@@ -50,6 +50,20 @@ GitHub repo bağlantısı kurulduktan sonra veriyi güncelleyip push etmek için
 https://KULLANICIADI.github.io/REPOADI/
 ```
 
+## Çift Tıklama ile Kullanım
+
+İlk kez GitHub repo bağlantısı kurmak için:
+
+```text
+ILK_KURULUM_GITHUB.bat
+```
+
+Sonraki veri güncellemelerinde sadece şunu çift tıkla:
+
+```text
+GUNCELLE_VE_PUSH.bat
+```
+
 ## Güvenlik Notu
 
 Repo public ise `data/partiler.json` herkes tarafından görülebilir. Firma, parti, termin ve tamir verileri hassassa public GitHub Pages kullanma.

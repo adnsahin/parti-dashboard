@@ -101,16 +101,30 @@ function build(mainRows, repairRows) {
 
   const rSample = repairRows[0] || {};
   const rParti = col(rSample, ['Parti No', 'Parti']);
-  const rWhy = col(rSample, ['Tamir Nedeni', 'Hata Nedeni', 'Nedeni', 'Açıklama']);
+  const rWhy = col(rSample, ['Tamir Sebebi', 'Tamir Nedeni', 'Hata Nedeni', 'Nedeni', 'Açıklama']);
+  const rNote = col(rSample, ['Tamir Sebep Notu', 'Yapılacaklar Notu', 'Not', 'Açıklama']);
+  const rType = col(rSample, ['Tamir Tipi', 'Tamir Tipi Grup Adı', 'Tamir Düzeltme Tipi Adı']);
+  const rStage = col(rSample, ['Sebep Aşama', 'Sebep Aşama 2', 'Sebep Aşama 3']);
+  const rStatus = col(rSample, ['Tamir Durumu', 'Çözüm Şekli']);
+  const rDate = col(rSample, ['Tarih', 'Tamir Onay Tarihi']);
+  const rKg = col(rSample, ['Kilo']);
+  const rMeter = col(rSample, ['Metre']);
+  const rFirm = col(rSample, ['Firma Adı', 'Firma']);
   const repairs = repairRows.map((r, i) => ({
     uid: `ext_${i}`,
     source: 'tamir_excel',
     parti: clean(r[rParti]),
     neden: rWhy ? clean(r[rWhy]) : '',
-    stage: '',
-    kg: 0,
-    firma: ''
+    not: rNote ? clean(r[rNote]) : '',
+    tip: rType ? clean(r[rType]) : '',
+    stage: rStage ? clean(r[rStage]) : '',
+    durum: rStatus ? clean(r[rStatus]) : '',
+    tarih: rDate ? fmtDate(r[rDate]) : '',
+    kg: rKg ? num(r[rKg]) : 0,
+    metre: rMeter ? num(r[rMeter]) : 0,
+    firma: rFirm ? clean(r[rFirm]) : ''
   })).filter(r => r.parti);
+  const hasExternalRepairs = repairs.length > 0;
 
   const cards = mainRows.map((r, i) => {
     const parti = clean(r[cParti]);
@@ -118,7 +132,7 @@ function build(mainRows, repairRows) {
     if (!parti || !stage) return null;
     const wait = waitDays(cWait ? r[cWait] : '');
     const internalRepair = cInner ? clean(r[cInner]) : '';
-    if (internalRepair) {
+    if (internalRepair && !hasExternalRepairs) {
       repairs.push({
         uid: `ic_${i}`,
         source: 'partiler_excel',

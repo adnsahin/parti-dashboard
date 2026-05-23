@@ -27,6 +27,12 @@ Tamir Excel de varsa:
 .\update_data.ps1 -MainExcel "..\partiler.xlsx" -RepairExcel "..\tamirler.xlsx"
 ```
 
+Bu klasördeki mevcut tamir dosyası için:
+
+```powershell
+.\update_data.ps1 -MainExcel "..\partiler.xlsx" -RepairExcel "..\tamir.xlsx"
+```
+
 GitHub repo bağlantısı kurulduktan sonra veriyi güncelleyip push etmek için:
 
 ```powershell

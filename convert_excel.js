@@ -6,6 +6,7 @@ const root = __dirname;
 const mainFile = process.argv[2] || path.join(root, '..', 'partiler.xlsx');
 const repairFile = process.argv[3] && process.argv[3] !== '-' ? process.argv[3] : '';
 const outFile = process.argv[4] || path.join(root, 'data', 'partiler.json');
+const outRepairFile = process.argv[5] || path.join(root, 'data', 'tamirler.json');
 
 function clean(v) {
   return v == null ? '' : String(v).trim();
@@ -101,9 +102,14 @@ function build(mainRows, repairRows) {
   const rSample = repairRows[0] || {};
   const rParti = col(rSample, ['Parti No', 'Parti']);
   const rWhy = col(rSample, ['Tamir Nedeni', 'Hata Nedeni', 'Nedeni', 'Açıklama']);
-  const repairs = repairRows.map(r => ({
+  const repairs = repairRows.map((r, i) => ({
+    uid: `ext_${i}`,
+    source: 'tamir_excel',
     parti: clean(r[rParti]),
-    neden: rWhy ? clean(r[rWhy]) : ''
+    neden: rWhy ? clean(r[rWhy]) : '',
+    stage: '',
+    kg: 0,
+    firma: ''
   })).filter(r => r.parti);
 
   const cards = mainRows.map((r, i) => {
@@ -111,6 +117,18 @@ function build(mainRows, repairRows) {
     const stage = clean(r[cStage]);
     if (!parti || !stage) return null;
     const wait = waitDays(cWait ? r[cWait] : '');
+    const internalRepair = cInner ? clean(r[cInner]) : '';
+    if (internalRepair) {
+      repairs.push({
+        uid: `ic_${i}`,
+        source: 'partiler_excel',
+        parti,
+        neden: internalRepair,
+        stage,
+        kg: cKg ? num(r[cKg]) : 0,
+        firma: cFirm ? clean(r[cFirm]) : ''
+      });
+    }
     const repairList = repairs.filter(x => x.parti === parti);
     return {
       id: `p${i}`,
@@ -125,7 +143,7 @@ function build(mainRows, repairRows) {
       term: cTerm ? fmtDate(r[cTerm]) : '',
       due: cTerm ? dueDays(r[cTerm]) : null,
       pri: cPri ? clean(r[cPri]) : '',
-      inner: cInner ? clean(r[cInner]) : '',
+      inner: internalRepair,
       blocked: cBlocked ? clean(r[cBlocked]) : '',
       flow: cFlow ? clean(r[cFlow]) : '',
       machine: cMachine ? clean(r[cMachine]) : '',
@@ -151,4 +169,10 @@ if (!mainRows.length) throw new Error(`Ana Excel okunamadı veya boş: ${mainFil
 const payload = build(mainRows, repairRows);
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, JSON.stringify(payload, null, 2), 'utf8');
+fs.writeFileSync(outRepairFile, JSON.stringify({
+  generatedAt: payload.generatedAt,
+  source: payload.source,
+  repairs: payload.repairs
+}, null, 2), 'utf8');
 console.log(`OK: ${payload.cards.length} parti yazıldı -> ${outFile}`);
+console.log(`OK: ${payload.repairs.length} tamir kaydı yazıldı -> ${outRepairFile}`);

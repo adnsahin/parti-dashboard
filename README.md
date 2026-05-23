@@ -6,6 +6,7 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 
 - `index.html`: URL üzerinden açılacak dashboard.
 - `data/partiler.json`: Dashboardun okuduğu güncel veri.
+- `data/tamirler.json`: Tamir kayıtları. Harici tamir Excel verilirse oradan, yoksa `partiler.xlsx` içindeki `İç Tamir Durumu` alanından üretilir.
 - `convert_excel.js`: Excel dosyasını JSON veriye çevirir.
 - `update_data.ps1`: Veriyi günceller, istenirse git push yapar.
 - `tools/xlsx.full.min.js`: Excel okuma kütüphanesi.
@@ -17,6 +18,8 @@ Ana Excel `..\partiler.xlsx` ise:
 ```powershell
 .\update_data.ps1
 ```
+
+Bu komut hem `data/partiler.json` hem de `data/tamirler.json` üretir.
 
 Tamir Excel de varsa:
 

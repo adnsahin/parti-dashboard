@@ -4,7 +4,7 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 
 ## Dosyalar
 
-- `index.html`: URL üzerinden açılacak dashboard.
+- `index.html`: URL üzerinden açılacak dashboard. Bu dosya `parti_takip_upload_single.html` tabanlıdır.
 - `data/partiler.json`: Dashboardun okuduğu güncel veri.
 - `data/tamirler.json`: Tamir kayıtları. Harici tamir Excel verilirse oradan, yoksa `partiler.xlsx` içindeki `İç Tamir Durumu` alanından üretilir.
 - `convert_excel.js`: Excel dosyasını JSON veriye çevirir.

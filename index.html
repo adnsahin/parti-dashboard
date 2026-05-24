@@ -1416,7 +1416,7 @@ function tamirShort(k){
     if(!list.length)return'';
     const map={};
     list.forEach(t=>{
-        const key=String(t.neden||t.tip||'Tamir').trim()||'Tamir';
+        const key=String(t.tip||t.neden||'Tamir').trim()||'Tamir';
         map[key]=(map[key]||0)+1;
     });
     const parts=Object.entries(map).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).map(([name,count])=>count+' '+name).slice(0,4);

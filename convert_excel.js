@@ -90,6 +90,8 @@ function build(mainRows, repairRows) {
   const cKg = col(sample, ['Kilo', 'Kalan Kilo', 'Kalan Brüt Kilo']);
   const cWait = col(sample, ['Geçen Süre (Son Hareketten Sonra)', 'Çıkıştan Sonra Geçen Süre', 'Bekleme Notu']);
   const cFirm = col(sample, ['Firma Adı', 'Firma']);
+  const cOrder = col(sample, ['Sipariş No']);
+  const cCustomer = col(sample, ['Müşteri Sipariş No', 'Müşteri Sipariş', 'MUSTERISIPARISNO']);
   const cFabric = col(sample, ['Ham Adı', 'Ham Ad', 'Kumaş']);
   const cRecipe = col(sample, ['Reçete Adı', 'Renk Adı', 'Reçete']);
   const cTerm = col(sample, ['Termin Tarihi', 'Termin Tarihi (Sipariş)', 'Revize Parti Termin Tarihi']);
@@ -152,6 +154,8 @@ function build(mainRows, repairRows) {
       wait,
       sev: wait >= 14 ? 'crit' : wait >= 7 ? 'warn' : 'ok',
       firma: cFirm ? clean(r[cFirm]) : '',
+      order: cOrder ? clean(r[cOrder]) : '',
+      customer: cCustomer ? clean(r[cCustomer]) : '',
       fabric: cFabric ? clean(r[cFabric]) : '',
       recipe: cRecipe ? clean(r[cRecipe]) : '',
       term: cTerm ? fmtDate(r[cTerm]) : '',

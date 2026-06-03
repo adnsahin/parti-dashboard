@@ -1065,18 +1065,6 @@ function renderSelectionPanel(){
 }
 function updateSelItem(id,f,v){if(selectedRecords[id]){selectedRecords[id][f]=v;saveSelected()}}
 
-function applyBulkSelection() {
-    const durum = document.getElementById('bulkDurum').value;
-    const not = document.getElementById('bulkNot').value;
-    if (!durum && !not) { showToast('Lütfen Durum veya Not girin!', 'warning'); return; }
-    Object.values(selectedRecords).forEach(r => {
-        if (durum) r.durum = durum;
-        if (not) r.not = not;
-    });
-    saveSelected();
-    renderSelectionPanel();
-    showToast('✅ Toplu güncelleme uygulandı: ' + Object.keys(selectedRecords).length + ' parti');
-}
 
 /* ── KESİNTİSİZ SESLİ PARTİ EKLEME MANTIĞI ── */
 function addManualToSelection(disaridanPartiNo) {

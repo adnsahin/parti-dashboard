@@ -41,7 +41,7 @@ if errorlevel 1 (
   echo HATA: GitHub repo baglantisi yok.
   echo.
   echo Bir kereye mahsus su komutu calistir:
-  echo git remote add origin https://github.com/KULLANICI_ADIN/REPO_ADI.git
+  echo git remote add origin https://github.com/adnsahin/parti-dashboard.git
   echo.
   pause
   exit /b 1

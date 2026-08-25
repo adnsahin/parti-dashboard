@@ -660,6 +660,7 @@ let currentViewMode = localStorage.getItem('vm9');
 if(!['cards','mini','list','kanban'].includes(currentViewMode)) currentViewMode = 'cards';
 
 let currentTamirViewMode = 'list'; // 'cards', 'mini', 'list'
+let tamirGunFiltre=0; // 0=Tümü, 1=Bugün, 2=Son 2 Gün, 7=Son 7 Gün
 let currentValidationView = 'cards';
 let currentValidationKind = 'overdue';
 let currentDisplayedCards=[],listSortCol=null,listSortAsc=true,activeStages=[];
@@ -840,6 +841,24 @@ function setTamirViewMode(mode) {
     renderTamirPanel();
 }
 
+/* ── TAMİR TARİH FİLTRESİ (SON 1-2 GÜN KAYITLARI) ── */
+function parseTamirTarih(s){
+    if(!s)return null;
+    const m=String(s).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    return m?new Date(+m[3],+m[2]-1,+m[1]):null;
+}
+function getFilteredTamirList(){
+    if(!tamirGunFiltre)return TAMIR_LIST;
+    const limit=new Date();limit.setHours(0,0,0,0);
+    limit.setDate(limit.getDate()-(tamirGunFiltre-1));
+    return TAMIR_LIST.filter(t=>{
+        const d=parseTamirTarih(t.tarih);
+        return d&&d>=limit;
+    });
+}
+function setTamirGunFiltre(g){tamirGunFiltre=g;renderTamirPanel()}
+function tamirFilterBtn(g,label){return '<button class="flow-tab '+(tamirGunFiltre===g?'active':'')+'" onclick="setTamirGunFiltre('+g+')">'+label+'</button>'}
+
 function toggleTamirPanel(){closeAllPanels();const p=document.getElementById('tamirPanel');if(p.style.display==='block')p.style.display='none';else renderTamirPanel()}
 
 function updateTamirOverride(uid, field, val) {
@@ -865,8 +884,9 @@ function applyBulkTamir() {
 function renderTamirPanel(){
     const p=document.getElementById('tamirPanel');
     const ro=['<option value="">-- Durum --</option>'].concat(DURUM_KAT.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
+    const all=getFilteredTamirList();
 
-    let h='<button class="panel-close" onclick="document.getElementById(\'tamirPanel\').style.display=\'none\'">×</button><h2 style="color:#D35400">🛠️ Tamir Olanlar Listesi</h2><div class="panel-summary">'+TAMIR_LIST.length+' kayıt eşleşti</div>';
+    let h='<button class="panel-close" onclick="document.getElementById(\'tamirPanel\').style.display=\'none\'">×</button><h2 style="color:#D35400">🛠️ Tamir Olanlar Listesi</h2><div class="panel-summary">'+all.length+' kayıt gösteriliyor • toplam '+TAMIR_LIST.length+' kayıt eşleşti</div>';
 
     if(!TAMIR_LIST.length){
         h+='<div class="list-empty">Eşleşen aktif tamir kaydı bulunamadı.</div>';
@@ -880,14 +900,22 @@ function renderTamirPanel(){
     h+='<button class="view-mode-btn '+(currentTamirViewMode==='list'?'active':'')+'" onclick="setTamirViewMode(\'list\')">📋 Liste</button>';
     h+='</div>';
 
+    // Tarih Filtresi (son 1-2 gün kayıtları)
+    h+='<div class="flow-tabs" style="margin-bottom:10px"><span style="align-self:center;font-size:12px;font-weight:900;color:#FFB74D">📅 Tarih:</span>'+tamirFilterBtn(0,'Tümü')+tamirFilterBtn(1,'Bugün (Son 1 Gün)')+tamirFilterBtn(2,'Son 2 Gün')+tamirFilterBtn(7,'Son 7 Gün')+'</div>';
+
     h+='<div class="sel-bulk"><strong>Toplu:</strong><select id="bulkTamirDurum" class="sel-select" style="width:130px">'+ro+'</select><input type="text" id="bulkTamirNot" class="sel-input" style="flex:1" placeholder="Toplu Not..."><button style="background:#4CAF50;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="applyBulkTamir()">Uygula</button><button style="background:#2196F3;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="exportTamirExcel()">📥 Excel</button><button style="background:#9B59B6;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="exportTamirPDF()">📄 PDF</button><button style="background:#25D366;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="shareTamirWhatsApp()">📱 WhatsApp</button></div>';
+
+    if(!all.length){
+        h+='<div class="list-empty">Seçilen tarih aralığında tamir kaydı yok.<br><small>"Tümü" seçeneğine dönerek bütün kayıtları görebilirsiniz.</small></div>';
+        p.innerHTML=h; p.style.display='block'; return;
+    }
 
     h+='<div id="tamirListContainer" style="overflow-x:auto; max-height:50vh; overflow-y:auto; border-radius:8px; padding:4px;">';
     h+='<div id="tamirPdfWrapper" style="background:#1a1a2e; padding:15px; border-radius:8px;">';
 
     if(currentTamirViewMode === 'cards') {
         h+='<div class="cards-container" style="padding:0; gap:10px;">';
-        TAMIR_LIST.forEach(t=>{
+        all.forEach(t=>{
             const ov = tamirOverrides[t.uid] || {};
             const dur = ov.durum || '';
             const no = ov.not || '';
@@ -899,7 +927,7 @@ function renderTamirPanel(){
     }
     else if(currentTamirViewMode === 'mini') {
         h+='<div class="mini-cards-container" style="padding:0; gap:8px;">';
-        TAMIR_LIST.forEach(t=>{
+        all.forEach(t=>{
             const ov = tamirOverrides[t.uid] || {};
             const dur = ov.durum || '';
             const ts = tamirSummaryForParti(t.parti);
@@ -910,7 +938,7 @@ function renderTamirPanel(){
     else {
         // Liste Görünümü
         h+='<table class="sel-panel-table"><thead><tr><th>Parti No</th><th>Aşama</th><th>Firma / Detay</th><th>Tamir Detayı</th><th>Kilo</th><th>Durum / Not</th></tr></thead><tbody>';
-        TAMIR_LIST.forEach(t=>{
+        all.forEach(t=>{
             const ov = tamirOverrides[t.uid] || {};
             const dur = ov.durum || '';
             const no = ov.not || '';

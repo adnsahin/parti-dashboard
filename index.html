@@ -1801,6 +1801,30 @@ function buildGecisResult(prev){
     Object.keys(prev.cards).forEach(pn=>{if(!seen[pn])res.gitti.push(pn)});
     return res;
 }
+function diagnoseGecisParti(){
+    const inp=document.getElementById('gecisTesh');
+    const out=document.getElementById('gecisTesihSonuc');
+    if(!inp||!out)return;
+    const pn=String(inp.value||'').trim();
+    if(!pn){out.innerHTML='<div class="validation-row">Parti numarası yazın.</div>';return}
+    let rec='';try{rec=String(safeParse('hsaat9','{}')[pn]||'')}catch(_e){}
+    const k=getAllCards().find(x=>String(x.parti)===pn)||getAllCards().find(x=>String(x.parti).includes(pn));
+    const ham=k?String(k.hareket||''):'';
+    const goster=k?gecisSaatTamamla(k):'';
+    let sonuc='';
+    if(!rec){sonuc='❌ Önbellekte kayıt YOK — Excel bu tarayıcıda/sitede yüklenmemiş olabilir.'}
+    else if(!k){sonuc='❌ Şu anki veride bu parti yok (listeden çıkmış olabilir).'}
+    else{
+        const sp=rec.indexOf(' ');
+        const rd=sp>0?gecisZamanParse(rec.slice(0,sp)):null;
+        const xd=gecisZamanParse(ham);
+        if(rd&&xd){
+            const dh=Math.round(Math.abs(rd-xd)/3600000);
+            sonuc=dh<=39?'✅ Tarihler uyumlu ('+dh+' saat fark) — saat gösteriliyor.':'⚠️ Tarih farkı '+dh+' saat — LİMİT AŞILDI. Muhtemelen parti son Excel yüklemenizden sonra tekrar hareket etti VEYA bat verisi eski.';
+        }else{sonuc='⚠️ Tarihlerden biri okunamadı. Önbellek: "'+rec+'" Kart: "'+ham+'"'}
+    }
+    out.innerHTML='<div class="validation-row" style="line-height:1.7">📋 <b>'+esc(pn)+'</b><br>💾 Önbellek: <b>'+esc(rec||'YOK')+'</b><br>🗂️ Verideki: <b>'+esc(ham||'boş')+'</b><br>👁️ Gösterilen: <b>'+esc(goster||'-')+'</b><br>'+esc(sonuc)+'</div>';
+}
 let gecisFiltre={bas:'',bit:''};
 function gecisZamanParse(s){if(!s)return null;const m=String(s).match(/(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);if(!m)return null;let y=+m[3];if(y<100)y+=2000;const d=new Date(y,+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0));return isNaN(d)?null:d}
 function gecisItemFiltreOk(k){
@@ -1845,6 +1869,7 @@ function renderGecisPanel(){
     h+='<div class="panel-summary">Şu anki veri ('+esc(cur.ts)+') seçilen eski veriyle karşılaştırılır. Veriler her güncellendiğinde yeni anlık görüntü otomatik alınır.</div>';
     let hsb=0,hss=0;try{const hm=safeParse('hsaat9','{}');hsb=Object.keys(hm).length}catch(_e){}fk.concat(fsr).forEach(x=>{if(String(x.k.hareket||'').includes(' '))hss++});
     h+='<div class="panel-summary" style="background:#FFF8E1;color:#8D6E63">🔧 Teşhis: önbellekte <b>'+hsb+'</b> saat kaydı • şu an listede <b>'+hss+'</b> partide saat görünüyor</div>';
+    h+='<div style="display:flex;gap:6px;align-items:center;margin:6px 0"><input id="gecisTesh" placeholder="Saat gelmeyen parti no (örn 7184)" style="flex:1;padding:8px;border-radius:8px;border:2px solid #E8E8F0" onkeydown="if(event.key===\'Enter\')diagnoseGecisParti()"><button class="view-action-btn" onclick="diagnoseGecisParti()">🔎 Neden?</button></div><div id="gecisTesihSonuc"></div>';
     h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><strong>🔍 Karşılaştır:</strong>'+sel+'</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;background:#F6F4FC;border-radius:12px"><b>🔎 Son Hareket Tarihi\'ne göre:</b><input type="datetime-local" id="gecisBas" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bas)+'" onchange="setGecisFiltre()"><span>–</span><input type="datetime-local" id="gecisBit" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bit)+'" onchange="setGecisFiltre()"><button class="view-action-btn" onclick="resetGecisFiltre()">✖ Temizle</button></div>';
     h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#27AE60">'+gf.yeni.length+'</b><small>Yeni parti</small></button><button type="button" style="cursor:default"><b style="color:#95A5A6">'+gf.gitti.length+'</b><small>Listeden çıktı</small></button></div>';

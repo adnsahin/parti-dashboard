@@ -1756,13 +1756,32 @@ function gecisDiffToast(){
 function cacheHareketSaatleri(){
     try{
         const m=safeParse('hsaat9','{}');
-        getAllCards().forEach(k=>{if(k.hareket&&k.parti)m[String(k.parti)]=String(k.hareket)});
+        getAllCards().forEach(k=>{
+            if(!k.hareket||!k.parti)return;
+            const key=String(k.parti),cur=String(m[key]||'');
+            const hasT=k.hareket.includes(' '),curT=cur.includes(' ');
+            if(hasT||!cur)m[key]=String(k.hareket);
+        });
         localStorage.setItem('hsaat9',JSON.stringify(m));
     }catch(e){console.warn('saat onbellek',e)}
 }
+function gecisSaatTamamla(k){
+    let h=String(k.hareket||'');
+    if(h&&!h.includes(' ')){
+        try{
+            const rec=String(safeParse('hsaat9','{}')[String(k.parti)]||'');
+            const sp=rec.indexOf(' ');
+            if(sp>0){
+                const rd=gecisZamanParse(rec.slice(0,sp)),xd=gecisZamanParse(h);
+                if(rd&&xd&&Math.abs(rd-xd)<=39*3600000)h=rec;
+            }
+        }catch(_e){}
+    }
+    return h;
+}
 function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
-    if(isExcel){try{cacheHareketSaatleri()}catch(e){}}
+    try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
 }
 function buildGecisResult(prev){
@@ -1805,7 +1824,7 @@ function getGecisFiltered(){
 function toggleGecisPanel(){safePanelOpen('gecisPanel','📜 KK / Sarım Geçiş Raporu',renderGecisPanel)}
 function setGecisSkip(n){gecisSkip=n;renderGecisPanel()}
 function gecisItemHtml(k,fromStage){
-    return '<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(\''+esc(k.id)+'\')"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(fromStage||'?')+' → <b>'+esc(k._asama)+'</b>'+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+(k.line2?' • '+esc(k.line2):'')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+(k.hareket?'<div class="flow-muted">🕒 Son Hareket: '+esc(k.hareket)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' • Tamir: '+((k.tamirler||[]).length)+'</div></div>';
+    return '<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(\''+esc(k.id)+'\')"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(fromStage||'?')+' → <b>'+esc(k._asama)+'</b>'+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+(k.line2?' • '+esc(k.line2):'')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+(function(){const hv=gecisSaatTamamla(k);return hv?'<div class="flow-muted">🕒 Son Hareket: '+esc(hv)+'</div>':''})()+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' • Tamir: '+((k.tamirler||[]).length)+'</div></div>';
 }
 function renderGecisPanel(){
     const p=document.getElementById('gecisPanel');
@@ -1824,6 +1843,8 @@ function renderGecisPanel(){
     for(let s=1;s<hist.length;s++){sel+='<option value="'+s+'"'+(s===gecisSkip?' selected':'')+'>'+esc(hist[hist.length-1-s].ts)+' verisiyle</option>'}
     sel+='</select>';
     h+='<div class="panel-summary">Şu anki veri ('+esc(cur.ts)+') seçilen eski veriyle karşılaştırılır. Veriler her güncellendiğinde yeni anlık görüntü otomatik alınır.</div>';
+    let hsb=0,hss=0;try{const hm=safeParse('hsaat9','{}');hsb=Object.keys(hm).length}catch(_e){}fk.concat(fsr).forEach(x=>{if(String(x.k.hareket||'').includes(' '))hss++});
+    h+='<div class="panel-summary" style="background:#FFF8E1;color:#8D6E63">🔧 Teşhis: önbellekte <b>'+hsb+'</b> saat kaydı • şu an listede <b>'+hss+'</b> partide saat görünüyor</div>';
     h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><strong>🔍 Karşılaştır:</strong>'+sel+'</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;background:#F6F4FC;border-radius:12px"><b>🔎 Son Hareket Tarihi\'ne göre:</b><input type="datetime-local" id="gecisBas" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bas)+'" onchange="setGecisFiltre()"><span>–</span><input type="datetime-local" id="gecisBit" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bit)+'" onchange="setGecisFiltre()"><button class="view-action-btn" onclick="resetGecisFiltre()">✖ Temizle</button></div>';
     h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#27AE60">'+gf.yeni.length+'</b><small>Yeni parti</small></button><button type="button" style="cursor:default"><b style="color:#95A5A6">'+gf.gitti.length+'</b><small>Listeden çıktı</small></button></div>';

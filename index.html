@@ -1754,7 +1754,17 @@ function gecisDiffToast(){
         if(kk||sr)showToast('📊 Yeni veri: '+kk+' parti Kalite Kontrol\'ü, '+sr+' parti Sarım1\'i geçti — 📜 Geçiş Raporu\'na bakın','warning');
     }catch(e){console.warn(e)}
 }
-let REMOTE_SAAT={};
+let REMOTE_SAAT={},VERI_URETIM_ZAMANI=null;
+function uretimVeriTarihiniYukle(){
+    const path=location.pathname.replace(/\\/g,'/'),base=(location.protocol==='file:'&&!path.includes('/github_dashboard/'))?'github_dashboard/data/':'data/';
+    fetch(base+'partiler.json?ts='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(p=>{
+        const z=p&&new Date(p.generatedAt);
+        if(!z||isNaN(z))return;
+        VERI_URETIM_ZAMANI=z;
+        const panel=document.getElementById('uretimPanel');
+        if(panel&&panel.style.display==='block')renderUretimPanel();
+    }).catch(()=>{});
+}
 function cacheHareketSaatleri(){
     try{
         const m=safeParse('hsaat9','{}');
@@ -1775,11 +1785,18 @@ function gecisSaatTamamla(k){
         if(!/\d{1,2}:\d{2}/.test(rec))rec=String(REMOTE_SAAT[String(k.parti)]||'');
         if(/\d{1,2}:\d{2}/.test(rec))h=rec;
     }
+    const bekleme=Number(k.bekleme_gun),tahmin=VERI_URETIM_ZAMANI&&Number.isFinite(bekleme)&&bekleme>=0?new Date(VERI_URETIM_ZAMANI.getTime()-bekleme*86400000):null;
+    if(tahmin&&!isNaN(tahmin)){
+        const two=n=>String(n).padStart(2,'0'),tahminMetin=two(tahmin.getDate())+'.'+two(tahmin.getMonth()+1)+'.'+tahmin.getFullYear()+' '+two(tahmin.getHours())+':'+two(tahmin.getMinutes());
+        const mevcut=gecisZamanParse(h),ayniGun=mevcut&&mevcut.getFullYear()===tahmin.getFullYear()&&mevcut.getMonth()===tahmin.getMonth()&&mevcut.getDate()===tahmin.getDate();
+        if(!/\d{1,2}:\d{2}/.test(h)||!ayniGun)h=tahminMetin;
+    }
     return h;
 }
 function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
     try{cacheHareketSaatleri()}catch(e){}
+    if(!isExcel)uretimVeriTarihiniYukle();
     saveDataSnapshot();updateInsightStrip();
 }
 function buildGecisResult(prev){

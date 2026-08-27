@@ -1702,7 +1702,7 @@ function normalizeStageName(v){return String(v||'').toLocaleUpperCase('tr-TR').r
 function stageKey(v){return normalizeStageName(v).replace(/[^\p{L}\p{N}]/gu,'')}
 function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if(x===y)return true;if(y==='KK')return x==='KK'||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
 function flowParts(k){return String(k.uretim_asamalari||'').split(',').map(s=>s.trim()).filter(Boolean)}
-function flowIndex(parts,stage){return parts.findIndex(p=>stageEquals(p,stage))}
+function flowIndex(parts,stage){const key=stageKey(stage),exact=parts.findIndex(p=>stageKey(p)===key);return exact>=0?exact:parts.findIndex(p=>stageEquals(p,stage))}
 function targetTitle(target){return target==='kk'?'Kalite Kontrol':'Sarım1'}
 function targetStage(target){return target==='kk'?'KK':'SARIM1'}
 function isAfterQualityOrSarım(k){const parts=flowParts(k);const cur=normalizeStageName(k._asama||k.asama);if(!cur)return false;const ci=flowIndex(parts,cur);const refs=[flowIndex(parts,'KK'),flowIndex(parts,'SARIM1')].filter(i=>i>=0);if(ci<0)return refs.length&&refs.some(i=>!stageEquals(cur,'KK')&&!stageEquals(cur,'SARIM1'));return refs.some(i=>ci>i)}
@@ -1846,36 +1846,33 @@ function getGecisFiltered(){
 /* ── GÜNLÜK ÜRETİM PANELİ ── */
 let uretimTab='kk';
 function setUretimTab(t){uretimTab=t;renderUretimPanel()}
+function uretimAsamaGecisleri(target){
+    const asama=targetStage(target);
+    return getAllCards().filter(k=>{
+        const parts=flowParts(k),simdiki=flowIndex(parts,k._asama),hedef=flowIndex(parts,asama);
+        return hedef>=0&&simdiki>hedef;
+    }).map(k=>{
+        const parts=flowParts(k),simdiki=flowIndex(parts,k._asama);
+        return {k:k,from:simdiki>0?parts[simdiki-1]:asama};
+    });
+}
 function uretimGunlukFilter(list){
-    const bugun=new Date();const ay=bugun.getMonth(),yil=bugun.getFullYear(),gun=bugun.getDate();
-    const baslangic=new Date(yil,ay,gun,8,0,0);
+    const simdi=new Date(),baslangic=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate(),8,0,0);
     return list.filter(x=>{
         const hv=gecisSaatTamamla(x.k);
-        if(!hv)return false;
-        const dm=hv.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})(?:\s+(\d{1,2}):(\d{2}))(?::(\d{2}))?/);
-        if(!dm)return false;
-        let y=+dm[3];if(y<100)y+=2000;
-        const t=new Date(y,+dm[2]-1,+dm[1],+(dm[4]||0),+(dm[5]||0),+(dm[6]||0));
-        return t>=baslangic;
-    }).sort((a,b)=>{
-        const ha=gecisSaatTamamla(a.k),hb=gecisSaatTamamla(b.k);
-        return (ha||'').localeCompare(hb||'');
-    });
+        if(!/\d{1,2}:\d{2}/.test(hv))return false;
+        const t=gecisZamanParse(hv);
+        return t&&t>=baslangic&&t<=simdi;
+    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));
 }
 function uretimItemHtml(k){return '<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(\''+esc(k.id)+'\')"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k.from||'?')+' → <b>'+esc(k._asama)+'</b>'+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+(k.line2?' • '+esc(k.line2):'')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+(function(){const hv=gecisSaatTamamla(k);return hv?'<div class="flow-muted">🕒 Son Hareket: '+esc(hv)+'</div>':''})()+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' • Tamir: '+((k.tamirler||[]).length)+'</div></div>'}
 function toggleUretimPanel(){safePanelOpen('uretimPanel','🏭 Günlük Üretim',renderUretimPanel)}
 function renderUretimPanel(){
     const p=document.getElementById('uretimPanel');
-    const hist=safeParse('gsnap9','[]');
     const today=new Date();const todayStr=today.toLocaleDateString('tr-TR');
     let h='<button class="panel-close" onclick="closeAllPanels()">×</button><h2 style="color:#2E7D32">🏭 Günlük Üretim — '+esc(todayStr)+'</h2>';
-    if(hist.length<2){
-        h+='<div class="list-empty">Geçiş verisi henüz yok. En az iki veri yüklemesi gerekiyor.</div>';
-        p.innerHTML=h;p.style.display='block';addPanelFullButton('uretimPanel');return;
-    }
     h+='<div style="display:flex;gap:6px;margin:10px 0"><button class="flow-tab '+(uretimTab==='kk'?'active':'')+'" onclick="setUretimTab(\'kk\')">✅ Kalite Kontrol</button><button class="flow-tab '+(uretimTab==='sarim'?'active':'')+'" onclick="setUretimTab(\'sarim\')">🧵 Sarım1</button></div>';
-    const gf=getGecisFiltered();
-    const kaynak=uretimTab==='kk'?gf.fk:gf.fsr;
+    const kaynak=uretimAsamaGecisleri(uretimTab);
     const gunluk=uretimGunlukFilter(kaynak);
     const toplamKg=gunluk.reduce((s,x)=>s+num(x.k.kilo),0);
     h+='<div class="quick-insights" style="padding:10px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#2E7D32">'+gunluk.length+'</b><small>Toplam Parti</small></button><button type="button" style="cursor:default"><b style="color:#1565C0">'+Math.round(toplamKg).toLocaleString('tr-TR')+'</b><small>Toplam kg</small></button><button type="button" style="cursor:default"><b style="color:#6C757D">08:00+</b><small>Başlangıç</small></button></div>';
@@ -1892,10 +1889,7 @@ function renderUretimPanel(){
     p.innerHTML=h;p.style.display='block';addPanelFullButton('uretimPanel');ensureElementFullscreenToolbar('uretimPanel','Günlük Üretim');
 }
 function exportUretimExcel(){
-    const hist=safeParse('gsnap9','[]');
-    if(hist.length<2){alert('Geçiş verisi henüz yok.');return}
-    const gf=getGecisFiltered();
-    const kaynak=uretimTab==='kk'?gf.fk:gf.fsr;
+    const kaynak=uretimAsamaGecisleri(uretimTab);
     const gunluk=uretimGunlukFilter(kaynak);
     const tabLabel=uretimTab==='kk'?'Kalite Kontrol':'Sarim1';
     const rows=gunluk.map(x=>({'Parti':x.k.parti,'Onceki Asama':x.from,'Su Anki Asama':x.k._asama,'Bir Sonraki':x.k.bir_sonraki||'','Firma':x.k.line1||'','Recete':x.k.recete_adi||'','Son Hareket':gecisSaatTamamla(x.k)||'-','Kilo':num(x.k.kilo),'Termin':x.k.termin_tarihi||x.k.termin_siparis||'','Tamir Sayisi':(x.k.tamirler||[]).length}));

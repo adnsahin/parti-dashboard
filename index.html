@@ -1723,11 +1723,11 @@ function filterPostProcessCards(){filterCardsDirect(getPostProcessCards())}
 
 /* ════════ 📜 KK / SARIM GEÇİŞ KARŞILAŞTIRMA RAPORU ════════ */
 let gecisSkip=1;
-function snapHash(){let h=0,c=0;getAllCards().forEach(k=>{c++;const s=String(k.parti)+'|'+k._asama+'|'+(k.bir_sonraki||'');for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;h=(h+Math.round(num(k.kilo)))|0});return c+'_'+(h>>>0)}
+function snapHash(){let h=0,c=0;getAllCards().forEach(k=>{c++;const s=String(k.parti)+'|'+cardCurrentStage(k)+'|'+cardNextStage(k);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;h=(h+Math.round(num(k.kilo)))|0});return c+'_'+(h>>>0)}
 function saveDataSnapshot(){
     try{
         const cards={};
-        getAllCards().forEach(k=>{cards[k.parti]={a:k._asama,n:k.bir_sonraki||'',kg:num(k.kilo),hz:k.hareket||''}});
+        getAllCards().forEach(k=>{cards[k.parti]={a:cardCurrentStage(k),n:cardNextStage(k),kg:num(k.kilo),hz:gecisSaatTamamla(k)||''}});
         const hist=safeParse('gsnap9','[]');
         const hash=snapHash();
         if(hist.length&&hist[hist.length-1].hash===hash)return false;
@@ -1754,17 +1754,7 @@ function gecisDiffToast(){
         if(kk||sr)showToast('📊 Yeni veri: '+kk+' parti Kalite Kontrol\'ü, '+sr+' parti Sarım1\'i geçti — 📜 Geçiş Raporu\'na bakın','warning');
     }catch(e){console.warn(e)}
 }
-let REMOTE_SAAT={},VERI_URETIM_ZAMANI=null;
-function uretimVeriTarihiniYukle(){
-    const path=location.pathname.replace(/\\/g,'/'),base=(location.protocol==='file:'&&!path.includes('/github_dashboard/'))?'github_dashboard/data/':'data/';
-    fetch(base+'partiler.json?ts='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(p=>{
-        const z=p&&new Date(p.generatedAt);
-        if(!z||isNaN(z))return;
-        VERI_URETIM_ZAMANI=z;
-        const panel=document.getElementById('uretimPanel');
-        if(panel&&panel.style.display==='block')renderUretimPanel();
-    }).catch(()=>{});
-}
+let REMOTE_SAAT={};
 function cacheHareketSaatleri(){
     try{
         const m=safeParse('hsaat9','{}');
@@ -1785,20 +1775,29 @@ function gecisSaatTamamla(k){
         if(!/\d{1,2}:\d{2}/.test(rec))rec=String(REMOTE_SAAT[String(k.parti)]||'');
         if(/\d{1,2}:\d{2}/.test(rec))h=rec;
     }
-    const bekleme=Number(k.bekleme_gun),tahmin=VERI_URETIM_ZAMANI&&Number.isFinite(bekleme)&&bekleme>=0?new Date(VERI_URETIM_ZAMANI.getTime()-bekleme*86400000):null;
-    if(tahmin&&!isNaN(tahmin)){
-        const two=n=>String(n).padStart(2,'0'),tahminMetin=two(tahmin.getDate())+'.'+two(tahmin.getMonth()+1)+'.'+tahmin.getFullYear()+' '+two(tahmin.getHours())+':'+two(tahmin.getMinutes());
-        const mevcut=gecisZamanParse(h),ayniGun=mevcut&&mevcut.getFullYear()===tahmin.getFullYear()&&mevcut.getMonth()===tahmin.getMonth()&&mevcut.getDate()===tahmin.getDate();
-        if(!/\d{1,2}:\d{2}/.test(h)||!ayniGun)h=tahminMetin;
-    }
     return h;
 }
 function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
     try{cacheHareketSaatleri()}catch(e){}
-    if(!isExcel)uretimVeriTarihiniYukle();
     saveDataSnapshot();updateInsightStrip();
 }
+function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
+function cardStageIndex(k){
+    const parts=flowParts(k),current=cardCurrentStage(k),key=stageKey(current),exact=parts.findIndex(p=>stageKey(p)===key);
+    return exact>=0?exact:parts.findIndex(p=>stageEquals(p,current)||stageEquals(current,p));
+}
+function cardNextStage(k){
+    if(k.sonraki_asama)return k.sonraki_asama;
+    if(k.bir_sonraki)return k.bir_sonraki;
+    const parts=flowParts(k),index=cardStageIndex(k);
+    return index>=0?parts[index+1]||'':'';
+}
+function isKkGecis(k){return stageEquals(cardCurrentStage(k),'KK')&&stageEquals(cardNextStage(k),'SEVK TESLİM')}
+function isSarimGecis(k){
+    return stageEquals(cardCurrentStage(k),'SARIM1')&&['LAMİNASYON','BRONZİNG','DİJİTAL BASKI','RAM','EMBOSS'].some(stage=>stageEquals(cardNextStage(k),stage));
+}
+function gecisEntry(k,from){return{k:{...k,_asama:cardCurrentStage(k),bir_sonraki:cardNextStage(k)},from:from}}
 function buildGecisResult(prev){
     const res={kk:[],sr:[],yeni:[],gitti:[],ok:false};
     if(!prev||!prev.cards)return res;
@@ -1806,12 +1805,10 @@ function buildGecisResult(prev){
     const seen={};
     getAllCards().forEach(k=>{
         seen[k.parti]=1;
-        const parts=flowParts(k),ci=flowIndex(parts,k._asama),ki=flowIndex(parts,'KK'),si=flowIndex(parts,'SARIM1');
         const p=prev.cards[k.parti];
         if(!p){res.yeni.push(k);return}
-        const pi=flowIndex(parts,p.a);
-        if(ki>=0&&ci>ki&&!(pi>=0&&pi>ki))res.kk.push({k:k,from:p.a});
-        if(si>=0&&ci>si&&!(pi>=0&&pi>si))res.sr.push({k:k,from:p.a});
+        if(isKkGecis(k)&&!stageEquals(p.a,cardCurrentStage(k)))res.kk.push(gecisEntry(k,p.a));
+        if(isSarimGecis(k)&&!stageEquals(p.a,cardCurrentStage(k)))res.sr.push(gecisEntry(k,p.a));
     });
     Object.keys(prev.cards).forEach(pn=>{if(!seen[pn])res.gitti.push(pn)});
     return res;
@@ -1864,13 +1861,10 @@ function getGecisFiltered(){
 let uretimTab='kk';
 function setUretimTab(t){uretimTab=t;renderUretimPanel()}
 function uretimAsamaGecisleri(target){
-    const asama=targetStage(target);
-    return getAllCards().filter(k=>{
-        const parts=flowParts(k),simdiki=flowIndex(parts,k._asama),hedef=flowIndex(parts,asama);
-        return hedef>=0&&simdiki>hedef;
-    }).map(k=>{
-        const parts=flowParts(k),simdiki=flowIndex(parts,k._asama);
-        return {k:k,from:simdiki>0?parts[simdiki-1]:asama};
+    const uygun=target==='kk'?isKkGecis:isSarimGecis;
+    return getAllCards().filter(uygun).map(k=>{
+        const parts=flowParts(k),simdiki=cardStageIndex(k);
+        return gecisEntry(k,simdiki>0?parts[simdiki-1]:'');
     });
 }
 function uretimGunlukFilter(list){
@@ -2018,6 +2012,29 @@ function dashboardActionMap(){return{today:toggleTodayPanel,bottleneck:toggleBot
 function runDashboardAction(action){const fn=dashboardActionMap()[action];if(!fn)return false;try{fn();return true}catch(e){console.error(e);const st=document.getElementById('uploadStatus');if(st){st.textContent='Tıklama işlemi açılamadı: '+(e&&e.message?e.message:e);st.className='upload-status error'}return true}}
 function bindStaticActionButtons(){document.querySelectorAll('[data-action]').forEach(btn=>{if(btn.__boundAction)return;btn.__boundAction=true;btn.removeAttribute('data-bound-action');btn.onclick=null;btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();runDashboardAction(btn.dataset.action)})})}
 function bindDashboardDelegates(){if(window.__dashboardDelegatesBound)return;window.__dashboardDelegatesBound=true;document.addEventListener('click',function(e){const card=e.target.closest('[data-card-id]');if(card){e.preventDefault();e.stopPropagation();openDetailModal(card.dataset.cardId);return}const validation=e.target.closest('[data-validation]');if(validation){e.preventDefault();e.stopPropagation();showValidationRows(validation.dataset.validation);return}const summaryAll=e.target.closest('[data-summary="all"]');if(summaryAll){e.preventDefault();e.stopPropagation();showAll();return}const summaryStage=e.target.closest('[data-summary-stage]');if(summaryStage){e.preventDefault();e.stopPropagation();toggleAsamaFromSummary(summaryStage.dataset.summaryStage);return}const btn=e.target.closest('[data-action]');if(!btn)return;e.preventDefault();e.stopPropagation();runDashboardAction(btn.dataset.action)},true)}
+var githubCardToMainRowBase=githubCardToMainRow;
+githubCardToMainRow=function(c){
+    const row=githubCardToMainRowBase(c);
+    row['Son Yapılan Aşama']=c.lastStage||'';
+    row['Son Hareket Tarihi']=c.hareket||row['Çıkış Tarihi']||'';
+    return row;
+};
+var upBuildDataBase=upBuildData;
+upBuildData=function(rows,repairSourceRows){
+    const built=upBuildDataBase(rows,repairSourceRows);
+    const partiCol=upCol(rows,['Parti No','Parti']),nextCol=upCol(rows,['SONRAKİ','Sonra Yapılacak Aşama','Sonraki Aşama']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']);
+    if(!partiCol||!nextCol||!lastCol)return built;
+    const lastStages=new Map();
+    rows.forEach(row=>{
+        const parti=upClean(row[partiCol]),next=upClean(row[nextCol]),last=upClean(row[lastCol]);
+        if(parti&&next&&last)lastStages.set(parti+'\u0000'+next,last);
+    });
+    Object.entries(built.data).forEach(([next,group])=>group.kartlar.forEach(k=>{
+        k.son_asama=lastStages.get(String(k.parti)+'\u0000'+next)||'';
+        k.sonraki_asama=next;
+    }));
+    return built;
+};
 function bootDashboard(){try{bindDashboardDelegates();bindStaticActionButtons();const embedded=loadEmbeddedDashboardData();init();if(embedded)afterDataLoaded();bindStaticActionButtons();const b=document.getElementById('loadExcelBtn');if(b)b.addEventListener('click',loadExcelDashboard);const s=document.getElementById('saveEmbeddedBtn');if(s)s.addEventListener('click',exportEmbeddedDashboard);if(!embedded)loadGithubJsonDashboard()}catch(e){console.error(e);const st=document.getElementById('uploadStatus');if(st){st.textContent='Dashboard başlatılırken hata oluştu: '+(e&&e.message?e.message:e);st.className='upload-status error'}}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard);else bootDashboard();
 </script>

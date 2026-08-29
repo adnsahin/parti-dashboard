@@ -48,19 +48,31 @@ function excelDate(v) {
   if (v instanceof Date) return v;
   if (typeof v === 'number') {
     const p = XLSX.SSF.parse_date_code(v);
-    return p ? new Date(p.y, p.m - 1, p.d) : null;
+    return p ? new Date(p.y, p.m - 1, p.d, p.H || 0, p.M || 0, p.S || 0) : null;
   }
   const s = clean(v);
   if (!s) return null;
-  const m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
-  if (m) return new Date(Number(m[3].length === 2 ? '20' + m[3] : m[3]), Number(m[2]) - 1, Number(m[1]));
+  const m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) {
+    const y = Number(m[3].length === 2 ? '20' + m[3] : m[3]);
+    const h = m[4] ? Number(m[4]) : 0;
+    const mi = m[5] ? Number(m[5]) : 0;
+    const sec = m[6] ? Number(m[6]) : 0;
+    return new Date(y, Number(m[2]) - 1, Number(m[1]), h, mi, sec);
+  }
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function fmtDate(v) {
   const d = excelDate(v);
-  return d ? `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}` : clean(v);
+  if (!d) return clean(v);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = d.getFullYear();
+  const hasTime = d.getHours() || d.getMinutes() || d.getSeconds();
+  if (hasTime) return `${dd}.${mm}.${yy} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${dd}.${mm}.${yy}`;
 }
 
 function dueDays(v) {
@@ -100,6 +112,8 @@ function build(mainRows, repairRows) {
   const cBlocked = col(sample, ['Beklemeye Alınmış Aşama Var']);
   const cFlow = col(sample, ['Üretim Aşamaları', 'Aşamalar', 'İş Akışı']);
   const cMachine = col(sample, ['Planlandigi Makina Kodu', 'Planlandığı Makina Kodu', 'Son Makina Kodu']);
+  const cLastStage = col(sample, ['Son Aşama', 'Son Yapılan Aşama', 'Son Yapilan Asama']);
+  const cHareket = col(sample, ['Son Hareket Tarihi', 'Son Hareket Tarihi/Saati', 'Çıkış Tarihi']);
 
   const rSample = repairRows[0] || {};
   const rParti = col(rSample, ['Parti No', 'Parti']);
@@ -165,6 +179,8 @@ function build(mainRows, repairRows) {
       blocked: cBlocked ? clean(r[cBlocked]) : '',
       flow: cFlow ? clean(r[cFlow]) : '',
       machine: cMachine ? clean(r[cMachine]) : '',
+      lastStage: cLastStage ? clean(r[cLastStage]) : '',
+      hareket: cHareket ? fmtDate(r[cHareket]) : '',
       repairs: repairList
     };
   }).filter(Boolean);

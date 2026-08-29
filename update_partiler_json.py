@@ -63,49 +63,61 @@ def col(row, names):
 
 
 def excel_date(v):
-    """Excel tarihini date objesine cevir."""
+    """Excel tarihini datetime objesine cevir (saat bilgisini koru)."""
     if v is None:
         return None
     if isinstance(v, datetime):
-        return v.date()
-    if isinstance(v, date):
         return v
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day)
     if isinstance(v, (int, float)):
         # Excel serial date
         try:
             from openpyxl.utils import datetime_from_windows_1900
-            return datetime_from_windows_1900(v).date()
+            return datetime_from_windows_1900(v)
         except Exception:
-            # Fallback: epoch'dan hesapla
             epoch = date(1899, 12, 30)
-            return epoch + timedelta(days=int(v))
+            d = epoch + timedelta(days=int(v))
+            return datetime(d.year, d.month, d.day)
     s = clean(v)
     if not s:
         return None
-    # DD.MM.YYYY veya DD/MM/YYYY
-    m = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})", s)
+    # DD.MM.YYYY HH:MM veya DD.MM.YYYY
+    m = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?", s)
     if m:
         y = int(m.group(3))
         if y < 100:
             y += 2000
-        return date(y, int(m.group(2)), int(m.group(1)))
+        h = int(m.group(4)) if m.group(4) else 0
+        mi = int(m.group(5)) if m.group(5) else 0
+        sec = int(m.group(6)) if m.group(6) else 0
+        return datetime(y, int(m.group(2)), int(m.group(1)), h, mi, sec)
     try:
-        d = datetime.strptime(s, "%d.%m.%Y")
-        return d.date()
+        return datetime.strptime(s, "%d.%m.%Y %H:%M")
     except Exception:
         pass
     try:
-        d = datetime.strptime(s, "%d/%m/%Y")
-        return d.date()
+        return datetime.strptime(s, "%d.%m.%Y")
+    except Exception:
+        pass
+    try:
+        return datetime.strptime(s, "%d/%m/%Y %H:%M")
+    except Exception:
+        pass
+    try:
+        return datetime.strptime(s, "%d/%m/%Y")
     except Exception:
         pass
     return None
 
 
 def fmt_date(v):
-    """Tarihi DD.MM.YYYY formatina cevir."""
+    """Tarihi DD.MM.YYYY formatina cevir (saat varsa DD.MM.YYYY HH:MM)."""
     d = excel_date(v)
     if d:
+        has_time = d.hour or d.minute or d.second
+        if has_time:
+            return f"{d.day:02d}.{d.month:02d}.{d.year} {d.hour:02d}:{d.minute:02d}"
         return f"{d.day:02d}.{d.month:02d}.{d.year}"
     return clean(v)
 
@@ -116,6 +128,9 @@ def due_days(v):
     if not d:
         return None
     today = date.today()
+    # datetime ise date portionunu al
+    if isinstance(d, datetime):
+        d = d.date()
     return (d - today).days
 
 

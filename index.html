@@ -1773,7 +1773,10 @@ function gecisSaatTamamla(k){
         let rec='';
         try{rec=String(safeParse('hsaat9','{}')[String(k.parti)]||'')}catch(_e){}
         if(!/\d{1,2}:\d{2}/.test(rec))rec=String(REMOTE_SAAT[String(k.parti)]||'');
-        if(/\d{1,2}:\d{2}/.test(rec))h=rec;
+        if(/\d{1,2}:\d{2}/.test(rec)){
+            const hm=rec.match(/(\d{1,2}):(\d{2})/);
+            if(hm)h=h+' '+hm[1]+':'+hm[2];
+        }
     }
     return h;
 }
@@ -1880,16 +1883,19 @@ function uretimAsamaGecisleri(target){
         const parts=flowParts(k),simdiki=cardStageIndex(k);
         return gecisEntry(k,simdiki>0?parts[simdiki-1]:'');
     });
-}
-function uretimGunlukFilter(list){
+}function uretimGunlukFilter(list){
     const simdi=new Date(),baslangic=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate(),8,0,0);
     return list.filter(x=>{
         const hv=gecisSaatTamamla(x.k);
-        if(!/\d{1,2}:\d{2}/.test(hv))return false;
         const t=gecisZamanParse(hv);
-        return t&&t>=baslangic&&t<=simdi;
-    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));
-}
+        if(!t)return false;
+        const hasTime=/\d{1,2}:\d{2}/.test(hv);
+        if(!hasTime){
+            const bugun=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate());
+            return t>=bugun&&t<=simdi;
+        }
+        return t>=baslangic&&t<=simdi;
+    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));}
 function uretimItemHtml(k){return '<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(\''+esc(k.id)+'\')"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k.from||'?')+' → <b>'+esc(k._asama)+'</b>'+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+(k.line2?' • '+esc(k.line2):'')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+(function(){const hv=gecisSaatTamamla(k);return hv?'<div class="flow-muted">🕒 Son Hareket: '+esc(hv)+'</div>':''})()+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' • Tamir: '+((k.tamirler||[]).length)+'</div></div>'}
 function toggleUretimPanel(){safePanelOpen('uretimPanel','🏭 Günlük Üretim',renderUretimPanel)}
 function renderUretimPanel(){

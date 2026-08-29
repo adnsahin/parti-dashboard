@@ -14,14 +14,18 @@ try {
     $repair = (Resolve-Path -LiteralPath $RepairExcel).Path
   }
 
-  node ".\convert_excel.js" $main.Path $repair ".\data\partiler.json" ".\data\tamirler.json"
+  $python = "python"
+  if (Test-Path "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe") {
+    $python = "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
+  }
+  & $python ".\update_partiler_json.py" $main.Path $repair ".\data\partiler.json" ".\data\tamirler.json"
 
   if ($Push) {
     if (-not (Test-Path -LiteralPath ".git")) {
       git init
       git branch -M main
     }
-    git add index.html data/partiler.json data/tamirler.json README.md update_data.ps1 convert_excel.js tools/xlsx.full.min.js
+    git add index.html data/partiler.json data/tamirler.json README.md update_data.ps1 update_partiler_json.py
     git commit -m "Update dashboard data"
     git push
   }

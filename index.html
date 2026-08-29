@@ -1799,18 +1799,16 @@ function isSarimGecis(k){
 }
 function gecisEntry(k,from){return{k:{...k,_asama:cardCurrentStage(k),bir_sonraki:cardNextStage(k)},from:from}}
 function buildGecisResult(prev){
-    const res={kk:[],sr:[],yeni:[],gitti:[],ok:false};
-    if(!prev||!prev.cards)return res;
-    res.ok=true;
+    const res={kk:[],sr:[],yeni:[],gitti:[],ok:true};
     const seen={};
     getAllCards().forEach(k=>{
         seen[k.parti]=1;
-        const p=prev.cards[k.parti];
-        if(!p){res.yeni.push(k);return}
-        if(isKkGecis(k)&&!stageEquals(p.a,cardCurrentStage(k)))res.kk.push(gecisEntry(k,p.a));
-        if(isSarimGecis(k)&&!stageEquals(p.a,cardCurrentStage(k)))res.sr.push(gecisEntry(k,p.a));
+        const index=cardStageIndex(k),from=index>0?flowParts(k)[index-1]:'';
+        if(isKkGecis(k))res.kk.push(gecisEntry(k,from));
+        if(isSarimGecis(k))res.sr.push(gecisEntry(k,from));
+        if(prev&&prev.cards&&!prev.cards[k.parti])res.yeni.push(k);
     });
-    Object.keys(prev.cards).forEach(pn=>{if(!seen[pn])res.gitti.push(pn)});
+    if(prev&&prev.cards)Object.keys(prev.cards).forEach(pn=>{if(!seen[pn])res.gitti.push(pn)});
     return res;
 }
 function diagnoseGecisParti(){
@@ -1914,51 +1912,25 @@ function gecisItemHtml(k,fromStage){
 }
 function renderGecisPanel(){
     const p=document.getElementById('gecisPanel');
-    const hist=safeParse('gsnap9','[]');
-    let h='<button class="panel-close" onclick="closeAllPanels()">×</button><h2 style="color:#8E44AD">📜 KK / Sarım Geçiş Raporu</h2>';
-    if(hist.length<2){
-        h+='<div class="list-empty">Karşılaştırma için en az iki farklı veri yüklemesi gerekiyor.<br><small>Bu rapor her veri güncellemesinde otomatik anlık görüntü alır ve bir sonraki güncellemede karşılaştırır.</small></div>';
-        p.innerHTML=h;p.style.display='block';addPanelFullButton('gecisPanel');return;
-    }
-    if(gecisSkip>hist.length-1)gecisSkip=1;
-    const cur=hist[hist.length-1];
-    const gf=getGecisFiltered();
-    const fk=gf.fk,fsr=gf.fsr;
+    const gf=getGecisFiltered(),fk=gf.fk,fsr=gf.fsr;
     const filtActive=!!(gecisFiltre.bas||gecisFiltre.bit);
-    let sel='<select class="sel-select" style="width:auto;min-width:240px;padding:8px;border-radius:10px;border:2px solid #E8E8F0;font-weight:bold" onchange="setGecisSkip(+this.value)">';
-    for(let s=1;s<hist.length;s++){sel+='<option value="'+s+'"'+(s===gecisSkip?' selected':'')+'>'+esc(hist[hist.length-1-s].ts)+' verisiyle</option>'}
-    sel+='</select>';
-    h+='<div class="panel-summary">Şu anki veri ('+esc(cur.ts)+') seçilen eski veriyle karşılaştırılır. Veriler her güncellendiğinde yeni anlık görüntü otomatik alınır.</div>';
-    let hsb=0,hss=0;try{const hm=safeParse('hsaat9','{}');hsb=Object.keys(hm).length}catch(_e){}fk.concat(fsr).forEach(x=>{if(String(x.k.hareket||'').includes(' '))hss++});
-    h+='<div class="panel-summary" style="background:#FFF8E1;color:#8D6E63">🔧 Teşhis: önbellekte <b>'+hsb+'</b> saat kaydı • şu an listede <b>'+hss+'</b> partide saat görünüyor</div>';
-    h+='<div style="display:flex;gap:6px;align-items:center;margin:6px 0"><input id="gecisTesh" placeholder="Saat gelmeyen parti no (örn 7184)" style="flex:1;padding:8px;border-radius:8px;border:2px solid #E8E8F0" onkeydown="if(event.key===\'Enter\')diagnoseGecisParti()"><button class="view-action-btn" onclick="diagnoseGecisParti()">🔎 Neden?</button></div><div id="gecisTesihSonuc"></div>';
-    h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><strong>🔍 Karşılaştır:</strong>'+sel+'</div>';
+    let h='<button class="panel-close" onclick="closeAllPanels()">×</button><h2 style="color:#8E44AD">📜 KK / Sarım Geçiş Raporu</h2>';
+    h+='<div class="panel-summary">Rapor, yüklenen verideki <b>Son Yapılan Aşama</b>, <b>Sonraki Aşama</b> ve <b>Son Hareket Tarihi</b> ile anında oluşturulur. Karşılaştırma için ikinci veri yüklemesi gerekmez.</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;background:#F6F4FC;border-radius:12px"><b>🔎 Son Hareket Tarihi\'ne göre:</b><input type="datetime-local" id="gecisBas" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bas)+'" onchange="setGecisFiltre()"><span>–</span><input type="datetime-local" id="gecisBit" style="padding:6px;border-radius:8px;border:2px solid #E8E8F0" value="'+esc(gecisFiltre.bit)+'" onchange="setGecisFiltre()"><button class="view-action-btn" onclick="resetGecisFiltre()">✖ Temizle</button></div>';
-    h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#27AE60">'+gf.yeni.length+'</b><small>Yeni parti</small></button><button type="button" style="cursor:default"><b style="color:#95A5A6">'+gf.gitti.length+'</b><small>Listeden çıktı</small></button></div>';
+    h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button></div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn-all-export" onclick="exportGecisWorkbook()">📥 Excel</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;,&quot;gecis_raporu.png&quot;)">📱 WhatsApp</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">⛶ Tam Ekran</button></div>';
-
     h+='<div class="flow-section-title">✅ Kalite Kontrol\'den geçenler ('+fk.length+')</div>';
-    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bu aralıkta Kalite Kontrol\'den geçen parti yok')+'</div>';
+    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Kalite Kontrol\'den geçen parti yok')+'</div>';
     h+='<div class="flow-section-title">🧵 Sarım1\'den geçenler ('+fsr.length+')</div>';
-    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bu aralıkta Sarım1\'den geçen parti yok')+'</div>';
-    h+='<div class="flow-section-title">🆕 Yeni gelen partiler ('+gf.yeni.length+')</div>';
-    h+=gf.yeni.length?'<div class="flow-detail-list">'+gf.yeni.map(k=>gecisItemHtml(k,'Yok')).join('')+'</div>':'<div class="list-empty">Yeni parti yok</div>';
-    if(gf.gitti.length){
-        h+='<div class="flow-section-title">📤 Listeden çıkanlar ('+gf.gitti.length+') — muhtemelen tamamlandı / sevk edildi</div><div class="validation-list compact" style="max-height:260px">'+gf.gitti.map(pn=>'<div class="validation-row"><b>'+esc(pn)+'</b></div>').join('')+'</div>';
-    }
+    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Sarım1\'den geçen parti yok')+'</div>';
     p.innerHTML=h;p.style.display='block';addPanelFullButton('gecisPanel');ensureElementFullscreenToolbar('gecisPanel','Geçiş Raporu');
 }
 function exportGecisWorkbook(){
-    const hist=safeParse('gsnap9','[]');
-    if(hist.length<2){alert('Kıyaslanacak eski veri yok. İkinci veri yüklemesinden sonra kullanılabilir.');return}
-    if(gecisSkip>hist.length-1)gecisSkip=1;
     const gf=getGecisFiltered();
     const rows=[];
     gf.fk.forEach(x=>rows.push({'Durum':'KK Gecti','Parti':x.k.parti,'Onceki Asama':x.from,'Su Anki Asama':x.k._asama,'Bir Sonraki':x.k.bir_sonraki||'','Firma':x.k.line1||'','Recete':x.k.recete_adi||'','Son Hareket':x.k.hareket||'-','Kilo':num(x.k.kilo),'Termin':x.k.termin_tarihi||x.k.termin_siparis||'','Tamir Sayisi':(x.k.tamirler||[]).length}));
     gf.fsr.forEach(x=>rows.push({'Durum':'Sarim Gecti','Parti':x.k.parti,'Onceki Asama':x.from,'Su Anki Asama':x.k._asama,'Bir Sonraki':x.k.bir_sonraki||'','Firma':x.k.line1||'','Recete':x.k.recete_adi||'','Son Hareket':x.k.hareket||'-','Kilo':num(x.k.kilo),'Termin':x.k.termin_tarihi||x.k.termin_siparis||'','Tamir Sayisi':(x.k.tamirler||[]).length}));
-    gf.yeni.forEach(k=>rows.push({'Durum':'Yeni Parti','Parti':k.parti,'Onceki Asama':'-','Su Anki Asama':k._asama,'Bir Sonraki':k.bir_sonraki||'','Firma':k.line1||'','Recete':k.recete_adi||'','Son Hareket':k.hareket||'-','Kilo':num(k.kilo),'Termin':k.termin_tarihi||k.termin_siparis||'','Tamir Sayisi':(k.tamirler||[]).length}));
-    gf.gitti.forEach(pn=>rows.push({'Durum':'Listeden Cikti','Parti':pn,'Onceki Asama':'-','Su Anki Asama':'-','Bir Sonraki':'-','Firma':'-','Recete':'-','Son Hareket':'-','Kilo':'-','Termin':'-','Tamir Sayisi':'-'}));
-    if(!rows.length){alert('Seçilen aralıkta değişiklik bulunamadı.');return}
+    if(!rows.length){alert('Seçilen aralıkta geçiş kaydı yok.');return}
     downloadWorkbook('gecis_raporu_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Gecis',rows}]);
 }
 
@@ -2022,16 +1994,19 @@ githubCardToMainRow=function(c){
 var upBuildDataBase=upBuildData;
 upBuildData=function(rows,repairSourceRows){
     const built=upBuildDataBase(rows,repairSourceRows);
-    const partiCol=upCol(rows,['Parti No','Parti']),nextCol=upCol(rows,['SONRAKİ','Sonra Yapılacak Aşama','Sonraki Aşama']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']);
-    if(!partiCol||!nextCol||!lastCol)return built;
-    const lastStages=new Map();
+    const partiCol=upCol(rows,['Parti No','Parti']),nextCol=upCol(rows,['SONRAKİ','Sonra Yapılacak Aşama','Sonraki Aşama']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']),movementCol=upCol(rows,['Son Hareket Tarihi','Son Hareket Tarihi/Saati','Son Hareket','Hareket Tarihi']);
+    if(!partiCol||!nextCol)return built;
+    const movements=new Map();
     rows.forEach(row=>{
-        const parti=upClean(row[partiCol]),next=upClean(row[nextCol]),last=upClean(row[lastCol]);
-        if(parti&&next&&last)lastStages.set(parti+'\u0000'+next,last);
+        const parti=upClean(row[partiCol]),next=upClean(row[nextCol]),last=lastCol?upClean(row[lastCol]):'',hareket=movementCol?upClean(row[movementCol]):'';
+        if(parti&&next)movements.set(parti+'\u0000'+next,{last:last,hareket:hareket});
     });
     Object.entries(built.data).forEach(([next,group])=>group.kartlar.forEach(k=>{
-        k.son_asama=lastStages.get(String(k.parti)+'\u0000'+next)||'';
+        const rec=movements.get(String(k.parti)+'\u0000'+next);
+        if(!rec)return;
+        k.son_asama=rec.last;
         k.sonraki_asama=next;
+        if(rec.hareket)k.hareket=rec.hareket;
     }));
     return built;
 };

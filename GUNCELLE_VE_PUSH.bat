@@ -82,6 +82,14 @@ if errorlevel 1 (
 
 echo.
 echo GitHub'a gonderiliyor...
+git pull --rebase --autostash origin main
+if errorlevel 1 (
+  echo.
+  echo HATA: Pull basarisiz. Remote degisiklikler cekilemedi.
+  pause
+  exit /b 1
+)
+
 git push
 if errorlevel 1 (
   echo.

@@ -167,6 +167,8 @@ def build(main_rows, repair_rows, main_file, repair_file):
     sample = main_rows[0] if main_rows else {}
     c_parti = col(sample, ["Parti No", "Parti"])
     c_stage = col(sample, ["Sonra Yapılacak Aşama", "SONRAKİ", "Sonraki Aşama"])
+    c_last_stage = col(sample, ["Son Aşama", "Son Yapılan Aşama", "Son Yapilan Asama"])
+    c_hareket = col(sample, ["Son Hareket Tarihi", "Son Hareket Tarihi/Saati", "Çıkış Tarihi"])
     if not c_parti or not c_stage:
         raise Exception("Parti No veya Sonra Yapılacak Aşama kolonu bulunamadi.")
 
@@ -256,6 +258,9 @@ def build(main_rows, repair_rows, main_file, repair_file):
         else:
             sev = "ok"
 
+        last_stage = clean(r.get(c_last_stage)) if c_last_stage else ""
+        hareket_val = fmt_date(r.get(c_hareket)) if c_hareket else ""
+
         cards.append({
             "id": f"p{i}",
             "parti": parti,
@@ -275,6 +280,8 @@ def build(main_rows, repair_rows, main_file, repair_file):
             "blocked": clean(r.get(c_blocked)) if c_blocked else "",
             "flow": clean(r.get(c_flow)) if c_flow else "",
             "machine": clean(r.get(c_machine)) if c_machine else "",
+            "lastStage": last_stage,
+            "hareket": hareket_val,
             "repairs": repair_list,
         })
 

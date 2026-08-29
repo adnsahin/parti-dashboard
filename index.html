@@ -1843,10 +1843,23 @@ function gecisZamanParse(s){if(!s)return null;const m=String(s).match(/(\d{1,2})
 function gecisItemFiltreOk(k){
     const f=gecisFiltre;
     if(f.bas||f.bit){
-        const z=gecisZamanParse(k.hareket);
+        const hv=gecisSaatTamamla(k);
+        const z=gecisZamanParse(hv);
         if(!z)return false;
         if(f.bas){const b=new Date(f.bas);if(z<b)return false}
         if(f.bit){const t=new Date(f.bit);t.setHours(23,59,59,999);if(z>t)return false}
+    }else{
+        const simdi=new Date(),baslangic=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate(),8,0,0);
+        const hv=gecisSaatTamamla(k);
+        const z=gecisZamanParse(hv);
+        if(!z)return false;
+        const hasTime=/\d{1,2}:\d{2}/.test(hv);
+        if(!hasTime){
+            const bugun=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate());
+            if(z<bugun||z>simdi)return false;
+        }else{
+            if(z<baslangic||z>simdi)return false;
+        }
     }
     return true;
 }
@@ -1923,9 +1936,9 @@ function renderGecisPanel(){
     h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button></div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn-all-export" onclick="exportGecisWorkbook()">📥 Excel</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;,&quot;gecis_raporu.png&quot;)">📱 WhatsApp</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">⛶ Tam Ekran</button></div>';
     h+='<div class="flow-section-title">✅ Kalite Kontrol\'den geçenler ('+fk.length+')</div>';
-    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Kalite Kontrol\'den geçen parti yok')+'</div>';
+    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bugün 08:00\'dan bu yana KK\'den geçen parti yok')+'</div>';
     h+='<div class="flow-section-title">🧵 Sarım1\'den geçenler ('+fsr.length+')</div>';
-    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Sarım1\'den geçen parti yok')+'</div>';
+    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bugün 08:00\'dan bu yana Sarım1\'den geçen parti yok')+'</div>';
     p.innerHTML=h;p.style.display='block';addPanelFullButton('gecisPanel');ensureElementFullscreenToolbar('gecisPanel','Geçiş Raporu');
 }
 function exportGecisWorkbook(){

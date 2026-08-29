@@ -1452,7 +1452,7 @@ async function shareElementWhatsApp(id,title,filename){
     }catch(err){hide.forEach(x=>x.style.display=x.dataset.oldDisplay||'');alert('Hata: '+err)}
 }
 
-function buildPipeline(k){const ua=k.uretim_asamalari||'';if(!ua)return'';const steps=ua.split(',').map(s=>s.trim()).filter(s=>s);if(steps.length<2)return'';const cn=(k._asama||'').trim().toLowerCase(),nn=(k.bir_sonraki||'').trim().toLowerCase();let ci=-1;for(let i=0;i<steps.length;i++)if(steps[i].trim().toLowerCase()===cn){ci=i;break}let h='<div class="pipeline">';steps.forEach((s,i)=>{let c='future';if(ci>=0){if(i<ci)c='done';else if(i===ci)c='current';else if(s.trim().toLowerCase()===nn&&nn)c='next'}if(i>0)h+='<span class="pipeline-arrow\">›</span>';h+='<span class="pipeline-step '+c+'">'+esc(s)+'</span>'});return h+'</div>'}
+function buildPipeline(k){const ua=k.uretim_asamalari||'';if(!ua)return'';const steps=ua.split(',').map(s=>s.trim()).filter(s=>s);if(steps.length<2)return'';const curStage=k._asama||k.asama||'',nxtStage=k.bir_sonraki||'';let ci=-1;for(let i=steps.length-1;i>=0;i--)if(stageEquals(steps[i].trim(),curStage)){ci=i;break}let h='<div class="pipeline">';steps.forEach((s,i)=>{let c='future';if(ci>=0){if(i<ci)c='done';else if(i===ci)c='current';else if(nxtStage&&stageEquals(s.trim(),nxtStage))c='next'}if(i>0)h+='<span class="pipeline-arrow\">›</span>';h+='<span class="pipeline-step '+c+'">'+esc(s)+'</span>'});return h+'</div>'}
 function tamirShort(k){
     const list=k&&Array.isArray(k.tamirler)?k.tamirler:[];
     if(!list.length)return'';
@@ -1785,7 +1785,10 @@ function afterDataLoaded(isExcel){
 function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
 function cardStageIndex(k){
     const parts=flowParts(k),current=cardCurrentStage(k),key=stageKey(current),exact=parts.findIndex(p=>stageKey(p)===key);
-    return exact>=0?exact:parts.findIndex(p=>stageEquals(p,current)||stageEquals(current,p));
+    if(exact>=0)return exact;
+    let last=-1;
+    for(let i=parts.length-1;i>=0;i--){if(stageEquals(parts[i],current)||stageEquals(current,parts[i])){last=i;break}}
+    return last;
 }
 function cardNextStage(k){
     if(k.sonraki_asama)return k.sonraki_asama;
@@ -1965,8 +1968,8 @@ function upShortFabric(v){return upClean(v).replace(/\(.*?\)/g,'').replace(/(\w+
 function upShortRecipe(v){const mp={"BOYAMA":"BY","BOYA":"BY","AĞARTMA":"AGR","AGARTMA":"AGR","YIKAMA":"YIK","KASARLAMA":"KSR","APRE":"APR","BASKILI":"BSK","BASKI":"BSK","SİLİKON":"SLK","SILIKON":"SLK","YUMUŞATMA":"YMS","YUMUSATMA":"YMS","MERSER":"MRS","SANFOR":"SNF","KALENDİR":"KLD","KALENDIR":"KLD"};return upClean(v).replace(/\(.*?\)/g,'').split(/\s+/).filter(Boolean).map(w=>{const u=w.toUpperCase();if(/\d/.test(u)||u.includes('/')||u.length<=2)return u;if(mp[u])return mp[u];return u.length>5?u.slice(0,4):u}).join(' ')}
 function upLine1(r){const f=upShortCompany(r.firma),s=upShortOrder(r.siparis),m=upShortCustomer(r.musteri);return [f,s&&s.toUpperCase()!==f.toUpperCase()?s:'',m].filter(Boolean).join(' / ')}
 function upLine2(r){return [upShortFabric(r.ham),upShortRecipe(r.recete)].filter(Boolean).join(' — ')}
-function upStageMatch(a,b){const x=upNorm(a).replace(/[^\w\s]/g,' ').trim(),y=upNorm(b).replace(/[^\w\s]/g,' ').trim();if(!x||!y)return false;if(x===y||x.replace(/\s/g,'').includes(y.replace(/\s/g,''))||y.replace(/\s/g,'').includes(x.replace(/\s/g,'')))return true;const ax=x.split(/\s+/),by=y.split(/\s+/);return ax.length===by.length&&ax.every((p,i)=>p.startsWith(by[i])||by[i].startsWith(p))}
-function upNextStage(flow,target,last){const st=upClean(flow).split(',').map(x=>x.trim()).filter(Boolean);if(!st.length||!upClean(target))return'';const ti=st.map((v,i)=>upStageMatch(v,target)?i:-1).filter(i=>i>=0),li=upClean(last)?st.map((v,i)=>upStageMatch(v,last)?i:-1).filter(i=>i>=0):[];let idx=-1;if(li.length&&ti.length){const latest=li[li.length-1];idx=ti.find(i=>i>=latest)??ti[ti.length-1]}else if(ti.length)idx=ti[0];return idx>=0&&idx+1<st.length?st[idx+1]:''}
+function upStageMatch(a,b){const x=upNorm(a).replace(/[^\w\s]/g,' ').trim(),y=upNorm(b).replace(/[^\w\s]/g,' ').trim();if(!x||!y)return false;if(x===y||x.replace(/\s/g,'').includes(y.replace(/\s/g,''))||y.replace(/\s/g,'').includes(x.replace(/\s/g,'')))return true;const xx=x.replace(/\s/g,''),yy=y.replace(/\s/g,'');if((xx==='kk'&&yy==='kalitekontrol')||(yy==='kk'&&xx==='kalitekontrol'))return true;const ax=x.split(/\s+/),by=y.split(/\s+/);return ax.length===by.length&&ax.every((p,i)=>p.startsWith(by[i])||by[i].startsWith(p))}
+function upNextStage(flow,target,last){const st=upClean(flow).split(',').map(x=>x.trim()).filter(Boolean);if(!st.length||!upClean(target))return'';const ti=st.map((v,i)=>upStageMatch(v,target)?i:-1).filter(i=>i>=0),li=upClean(last)?st.map((v,i)=>upStageMatch(v,last)?i:-1).filter(i=>i>=0):[];let idx=-1;if(li.length&&ti.length){const latest=li[li.length-1];idx=ti.find(i=>i>=latest)??ti[ti.length-1]}else if(ti.length)idx=ti[ti.length-1];return idx>=0&&idx+1<st.length?st[idx+1]:''}
 async function upWorkbook(file){if(!file)return null;const buf=await file.arrayBuffer();return XLSX.read(buf,{type:'array',cellDates:true})}
 function upRows(wb,name){return XLSX.utils.sheet_to_json(wb.Sheets[name],{defval:'',raw:true})}
 function upBookRows(wb,pred){const out=[];wb.SheetNames.forEach(n=>{const r=upRows(wb,n);if(r.length&&(!pred||pred(r,n)))out.push(...r)});return out}
@@ -2005,7 +2008,6 @@ upBuildData=function(rows,repairSourceRows){
         const rec=movements.get(String(k.parti)+'\u0000'+next);
         if(!rec)return;
         k.son_asama=rec.last;
-        k.sonraki_asama=next;
         if(rec.hareket)k.hareket=rec.hareket;
     }));
     return built;

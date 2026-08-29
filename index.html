@@ -1700,7 +1700,7 @@ function filterCurrentValidationRows(){const el=document.getElementById('validat
 function showTamirCards(){toggleTamirPanel()}
 function normalizeStageName(v){return String(v||'').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()}
 function stageKey(v){return normalizeStageName(v).replace(/[^\p{L}\p{N}]/gu,'')}
-function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if(x===y)return true;if(y==='KK')return x==='KK'||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
+function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if(x===y)return true;if(x==='KK'||y==='KK')return x===y||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL')||y.includes('KALITEKONTROL')||y.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
 function flowParts(k){return String(k.uretim_asamalari||'').split(',').map(s=>s.trim()).filter(Boolean)}
 function flowIndex(parts,stage){const key=stageKey(stage),exact=parts.findIndex(p=>stageKey(p)===key);return exact>=0?exact:parts.findIndex(p=>stageEquals(p,stage))}
 function targetTitle(target){return target==='kk'?'Kalite Kontrol':'Sarım1'}
@@ -1785,7 +1785,7 @@ function afterDataLoaded(isExcel){
     try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
 }
-function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
+function cardCurrentStage(k){return k._asama||k.asama||''}
 function cardStageIndex(k){
     const parts=flowParts(k),current=cardCurrentStage(k),key=stageKey(current),exact=parts.findIndex(p=>stageKey(p)===key);
     if(exact>=0)return exact;

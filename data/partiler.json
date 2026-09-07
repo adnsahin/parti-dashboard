@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T07:55:37.782876",
+  "generatedAt": "2026-09-07T08:21:19.858335",
   "source": {
     "mainFile": "partiler.xlsx",
     "repairFile": "tamir.xlsx"
@@ -46,7 +46,7 @@
     {
       "id": "p1",
       "parti": "(2026) 8428",
-      "stage": "BOYAMA",
+      "stage": "YUMUŞATMA",
       "kg": 180.0,
       "wait": 1,
       "sev": "ok",
@@ -62,7 +62,7 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, M.AÇMA, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "DSL250-2",
-      "lastStage": "MAL AÇMA",
+      "lastStage": "BOYAMA",
       "hareket": "05.09.2026 09:00",
       "repairs": [
         {
@@ -5666,9 +5666,9 @@
     {
       "id": "p215",
       "parti": "(2026) 8539",
-      "stage": "BOYAMA",
+      "stage": "YAŞ AÇMA",
       "kg": 22.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "İSNA TEKSTİL SANAYİ VE TİC.A.Ş",
       "order": "(2026) 117",
@@ -5682,8 +5682,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, İNCELTME, Y.AÇMA, ÖN FİKSE 2, ZMPR 1, ZMPR 2, BOYA, Y.AÇMA, FIRÇA, RAM APRE, THUMPLER, RAM FIRÇA, KK, M.AÇMA, BOYA, Y.AÇMA, FIRÇA, RAM APRE, THUMPLER, RAM FIRÇA, KK, FZK.KNT, SEVK",
       "machine": "SL250-4",
-      "lastStage": "MAL AÇMA",
-      "hareket": "05.09.2026 09:18",
+      "lastStage": "BOYAMA",
+      "hareket": "07.09.2026 08:11",
       "repairs": [
         {
           "uid": "ext_391",
@@ -13035,7 +13035,7 @@
     {
       "id": "p496",
       "parti": "(2026) 9191",
-      "stage": "KALİTE KONTROL",
+      "stage": "FİZİKSEL KONTROL",
       "kg": 311.4,
       "wait": 1,
       "sev": "ok",
@@ -13051,7 +13051,7 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, RAM, RAM, AES, KK, FZK.KNT, SEVK",
       "machine": "",
-      "lastStage": "AÇIK EN SANFOR",
+      "lastStage": "KALİTE KONTROL",
       "hareket": "05.09.2026 08:20",
       "repairs": [
         {
@@ -16475,8 +16475,8 @@
       "parti": "(2026) 8968",
       "stage": "TRAŞ 1",
       "kg": 24.0,
-      "wait": 6,
-      "sev": "ok",
+      "wait": 7,
+      "sev": "warn",
       "firma": "ÇAĞLAYAN TEKSTİL + SÜLEYMAN DİZDAK",
       "order": "(2026) 376",
       "customer": "20/08/2026- 2600624-01 BEKİR BEY",
@@ -17676,7 +17676,7 @@
     {
       "id": "p694",
       "parti": "(2026) 9237",
-      "stage": "ÇİFT BOYAMA",
+      "stage": "YAŞ AÇMA",
       "kg": 360.0,
       "wait": 2,
       "sev": "ok",
@@ -17692,7 +17692,7 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, ÇİFTBOYA, Y.AÇMA, RAMKURUTMA, RAM APRE, KK, FZK.KNT, SEVK",
       "machine": "SL500-6",
-      "lastStage": "ÖN FİKSE 1",
+      "lastStage": "ÇİFT BOYAMA",
       "hareket": "04.09.2026 17:02",
       "repairs": []
     },

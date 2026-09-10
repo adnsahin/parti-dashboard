@@ -439,13 +439,72 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .bottleneck-bar{height:9px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
 .bottleneck-bar span{display:block;height:100%;background:#FFB74D}
 @media(max-width:768px){.upload-field{width:100%}.upload-field input{max-width:none}.upload-action{width:100%}.quick-insights{display:grid;grid-template-columns:repeat(2,1fr);padding:8px}.quick-insights button{min-width:0;padding:10px}.filter-bar{position:sticky;top:68px;z-index:90;background:rgba(15,12,41,.92);backdrop-filter:blur(8px)}}
+.mindmap-stage{position:relative;min-height:300px;overflow:auto;background:radial-gradient(circle at center,rgba(103,58,183,.2),rgba(0,0,0,.18));border:1px solid rgba(206,147,216,.25);border-radius:12px}
+.mindmap-stage>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mindmap-node{position:absolute;transform:translateY(0);width:18%;min-height:72px;padding:10px 12px;border-radius:12px;color:white;box-shadow:0 6px 18px rgba(0,0,0,.3);overflow:hidden;cursor:pointer}
+.mindmap-node b{display:block;color:#FFD700;font-size:13px;line-height:1.25;padding-right:20px}
+.mindmap-node small{display:block;color:#E0E0E0;font-size:10px;line-height:1.3;margin-top:4px;word-break:break-word}
+.mindmap-root{left:2%!important;width:16%;text-align:center;background:linear-gradient(135deg,#512DA8,#7B1FA2);border:2px solid #CE93D8}
+.mindmap-root small{color:#E1BEE7}
+.mindmap-category{background:linear-gradient(135deg,#6A1B9A,#8E24AA);border:2px solid #CE93D8}
+.mindmap-branch{background:linear-gradient(135deg,#00695C,#00897B);border:2px solid #80CBC4}
+.mindmap-party{background:linear-gradient(135deg,#145A86,#1976A8);border:2px solid #81D4FA}
+.mindmap-node button{position:absolute;right:5px;top:4px;border:0;background:rgba(0,0,0,.25);color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-weight:bold}
+.mindmap-node button:hover{background:#E74C3C}
+.mindmap-empty{position:absolute;left:25%;right:10%;top:45%;text-align:center;color:#CE93D8;font-weight:bold}
+@media(max-width:768px){.mindmap-stage{min-width:1000px}.mindmap-node{width:18%}}
+.mindmap-toolbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:8px 0;padding:7px 9px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);border-radius:9px}
+.mindmap-toolbar button{border:1px solid rgba(255,255,255,.25);background:#2d2359;color:#fff;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:bold}
+.mindmap-toolbar button:hover{background:#533b88}
+.mindmap-zoom-label{min-width:48px;text-align:center;color:#FFD700;font-weight:bold;font-size:12px}
+.mindmap-viewport{position:relative;max-height:72vh;min-height:320px;overflow:auto;background:radial-gradient(circle at center,rgba(103,58,183,.2),rgba(0,0,0,.18));border:1px solid rgba(206,147,216,.25);border-radius:12px;padding:14px}
+.mindmap-board{width:100%;min-width:1040px;transform-origin:top left;transition:transform .18s ease}
+.mindmap-board-root{text-align:center;margin:0 auto 16px;width:240px;padding:10px 14px;border-radius:14px;background:linear-gradient(135deg,#512DA8,#7B1FA2);border:2px solid #CE93D8;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.mindmap-board-root b{display:block;color:#FFD700;font-size:14px;line-height:1.2}
+.mindmap-board-root small{display:block;color:#E1BEE7;margin-top:4px}
+.mindmap-category-lane{position:relative;margin:0 0 16px;padding:12px 14px 14px;border:1px solid rgba(206,147,216,.38);border-left:6px solid #CE93D8;border-radius:12px;background:rgba(44,24,78,.68);box-shadow:0 5px 15px rgba(0,0,0,.22)}
+.mindmap-category-lane:before{content:"";position:absolute;left:50%;top:-17px;height:17px;border-left:2px solid #CE93D8}
+.mindmap-category-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;color:#FFD700}
+.mindmap-category-header b{font-size:15px}
+.mindmap-category-header small{color:#E1BEE7}
+.mindmap-branch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}
+.mindmap-branch-card{position:relative;min-height:112px;padding:10px;border:1px solid rgba(128,203,196,.5);border-top:4px solid #80CBC4;border-radius:10px;background:rgba(0,77,64,.38)}
+.mindmap-branch-card:before{content:"";position:absolute;left:20px;top:-13px;width:2px;height:13px;background:#80CBC4}
+.mindmap-branch-title{display:flex;justify-content:space-between;gap:5px;align-items:center;color:#80CBC4;font-weight:bold;font-size:12px;margin-bottom:8px}
+.mindmap-branch-title small{color:#B2DFDB;font-weight:normal}
+.mindmap-party-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px}
+.mindmap-party-card{position:relative;width:100%;min-height:72px;padding:9px 26px 8px 10px;border:1px solid #81D4FA;border-left:5px solid #81D4FA;border-radius:8px;background:linear-gradient(135deg,rgba(20,90,134,.95),rgba(25,118,168,.84));color:white;text-align:left;cursor:pointer;box-shadow:0 3px 9px rgba(0,0,0,.22)}
+.mindmap-party-card:hover{filter:brightness(1.18);transform:translateY(-1px)}
+.mindmap-party-card b{display:block;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mindmap-party-card small{display:block;color:#E1F5FE;font-size:10px;line-height:1.3;margin-top:3px;word-break:break-word}
+.mindmap-party-card .mindmap-severity{display:inline-block;width:8px;height:8px;margin-right:4px;border-radius:50%;background:#66BB6A}
+.mindmap-party-card.mindmap-critical{border-left-color:#EF5350}.mindmap-party-card.mindmap-critical .mindmap-severity{background:#EF5350}
+.mindmap-party-card.mindmap-warning{border-left-color:#FFCA28}.mindmap-party-card.mindmap-warning .mindmap-severity{background:#FFCA28}
+.mindmap-party-card .mindmap-party-note{display:block;color:#FFD54F;font-size:10px;line-height:1.3;margin-top:3px;white-space:normal;word-break:break-word}
+.mindmap-daily-note{display:block;position:relative;padding-right:18px;color:#B39DDB;font-size:10px;line-height:1.3;margin-top:3px;white-space:normal;word-break:break-word}
+.mindmap-daily-note button{position:absolute;right:0;top:-2px;width:17px;height:17px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:#fff;cursor:pointer;font-size:11px}
+.mindmap-party-remove{position:absolute;right:4px;top:4px;width:20px;height:20px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:#fff;cursor:pointer}
+.mindmap-party-remove:hover{background:#E74C3C}
+.mindmap-branch-empty,.mindmap-lane-empty{padding:10px;color:#B2DFDB;font-size:11px}
+.mindmap-notes-lane{margin-top:4px;padding:12px 14px;border:1px dashed rgba(206,147,216,.55);border-radius:12px;background:rgba(74,20,97,.25)}
+.mindmap-notes-lane h3{margin:0 0 8px;color:#CE93D8;font-size:13px}
+.mindmap-note-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.mindmap-note-card{position:relative;padding:9px 27px 9px 10px;border-left:4px solid #CE93D8;border-radius:7px;background:rgba(123,31,162,.45);color:#fff;font-size:11px}
+.mindmap-note-card b{display:block;color:#E1BEE7;font-size:10px;margin-bottom:3px}
+.mindmap-note-card button{position:absolute;right:4px;top:4px;border:0;background:rgba(0,0,0,.25);color:#fff;border-radius:50%;width:20px;height:20px;cursor:pointer}
+.mindmap-fit-hint{color:#BDBDBD;font-size:11px;margin-top:7px}
+@media(max-width:768px){.mindmap-viewport{max-height:65vh;padding:8px}.mindmap-board{min-width:860px}.mindmap-branch-grid{grid-template-columns:repeat(2,minmax(210px,1fr))}.mindmap-party-grid{grid-template-columns:repeat(2,minmax(175px,1fr))}}
+#mindmapPanel.mindmap-host{flex-direction:column;overflow:hidden!important}
+#mindmapPanel.mindmap-host .mindmap-viewport{flex:1 1 0;min-height:220px;height:auto;max-height:none;overflow-x:auto!important;overflow-y:auto!important;overscroll-behavior:contain;touch-action:pan-x pan-y}
+#mindmapPanel.mindmap-host .mindmap-board{flex:0 0 auto}
+@media(max-width:768px){#mindmapPanel.mindmap-host .mindmap-viewport{min-height:180px}}
 </style>
 <script>
 (function(){
   if(window.__emergencyClickRouter)return;
   window.__emergencyClickRouter=true;
   function byId(id){return document.getElementById(id)}
-  function hidePanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel'].forEach(function(id){var el=byId(id);if(el)el.style.display='none'})}
+  function hidePanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(function(id){var el=byId(id);if(el)el.style.display='none'})}
   function htmlEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
   function openEmergencyPanel(id,title,renderName){
     var p=byId(id); if(!p){alert('Panel bulunamadı: '+id);return}
@@ -502,7 +561,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button type="button" data-action="bottleneck" onclick="toggleBottleneckPanel()"><b id="qiBottleneck">-</b><small>Darboğaz</small></button>
 <button type="button" data-action="validation" onclick="toggleValidationPanel()"><b id="qiValidation">-</b><small>Veri Kontrol</small></button>
 <button type="button" data-action="repair" onclick="showTamirCards()"><b id="qiRepair">0</b><small>Tamirli Parti</small></button>
-<button type="button" data-action="post" onclick="togglePostProcessPanel()"><b id="qiPost">0</b><small>KK/Sarım Sonrası</small></button>
+<button type="button" data-action="wetdry" onclick="toggleWetDryPanel()"><b id="qiWetDry">930</b><small>Islak-Kuru</small></button>
 </div>
 <div class="group-mode-bar">
 <button class="group-mode-btn gm-hedef active" data-gmode="hedef" onclick="setGroupMode('hedef')">🔵 Şu An Beklediği Aşama</button>
@@ -543,8 +602,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#8E44AD;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleGecisPanel()">📜 Geçiş Raporu</button><button style="background:#2E7D32;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimPanel()">🏭 Günlük Üretim</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#8E44AD;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleGecisPanel()">📜 Geçiş Raporu</button><button style="background:#2E7D32;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimPanel()">🏭 Günlük Üretim</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
+<button id="btnMindmap" style="background:#673AB7;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleMindmapPanel()">🧠 Günlük Mindmap</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
 <div class="total-bar" id="totalBar"></div>
@@ -568,7 +628,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="todayPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="bottleneckPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="validationPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
-<div class="panel" id="postProcessPanel" style="width:min(920px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="gecisPanel" style="width:min(920px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="uretimPanel" style="width:min(960px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="gecisPanel" style="width:min(920px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="uretimPanel" style="width:min(960px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="mindmapPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
 <div class="mini-cards-container" id="miniCardsContainer" style="display:none"></div>
@@ -1325,7 +1386,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p||p.querySelector('.panel-full-btn'))return;const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -1625,14 +1686,13 @@ function showAll(){activeStages=[];currentSeviye=null;document.getElementById('s
 function filterSeviye(s){currentSeviye=s;renderCards(getFilteredCards())}
 function filterCards(){renderCards(getFilteredCards())}
 
-/* ── NOT/FIRE İŞLEMLERİ ── */
-function saveNote(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const n=document.getElementById('note_'+id).value.trim();if(!n){alert('Not boş!');return}noteRecords[id]={id,parti:k.parti,asama:k._asama,note:n,saved_at:new Date().toLocaleString('tr-TR')};saveNotes();showToast('✅ Not kaydedildi!');renderCards(currentDisplayedCards)}
-function clearNote(e,id){e.stopPropagation();if(!confirm('Sil?'))return;delete noteRecords[id];saveNotes();renderCards(currentDisplayedCards)}
+function saveNote(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const n=document.getElementById('note_'+id).value.trim();if(!n){alert('Not boş!');return}noteRecords[id]={id,parti:k.parti,asama:k._asama,note:n,saved_at:new Date().toLocaleString('tr-TR')};saveNotes();showToast('✅ Not kaydedildi!');renderCards(currentDisplayedCards);if(typeof window.refreshMindmap==='function')window.refreshMindmap()}
+function clearNote(e,id){e.stopPropagation();if(!confirm('Sil?'))return;delete noteRecords[id];saveNotes();renderCards(currentDisplayedCards);if(typeof window.refreshMindmap==='function')window.refreshMindmap()}
 function saveFire(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const fk=num(document.getElementById('firekg_'+id).value),fm=num(document.getElementById('firemt_'+id).value),fs=document.getElementById('firesebep_'+id).value.trim(),fn=document.getElementById('firenote_'+id).value.trim();if(fk<=0&&fm<=0){alert('kg/mt gir');return}if(!fs){alert('Sebep seç');return}const row={uid:'fr_'+Date.now()+''+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,fire_sebebi:fs,fire_kg:fk,fire_mt:fm,fire_aciklama:fn,saved_at:new Date().toLocaleString('tr-TR')};const l=getFireList(id);l.push(row);fireRecords[id]=l;saveFires();showToast('✅ Fire eklendi!');document.getElementById('firekg_'+id).value='';document.getElementById('firemt_'+id).value='';document.getElementById('firesebep_'+id).value='';document.getElementById('firenote_'+id).value='';renderCards(currentDisplayedCards)}
 function deleteFireLine(e,id,uid){e.stopPropagation();const l=getFireList(id).filter(r=>r.uid!==uid);if(l.length)fireRecords[id]=l;else delete fireRecords[id];saveFires();renderCards(currentDisplayedCards)}
 function clearFire(e,id){e.stopPropagation();if(!confirm('Hepsini sil?'))return;delete fireRecords[id];saveFires();renderCards(currentDisplayedCards)}
-function saveNoteM(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const n=document.getElementById('mnote_'+id).value.trim();if(!n){alert('Not boş!');return}noteRecords[id]={id,parti:k.parti,asama:k._asama,note:n,saved_at:new Date().toLocaleString('tr-TR')};saveNotes();showToast('✅ Not kaydedildi!');renderCurrentView();openDetailModal(id)}
-function clearNoteM(e,id){e.stopPropagation();if(!confirm('Sil?'))return;delete noteRecords[id];saveNotes();renderCurrentView();openDetailModal(id)}
+function saveNoteM(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const n=document.getElementById('mnote_'+id).value.trim();if(!n){alert('Not boş!');return}noteRecords[id]={id,parti:k.parti,asama:k._asama,note:n,saved_at:new Date().toLocaleString('tr-TR')};saveNotes();showToast('✅ Not kaydedildi!');renderCurrentView();openDetailModal(id);if(typeof window.refreshMindmap==='function')window.refreshMindmap()}
+function clearNoteM(e,id){e.stopPropagation();if(!confirm('Sil?'))return;delete noteRecords[id];saveNotes();renderCurrentView();openDetailModal(id);if(typeof window.refreshMindmap==='function')window.refreshMindmap()}
 function saveFireM(e,id){e.stopPropagation();const k=getCardById(id);if(!k)return;const fk=num(document.getElementById('mfirekg_'+id).value),fm=num(document.getElementById('mfiremt_'+id).value),fs=document.getElementById('mfiresebep_'+id).value.trim(),fn=document.getElementById('mfirenote_'+id).value.trim();if(fk<=0&&fm<=0){alert('kg/mt gir');return}if(!fs){alert('Sebep seç');return}const row={uid:'fr_'+Date.now()+'_'.concat(Math.random().toString(16).slice(2)),id,parti:k.parti,asama:k._asama,fire_sebebi:fs,fire_kg:fk,fire_mt:fm,fire_aciklama:fn,saved_at:new Date().toLocaleString('tr-TR')};const l=getFireList(id);l.push(row);fireRecords[id]=l;saveFires();showToast('✅ Fire eklendi!');renderCurrentView();openDetailModal(id)}
 function clearFireM(e,id){e.stopPropagation();if(!confirm('Hepsini sil?'))return;delete fireRecords[id];saveFires();renderCurrentView();openDetailModal(id)}
 
@@ -1785,13 +1845,10 @@ function afterDataLoaded(isExcel){
     try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
 }
-function cardCurrentStage(k){return k._asama||k.asama||''}
+function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
 function cardStageIndex(k){
     const parts=flowParts(k),current=cardCurrentStage(k),key=stageKey(current),exact=parts.findIndex(p=>stageKey(p)===key);
-    if(exact>=0)return exact;
-    let last=-1;
-    for(let i=parts.length-1;i>=0;i--){if(stageEquals(parts[i],current)||stageEquals(current,parts[i])){last=i;break}}
-    return last;
+    return exact>=0?exact:parts.findIndex(p=>stageEquals(p,current)||stageEquals(current,p));
 }
 function cardNextStage(k){
     if(k.sonraki_asama)return k.sonraki_asama;
@@ -1799,8 +1856,10 @@ function cardNextStage(k){
     const parts=flowParts(k),index=cardStageIndex(k);
     return index>=0?parts[index+1]||'':'';
 }
-function isKkGecis(k){return stageEquals(k.son_asama||k.lastStage||k._asama||k.asama||'','KK')}
-function isSarimGecis(k){return stageEquals(k.son_asama||k.lastStage||k._asama||k.asama||'','SARIM1')}
+function isKkGecis(k){return stageEquals(cardCurrentStage(k),'KK')&&stageEquals(cardNextStage(k),'SEVK TESLİM')}
+function isSarimGecis(k){
+    return stageEquals(cardCurrentStage(k),'SARIM1')&&['LAMİNASYON','BRONZİNG','DİJİTAL BASKI','RAM','EMBOSS'].some(stage=>stageEquals(cardNextStage(k),stage));
+}
 function gecisEntry(k,from){return{k:{...k,_asama:cardCurrentStage(k),bir_sonraki:cardNextStage(k)},from:from}}
 function buildGecisResult(prev){
     const res={kk:[],sr:[],yeni:[],gitti:[],ok:true};
@@ -1844,23 +1903,10 @@ function gecisZamanParse(s){if(!s)return null;const m=String(s).match(/(\d{1,2})
 function gecisItemFiltreOk(k){
     const f=gecisFiltre;
     if(f.bas||f.bit){
-        const hv=gecisSaatTamamla(k);
-        const z=gecisZamanParse(hv);
+        const z=gecisZamanParse(k.hareket);
         if(!z)return false;
         if(f.bas){const b=new Date(f.bas);if(z<b)return false}
         if(f.bit){const t=new Date(f.bit);t.setHours(23,59,59,999);if(z>t)return false}
-    }else{
-        const simdi=new Date(),baslangic=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate(),8,0,0);
-        const hv=gecisSaatTamamla(k);
-        const z=gecisZamanParse(hv);
-        if(!z)return false;
-        const hasTime=/\d{1,2}:\d{2}/.test(hv);
-        if(!hasTime){
-            const bugun=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate());
-            if(z<bugun||z>simdi)return false;
-        }else{
-            if(z<baslangic||z>simdi)return false;
-        }
     }
     return true;
 }
@@ -1881,19 +1927,16 @@ function uretimAsamaGecisleri(target){
         const parts=flowParts(k),simdiki=cardStageIndex(k);
         return gecisEntry(k,simdiki>0?parts[simdiki-1]:'');
     });
-}function uretimGunlukFilter(list){
+}
+function uretimGunlukFilter(list){
     const simdi=new Date(),baslangic=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate(),8,0,0);
     return list.filter(x=>{
         const hv=gecisSaatTamamla(x.k);
+        if(!/\d{1,2}:\d{2}/.test(hv))return false;
         const t=gecisZamanParse(hv);
-        if(!t)return false;
-        const hasTime=/\d{1,2}:\d{2}/.test(hv);
-        if(!hasTime){
-            const bugun=new Date(simdi.getFullYear(),simdi.getMonth(),simdi.getDate());
-            return t>=bugun&&t<=simdi;
-        }
-        return t>=baslangic&&t<=simdi;
-    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));}
+        return t&&t>=baslangic&&t<=simdi;
+    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));
+}
 function uretimItemHtml(k){return '<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(\''+esc(k.id)+'\')"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k.from||'?')+' → <b>'+esc(k._asama)+'</b>'+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+(k.line2?' • '+esc(k.line2):'')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+(function(){const hv=gecisSaatTamamla(k);return hv?'<div class="flow-muted">🕒 Son Hareket: '+esc(hv)+'</div>':''})()+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' • Tamir: '+((k.tamirler||[]).length)+'</div></div>'}
 function toggleUretimPanel(){safePanelOpen('uretimPanel','🏭 Günlük Üretim',renderUretimPanel)}
 function renderUretimPanel(){
@@ -1940,9 +1983,9 @@ function renderGecisPanel(){
     h+='<div class="quick-insights" style="padding:8px 0;background:none;border:none"><button type="button" style="cursor:default"><b style="color:#FF4444">'+fk.length+'</b><small>KK\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button><button type="button" style="cursor:default"><b style="color:#E67E22">'+fsr.length+'</b><small>Sarım1\'den geçti'+(filtActive?' (filtreli)':'')+'</small></button></div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn-all-export" onclick="exportGecisWorkbook()">📥 Excel</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;,&quot;gecis_raporu.png&quot;)">📱 WhatsApp</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;gecisPanel&quot;,&quot;Geçiş Raporu&quot;)">⛶ Tam Ekran</button></div>';
     h+='<div class="flow-section-title">✅ Kalite Kontrol\'den geçenler ('+fk.length+')</div>';
-    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bugün 08:00\'dan bu yana KK\'den geçen parti yok')+'</div>';
+    h+=fk.length?'<div class="flow-detail-list">'+fk.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Kalite Kontrol\'den geçen parti yok')+'</div>';
     h+='<div class="flow-section-title">🧵 Sarım1\'den geçenler ('+fsr.length+')</div>';
-    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Bugün 08:00\'dan bu yana Sarım1\'den geçen parti yok')+'</div>';
+    h+=fsr.length?'<div class="flow-detail-list">'+fsr.map(x=>gecisItemHtml(x.k,x.from)).join('')+'</div>':'<div class="list-empty">'+(filtActive?'Filtreye uyan parti yok':'Sarım1\'den geçen parti yok')+'</div>';
     p.innerHTML=h;p.style.display='block';addPanelFullButton('gecisPanel');ensureElementFullscreenToolbar('gecisPanel','Geçiş Raporu');
 }
 function exportGecisWorkbook(){
@@ -1985,8 +2028,8 @@ function upShortFabric(v){return upClean(v).replace(/\(.*?\)/g,'').replace(/(\w+
 function upShortRecipe(v){const mp={"BOYAMA":"BY","BOYA":"BY","AĞARTMA":"AGR","AGARTMA":"AGR","YIKAMA":"YIK","KASARLAMA":"KSR","APRE":"APR","BASKILI":"BSK","BASKI":"BSK","SİLİKON":"SLK","SILIKON":"SLK","YUMUŞATMA":"YMS","YUMUSATMA":"YMS","MERSER":"MRS","SANFOR":"SNF","KALENDİR":"KLD","KALENDIR":"KLD"};return upClean(v).replace(/\(.*?\)/g,'').split(/\s+/).filter(Boolean).map(w=>{const u=w.toUpperCase();if(/\d/.test(u)||u.includes('/')||u.length<=2)return u;if(mp[u])return mp[u];return u.length>5?u.slice(0,4):u}).join(' ')}
 function upLine1(r){const f=upShortCompany(r.firma),s=upShortOrder(r.siparis),m=upShortCustomer(r.musteri);return [f,s&&s.toUpperCase()!==f.toUpperCase()?s:'',m].filter(Boolean).join(' / ')}
 function upLine2(r){return [upShortFabric(r.ham),upShortRecipe(r.recete)].filter(Boolean).join(' — ')}
-function upStageMatch(a,b){const x=upNorm(a).replace(/[^\w\s]/g,' ').trim(),y=upNorm(b).replace(/[^\w\s]/g,' ').trim();if(!x||!y)return false;if(x===y||x.replace(/\s/g,'').includes(y.replace(/\s/g,''))||y.replace(/\s/g,'').includes(x.replace(/\s/g,'')))return true;const xx=x.replace(/\s/g,''),yy=y.replace(/\s/g,'');if((xx==='kk'&&yy==='kalitekontrol')||(yy==='kk'&&xx==='kalitekontrol'))return true;const ax=x.split(/\s+/),by=y.split(/\s+/);return ax.length===by.length&&ax.every((p,i)=>p.startsWith(by[i])||by[i].startsWith(p))}
-function upNextStage(flow,target,last){const st=upClean(flow).split(',').map(x=>x.trim()).filter(Boolean);if(!st.length||!upClean(target))return'';const ti=st.map((v,i)=>upStageMatch(v,target)?i:-1).filter(i=>i>=0),li=upClean(last)?st.map((v,i)=>upStageMatch(v,last)?i:-1).filter(i=>i>=0):[];let idx=-1;if(li.length&&ti.length){const latest=li[li.length-1];idx=ti.find(i=>i>=latest)??ti[ti.length-1]}else if(ti.length)idx=ti[ti.length-1];return idx>=0&&idx+1<st.length?st[idx+1]:''}
+function upStageMatch(a,b){const x=upNorm(a).replace(/[^\w\s]/g,' ').trim(),y=upNorm(b).replace(/[^\w\s]/g,' ').trim();if(!x||!y)return false;if(x===y||x.replace(/\s/g,'').includes(y.replace(/\s/g,''))||y.replace(/\s/g,'').includes(x.replace(/\s/g,'')))return true;const ax=x.split(/\s+/),by=y.split(/\s+/);return ax.length===by.length&&ax.every((p,i)=>p.startsWith(by[i])||by[i].startsWith(p))}
+function upNextStage(flow,target,last){const st=upClean(flow).split(',').map(x=>x.trim()).filter(Boolean);if(!st.length||!upClean(target))return'';const ti=st.map((v,i)=>upStageMatch(v,target)?i:-1).filter(i=>i>=0),li=upClean(last)?st.map((v,i)=>upStageMatch(v,last)?i:-1).filter(i=>i>=0):[];let idx=-1;if(li.length&&ti.length){const latest=li[li.length-1];idx=ti.find(i=>i>=latest)??ti[ti.length-1]}else if(ti.length)idx=ti[0];return idx>=0&&idx+1<st.length?st[idx+1]:''}
 async function upWorkbook(file){if(!file)return null;const buf=await file.arrayBuffer();return XLSX.read(buf,{type:'array',cellDates:true})}
 function upRows(wb,name){return XLSX.utils.sheet_to_json(wb.Sheets[name],{defval:'',raw:true})}
 function upBookRows(wb,pred){const out=[];wb.SheetNames.forEach(n=>{const r=upRows(wb,n);if(r.length&&(!pred||pred(r,n)))out.push(...r)});return out}
@@ -1999,46 +2042,321 @@ async function loadExcelDashboard(){const main=document.getElementById('mainExce
 function githubWaitText(v){const d=Math.max(0,num(v)||0),g=Math.floor(d);let sec=Math.round((d-g)*86400);const h=Math.floor(sec/3600);sec%=3600;const m=Math.floor(sec/60),s=sec%60;return g+' Gün, '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
 function githubCardToMainRow(c){const wait=githubWaitText(c.wait);let ex='';if(typeof c.wait==='number'&&isFinite(c.wait)&&c.wait>=0){const e=new Date();e.setDate(e.getDate()-Math.round(c.wait));ex=e.toLocaleDateString('tr-TR')}{let rec='';try{rec=String(safeParse('hsaat9','{}')[String(c.parti)]||'')}catch(_e){}if(!/\d{1,2}:\d{2}/.test(rec))rec=String(REMOTE_SAAT[String(c.parti)]||'');rec=rec.trim();if(rec&&ex&&!/\d{1,2}:\d{2}/.test(ex)&&/\d{1,2}:\d{2}/.test(rec))ex=rec}return{'Parti No':c.parti||'','Sonra Yapılacak Aşama':c.stage||'','Kilo':num(c.kg),'Çıkıştan Sonra Geçen Süre':wait,'Geçen Süre (Son Hareketten Sonra)':wait,'Çıkış Tarihi':ex,'Firma Adı':c.firma||'','Sipariş No':c.order||'','Müşteri Sipariş No':c.customer||'','Ham Adı':c.fabric||'','Reçete Adı':c.recipe||'','Termin Tarihi':c.term||'','Öncelik No':c.pri||'','İç Tamir Durumu':c.inner||'','Beklemeye Alınmış Aşama Var':c.blocked||'','Üretim Aşamaları':c.flow||'','Planlandigi Makina Kodu':c.machine||''}}
 function githubRepairToRow(r){return{'Parti No':r.parti||'','Tamir Nedeni':r.neden||'','Tamir Tipi':r.tip||'','Tamir Notu':r.not||'','Sorumlu':r.stage||'','Tamir Tarihi':r.tarih||''}}
-async function loadGithubJsonDashboard(){const st=document.getElementById('uploadStatus');try{if(st){st.textContent='GitHub verisi yükleniyor...';st.className='upload-status'}const ts=Date.now();const path=location.pathname.replace(/\\/g,'/');const base='data/';const pr=await fetch(base+'partiler.json?ts='+ts,{cache:'no-store'});if(!pr.ok)throw new Error(base+'partiler.json okunamadı: '+pr.status);const pdata=await pr.json();try{const sr=await fetch(base+'hareket_saatleri.json?ts='+ts,{cache:'no-store'});if(sr.ok)REMOTE_SAAT=await sr.json()||{}}catch(_e){}let repairData=[];try{const tr=await fetch(base+'tamirler.json?ts='+ts,{cache:'no-store'});if(tr.ok){const tdata=await tr.json();repairData=tdata.repairs||[]}}catch(_e){}const mainRows=(pdata.cards||[]).map(c=>githubCardToMainRow(c));const repairRows=repairData.map(githubRepairToRow);if(!mainRows.length)throw new Error('GitHub verisinde parti kaydı yok.');const built=upBuildData(mainRows,repairRows);DATA=built.data;ASAMA_ORDER=built.order;BSA_ORDER=built.bsa;TAMIR_LIST=built.repairs;currentSeviye=null;activeStages=[];currentDisplayedCards=[];listSortCol=null;checkedCards.clear();let c=0;for(const a in DATA)DATA[a].kartlar.forEach(k=>{k.id='c_'+(c++);k._asama=a});uploadValidation=upComputeValidation(mainRows,repairRows,built);document.querySelector('.header .info').textContent='GitHub veri • '+(pdata.generatedAt?new Date(pdata.generatedAt).toLocaleString('tr-TR'):'')+' • '+c+' parti • '+Math.round(Object.values(DATA).reduce((s,a)=>s+(a.toplam_kg||0),0)).toLocaleString('tr-TR')+' kg';enrichTamirList();setGroupMode('hedef');setViewMode(currentViewMode);showAll();updateStarCount();updateAlarmCount();updateTamirCount();afterDataLoaded();if(st)st.textContent='GitHub verisi otomatik yüklendi. '+c+' parti, '+TAMIR_LIST.length+' tamir eşleşmesi.';return true}catch(e){console.error(e);if(st){st.textContent='GitHub verisi otomatik yüklenemedi: '+(e&&e.message?e.message:e)+'. İstersen Excel yükleyebilirsin.';st.className='upload-status error'}return false}}
-function dashboardActionMap(){return{today:toggleTodayPanel,bottleneck:toggleBottleneckPanel,validation:toggleValidationPanel,repair:showTamirCards,post:togglePostProcessPanel}}
-function runDashboardAction(action){const fn=dashboardActionMap()[action];if(!fn)return false;try{fn();return true}catch(e){console.error(e);const st=document.getElementById('uploadStatus');if(st){st.textContent='Tıklama işlemi açılamadı: '+(e&&e.message?e.message:e);st.className='upload-status error'}return true}}
-function bindStaticActionButtons(){document.querySelectorAll('[data-action]').forEach(btn=>{if(btn.__boundAction)return;btn.__boundAction=true;btn.removeAttribute('data-bound-action');btn.onclick=null;btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();runDashboardAction(btn.dataset.action)})})}
-function bindDashboardDelegates(){if(window.__dashboardDelegatesBound)return;window.__dashboardDelegatesBound=true;document.addEventListener('click',function(e){const card=e.target.closest('[data-card-id]');if(card){e.preventDefault();e.stopPropagation();openDetailModal(card.dataset.cardId);return}const validation=e.target.closest('[data-validation]');if(validation){e.preventDefault();e.stopPropagation();showValidationRows(validation.dataset.validation);return}const summaryAll=e.target.closest('[data-summary="all"]');if(summaryAll){e.preventDefault();e.stopPropagation();showAll();return}const summaryStage=e.target.closest('[data-summary-stage]');if(summaryStage){e.preventDefault();e.stopPropagation();toggleAsamaFromSummary(summaryStage.dataset.summaryStage);return}const btn=e.target.closest('[data-action]');if(!btn)return;e.preventDefault();e.stopPropagation();runDashboardAction(btn.dataset.action)},true)}
-var githubCardToMainRowBase=githubCardToMainRow;
-githubCardToMainRow=function(c){
-    const row=githubCardToMainRowBase(c);
-    row['Son Yapılan Aşama']=c.lastStage||'';
-    row['Son Hareket Tarihi']=c.hareket||row['Çıkış Tarihi']||'';
-    return row;
-};
-var upBuildDataBase=upBuildData;
-upBuildData=function(rows,repairSourceRows){
-    const built=upBuildDataBase(rows,repairSourceRows);
-    const partiCol=upCol(rows,['Parti No','Parti']),nextCol=upCol(rows,['SONRAKİ','Sonra Yapılacak Aşama','Sonraki Aşama']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']),movementCol=upCol(rows,['Son Hareket Tarihi','Son Hareket Tarihi/Saati','Son Hareket','Hareket Tarihi']);
-    if(!partiCol||!nextCol)return built;
-    const movements=new Map();
-    rows.forEach(row=>{
-        const parti=upClean(row[partiCol]),next=upClean(row[nextCol]),last=lastCol?upClean(row[lastCol]):'',hareket=movementCol?upClean(row[movementCol]):'';
-        if(parti&&next)movements.set(parti+'\u0000'+next,{last:last,hareket:hareket});
+
+function toggleWetDryPanel(){
+  safePanelOpen('wetDryPanel','Islak-Kuru Bekleme',renderWetDryPanel);
+}
+
+function renderWetDryPanel(){
+  const p = document.getElementById('wetDryPanel');
+  const dataUrl = 'data/parti_islik_kuru_tablo.json';
+  const wetInternalUrl = 'data/islik_ic_bekleme_2saat_ustu.json';
+  let h = '<button class="panel-close" onclick="document.getElementById(\'wetDryPanel\').style.display=\'none\'">×</button><h2 style="color:#4FC3F7">💧 Islak → Kuru Bekleme Raporu</h2><div class="panel-summary">Islak proseslerin son aşaması ile ilk kuru RAM aşaması arasındaki bekleme süreleri. Islak: BOYAMA, YAŞ AÇMA, FIRÇA. Kuru: RAM*</div>';
+  h += '<div style="margin:10px 0"><button style="background:#FF9800;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer" onclick="loadWetInternal()">⚠️ Islak İç Bekleme >2saat</button></div>';
+  h += '<div id="wetDryContent"><p>Yükleniyor...</p></div>';
+  p.innerHTML = h;
+  fetch(dataUrl).then(r=>r.json()).then(rows=>{
+    let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Son Islak</th><th>Islak Çıkış</th><th>İlk Kuru</th><th>Kuru Giriş</th><th>Bekleme Saat</th><th>Bekleme Gün</th></tr></thead><tbody>';
+    rows.slice(0,1000).forEach(r=>{
+      const cls = r.wait_hours>48 ? 'style="background:rgba(255,152,0,0.15)"' : '';
+      tbl += `<tr ${cls}><td><b>${r.parti}</b></td><td>${r.wet_last_stage}</td><td>${r.wet_last_exit}</td><td>${r.dry_first_stage}</td><td>${r.dry_first_entry}</td><td>${r.wait_hours.toFixed(2)}</td><td>${r.wait_days.toFixed(2)}</td></tr>`;
     });
-    Object.entries(built.data).forEach(([next,group])=>group.kartlar.forEach(k=>{
-        const rec=movements.get(String(k.parti)+'\u0000'+next);
-        if(!rec)return;
-        k.son_asama=rec.last;
-        if(rec.hareket)k.hareket=rec.hareket;
-    }));
-    return built;
-};
-function bootDashboard(){try{bindDashboardDelegates();bindStaticActionButtons();const embedded=loadEmbeddedDashboardData();init();if(embedded)afterDataLoaded();bindStaticActionButtons();const b=document.getElementById('loadExcelBtn');if(b)b.addEventListener('click',loadExcelDashboard);const s=document.getElementById('saveEmbeddedBtn');if(s)s.addEventListener('click',exportEmbeddedDashboard);if(!embedded)loadGithubJsonDashboard()}catch(e){console.error(e);const st=document.getElementById('uploadStatus');if(st){st.textContent='Dashboard başlatılırken hata oluştu: '+(e&&e.message?e.message:e);st.className='upload-status error'}}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard);else bootDashboard();
+    tbl += '</tbody></table></div>';
+    document.getElementById('wetDryContent').innerHTML = tbl;
+  }).catch(e=>{
+    document.getElementById('wetDryContent').innerHTML = '<p style="color:#F44336">Veri yüklenemedi: '+e.message+'</p>';
+  });
+}
+function loadWetInternal(){
+  const el = document.getElementById('wetDryContent');
+  el.innerHTML = '<p>Yükleniyor...</p>';
+  fetch('data/islik_ic_bekleme_2saat_ustu.json').then(r=>r.json()).then(rows=>{
+    let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Boya Çıkış</th><th>Yaş Açma Giriş</th><th>Bekleme h</th><th>Yaş Açma Çıkış</th><th>Fırça Giriş</th><th>Bekleme h</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      tbl += `<tr><td><b>${r.parti}</b></td><td>${r.boyama_cik}</td><td>${r.yasacma_gir}</td><td>${r.delta1_hours.toFixed(2)}</td><td>${r.yasacma_cik}</td><td>${r.firca_gir}</td><td>${r.delta2_hours.toFixed(2)}</td></tr>`;
+    });
+    tbl += '</tbody></table></div>';
+    el.innerHTML = tbl;
+  }).catch(e=>{el.innerHTML = '<p style="color:#F44336">Veri yok</p>';});
+}
+</script>
+<script>
+/* Günlük iş notları, kategoriler, alt dallar ve parti mindmap'i */
+(function(){
+  const STORE='partiMindmap.v1';
+  const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  let state=readState();
+  let selectedDate=today(),currentCategoryId='',currentBranchId='',mindmapAutoMode=false;
+
+  function readState(){
+    try{
+      const raw=localStorage.getItem(STORE),value=raw?JSON.parse(raw):{days:{}};
+      if(!value||typeof value!=='object')return{days:{}};
+      if(!value.days||typeof value.days!=='object')value.days={};
+      return value;
+    }catch(e){return{days:{}}}
+  }
+  function saveState(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){showToast('Mindmap kaydedilemedi','error')}}
+  function newId(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
+  function cleanName(v){return String(v||'').trim()}
+  function nameKey(v){return cleanName(v).toLocaleLowerCase('tr-TR')}
+  function htmlEsc(v){return typeof esc==='function'?esc(v):String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+  function normalizeDay(d){
+    if(!d||typeof d!=='object')d={};
+    if(!Array.isArray(d.categories)){
+      const legacy=Array.isArray(d.parties)?d.parties.filter(Boolean):[];
+      d.categories=legacy.length?[{id:'cat_default',name:'Günlük İşler',branches:[{id:'branch_default',name:'Takip',parties:legacy}]}]:[];
+      delete d.parties;
+    }
+    d.categories=d.categories.filter(Boolean).map((c,i)=>{
+      c.id=cleanName(c.id)||'cat_'+i;
+      c.name=cleanName(c.name)||'Kategori '+(i+1);
+      if(!Array.isArray(c.branches))c.branches=[];
+      c.branches=c.branches.filter(Boolean).map((b,j)=>{
+        b.id=cleanName(b.id)||c.id+'_branch_'+j;
+        b.name=cleanName(b.name)||'Alt Dal '+(j+1);
+        b.parties=Array.isArray(b.parties)?b.parties.map(cleanName).filter(Boolean):[];
+        return b;
+      });
+      return c;
+    });
+    if(!Array.isArray(d.notes))d.notes=[];else d.notes=d.notes.filter(Boolean).map((n,j)=>({id:cleanName(n.id)||'legacy_note_'+j,text:cleanName(n.text),party:cleanName(n.party||n.parti),createdAt:cleanName(n.createdAt)})).filter(n=>n.text);
+    return d;
+  }
+  function day(){
+    if(!state.days[selectedDate])state.days[selectedDate]={categories:[],notes:[]};
+    state.days[selectedDate]=normalizeDay(state.days[selectedDate]);
+    return state.days[selectedDate];
+  }
+  function cards(){return typeof getAllCards==='function'?getAllCards():[]}
+  function categories(){return day().categories}
+  function activeCategory(){
+    const list=categories();let c=list.find(x=>x.id===currentCategoryId);
+    if(!c)c=list[0]||null;
+    currentCategoryId=c?c.id:'';
+    return c;
+  }
+  function activeBranch(){
+    const c=activeCategory();if(!c){currentBranchId='';return null}
+    let b=c.branches.find(x=>x.id===currentBranchId);
+    if(!b)b=c.branches[0]||null;
+    currentBranchId=b?b.id:'';
+    return b;
+  }
+  function allPartyEntries(){
+    const out=[];categories().forEach(c=>c.branches.forEach(b=>b.parties.forEach(p=>out.push({party:p,category:c,branch:b}))));
+    return out;
+  }
+  function findParty(query){
+    const q=cleanName(query).toLocaleLowerCase('tr-TR');if(!q)return null;
+    const all=cards(),exact=all.find(k=>cleanName(k.parti).toLocaleLowerCase('tr-TR')===q);
+    if(exact)return exact;
+    const matches=all.filter(k=>[k.parti,k.line1,k.line2,k.ham_adi,k.recete_adi].some(v=>cleanName(v).toLocaleLowerCase('tr-TR').includes(q)));
+    return matches.length===1?matches[0]:null;
+  }
+  function stageMatches(value,target){
+    if(typeof stageEquals==='function')return stageEquals(value,target);
+    const a=nameKey(value).replace(/\s+/g,''),b=nameKey(target).replace(/\s+/g,'');
+    return a===b;
+  }
+  function uniqueAutoParties(list){
+    const seen=new Set();
+    return(list||[]).map(k=>cleanName(k&&k.parti)).filter(p=>p&&!seen.has(p)&&seen.add(p));
+  }
+  function autoPartyCategory(id,name,list){
+    return{id,name,branches:[{id:id+'_branch',name:'İlgili Partiler',parties:uniqueAutoParties(list)}]};
+  }
+  function partyAgeHours(k){
+    const raw=typeof gecisSaatTamamla==='function'?gecisSaatTamamla(k):k&&k.hareket;
+    const at=typeof gecisZamanParse==='function'?gecisZamanParse(raw):null;
+    return at?(Date.now()-at.getTime())/3600000:null;
+  }
+  function autoTimedCategory(id,name,list){
+    const recent=[],older=[];
+    (list||[]).forEach(k=>{const age=partyAgeHours(k);(age!==null&&age<=72?recent:older).push(k)});
+    return{id,name,branches:[
+      {id:id+'_recent',name:'Son 3 Gün',parties:uniqueAutoParties(recent)},
+      {id:id+'_older',name:'3 Gün ve Öncesi',parties:uniqueAutoParties(older)}
+    ]};
+  }
+  function automaticCategories(){
+    const all=cards(),repairParties=new Set((typeof TAMIR_LIST!=='undefined'?TAMIR_LIST:[]).map(t=>cleanName(t&&t.parti)).filter(Boolean));
+    const nextStage=k=>typeof cardNextStage==='function'?cardNextStage(k):k&&k.bir_sonraki;
+    const quality=all.filter(k=>stageMatches(nextStage(k),'KK')||stageMatches(nextStage(k),'KALİTE KONTROL'));
+    const sarim1=all.filter(k=>stageMatches(nextStage(k),'SARIM1'));
+    const repairs=all.filter(k=>repairParties.has(cleanName(k&&k.parti))||(Array.isArray(k&&k.tamirler)&&k.tamirler.length));
+    const out=[];
+    if(quality.length)out.push(autoTimedCategory('auto_quality','Kalite Kontrole Gidecek Partiler',quality));
+    if(sarim1.length)out.push(autoPartyCategory('auto_sarim1','Sarım 1 Olacak Partiler',sarim1));
+    if(repairs.length)out.push(autoTimedCategory('auto_repair','Yeni Tamir Kartı Açılanlar',repairs));
+    return out;
+  }
+  function enableAutoMode(){mindmapAutoMode=true;currentCategoryId='';currentBranchId='';render();showToast('⚙ Otomatik kategoriler güncellendi')}
+  function disableAutoMode(){mindmapAutoMode=false;currentCategoryId='';currentBranchId='';render();showToast('↩ Manuel mindmap görünümüne dönüldü')}
+  function cardSummary(k){
+    if(!k)return'Mevcut datada parti bulunamadı';
+    return [k._asama||k.asama,k.bir_sonraki?'→ '+k.bir_sonraki:'',k.line1||k.firma||'',k.recete_adi||k.recipe||''].filter(Boolean).join(' • ');
+  }
+  function setCategory(id){currentCategoryId=id;currentBranchId='';render()}
+  function setBranch(id){currentBranchId=id;render()}
+  function addCategory(){
+    const input=document.getElementById('mindmapCategoryInput'),name=cleanName(input&&input.value);
+    if(!name){showToast('Kategori adı girin','warning');return}
+    const d=day();if(d.categories.some(c=>nameKey(c.name)===nameKey(name))){showToast('Bu kategori zaten var','warning');return}
+    const c={id:newId('cat'),name,branches:[{id:newId('branch'),name:'Genel',parties:[]}]};
+    d.categories.push(c);currentCategoryId=c.id;currentBranchId=c.branches[0].id;saveState();render();showToast('✅ Kategori eklendi: '+name);
+  }
+  function renameCategory(){
+    const c=activeCategory();if(!c){showToast('Önce kategori seçin','warning');return}
+    const name=cleanName(window.prompt('Kategori adı',c.name));if(!name||name===c.name)return;
+    if(categories().some(x=>x.id!==c.id&&nameKey(x.name)===nameKey(name))){showToast('Bu kategori zaten var','warning');return}
+    c.name=name;saveState();render();showToast('✅ Kategori adı değiştirildi');
+  }
+  function removeCategory(){
+    const c=activeCategory();if(!c)return;
+    if(!window.confirm('“'+c.name+'” kategorisi, alt dalları ve içindeki partiler çıkarılsın mı?'))return;
+    const d=day();d.categories=d.categories.filter(x=>x.id!==c.id);currentCategoryId='';currentBranchId='';saveState();render();showToast('Kategori çıkarıldı');
+  }
+  function addBranch(){
+    const c=activeCategory(),input=document.getElementById('mindmapBranchInput'),name=cleanName(input&&input.value);
+    if(!c){showToast('Önce kategori ekleyin veya seçin','warning');return}
+    if(!name){showToast('Alt dal adı girin','warning');return}
+    if(c.branches.some(b=>nameKey(b.name)===nameKey(name))){showToast('Bu alt dal zaten var','warning');return}
+    const b={id:newId('branch'),name,parties:[]};c.branches.push(b);currentBranchId=b.id;saveState();render();showToast('✅ Alt dal eklendi: '+name);
+  }
+  function renameBranch(){
+    const c=activeCategory(),b=activeBranch();if(!c||!b){showToast('Önce alt dal seçin','warning');return}
+    const name=cleanName(window.prompt('Alt dal adı',b.name));if(!name||name===b.name)return;
+    if(c.branches.some(x=>x.id!==b.id&&nameKey(x.name)===nameKey(name))){showToast('Bu alt dal zaten var','warning');return}
+    b.name=name;saveState();render();showToast('✅ Alt dal adı değiştirildi');
+  }
+  function removeBranch(){
+    const c=activeCategory(),b=activeBranch();if(!c||!b)return;
+    if(!window.confirm('“'+b.name+'” alt dalı ve içindeki partiler çıkarılsın mı?'))return;
+    c.branches=c.branches.filter(x=>x.id!==b.id);currentBranchId='';saveState();render();showToast('Alt dal çıkarıldı');
+  }
+  function addParty(){
+    const input=document.getElementById('mindmapPartyInput'),value=input?input.value:'',card=findParty(value),branch=activeBranch();
+    if(!branch){showToast('Parti eklemek için önce kategori ve alt dal oluşturun','warning');return}
+    if(!card){showToast(value?'Tek bir parti bulunamadı: '+value:'Parti no, firma veya reçete girin','warning');return}
+    const key=cleanName(card.parti);
+    if(allPartyEntries().some(x=>x.party===key)){showToast('Parti zaten mindmap içinde; önce çıkarın','warning');return}
+    branch.parties.push(key);saveState();if(input)input.value='';render();showToast('✅ Parti eklendi: '+key);
+  }
+  function removeParty(party){
+    const d=day();d.categories.forEach(c=>c.branches.forEach(b=>{b.parties=b.parties.filter(p=>p!==party)}));saveState();render();showToast('Parti mindmap’ten çıkarıldı');
+  }
+  function addNote(){
+    const input=document.getElementById('mindmapNoteInput'),partyInput=document.getElementById('mindmapNotePartyInput'),text=cleanName(input&&input.value),party=findParty(partyInput&&partyInput.value);
+    if(!party){showToast('Notu bağlamak için geçerli parti numarası seçin','warning');return}
+    if(!text){showToast('Not metni girin','warning');return}
+    day().notes.push({id:newId('note'),party:cleanName(party.parti),text,createdAt:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})});
+    saveState();if(input)input.value='';if(partyInput)partyInput.value='';render();showToast('✅ Parti günlük notu kaydedildi');
+  }
+  function removeNote(id){day().notes=day().notes.filter(n=>n.id!==id);saveState();render()}
+  function startVoice(){
+    const partyInput=document.getElementById('mindmapNotePartyInput'),party=findParty(partyInput&&partyInput.value),SR=window.SpeechRecognition||window.webkitSpeechRecognition,status=document.getElementById('mindmapVoiceStatus');
+    if(!party){showToast('Sesli not için önce parti numarası seçin','warning');return}
+    if(!SR){showToast('Tarayıcı ses tanımayı desteklemiyor','error');return}
+    const button=document.getElementById('mindmapVoiceButton'),r=new SR();r.lang='tr-TR';r.interimResults=false;r.maxAlternatives=1;
+    if(status)status.textContent='Dinleniyor... konuşun';if(button){button.disabled=true;button.textContent='🔴 Dinleniyor'}
+    r.onresult=e=>{const text=cleanName(e.results[0][0].transcript);if(text){day().notes.push({id:newId('note'),party:cleanName(party.parti),text,createdAt:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})});saveState();render();showToast('✅ Parti sesli notu kaydedildi')}};
+    r.onerror=()=>{if(status)status.textContent='Ses alınamadı';showToast('Sesli not alınamadı','error')};
+    r.onend=()=>{if(button){button.disabled=false;button.textContent='🎙️ Sesli not'}if(status)status.textContent='Not seçilen partiye bağlanır ve kartında görünür'};
+    r.start();
+  }
+  function changeDate(value){selectedDate=/^\d{4}-\d{2}-\d{2}$/.test(value)?value:today();currentCategoryId='';currentBranchId='';render()}
+  function openPartyFromNode(party){const k=findParty(party);if(k&&typeof openDetailModal==='function')openDetailModal(k.id)}
+  let mindmapZoom=1,mindmapFitMode=true;
+  function applyMindmapZoom(){
+    const viewport=document.getElementById('mindmapViewport'),board=document.getElementById('mindmapBoard');
+    if(!viewport||!board)return;
+    board.style.transform='scale('+mindmapZoom+')';
+    viewport.style.minHeight='220px';
+    const label=document.getElementById('mindmapZoomLabel');if(label)label.textContent=Math.round(mindmapZoom*100)+'%';
+  }
+  function fitMindmap(){
+    const viewport=document.getElementById('mindmapViewport'),board=document.getElementById('mindmapBoard');
+    if(!viewport||!board)return;
+    const available=Math.max(300,viewport.clientWidth-28),naturalWidth=Math.max(1,board.scrollWidth);
+    mindmapZoom=Math.min(1,available/naturalWidth);mindmapFitMode=true;applyMindmapZoom();
+  }
+  function adjustMindmapZoom(delta){mindmapFitMode=false;mindmapZoom=Math.max(.45,Math.min(1.35,mindmapZoom+delta));applyMindmapZoom()}
+  function resetMindmapZoom(){mindmapFitMode=false;mindmapZoom=1;applyMindmapZoom()}
+  function severityClass(k){return k&&k.seviye==='kritik'?'mindmap-critical':k&&k.seviye==='uyari'?'mindmap-warning':''}
+  function partyNoteText(k){
+    if(!k||typeof noteRecords!=='object')return '';
+    const row=noteRecords[k.id],text=String(row&&row.note||'').trim();
+    return text.length>110?text.slice(0,107)+'…':text;
+  }
+  function partySummaryText(k){
+    if(!k)return 'Mevcut datada parti bulunamadı';
+    const bits=[k.line1||'Firma bilgisi yok',k._asama?'Şu an: '+k._asama:'Bulunduğu aşama yok',k.bir_sonraki?'Sonraki: '+k.bir_sonraki:'Sonraki aşama yok',k.recete_adi||k.ham_adi||'Reçete bilgisi yok'];
+    if(k.kilo)bits.push(Number(k.kilo).toLocaleString('tr-TR')+' kg');
+    return bits.join(' • ');
+  }
+  function render(){
+    const panel=document.getElementById('mindmapPanel');if(!panel)return;panel.classList.add('mindmap-host');
+    const d=day(),auto=mindmapAutoMode,cs=auto?automaticCategories():d.categories,c=auto?null:activeCategory();if(!auto)activeBranch();const unlinkedDailyNotes=d.notes.filter(n=>!cleanName(n.party)).length,hasLinkedDailyNotes=d.notes.some(n=>cleanName(n.party));
+    let h='<button class="panel-close" onclick="document.getElementById(\'mindmapPanel\').style.display=\'none\'">×</button>';
+    h+='<h2 style="color:#CE93D8">🧠 Günlük İş Mindmap\'i</h2><div class="panel-summary">Her kategori ayrı bir şerit, her alt dal ayrı bir kart alanıdır. Parti kartı özet gösterir; tıklayınca tam detay açılır.</div>';
+    h+='<div class="mindmap-mode-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0"><button onclick="mindmapEnableAutoMode()" style="background:#7E57C2;color:white;border:0;padding:8px 12px;border-radius:7px;font-weight:bold">⚙ Otomatik kategoriler</button><button onclick="mindmapDisableAutoMode()" style="background:#455A64;color:white;border:0;padding:8px 12px;border-radius:7px;font-weight:bold">↩ Manuel görünüm</button><span style="color:#D1C4E9;font-size:11px">'+(auto?'Otomatik görünüm açık: partiler güncel veriden kurala göre yeniden gruplanıyor.':'Manuel görünüm açık: kategori, alt dal ve parti seçimini kendiniz yapabilirsiniz.')+'</span></div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin:10px 0;padding:10px;background:rgba(103,58,183,.16);border:1px solid rgba(206,147,216,.3);border-radius:10px">';
+    h+='<div><label style="display:block;color:#FFD700;font-weight:bold;margin-bottom:4px">Kategori</label><div style="display:flex;gap:4px"><select id="mindmapCategorySelect" onchange="mindmapSetCategory(this.value)" style="flex:1;padding:7px;border-radius:6px;background:#211944;color:white;border:1px solid rgba(255,255,255,.3)"><option value="">Kategori seçin</option>'+cs.map(x=>'<option value="'+htmlEsc(x.id)+'" '+(x.id===currentCategoryId?'selected':'')+'>'+htmlEsc(x.name)+'</option>').join('')+'</select><button onclick="mindmapRenameCategory()" title="Kategori adını değiştir">✎</button><button onclick="mindmapRemoveCategory()" title="Kategoriyi çıkar">×</button></div><div style="display:flex;gap:4px;margin-top:5px"><input id="mindmapCategoryInput" placeholder="Yeni kategori" style="flex:1;padding:7px;border-radius:6px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddCategory()"><button onclick="mindmapAddCategory()">＋ Ekle</button></div></div>';
+    h+='<div><label style="display:block;color:#80CBC4;font-weight:bold;margin-bottom:4px">Alt dal</label><div style="display:flex;gap:4px"><select id="mindmapBranchSelect" onchange="mindmapSetBranch(this.value)" style="flex:1;padding:7px;border-radius:6px;background:#123A37;color:white;border:1px solid rgba(255,255,255,.3)"><option value="">Alt dal seçin</option>'+(c?c.branches.map(b=>'<option value="'+htmlEsc(b.id)+'" '+(b.id===currentBranchId?'selected':'')+'>'+htmlEsc(b.name)+'</option>').join(''):'')+'</select><button onclick="mindmapRenameBranch()" title="Alt dal adını değiştir">✎</button><button onclick="mindmapRemoveBranch()" title="Alt dalı çıkar">×</button></div><div style="display:flex;gap:4px;margin-top:5px"><input id="mindmapBranchInput" placeholder="Yeni alt dal" style="flex:1;padding:7px;border-radius:6px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddBranch()"><button onclick="mindmapAddBranch()">＋ Ekle</button></div></div>';
+    h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><label style="font-weight:bold;color:#FFD700">Gün:</label><input id="mindmapDate" type="date" value="'+selectedDate+'" onchange="mindmapChangeDate(this.value)" style="padding:7px;border-radius:6px;background:#211944;color:white;border:1px solid rgba(255,255,255,.3)"><input id="mindmapPartyInput" list="mindmapPartyList" placeholder="Parti no, firma veya reçete ara" style="flex:1;min-width:220px;padding:8px;border-radius:6px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddParty()"><datalist id="mindmapPartyList">'+cards().map(k=>'<option value="'+htmlEsc(k.parti)+'">'+htmlEsc(k.line1||'')+' • '+htmlEsc(k.recete_adi||k.ham_adi||'')+'</option>').join('')+'</datalist><button onclick="mindmapAddParty()">＋ Parti ekle</button></div>';
+    h+='<div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><input id="mindmapNotePartyInput" list="mindmapPartyList" placeholder="Not hangi partiye ait?" style="width:220px;padding:9px;border-radius:7px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddNote()"><input id="mindmapNoteInput" placeholder="Partiyle ilgili günlük not..." style="flex:1;min-width:220px;padding:9px;border-radius:7px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddNote()"><button onclick="mindmapAddNote()" style="background:#0288D1;color:white;border:0;padding:9px 13px;border-radius:7px;font-weight:bold">📝 Not ekle</button><button id="mindmapVoiceButton" onclick="mindmapStartVoice()" style="background:#9C27B0;color:white;border:0;padding:9px 13px;border-radius:7px;font-weight:bold">🎙️ Sesli not</button><small id="mindmapVoiceStatus" style="width:100%;color:#BDBDBD">Not, seçilen parti kartının altında görünür.'+(unlinkedDailyNotes?' Eski bağlantısız not: '+unlinkedDailyNotes:'')+'</small></div>';
+    h+='<div class="mindmap-toolbar"><b style="color:#CE93D8;margin-right:4px">Görünüm:</b><button onclick="mindmapFitToScreen()">⛶ Ekrana sığdır</button><button onclick="mindmapZoomOut()">−</button><span id="mindmapZoomLabel">100%</span><button onclick="mindmapZoomIn()">＋</button><button onclick="mindmapZoomReset()">Sıfırla</button><span class="mindmap-fit-hint">Dallar ayrı şeritlerde tutulur; yatay veya dikey kaydırabilirsiniz.</span></div>';
+    h+='<div class="mindmap-viewport" id="mindmapViewport"><div class="mindmap-board" id="mindmapBoard">';
+    h+='<div class="mindmap-board-root"><b>GÜNLÜK İŞLER</b><small>'+selectedDate+' • '+cs.length+' kategori</small></div>';
+    if(!cs.length&&!hasLinkedDailyNotes)h+='<div class="mindmap-lane-empty">Önce kategori ve alt dal ekleyin; ardından mevcut datadan parti seçin.</div>';
+    cs.forEach(cat=>{
+      h+='<section class="mindmap-category-lane"><div class="mindmap-category-header"><b>◈ '+htmlEsc(cat.name)+'</b><small>'+cat.branches.length+' alt dal</small></div><div class="mindmap-branch-grid">';
+      if(!cat.branches.length)h+='<div class="mindmap-lane-empty">Bu kategoride henüz alt dal yok.</div>';
+      cat.branches.forEach(branch=>{
+        h+='<section class="mindmap-branch-card"><div class="mindmap-branch-title"><span>⌞ '+htmlEsc(branch.name)+'</span><small>'+branch.parties.length+' parti</small></div>';
+        if(!branch.parties.length)h+='<div class="mindmap-branch-empty">Parti eklemek için üstte bu alt dalı seçin.</div>';
+        else{h+='<div class="mindmap-party-grid">';branch.parties.forEach(p=>{
+          const k=findParty(p),cls=severityClass(k),note=partyNoteText(k),dailyNotes=d.notes.filter(n=>cleanName(n.party)===cleanName(k&&k.parti));
+          h+='<div class="mindmap-party-card '+cls+'" data-party="'+htmlEsc(p)+'" role="button" tabindex="0" onclick="mindmapOpenParty(this.dataset.party)" title="Detay için tıklayın"><span class="mindmap-severity"></span><b>'+htmlEsc(k?k.parti:p)+'</b><small>'+htmlEsc(partySummaryText(k))+'</small>'+(note?'<small class="mindmap-party-note">📝 '+htmlEsc(note)+'</small>':'')+(dailyNotes.length?dailyNotes.map(n=>'<small class="mindmap-daily-note" data-note="'+htmlEsc(n.id)+'">📅 '+htmlEsc(n.createdAt||'')+' • '+htmlEsc(n.text)+'<button title="Notu sil" onclick="event.stopPropagation();mindmapRemoveNote(this.parentElement.dataset.note)">×</button></small>').join(''):'')+'<button class="mindmap-party-remove" title="Partiyi çıkar" onclick="event.stopPropagation();mindmapRemoveParty(this.parentElement.dataset.party)">×</button></div>';
+        });h+='</div>'}
+        h+='</section>';
+      });h+='</div></section>';
+    });
+    h+='</div></div><div style="margin-top:8px;color:#BDBDBD;font-size:11px">Özet: parti no • firma • reçete • kilo • durum rengi. Detay için parti kartına tıklayın. Kayıt anahtarı: '+STORE+'</div>';
+    panel.innerHTML=h;panel.style.display='flex';if(typeof addPanelFullButton==='function')addPanelFullButton('mindmapPanel');applyMindmapZoom();if(mindmapFitMode)setTimeout(fitMindmap,0);
+    if(auto){const grid=panel.querySelector('#mindmapCategorySelect')&&panel.querySelector('#mindmapCategorySelect').closest('div[style*="display:grid"]');if(grid)grid.style.display='none';const partyInput=panel.querySelector('#mindmapPartyInput');if(partyInput){partyInput.style.display='none';partyInput.parentElement.querySelectorAll('button').forEach(b=>b.style.display='none');}}
+    if(auto){const status=panel.querySelector('.mindmap-mode-bar span');if(status)status.textContent='Otomatik görünüm açık: KK ve tamir partileri son hareket saatine göre Son 3 Gün / 3 Gün ve Öncesi dallarına ayrılıyor.';}
+  }
+  window.toggleMindmapPanel=function(){const p=document.getElementById('mindmapPanel');if(!p)return;if(getComputedStyle(p).display!=='none'){p.style.display='none';p.classList.remove('fullscreen-panel');return}closeAllPanels();render()};
+  window.mindmapFitToScreen=fitMindmap;window.mindmapZoomIn=function(){adjustMindmapZoom(.1)};window.mindmapZoomOut=function(){adjustMindmapZoom(-.1)};window.mindmapZoomReset=resetMindmapZoom;
+  window.mindmapSetCategory=setCategory;window.mindmapSetBranch=setBranch;window.mindmapAddCategory=addCategory;window.mindmapRenameCategory=renameCategory;window.mindmapRemoveCategory=removeCategory;window.mindmapAddBranch=addBranch;window.mindmapRenameBranch=renameBranch;window.mindmapRemoveBranch=removeBranch;window.mindmapAddParty=addParty;window.mindmapRemoveParty=removeParty;window.mindmapAddNote=addNote;window.mindmapRemoveNote=removeNote;window.mindmapStartVoice=startVoice;window.mindmapChangeDate=changeDate;window.mindmapOpenParty=openPartyFromNode;window.mindmapEnableAutoMode=enableAutoMode;window.mindmapDisableAutoMode=disableAutoMode;
+  window.refreshMindmap=function(){const p=document.getElementById('mindmapPanel');if(p&&getComputedStyle(p).display!=='none')render()};
+  function flatToDashboard(payload){
+    const raw=Array.isArray(payload&&payload.cards)?payload.cards:[],grouped={},order=[],nextOrder=[];
+    raw.forEach((r,i)=>{const stage=String(r.lastStage||r.currentStage||r.stage||r.nextStage||'Bilinmeyen Aşama').trim()||'Bilinmeyen Aşama';if(!grouped[stage]){grouped[stage]={kartlar:[],toplam_kg:0};order.push(stage)}const wait=Number(r.wait)||0,next=String(r.nextStage||r.stage||'').trim(),movement=String(r.hareket||(typeof REMOTE_SAAT!=='undefined'&&REMOTE_SAAT[String(r.parti)]||'')).trim(),k={id:String(r.id||'p'+i),parti:String(r.parti||''),kilo:Number(r.kg)||0,bekleme_gun:wait,bekleme:typeof githubWaitText==='function'?githubWaitText(wait):wait.toFixed(1)+' Gün',seviye:r.sev==='crit'?'kritik':r.sev==='warn'?'uyari':'normal',line1:String(r.firma||''),line2:String(r.fabric||''),ham_adi:String(r.fabric||''),recete_adi:String(r.recipe||''),termin_tarihi:String(r.term||''),termin_siparis:String(r.term||''),oncelik_no:String(r.pri||''),ic_tamir:String(r.inner||''),bekleme_asama:String(r.blocked||''),uretim_asamalari:String(r.flow||''),plan_makina:String(r.machine||''),son_makina:String(r.machine||''),son_yapilan_asama:String(r.lastStage||''),hareket:movement,bir_sonraki:next,tamirler:Array.isArray(r.repairs)?r.repairs:[]};grouped[stage].kartlar.push(k);grouped[stage].toplam_kg+=k.kilo;if(next&&!nextOrder.includes(next))nextOrder.push(next)});
+    return{DATA:grouped,ASAMA_ORDER:order,BSA_ORDER:nextOrder,TAMIR_LIST:Array.isArray(payload&&payload.repairs)?payload.repairs:[],uploadValidation:{mainRows:raw.length,repairRows:Array.isArray(payload&&payload.repairs)?payload.repairs.length:0,lists:{}}};
+  }
+  async function loadCurrentData(){
+    try{
+      const ts=Date.now(),loadJson=path=>fetch(path+'?ts='+ts,{cache:'no-store'}),response=await loadJson('data/partiler.json');
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const payload=await response.json();REMOTE_SAAT={};
+      try{const movement=await loadJson('data/hareket_saatleri.json');if(movement.ok)REMOTE_SAAT=await movement.json()||{}}catch(_e){}
+      let repairs=Array.isArray(payload&&payload.repairs)?payload.repairs:[];
+      try{const repairResponse=await loadJson('data/tamirler.json');if(repairResponse.ok){const repairPayload=await repairResponse.json();if(Array.isArray(repairPayload&&repairPayload.repairs))repairs=repairPayload.repairs}}catch(_e){}
+      payload.repairs=repairs;
+      const dashboard=flatToDashboard(payload);DATA=dashboard.DATA;ASAMA_ORDER=dashboard.ASAMA_ORDER;BSA_ORDER=dashboard.BSA_ORDER;TAMIR_LIST=dashboard.TAMIR_LIST;uploadValidation=dashboard.uploadValidation;
+      if(typeof init==='function')init();if(typeof window.refreshMindmap==='function')window.refreshMindmap();
+      const info=document.querySelector('.header .info');if(info)info.textContent='GitHub uyumlu data • '+cards().length+' parti • Kategorili günlük mindmap hazır';
+      const status=document.getElementById('uploadStatus');if(status)status.textContent='GitHub uyumlu veriler yüklendi: partiler.json, hareket_saatleri.json ve tamirler.json.';
+    }catch(e){
+      const status=document.getElementById('uploadStatus');if(status)status.textContent='JSON otomatik yüklenemedi. GitHub Pages veya yerel HTTP sunucusu üzerinden açın; bu durumda Excel yükleme kullanılabilir.';if(typeof loadEmbeddedDashboardData==='function'&&loadEmbeddedDashboardData()&&typeof init==='function')init();
+    }
+  }
+  function wire(){const load=document.getElementById('loadExcelBtn'),save=document.getElementById('saveEmbeddedBtn');if(load)load.onclick=()=>typeof loadExcelDashboard==='function'?loadExcelDashboard():showToast('Excel yükleme hazır değil','error');if(save)save.onclick=()=>typeof exportEmbeddedDashboard==='function'?exportEmbeddedDashboard():showToast('Gömülü kayıt hazır değil','error');loadCurrentData()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-

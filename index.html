@@ -799,7 +799,7 @@ function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postP
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function xmlEsc(v){return esc(v)}
 function num(v){return parseFloat(String(v??'0').replace(',','.'))||0}
-function waitHoursText(k){const raw=k&&k.bekleme_gun;if(raw===null||raw===undefined||String(raw).trim()==='')return'-';let totalMinutes=Math.round(Math.max(0,num(raw))*24*60);if(!Number.isFinite(totalMinutes))return'-';const days=Math.floor(totalMinutes/1440);totalMinutes%=1440;const hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;return days+' gün '+hours+' saat '+minutes+' dakika'}
+function waitHoursText(k){const raw=k&&k.bekleme_gun;if(raw===null||raw===undefined||String(raw).trim()==='')return'-';let days=Math.max(0,num(raw));const start=typeof latestUpdateDate==='function'?latestUpdateDate(k):null;if(start){const elapsed=(Date.now()-start.getTime())/86400000;if(Number.isFinite(elapsed)&&elapsed>=0)days=elapsed}let totalMinutes=Math.round(days*24*60);if(!Number.isFinite(totalMinutes))return'-';const dayCount=Math.floor(totalMinutes/1440);totalMinutes%=1440;const hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;return dayCount+' gün '+hours+' saat '+minutes+' dakika'}
 function latestUpdateDate(k){
     const raw=k&&k.son_asama_tarihi||k&&k.hareket;
     if(!raw||typeof gecisZamanParse!=='function')return null;

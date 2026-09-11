@@ -2248,15 +2248,17 @@ function toggleWetDryPanel(){
   safePanelOpen('wetDryPanel','Islak-Kuru Bekleme',renderWetDryPanel);
 }
 
+const WET_DRY_DATA_URL='data/wet_dry_report.json';
+const WET_INTERNAL_DATA_URL='data/wet_internal_report.json';
+function wetFetchJson(url){return fetch(url).then(r=>{if(!r.ok)throw new Error('Veri dosyası yüklenemedi ('+r.status+')');return r.json()})}
 function renderWetDryPanel(){
   const p = document.getElementById('wetDryPanel');
-  const dataUrl = 'data/parti_islik_kuru_tablo.json';
-  const wetInternalUrl = 'data/islik_ic_bekleme_2saat_ustu.json';
+  const dataUrl = WET_DRY_DATA_URL;
   let h = '<button class="panel-close" onclick="document.getElementById(\'wetDryPanel\').style.display=\'none\'">×</button><h2 style="color:#4FC3F7">💧 Islak → Kuru Bekleme Raporu</h2><div class="panel-summary">Islak proseslerin son aşaması ile ilk kuru RAM aşaması arasındaki bekleme süreleri. Islak: BOYAMA, YAŞ AÇMA, FIRÇA. Kuru: RAM*</div>';
   h += '<div style="margin:10px 0"><button style="background:#FF9800;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer" onclick="loadWetInternal()">⚠️ Islak İç Bekleme >2saat</button></div>';
   h += '<div id="wetDryContent"><p>Yükleniyor...</p></div>';
   p.innerHTML = h;
-  fetch(dataUrl).then(r=>r.json()).then(rows=>{
+  wetFetchJson(dataUrl).then(rows=>{
     let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Son Islak</th><th>Islak Çıkış</th><th>İlk Kuru</th><th>Kuru Giriş</th><th>Bekleme Saat</th><th>Bekleme Gün</th></tr></thead><tbody>';
     rows.slice(0,1000).forEach(r=>{
       const cls = r.wait_hours>48 ? 'style="background:rgba(255,152,0,0.15)"' : '';
@@ -2271,7 +2273,7 @@ function renderWetDryPanel(){
 function loadWetInternal(){
   const el = document.getElementById('wetDryContent');
   el.innerHTML = '<p>Yükleniyor...</p>';
-  fetch('data/islik_ic_bekleme_2saat_ustu.json').then(r=>r.json()).then(rows=>{
+  wetFetchJson(WET_INTERNAL_DATA_URL).then(rows=>{
     let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Boya Çıkış</th><th>Yaş Açma Giriş</th><th>Bekleme h</th><th>Yaş Açma Çıkış</th><th>Fırça Giriş</th><th>Bekleme h</th></tr></thead><tbody>';
     rows.forEach(r=>{
       tbl += `<tr><td><b>${r.parti}</b></td><td>${r.boyama_cik}</td><td>${r.yasacma_gir}</td><td>${r.delta1_hours.toFixed(2)}</td><td>${r.yasacma_cik}</td><td>${r.firca_gir}</td><td>${r.delta2_hours.toFixed(2)}</td></tr>`;

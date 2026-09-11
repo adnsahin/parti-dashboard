@@ -799,7 +799,7 @@ function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postP
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function xmlEsc(v){return esc(v)}
 function num(v){return parseFloat(String(v??'0').replace(',','.'))||0}
-function waitHoursText(k){const raw=k&&k.bekleme_gun;if(raw===null||raw===undefined||String(raw).trim()==='')return'-';const hours=Math.max(0,num(raw)*24);if(!Number.isFinite(hours))return'-';const value=hours>=100?Math.round(hours):Number(hours.toFixed(1));return value.toLocaleString('tr-TR')+' saat'}
+function waitHoursText(k){const raw=k&&k.bekleme_gun;if(raw===null||raw===undefined||String(raw).trim()==='')return'-';let totalMinutes=Math.round(Math.max(0,num(raw))*24*60);if(!Number.isFinite(totalMinutes))return'-';const days=Math.floor(totalMinutes/1440);totalMinutes%=1440;const hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;const parts=[];if(days)parts.push(days+' gün');if(hours)parts.push(hours+' saat');if(minutes||!parts.length)parts.push(minutes+' dakika');return parts.join(' ')}
 function latestUpdateDate(k){
     const raw=k&&k.son_asama_tarihi||k&&k.hareket;
     if(!raw||typeof gecisZamanParse!=='function')return null;

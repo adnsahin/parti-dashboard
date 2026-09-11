@@ -2138,6 +2138,19 @@ function upCol(rows,cands){const cols=Object.keys(rows[0]||{}).map(raw=>({raw,n:
 function upWaitDays(v){if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return v;const s=String(v).trim();let m=s.match(/(\d+)\s*(?:gün|gun|GÜN)\s*,?\s*(\d{1,2}):(\d{1,2}):(\d{1,2})/i);if(m)return Number(m[1])+Number(m[2])/24+Number(m[3])/1440+Number(m[4])/86400;m=s.match(/(\d+)\s*(?:gün|gun|GÜN)/i);if(m)return Number(m[1]);m=s.match(/^(\d{1,2}):(\d{2}):(\d{2})/);if(m)return Number(m[1])/24+Number(m[2])/1440+Number(m[3])/86400;const n=upNum(s);return n||null}
 function upFmtWait(v,days){const s=upClean(v);if(s){let m=s.match(/(\d+)\s*(?:gün|gun|GÜN)\s*,?\s*(\d{1,2}):(\d{2}):(\d{2})/i);if(m)return `${Number(m[1])} Gün, ${String(Number(m[2])).padStart(2,'0')}:${m[3]}:${m[4]}`;m=s.match(/(\d+)\s*(?:gün|gun|GÜN)/i);if(m)return `${Number(m[1])} Gün, 00:00:00`;m=s.match(/^(\d{1,2}):(\d{2}):(\d{2})/);if(m)return `0 Gün, ${String(Number(m[1])).padStart(2,'0')}:${m[2]}:${m[3]}`;return s}if(days===null||days===undefined||Number.isNaN(days))return'';const g=Math.floor(days);let r=Math.max(0,Math.round((days-g)*86400));const h=Math.floor(r/3600);r%=3600;const dk=Math.floor(r/60),sn=r%60;return `${g} Gün, ${String(h).padStart(2,'0')}:${String(dk).padStart(2,'0')}:${String(sn).padStart(2,'0')}`}
 function upDate(v){if(v instanceof Date)return v;if(typeof v==='number'&&v>20000){const p=XLSX.SSF.parse_date_code(v);return p?new Date(p.y,p.m-1,p.d):null}const s=upClean(v);if(!s)return null;const m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);if(m)return new Date(Number(m[3].length===2?'20'+m[3]:m[3]),Number(m[2])-1,Number(m[1]));const d=new Date(s);return Number.isNaN(d.getTime())?null:d}
+function upDateTime(v){
+    if(v instanceof Date)return Number.isNaN(v.getTime())?null:new Date(v.getTime());
+    if(typeof v==='number'&&v>20000){const p=XLSX.SSF.parse_date_code(v);return p?new Date(p.y,p.m-1,p.d,p.H||0,p.M||0,p.S||0):null}
+    const s=upClean(v);if(!s)return null;
+    const m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if(m){const y=Number(m[3].length===2?'20'+m[3]:m[3]);return new Date(y,Number(m[2])-1,Number(m[1]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0))}
+    const d=new Date(s);return Number.isNaN(d.getTime())?null:d;
+}
+function upDateTimeText(v){
+    const d=upDateTime(v);if(!d)return upClean(v);
+    const pad=n=>String(n).padStart(2,'0');
+    return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 function upFmtDate(v){const d=upDate(v);return d?`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`:''}
 function upJoin(arr){const out=[];arr.forEach(v=>{const s=upClean(v);if(s&&!out.includes(s))out.push(s)});return out.join(' | ')}
 function upShortCompany(v){let s=upClean(v).toUpperCase();if(!s)return'';[/\sVE\s+TEKS\w*\s+SAN\w*\s+VE\s+T[İI]C\w*\.?\sA\.?Ş\.?/gi,/\sSAN\w*\.?\sVE\s+T[İI]C\w*\.?\sA\.?Ş\.?/gi,/\sVE\s+T[İI]C\w*\.?\sA\.?Ş\.?/gi,/\sA\.?Ş\.?/gi,/\sLTD\.?\s*ŞT[İI]\.?/gi,/\sLTD\.?/gi,/\sŞT[İI]\.?/gi].forEach(p=>s=s.replace(p,''));s=s.replace(/\s+/g,' ').trim().replace(/[.,]+$/,'');return s.length>18?s.split(' ')[0]:s}
@@ -2157,19 +2170,23 @@ function upBuildData(rows,repairSourceRows){const cp=upCol(rows,['Parti No']),cn
 const upBuildDataOriginal=upBuildData;
 upBuildData=function(rows,repairSourceRows){
     const result=upBuildDataOriginal(rows,repairSourceRows);
-    const partyCol=upCol(rows,['Parti No','Parti']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']);
+    const partyCol=upCol(rows,['Parti No','Parti']),lastCol=upCol(rows,['Son Yapılan Aşama','Son Yapilan Asama','Son Aşama','Son Asama']),dateCol=upCol(rows,['Son Hareket Tarihi','Çıkış Tarihi','Hareket Tarihi','Son Hareket']);
     if(partyCol&&lastCol){
         const lastByParty=new Map();
-        rows.forEach(row=>{
-            const party=upClean(row[partyCol]),last=upClean(row[lastCol]);
-            if(!party||!last)return;
-            const values=lastByParty.get(party)||[];
-            if(!values.includes(last))values.push(last);
-            lastByParty.set(party,values);
+        rows.forEach((row,index)=>{
+            const party=upClean(row[partyCol]),stage=upClean(row[lastCol]);
+            if(!party||!stage)return;
+            const time=dateCol?upDateTime(row[dateCol]):null,prev=lastByParty.get(party);
+            if(!prev||(time&&(!prev.time||time>=prev.time))||(!time&&!prev.time&&index>=prev.index)){
+                lastByParty.set(party,{stage,time,index,display:time?upDateTimeText(row[dateCol]):''});
+            }
         });
         Object.values(result.data).forEach(group=>group.kartlar.forEach(card=>{
-            const values=lastByParty.get(card.parti)||[];
-            card.son_asama=values[values.length-1]||'';
+            const latest=lastByParty.get(card.parti);
+            if(!latest)return;
+            card.son_asama=latest.stage;
+            card.son_asama_tarihi=latest.display;
+            if(latest.display)card.hareket=latest.display;
             card.sonraki_asama=card.bir_sonraki||'';
         }));
     }

@@ -599,6 +599,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="group-mode-bar">
 <button class="group-mode-btn gm-hedef active" data-gmode="hedef" onclick="setGroupMode('hedef')">🔵 Şu An Beklediği Aşama</button>
 <button class="group-mode-btn" data-gmode="next" onclick="setGroupMode('next')">🟠 Bir Sonraki Yapılacak Aşama</button>
+<button class="group-mode-btn gm-latest" data-gmode="latest" onclick="setGroupMode('latest')">🕘 Son Güncelleme Sonu</button>
 </div>
 <div class="summary" id="summaryBar"></div>
 <div class="view-action-bar">
@@ -1432,8 +1433,23 @@ function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel'
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p||p.querySelector('.panel-full-btn'))return;const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
-function getGroupKey(k){return currentGroupMode==='next'?(k.bir_sonraki||'(Son Aşama)'):k._asama}
-function getGroupOrder(){if(currentGroupMode==='next'){const seen=[];BSA_ORDER.forEach(a=>{if(!seen.includes(a))seen.push(a)});getAllCards().forEach(k=>{const gk=k.bir_sonraki||'(Son Aşama)';if(!seen.includes(gk))seen.push(gk)});return seen}return ASAMA_ORDER}
+function getLatestGroupKey(k){
+    const latest=typeof cardCurrentStage==='function'?cardCurrentStage(k):(k.son_asama||k._asama||k.asama||'');
+    if(stageEquals(latest,'KK'))return'Son Güncelleme Sonu • Kalite Kontrol';
+    if(stageEquals(latest,'SARIM1'))return'Son Güncelleme Sonu • Sarım1';
+    return latest||'Son Güncelleme Sonu • Bilinmeyen';
+}
+function getGroupKey(k){if(currentGroupMode==='latest')return getLatestGroupKey(k);return currentGroupMode==='next'?(k.bir_sonraki||'(Son Aşama)'):k._asama}
+function getGroupOrder(){
+    if(currentGroupMode==='latest'){
+        const preferred=['Son Güncelleme Sonu • Kalite Kontrol','Son Güncelleme Sonu • Sarım1'],seen=[];
+        preferred.forEach(a=>{if(getAllCards().some(k=>getLatestGroupKey(k)===a))seen.push(a)});
+        getAllCards().forEach(k=>{const gk=getLatestGroupKey(k);if(!seen.includes(gk))seen.push(gk)});
+        return seen;
+    }
+    if(currentGroupMode==='next'){const seen=[];BSA_ORDER.forEach(a=>{if(!seen.includes(a))seen.push(a)});getAllCards().forEach(k=>{const gk=k.bir_sonraki||'(Son Aşama)';if(!seen.includes(gk))seen.push(gk)});return seen}
+    return ASAMA_ORDER
+}
 
 function toggleAsamaFromSummary(a){if(activeStages.length===1&&activeStages[0]===a)activeStages=[];else activeStages=[a];document.getElementById('searchBox').value='';listSortCol=null;renderSummaries();filterCards()}
 function renderSummaries(){const bar=document.getElementById('summaryBar');const order=getGroupOrder();const stats={};let allC=0,allK=0,allRecipes={};const addRecipe=(map,k)=>{const r=(k.recete_adi||'').trim();if(!r)return;if(!map[r])map[r]={count:0,kg:0};map[r].count++;map[r].kg+=num(k.kilo)};const topRecipe=map=>{const row=Object.entries(map||{}).sort((a,b)=>b[1].kg-a[1].kg||b[1].count-a[1].count)[0];return row?'🎨 '+row[0]+' • '+row[1].count+'p':''};order.forEach(a=>stats[a]={count:0,kg:0,recipes:{}});getAllCards().forEach(k=>{if(checkedCards.has(k.id))return;const gk=getGroupKey(k);allC++;allK+=k.kilo;addRecipe(allRecipes,k);if(!stats[gk])stats[gk]={count:0,kg:0,recipes:{}};stats[gk].count++;stats[gk].kg+=k.kilo;addRecipe(stats[gk].recipes,k)});let h='<div class="summary-card '+(activeStages.length===0?'active':'')+'" data-summary="all" onclick="showAll()"><div class="asama-name">TÜMÜ</div><div class="asama-count">'+allC+'</div><div class="asama-kg">'+Math.round(allK).toLocaleString('tr-TR')+' kg</div>'+(topRecipe(allRecipes)?'<div class="summary-recipe">'+esc(topRecipe(allRecipes))+'</div>':'')+'</div>';order.forEach(a=>{const s=stats[a];if(!s||s.count===0)return;const tr=topRecipe(s.recipes);h+='<div class="summary-card '+(activeStages.includes(a)?'active':'')+'" data-summary-stage="'+esc(a)+'" onclick="toggleAsamaFromSummary(\''+esc(a)+'\')"><div class="asama-name">'+esc(a)+'</div><div class="asama-count">'+s.count+'</div><div class="asama-kg">'+Math.round(s.kg).toLocaleString('tr-TR')+' kg</div>'+(tr?'<div class="summary-recipe">'+esc(tr)+'</div>':'')+'</div>';});bar.innerHTML=h;ensureElementFullscreenToolbar('summaryBar','Özet')}
@@ -2306,12 +2322,17 @@ function loadWetInternal(){
   function automaticCategories(){
     const all=cards(),repairParties=new Set((typeof TAMIR_LIST!=='undefined'?TAMIR_LIST:[]).map(t=>cleanName(t&&t.parti)).filter(Boolean));
     const nextStage=k=>typeof cardNextStage==='function'?cardNextStage(k):k&&k.bir_sonraki;
+    const latestStage=k=>typeof cardCurrentStage==='function'?cardCurrentStage(k):(k&&k.son_asama)||k&&k._asama;
     const quality=all.filter(k=>stageMatches(nextStage(k),'KK')||stageMatches(nextStage(k),'KALİTE KONTROL'));
     const sarim1=all.filter(k=>stageMatches(nextStage(k),'SARIM1'));
+    const latestQuality=all.filter(k=>stageMatches(latestStage(k),'KK')||stageMatches(latestStage(k),'KALİTE KONTROL'));
+    const latestSarim1=all.filter(k=>stageMatches(latestStage(k),'SARIM1'));
     const repairs=all.filter(k=>repairParties.has(cleanName(k&&k.parti))||(Array.isArray(k&&k.tamirler)&&k.tamirler.length));
     const out=[];
     if(quality.length)out.push(autoTimedCategory('auto_quality','Kalite Kontrole Gidecek Partiler',quality));
     if(sarim1.length)out.push(autoPartyCategory('auto_sarim1','Sarım 1 Olacak Partiler',sarim1));
+    if(latestQuality.length)out.push(autoTimedCategory('auto_latest_quality','Kalite Kontrol — Son Güncelleme Sonu',latestQuality));
+    if(latestSarim1.length)out.push(autoTimedCategory('auto_latest_sarim1','Sarım1 — Son Güncelleme Sonu',latestSarim1));
     if(repairs.length)out.push(autoTimedCategory('auto_repair','Yeni Tamir Kartı Açılanlar',repairs));
     return out;
   }

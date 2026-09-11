@@ -502,6 +502,35 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 #mindmapPanel.mindmap-host .mindmap-viewport{flex:1 1 0;min-height:220px;height:auto;max-height:none;overflow-x:auto!important;overflow-y:auto!important;overscroll-behavior:contain;touch-action:pan-x pan-y}
 #mindmapPanel.mindmap-host .mindmap-board{flex:0 0 auto}
 @media(max-width:768px){#mindmapPanel.mindmap-host .mindmap-viewport{min-height:180px}}
+@media(max-width:768px){
+  .panel-full-btn{right:54px;top:9px;width:42px;height:42px;font-size:21px;background:#2F75B5;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+  .panel.fullscreen-panel{inset:8px!important;width:calc(100vw - 16px)!important;height:calc(100vh - 16px)!important;max-height:none!important;border-radius:14px!important}
+  .panel.fullscreen-panel .panel-full-btn{background:#E67E22}
+  .cards-container,.mini-cards-container{padding:14px 10px;gap:14px}
+  .flash-card{min-height:245px}
+  .flash-card .card-header{padding:18px 16px}
+  .flash-card .card-header .parti{font-size:27px}
+  .flash-card .card-header .kilo{font-size:24px;padding:6px 11px}
+  .flash-card .card-body{padding:0 16px 14px}
+  .flash-card .card-body .line1{font-size:16px}
+  .flash-card .card-body .line2{font-size:14px}
+  .flash-card .card-footer{padding:13px 16px}
+  .flash-card .card-footer .bekleme{font-size:18px}
+  .mini-card{min-height:124px;padding:15px 16px}
+  .mini-card .mc-parti{font-size:20px}
+  .mini-card .mc-kilo{font-size:18px;padding:4px 8px}
+  .mini-card .mc-line1{font-size:14px}
+  .mini-card .mc-recipe,.mini-card .mc-tamir{font-size:13px}
+  .mini-card .mc-bottom{margin-top:8px;padding-top:7px}
+  .mini-card .mc-bekleme{font-size:14px}
+  .view-fullscreen .flash-card{min-height:270px}
+  .view-fullscreen .mini-card{min-height:140px}
+  .mindmap-toolbar button{padding:10px 13px;font-size:14px}
+  .mindmap-fit-hint{font-size:12px}
+  #mindmapPanel.mindmap-host.fullscreen-panel .mindmap-viewport{min-height:0}
+  #mindmapPanel.mindmap-focus .mindmap-focus-hidden{display:none!important}
+  #mindmapPanel.mindmap-focus .mindmap-viewport{height:calc(100vh - 150px)!important;min-height:0!important;flex:1 1 auto}
+}
 </style>
 <script>
 (function(){
@@ -1399,8 +1428,8 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel')}})}
-function addPanelFullButton(id){const p=document.getElementById(id);if(!p||p.querySelector('.panel-full-btn'))return;const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function addPanelFullButton(id){const p=document.getElementById(id);if(!p||p.querySelector('.panel-full-btn'))return;const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
 function getGroupKey(k){return currentGroupMode==='next'?(k.bir_sonraki||'(Son Aşama)'):k._asama}
@@ -2373,11 +2402,28 @@ function loadWetInternal(){
   function fitMindmap(){
     const viewport=document.getElementById('mindmapViewport'),board=document.getElementById('mindmapBoard');
     if(!viewport||!board)return;
-    const available=Math.max(300,viewport.clientWidth-28),naturalWidth=Math.max(1,board.scrollWidth);
-    mindmapZoom=Math.min(1,available/naturalWidth);mindmapFitMode=true;applyMindmapZoom();
+    const available=Math.max(300,viewport.clientWidth-28),naturalWidth=Math.max(1,board.scrollWidth),mobile=window.matchMedia&&window.matchMedia('(max-width:768px)').matches;
+    mindmapZoom=Math.max(mobile?0.72:0.45,Math.min(1,available/naturalWidth));mindmapFitMode=true;applyMindmapZoom();
   }
   function adjustMindmapZoom(delta){mindmapFitMode=false;mindmapZoom=Math.max(.45,Math.min(1.35,mindmapZoom+delta));applyMindmapZoom()}
   function resetMindmapZoom(){mindmapFitMode=false;mindmapZoom=1;applyMindmapZoom()}
+  function syncMindmapFocusState(panel){
+    const focus=panel.classList.contains('mindmap-focus');
+    Array.from(panel.children).forEach(el=>{
+      const keep=el.classList.contains('panel-close')||el.classList.contains('panel-full-btn')||el.tagName==='H2'||el.classList.contains('mindmap-toolbar')||el.classList.contains('mindmap-viewport');
+      el.classList.toggle('mindmap-focus-hidden',focus&&!keep);
+    });
+  }
+  function toggleMindmapFullscreen(){
+    const panel=document.getElementById('mindmapPanel');
+    if(!panel)return;
+    panel.classList.toggle('fullscreen-panel');
+    panel.classList.toggle('mindmap-focus',panel.classList.contains('fullscreen-panel'));
+    syncMindmapFocusState(panel);
+    const button=panel.querySelector('.mindmap-fullscreen-action');
+    if(button)button.textContent=panel.classList.contains('fullscreen-panel')?'↙ Tam ekranı kapat':'⛶ Tam ekran';
+    if(panel.classList.contains('fullscreen-panel'))setTimeout(()=>{applyMindmapZoom();if(mindmapFitMode)fitMindmap()},0);
+  }
   function severityClass(k){return k&&k.seviye==='kritik'?'mindmap-critical':k&&k.seviye==='uyari'?'mindmap-warning':''}
   function partyNoteText(k){
     if(!k||typeof noteRecords!=='object')return '';
@@ -2401,7 +2447,7 @@ function loadWetInternal(){
     h+='<div><label style="display:block;color:#80CBC4;font-weight:bold;margin-bottom:4px">Alt dal</label><div style="display:flex;gap:4px"><select id="mindmapBranchSelect" onchange="mindmapSetBranch(this.value)" style="flex:1;padding:7px;border-radius:6px;background:#123A37;color:white;border:1px solid rgba(255,255,255,.3)"><option value="">Alt dal seçin</option>'+(c?c.branches.map(b=>'<option value="'+htmlEsc(b.id)+'" '+(b.id===currentBranchId?'selected':'')+'>'+htmlEsc(b.name)+'</option>').join(''):'')+'</select><button onclick="mindmapRenameBranch()" title="Alt dal adını değiştir">✎</button><button onclick="mindmapRemoveBranch()" title="Alt dalı çıkar">×</button></div><div style="display:flex;gap:4px;margin-top:5px"><input id="mindmapBranchInput" placeholder="Yeni alt dal" style="flex:1;padding:7px;border-radius:6px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddBranch()"><button onclick="mindmapAddBranch()">＋ Ekle</button></div></div>';
     h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><label style="font-weight:bold;color:#FFD700">Gün:</label><input id="mindmapDate" type="date" value="'+selectedDate+'" onchange="mindmapChangeDate(this.value)" style="padding:7px;border-radius:6px;background:#211944;color:white;border:1px solid rgba(255,255,255,.3)"><input id="mindmapPartyInput" list="mindmapPartyList" placeholder="Parti no, firma veya reçete ara" style="flex:1;min-width:220px;padding:8px;border-radius:6px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddParty()"><datalist id="mindmapPartyList">'+cards().map(k=>'<option value="'+htmlEsc(k.parti)+'">'+htmlEsc(k.line1||'')+' • '+htmlEsc(k.recete_adi||k.ham_adi||'')+'</option>').join('')+'</datalist><button onclick="mindmapAddParty()">＋ Parti ekle</button></div>';
     h+='<div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><input id="mindmapNotePartyInput" list="mindmapPartyList" placeholder="Not hangi partiye ait?" style="width:220px;padding:9px;border-radius:7px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddNote()"><input id="mindmapNoteInput" placeholder="Partiyle ilgili günlük not..." style="flex:1;min-width:220px;padding:9px;border-radius:7px;background:rgba(0,0,0,.25);color:white;border:1px solid rgba(255,255,255,.3)" onkeypress="if(event.key===\'Enter\')mindmapAddNote()"><button onclick="mindmapAddNote()" style="background:#0288D1;color:white;border:0;padding:9px 13px;border-radius:7px;font-weight:bold">📝 Not ekle</button><button id="mindmapVoiceButton" onclick="mindmapStartVoice()" style="background:#9C27B0;color:white;border:0;padding:9px 13px;border-radius:7px;font-weight:bold">🎙️ Sesli not</button><small id="mindmapVoiceStatus" style="width:100%;color:#BDBDBD">Not, seçilen parti kartının altında görünür.'+(unlinkedDailyNotes?' Eski bağlantısız not: '+unlinkedDailyNotes:'')+'</small></div>';
-    h+='<div class="mindmap-toolbar"><b style="color:#CE93D8;margin-right:4px">Görünüm:</b><button onclick="mindmapFitToScreen()">⛶ Ekrana sığdır</button><button onclick="mindmapZoomOut()">−</button><span id="mindmapZoomLabel">100%</span><button onclick="mindmapZoomIn()">＋</button><button onclick="mindmapZoomReset()">Sıfırla</button><span class="mindmap-fit-hint">Dallar ayrı şeritlerde tutulur; yatay veya dikey kaydırabilirsiniz.</span></div>';
+    h+='<div class="mindmap-toolbar"><b style="color:#CE93D8;margin-right:4px">Görünüm:</b><button onclick="mindmapFitToScreen()">⛶ Ekrana sığdır</button><button onclick="mindmapZoomOut()">−</button><span id="mindmapZoomLabel">100%</span><button onclick="mindmapZoomIn()">＋</button><button onclick="mindmapZoomReset()">Sıfırla</button><button class="mindmap-fullscreen-action" onclick="toggleMindmapFullscreen()">⛶ Tam ekran</button><span class="mindmap-fit-hint">Mobilde kartlar büyük görünür; yatay veya dikey kaydırabilirsiniz.</span></div>';
     h+='<div class="mindmap-viewport" id="mindmapViewport"><div class="mindmap-board" id="mindmapBoard">';
     h+='<div class="mindmap-board-root"><b>GÜNLÜK İŞLER</b><small>'+selectedDate+' • '+cs.length+' kategori</small></div>';
     if(!cs.length&&!hasLinkedDailyNotes)h+='<div class="mindmap-lane-empty">Önce kategori ve alt dal ekleyin; ardından mevcut datadan parti seçin.</div>';
@@ -2423,8 +2469,9 @@ function loadWetInternal(){
     if(auto){const grid=panel.querySelector('#mindmapCategorySelect')&&panel.querySelector('#mindmapCategorySelect').closest('div[style*="display:grid"]');if(grid)grid.style.display='none';const partyInput=panel.querySelector('#mindmapPartyInput');if(partyInput){partyInput.style.display='none';partyInput.parentElement.querySelectorAll('button').forEach(b=>b.style.display='none');}}
     if(auto){const status=panel.querySelector('.mindmap-mode-bar span');if(status)status.textContent='Otomatik görünüm açık: KK ve tamir partileri son hareket saatine göre Son 3 Gün / 3 Gün ve Öncesi dallarına ayrılıyor.';}
   }
-  window.toggleMindmapPanel=function(){const p=document.getElementById('mindmapPanel');if(!p)return;if(getComputedStyle(p).display!=='none'){p.style.display='none';p.classList.remove('fullscreen-panel');return}closeAllPanels();render()};
+  window.toggleMindmapPanel=function(){const p=document.getElementById('mindmapPanel');if(!p)return;if(getComputedStyle(p).display!=='none'){p.style.display='none';p.classList.remove('fullscreen-panel','mindmap-focus');return}closeAllPanels();render()};
   window.mindmapFitToScreen=fitMindmap;window.mindmapZoomIn=function(){adjustMindmapZoom(.1)};window.mindmapZoomOut=function(){adjustMindmapZoom(-.1)};window.mindmapZoomReset=resetMindmapZoom;
+  window.toggleMindmapFullscreen=toggleMindmapFullscreen;
   window.mindmapSetCategory=setCategory;window.mindmapSetBranch=setBranch;window.mindmapAddCategory=addCategory;window.mindmapRenameCategory=renameCategory;window.mindmapRemoveCategory=removeCategory;window.mindmapAddBranch=addBranch;window.mindmapRenameBranch=renameBranch;window.mindmapRemoveBranch=removeBranch;window.mindmapAddParty=addParty;window.mindmapRemoveParty=removeParty;window.mindmapAddNote=addNote;window.mindmapRemoveNote=removeNote;window.mindmapStartVoice=startVoice;window.mindmapChangeDate=changeDate;window.mindmapOpenParty=openPartyFromNode;window.mindmapEnableAutoMode=enableAutoMode;window.mindmapDisableAutoMode=disableAutoMode;
   window.refreshMindmap=function(){const p=document.getElementById('mindmapPanel');if(p&&getComputedStyle(p).display!=='none')render()};
   async function loadGithubJsonDashboard(){

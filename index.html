@@ -101,6 +101,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .filter-bar input::placeholder{color:rgba(255,255,255,.5)}
 .filter-bar input:focus{border-color:#FFD700}
 .filter-bar button{padding:9px 16px;border-radius:25px;border:none;cursor:pointer;font-size:13px;font-weight:bold;transition:all .25s}
+.wait-filter{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid rgba(255,255,255,.18);border-radius:24px;background:rgba(0,0,0,.18);color:#FFD54F;font-size:12px;font-weight:bold}
+.filter-bar .wait-filter input{width:82px;padding:8px 9px;border-radius:12px;font-size:12px}
+.wait-filter button{padding:7px 10px;font-size:11px}
+@media(max-width:768px){.wait-filter{width:100%;justify-content:center}.filter-bar .wait-filter input{width:100px}}
 .btn-all{background:#2F75B5;color:white}
 .btn-kritik{background:#FF4444;color:white}
 .btn-uyari{background:#FFC300;color:#222}
@@ -581,11 +585,18 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 </div>
 <div class="view-action-bar">
 <button class="view-action-btn full" onclick="toggleViewFullscreen()">⛶ Tam Ekran</button>
-<button class="view-action-btn pdf" onclick="exportPDF()">📄 Görünüm PDF</button>
 <button class="view-action-btn whatsapp" onclick="shareCurrentViewWhatsApp()">📱 WhatsApp Görünüm</button>
 </div>
 <div class="filter-bar">
 <input type="text" id="searchBox" placeholder="🔍 Parti, Aşama, Firma, Kumaş, Bir Sonraki..." oninput="filterCards()">
+<div class="wait-filter" title="Seçili aşamalar dahil tüm kartlarda bekleme süresini filtreler">
+<span>⏱ Bekleme:</span>
+<input type="number" id="waitMinInput" min="0" step="0.01" placeholder="min gün" aria-label="Minimum bekleme günü" onchange="applyWaitFilter()">
+<span>–</span>
+<input type="number" id="waitMaxInput" min="0" step="0.01" placeholder="max gün" aria-label="Maksimum bekleme günü" onchange="applyWaitFilter()">
+<button type="button" style="background:#00897B;color:white" onclick="applyWaitFilter()">Uygula</button>
+<button type="button" style="background:#455A64;color:white" onclick="clearWaitFilter()" title="Bekleme filtresini temizle">×</button>
+</div>
 <button class="btn-numpad" onclick="openNumpad()">🔢 Klavye</button>
 <button class="btn-voice" onclick="startVoiceSearch()">🎤 Sesli</button>
 <button style="background:#009688;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="openStageFilter()">⚙️ Aşama Seç</button>
@@ -728,6 +739,7 @@ let tamirGunFiltre=0; // 0=Tümü, 1=Bugün, 2=Son 2 Gün, 7=Son 7 Gün
 let currentValidationView = 'cards';
 let currentValidationKind = 'overdue';
 let currentDisplayedCards=[],listSortCol=null,listSortAsc=true,activeStages=[];
+let waitFilterMin=null,waitFilterMax=null;
 const checkedCards=safeSet('ck9');
 let fireRecords=safeParse('fr9','{}');
 let noteRecords=safeParse('nr9','{}');
@@ -1678,12 +1690,28 @@ function saveAlarmM(e,id){
 function getFilteredCards(){
     let kk=getAllCards();
     if(activeStages.length>0)kk=kk.filter(k=>activeStages.includes(getGroupKey(k)));
+    if(waitFilterMin!==null)kk=kk.filter(k=>num(k.bekleme_gun)>=waitFilterMin);
+    if(waitFilterMax!==null)kk=kk.filter(k=>num(k.bekleme_gun)<=waitFilterMax);
     if(currentSeviye)kk=kk.filter(k=>k.seviye===currentSeviye);
     const q=document.getElementById('searchBox').value.toLowerCase().trim();
     if(q)kk=kk.filter(k=>String(k.parti).toLowerCase().includes(q)||(k.line1&&k.line1.toLowerCase().includes(q))||(k.line2&&k.line2.toLowerCase().includes(q))||(k.ham_adi&&k.ham_adi.toLowerCase().includes(q))||(k.recete_adi&&k.recete_adi.toLowerCase().includes(q))||(tamirShort(k)&&tamirShort(k).toLowerCase().includes(q))||(k._asama&&k._asama.toLowerCase().includes(q))||(k.bir_sonraki&&k.bir_sonraki.toLowerCase().includes(q))||(k.uretim_asamalari&&k.uretim_asamalari.toLowerCase().includes(q)));
     return kk;
 }
-function showAll(){activeStages=[];currentSeviye=null;document.getElementById('searchBox').value='';listSortCol=null;renderSummaries();filterCards()}
+function applyWaitFilter(){
+    const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput');
+    const minRaw=minEl?minEl.value.trim():'',maxRaw=maxEl?maxEl.value.trim():'';
+    const min=minRaw===''?null:Number(minRaw),max=maxRaw===''?null:Number(maxRaw);
+    if((min!==null&&!Number.isFinite(min))||(max!==null&&!Number.isFinite(max))||(min!==null&&min<0)||(max!==null&&max<0)){showToast('Bekleme günü 0 veya daha büyük olmalı','warning');return}
+    if(min!==null&&max!==null&&min>max){showToast('Minimum bekleme, maksimumdan büyük olamaz','warning');return}
+    waitFilterMin=min;waitFilterMax=max;filterCards();
+}
+function clearWaitFilter(){
+    waitFilterMin=null;waitFilterMax=null;
+    const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput');
+    if(minEl)minEl.value='';if(maxEl)maxEl.value='';
+    filterCards();
+}
+function showAll(){activeStages=[];currentSeviye=null;waitFilterMin=null;waitFilterMax=null;document.getElementById('searchBox').value='';const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput');if(minEl)minEl.value='';if(maxEl)maxEl.value='';listSortCol=null;renderSummaries();filterCards()}
 function filterSeviye(s){currentSeviye=s;renderCards(getFilteredCards())}
 function filterCards(){renderCards(getFilteredCards())}
 

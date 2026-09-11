@@ -75,6 +75,16 @@ function fmtDate(v) {
   return `${dd}.${mm}.${yy}`;
 }
 
+function fmtMovement(v) {
+  const d = excelDate(v);
+  if (!d) return clean(v);
+  const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const raw = clean(v);
+  const hasTime = (typeof v === 'number' && v % 1 !== 0) || /\d{1,2}:\d{2}/.test(raw) ||
+    (v instanceof Date && (d.getHours() || d.getMinutes() || d.getSeconds()));
+  return hasTime ? `${date} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : date;
+}
+
 function dueDays(v) {
   const d = excelDate(v);
   if (!d) return null;
@@ -97,6 +107,7 @@ function build(mainRows, repairRows) {
   const sample = mainRows[0] || {};
   const cParti = col(sample, ['Parti No', 'Parti']);
   const cStage = col(sample, ['Sonra Yapılacak Aşama', 'SONRAKİ', 'Sonraki Aşama']);
+  const cLastStage = col(sample, ['Son Yapılan Aşama', 'Son Yapilan Asama', 'Son Aşama', 'Son Asama']);
   if (!cParti || !cStage) throw new Error('Parti No veya Sonra Yapılacak Aşama kolonu bulunamadı.');
 
   const cKg = col(sample, ['Kilo', 'Kalan Kilo', 'Kalan Brüt Kilo']);
@@ -112,8 +123,7 @@ function build(mainRows, repairRows) {
   const cBlocked = col(sample, ['Beklemeye Alınmış Aşama Var']);
   const cFlow = col(sample, ['Üretim Aşamaları', 'Aşamalar', 'İş Akışı']);
   const cMachine = col(sample, ['Planlandigi Makina Kodu', 'Planlandığı Makina Kodu', 'Son Makina Kodu']);
-  const cLastStage = col(sample, ['Son Aşama', 'Son Yapılan Aşama', 'Son Yapilan Asama']);
-  const cHareket = col(sample, ['Son Hareket Tarihi', 'Son Hareket Tarihi/Saati', 'Çıkış Tarihi']);
+  const cHareket = col(sample, ['Son Hareket Tarihi', 'Son Hareket Tarihi/Saati', 'Son Hareket Tarih', 'Son Hareket', 'Son Hareket Zamanı', 'Son Hareket Zamani', 'Hareket Tarihi', 'Hareket Zamanı', 'Hareket Zamani', 'Çıkış Tarihi']);
 
   const rSample = repairRows[0] || {};
   const rParti = col(rSample, ['Parti No', 'Parti']);
@@ -180,7 +190,7 @@ function build(mainRows, repairRows) {
       flow: cFlow ? clean(r[cFlow]) : '',
       machine: cMachine ? clean(r[cMachine]) : '',
       lastStage: cLastStage ? clean(r[cLastStage]) : '',
-      hareket: cHareket ? fmtDate(r[cHareket]) : '',
+      hareket: cHareket ? fmtMovement(r[cHareket]) : '',
       repairs: repairList
     };
   }).filter(Boolean);

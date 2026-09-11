@@ -627,6 +627,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button type="button" style="background:#00897B;color:white" onclick="applyWaitFilter()">Uygula</button>
 <button type="button" style="background:#455A64;color:white" onclick="clearWaitFilter()" title="Bekleme filtresini temizle">×</button>
 </div>
+<div class="wait-filter latest-update-filter" title="Son Güncelleme Sonu görünümünde kayıt saatine göre filtreler">
+<span>🕘 Son güncelleme:</span>
+<input type="number" id="latestUpdateMinInput" min="0" step="0.25" placeholder="min saat" aria-label="Minimum son güncelleme yaşı saat">
+<span>–</span>
+<input type="number" id="latestUpdateMaxInput" min="0" step="0.25" placeholder="max saat" aria-label="Maksimum son güncelleme yaşı saat">
+<button type="button" style="background:#6A1B9A;color:white" onclick="setLatestUpdateQuick(1)">Son 1 saat</button>
+<button type="button" style="background:#00897B;color:white" onclick="applyLatestUpdateFilter()">Uygula</button>
+<button type="button" style="background:#455A64;color:white" onclick="clearLatestUpdateFilter()" title="Son güncelleme filtresini temizle">×</button>
+</div>
 <button class="btn-numpad" onclick="openNumpad()">🔢 Klavye</button>
 <button class="btn-voice" onclick="startVoiceSearch()">🎤 Sesli</button>
 <button style="background:#009688;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="openStageFilter()">⚙️ Aşama Seç</button>
@@ -769,7 +778,7 @@ let tamirGunFiltre=0; // 0=Tümü, 1=Bugün, 2=Son 2 Gün, 7=Son 7 Gün
 let currentValidationView = 'cards';
 let currentValidationKind = 'overdue';
 let currentDisplayedCards=[],listSortCol=null,listSortAsc=true,activeStages=[];
-let waitFilterMin=null,waitFilterMax=null;
+let waitFilterMin=null,waitFilterMax=null,latestUpdateMinHours=null,latestUpdateMaxHours=null;
 const checkedCards=safeSet('ck9');
 let fireRecords=safeParse('fr9','{}');
 let noteRecords=safeParse('nr9','{}');
@@ -790,6 +799,13 @@ function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postP
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function xmlEsc(v){return esc(v)}
 function num(v){return parseFloat(String(v??'0').replace(',','.'))||0}
+function waitHoursText(k){const raw=k&&k.bekleme_gun;if(raw===null||raw===undefined||String(raw).trim()==='')return'-';const hours=Math.max(0,num(raw)*24);if(!Number.isFinite(hours))return'-';const value=hours>=100?Math.round(hours):Number(hours.toFixed(1));return value.toLocaleString('tr-TR')+' saat'}
+function latestUpdateDate(k){
+    const raw=k&&k.son_asama_tarihi||k&&k.hareket;
+    if(!raw||typeof gecisZamanParse!=='function')return null;
+    return gecisZamanParse(String(raw).split(' | ')[0]);
+}
+function latestUpdateAgeHours(k){const date=latestUpdateDate(k);return date?Math.max(0,(Date.now()-date.getTime())/3600000):null}
 function showToast(m,t='success'){const d=document.createElement('div');d.className='toast '+t;d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000)}
 
 /* ── GELİŞTİRİLMİŞ TÜRKÇE SES MOTORU (TTS) ── */
@@ -1432,7 +1448,7 @@ function exportPDF(){
 function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p||p.querySelector('.panel-full-btn'))return;const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
-function setGroupMode(m){currentGroupMode=m;activeStages=[];document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
+function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
 function getLatestGroupKey(k){
     const latest=typeof cardCurrentStage==='function'?cardCurrentStage(k):(k.son_asama||k._asama||k.asama||'');
     if(stageEquals(latest,'KK'))return'Son Güncelleme Sonu • Kalite Kontrol';
@@ -1617,7 +1633,7 @@ function renderCardsView(kartlar){
     groups.forEach(g=>{let gC=0,gK=0;g.cards.forEach(k=>{if(!checkedCards.has(k.id)){gC++;gK+=k.kilo}});
     h+='<div class="group-header '+(isN?'gh-next':'')+'"><div class="gh-name">'+(isN?'→ ':'')+esc(g.key)+'</div><div class="gh-stats">'+gC+' parti • '+Math.round(gK).toLocaleString('tr-TR')+' kg</div></div>';
     g.cards.forEach(k=>{
-        const ic=checkedCards.has(k.id),sev=k.seviye,bt=k.bekleme||'-',bl=sev==='kritik'?'KRİTİK':sev==='uyari'?'UYARI':'NORMAL';
+        const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev==='kritik'?'KRİTİK':sev==='uyari'?'UYARI':'NORMAL';
         const fl=getFireList(k.id),ftk=fl.reduce((a,b)=>a+num(b.fire_kg),0),fp=fl.length?'<div class="fire-pill">🔥 '+fl.length+' • '+ftk.toLocaleString('tr-TR')+' kg</div>':'';
         const ns=noteRecords[k.id]||{},nv=ns.note||'',np2=nv?'<div class="note-pill">📝 Not var</div>':'';
         const nb=k.bir_sonraki?'<span class="next-asama-badge">'+esc(k.bir_sonraki)+'</span>':'';const pipe=buildPipeline(k);
@@ -1642,7 +1658,7 @@ function renderMiniView(kartlar){
     groups.forEach(g=>{let gC=0,gK=0;g.cards.forEach(k=>{if(!checkedCards.has(k.id)){gC++;gK+=k.kilo}});
     h+='<div class="group-header '+(isN?'gh-next':'')+'"><div class="gh-name">'+(isN?'→ ':'')+esc(g.key)+'</div><div class="gh-stats">'+gC+'p • '+Math.round(gK).toLocaleString('tr-TR')+'kg</div></div>';
     g.cards.forEach(k=>{
-        const ic=checkedCards.has(k.id),sev=k.seviye,bt=k.bekleme||'-',bl=sev[0].toUpperCase();
+        const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev[0].toUpperCase();
         const al=getAlarmsList(k.id),hasAl=al.filter(a=>a.active!==false).length>0;
 
         const hasTamir = k.tamirler && k.tamirler.length > 0;
@@ -1670,7 +1686,7 @@ function renderListView(kartlar){
         if(hasTamir) statusIcons += '🛠️ ';
 
         const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:14px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
-        return '<tr class="'+(ic?'is-checked':'')+'" ondblclick="openDetailModal(\''+k.id+'\')"><td><input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"></td><td>'+starH+'</td><td><span class="lv-seviye-dot '+k.seviye+'\"></span></td><td class="lv-parti">'+esc(k.parti)+'</td><td class="lv-asama">'+esc(k._asama)+'</td><td class="lv-next">'+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</td><td class="lv-line1">'+esc(k.line1||'-')+'</td><td class="lv-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+'</td><td class="lv-bekleme '+k.seviye+'">'+(k.bekleme_gun?k.bekleme_gun.toFixed(1)+'g':'-')+'</td><td>'+statusIcons+'</td></tr>';
+        return '<tr class="'+(ic?'is-checked':'')+'" ondblclick="openDetailModal(\''+k.id+'\')"><td><input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"></td><td>'+starH+'</td><td><span class="lv-seviye-dot '+k.seviye+'\"></span></td><td class="lv-parti">'+esc(k.parti)+'</td><td class="lv-asama">'+esc(k._asama)+'</td><td class="lv-next">'+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</td><td class="lv-line1">'+esc(k.line1||'-')+'</td><td class="lv-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+'</td><td class="lv-bekleme '+k.seviye+'">'+esc(waitHoursText(k))+'</td><td>'+statusIcons+'</td></tr>';
     };
     if(listSortCol)sorted.forEach(k=>h+=renderRow(k));
     else groups.forEach(g=>{let gC=0,gK=0;g.cards.forEach(k=>{if(!checkedCards.has(k.id)){gC++;gK+=k.kilo}});h+='<tr class="group-sep '+(isN?'gs-next':'')+'"><td colspan="10">'+(isN?'→ ':'')+esc(g.key)+' — '+gC+'p • '+Math.round(gK).toLocaleString('tr-TR')+'kg</td></tr>';g.cards.forEach(k=>h+=renderRow(k))});
@@ -1684,14 +1700,14 @@ function renderKanbanView(kartlar){
     if(!groups.length){c.innerHTML='<div class="no-results" style="width:100%">Sonuç bulunamadı</div>';return}let h='';
     groups.forEach(g=>{let aC=0,aK=0;g.cards.forEach(k=>{if(!checkedCards.has(k.id)){aC++;aK+=k.kilo}});
     h+='<div class="kanban-column"><div class="kanban-col-header '+(isN?'kch-next':'kch-hedef')+'"><div class="kch-name">'+(isN?'→ ':'')+esc(g.key)+'</div><div class="kch-stats">'+aC+'p • '+Math.round(aK).toLocaleString('tr-TR')+'kg</div></div><div class="kanban-col-body">';
-    g.cards.forEach(k=>{const ic=checkedCards.has(k.id),sev=k.seviye,bt=k.bekleme||'-',bl=sev[0].toUpperCase();const al=getAlarmsList(k.id),hasAl=al.filter(a=>a.active!==false).length>0;const hasTamir = k.tamirler && k.tamirler.length > 0;const indicators = (hasAl?' 🔔':'') + (hasTamir?' 🛠️':'');const sub=isN?'<div class="kc-sub">şu an: '+esc(k._asama)+'</div>':(k.bir_sonraki?'<div class="kc-sub" style="color:#FFB74D">→'+esc(k.bir_sonraki)+'</div>':'');const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:13px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+    g.cards.forEach(k=>{const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev[0].toUpperCase();const al=getAlarmsList(k.id),hasAl=al.filter(a=>a.active!==false).length>0;const hasTamir = k.tamirler && k.tamirler.length > 0;const indicators = (hasAl?' 🔔':'') + (hasTamir?' 🛠️':'');const sub=isN?'<div class="kc-sub">şu an: '+esc(k._asama)+'</div>':(k.bir_sonraki?'<div class="kc-sub" style="color:#FFB74D">→'+esc(k.bir_sonraki)+'</div>':'');const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:13px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
     h+='<div class="kanban-card '+sev+' '+(ic?'is-checked':'')+'" onclick="openDetailModal(\''+k.id+'\')"><div class="kc-top"><div style="display:flex;align-items:center">'+starH+'<span class="kc-parti">'+esc(k.parti)+'</span></div><span class="kc-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+'kg</span></div><div class="kc-line1">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="kc-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'kc-tamir')+sub+'<div class="kc-bottom"><span class="kc-bekleme '+sev+'">'+esc(bt)+indicators+'</span><span class="kc-badge '+sev+'">'+bl+'</span></div></div>'});
     h+='</div></div>'});c.innerHTML=h;
 }
 
 /* ── DETAIL MODAL ── */
 function openDetailModal(id){
-    const k=getCardById(id);if(!k)return;const bt=k.bekleme||'-',fl=getFireList(k.id),ns=noteRecords[k.id]||{},nv=ns.note||'',ic=checkedCards.has(k.id),alarms=getAlarmsList(k.id);
+    const k=getCardById(id);if(!k)return;const bt=waitHoursText(k),fl=getFireList(k.id),ns=noteRecords[k.id]||{},nv=ns.note||'',ic=checkedCards.has(k.id),alarms=getAlarmsList(k.id);
     const ro=['<option value="">Sebep</option>'].concat(FIRE_REASONS.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
     const prioOpts=ALARM_PRIORITIES.map(p=>'<button class="priority-btn '+p.toLowerCase()+'" data-priority="'+p+'" onclick="selectPriorityM(this)">'+p+'</button>').join('');
     let fml='';if(fl.length){fml='<div class="fire-mini-list">';fl.forEach((fr,i)=>{fml+='<div class="fire-mini-item"><b>'+(i+1)+') '+esc(fr.fire_sebebi||'')+'</b> '+num(fr.fire_kg).toLocaleString('tr-TR')+'kg<button onclick="deleteFireLine(event,\''+k.id+'\',\''+fr.uid+'\');openDetailModal(\''+k.id+'\')">Sil</button></div>'});fml+='</div>'}
@@ -1737,10 +1753,38 @@ function getFilteredCards(){
     if(activeStages.length>0)kk=kk.filter(k=>activeStages.includes(getGroupKey(k)));
     if(waitFilterMin!==null)kk=kk.filter(k=>num(k.bekleme_gun)>=waitFilterMin);
     if(waitFilterMax!==null)kk=kk.filter(k=>num(k.bekleme_gun)<=waitFilterMax);
+    if(currentGroupMode==='latest'&&(latestUpdateMinHours!==null||latestUpdateMaxHours!==null)){
+        kk=kk.filter(k=>{
+            const age=latestUpdateAgeHours(k);
+            return age!==null&&(latestUpdateMinHours===null||age>=latestUpdateMinHours)&&(latestUpdateMaxHours===null||age<=latestUpdateMaxHours);
+        });
+    }
     if(currentSeviye)kk=kk.filter(k=>k.seviye===currentSeviye);
     const q=document.getElementById('searchBox').value.toLowerCase().trim();
     if(q)kk=kk.filter(k=>String(k.parti).toLowerCase().includes(q)||(k.line1&&k.line1.toLowerCase().includes(q))||(k.line2&&k.line2.toLowerCase().includes(q))||(k.ham_adi&&k.ham_adi.toLowerCase().includes(q))||(k.recete_adi&&k.recete_adi.toLowerCase().includes(q))||(tamirShort(k)&&tamirShort(k).toLowerCase().includes(q))||(k._asama&&k._asama.toLowerCase().includes(q))||(k.bir_sonraki&&k.bir_sonraki.toLowerCase().includes(q))||(k.uretim_asamalari&&k.uretim_asamalari.toLowerCase().includes(q)));
     return kk;
+}
+function applyLatestUpdateFilter(){
+    const minEl=document.getElementById('latestUpdateMinInput'),maxEl=document.getElementById('latestUpdateMaxInput');
+    const minRaw=minEl?minEl.value.trim():'',maxRaw=maxEl?maxEl.value.trim():'';
+    const min=minRaw===''?null:Number(minRaw),max=maxRaw===''?null:Number(maxRaw);
+    if((min!==null&&!Number.isFinite(min))||(max!==null&&!Number.isFinite(max))||(min!==null&&min<0)||(max!==null&&max<0)){showToast('Son güncelleme saati 0 veya daha büyük olmalı','warning');return}
+    if(min!==null&&max!==null&&min>max){showToast('Minimum son güncelleme yaşı, maksimumdan büyük olamaz','warning');return}
+    if(currentGroupMode!=='latest')setGroupMode('latest');
+    latestUpdateMinHours=min;latestUpdateMaxHours=max;filterCards();
+}
+function setLatestUpdateQuick(hours){
+    if(currentGroupMode!=='latest')setGroupMode('latest');
+    latestUpdateMinHours=null;latestUpdateMaxHours=Number(hours);
+    const minEl=document.getElementById('latestUpdateMinInput'),maxEl=document.getElementById('latestUpdateMaxInput');
+    if(minEl)minEl.value='';if(maxEl)maxEl.value=String(hours);
+    filterCards();
+}
+function clearLatestUpdateFilter(){
+    latestUpdateMinHours=null;latestUpdateMaxHours=null;
+    const minEl=document.getElementById('latestUpdateMinInput'),maxEl=document.getElementById('latestUpdateMaxInput');
+    if(minEl)minEl.value='';if(maxEl)maxEl.value='';
+    filterCards();
 }
 function applyWaitFilter(){
     const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput');
@@ -1756,7 +1800,7 @@ function clearWaitFilter(){
     if(minEl)minEl.value='';if(maxEl)maxEl.value='';
     filterCards();
 }
-function showAll(){activeStages=[];currentSeviye=null;waitFilterMin=null;waitFilterMax=null;document.getElementById('searchBox').value='';const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput');if(minEl)minEl.value='';if(maxEl)maxEl.value='';listSortCol=null;renderSummaries();filterCards()}
+function showAll(){activeStages=[];currentSeviye=null;waitFilterMin=null;waitFilterMax=null;latestUpdateMinHours=null;latestUpdateMaxHours=null;document.getElementById('searchBox').value='';const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput'),latestMinEl=document.getElementById('latestUpdateMinInput'),latestMaxEl=document.getElementById('latestUpdateMaxInput');if(minEl)minEl.value='';if(maxEl)maxEl.value='';if(latestMinEl)latestMinEl.value='';if(latestMaxEl)latestMaxEl.value='';listSortCol=null;renderSummaries();filterCards()}
 function filterSeviye(s){currentSeviye=s;renderCards(getFilteredCards())}
 function filterCards(){renderCards(getFilteredCards())}
 
@@ -1846,7 +1890,7 @@ function flowRiskScore(k){const due=daysUntilDate(k.termin_tarihi||k.termin_sipa
 function sortFlowCards(list){return list.sort((a,b)=>flowRiskScore(b)-flowRiskScore(a)||num(a.due)-num(b.due)||num(b.bekleme_gun)-num(a.bekleme_gun)||num(b.kilo)-num(a.kilo))}
 function makeFlowBuckets(target){const t=targetStage(target),b={incoming:{},currentFrom:{},currentTo:{},after:{}};const add=(name,key,k)=>{key=key||'Bilinmeyen';if(!b[name][key])b[name][key]={name:key,count:0,kg:0,cards:[]};b[name][key].count++;b[name][key].kg+=num(k.kilo);b[name][key].cards.push(k)};getPriorityCards().forEach(k=>{const parts=flowParts(k),idx=flowIndex(parts,t),cur=normalizeStageName(k._asama||k.asama),curIdx=flowIndex(parts,cur);if(idx<0)return;const prev=idx>0?parts[idx-1]:'Önceki yok',next=idx<parts.length-1?parts[idx+1]:(k.bir_sonraki||'Sonraki yok');if(stageEquals(cur,t)){add('currentFrom',prev,k);add('currentTo',k.bir_sonraki||next,k);return}if(curIdx===idx-1)add('incoming',prev,k);else if(curIdx===idx+1)add('after',next,k)});Object.values(b).forEach(group=>Object.values(group).forEach(x=>sortFlowCards(x.cards)));const sort=o=>Object.values(o).sort((a,b)=>b.count-a.count||b.kg-a.kg);return{incoming:sort(b.incoming),currentFrom:sort(b.currentFrom),currentTo:sort(b.currentTo),after:sort(b.after)}}
 function flowSummaryHtml(title,items,target,kind){let h='<div class="flow-section-title">'+title+'</div>';if(!items.length)return h+'<div class="list-empty">Kayıt yok</div>';h+='<div class="flow-summary-grid">';items.forEach(x=>{const top=(x.cards||[]).map(k=>k.recete_adi).filter(Boolean).reduce((m,r)=>{m[r]=(m[r]||0)+1;return m},{});const tr=Object.entries(top).sort((a,b)=>b[1]-a[1])[0];h+='<div class="flow-summary-card" onclick="showFlowDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.name)+'&quot;))"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small>'+(tr?'<small style="color:#FFD54F">🎨 '+esc(tr[0])+' • '+tr[1]+'p</small>':'')+'</div>'});return h+'</div>'}
-function flowDetailCards(cards){if(!cards.length)return'<div class="list-empty">Kayıt yok</div>';let h='<div class="flow-detail-list">';cards.slice(0,180).forEach(k=>{const due=daysUntilDate(k.termin_tarihi||k.termin_siparis);const dt=due===null?'-':(due<0?Math.abs(due)+' gün geçti':due+' gün kaldı');h+='<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k._asama||k.asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">'+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(dt)+') • Tamir: '+((k.tamirler||[]).length)+'</div></div>'});return h+'</div>'}
+function flowDetailCards(cards){if(!cards.length)return'<div class="list-empty">Kayıt yok</div>';let h='<div class="flow-detail-list">';cards.slice(0,180).forEach(k=>{const due=daysUntilDate(k.termin_tarihi||k.termin_siparis);const dt=due===null?'-':(due<0?Math.abs(due)+' gün geçti':due+' gün kaldı');h+='<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="flow-card-top"><span class="flow-parti">'+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k._asama||k.asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">'+esc(waitHoursText(k))+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(dt)+') • Tamir: '+((k.tamirler||[]).length)+'</div></div>'});return h+'</div>'}
 function renderFlowTargetPanel(target){const p=document.getElementById('postProcessPanel'),bucket=makeFlowBuckets(target),title=targetTitle(target);let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+title+' Akış Özeti</h2><div class="panel-summary">Bu görünüm sadece '+title+' aşamasının doğrudan bir önceki ve doğrudan bir sonraki aşamasını sayar. Daha geride veya daha ileride olan partiler iş planını bozmasın diye bu özetlere dahil edilmez.</div><div class="flow-tabs"><button class="flow-tab" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab '+(target==='kk'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK</button><button class="flow-tab '+(target==='sarim1'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1</button><button class="btn-fire-export" onclick="exportFlowTargetWorkbook(&quot;'+target+'&quot;)">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;,&quot;'+target+'_akis.png&quot;)">📱 WhatsApp</button></div>';h+=flowSummaryHtml(title+' aşamasına gelecekler - sadece bir önceki aşama',bucket.incoming,target,'incoming');h+=flowSummaryHtml(title+' üzerindekiler - geldiği bir önceki aşama',bucket.currentFrom,target,'currentFrom');h+=flowSummaryHtml(title+' üzerindekiler - gideceği bir sonraki aşama',bucket.currentTo,target,'currentTo');h+=flowSummaryHtml(title+' sonrası - sadece bir sonraki aşamaya geçmişler',bucket.after,target,'after');p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' Akış Özeti')}
 function showFlowDetail(target,kind,name){const p=document.getElementById('postProcessPanel'),bucket=makeFlowBuckets(target),grp=(bucket[kind]||[]).find(x=>x.name===name),cards=grp?grp.cards:[],labels={incoming:'Gelecek',currentFrom:'Üzerinde / geldiği',currentTo:'Üzerinde / gideceği',after:'Sonrası'},encName=encodeURIComponent(name),ttl=targetTitle(target)+' - '+(labels[kind]||'Detay');let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">'+esc(name)+' • '+cards.length+' parti • '+Math.round(cards.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR')+' kg</div><div class="flow-tabs"><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;'+target+'&quot;)">← Özete Dön</button><button class="btn-all-export" onclick="filterFlowDetailCards(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encName+'&quot;))">Listeyi Göster</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;,&quot;akis_detay.png&quot;)">📱 WhatsApp</button></div>'+flowDetailCards(cards);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',ttl)}
 function filterFlowDetailCards(target,kind,name){const grp=(makeFlowBuckets(target)[kind]||[]).find(x=>x.name===name);filterCardsDirect(grp?grp.cards:[])}

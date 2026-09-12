@@ -41,6 +41,16 @@ Dashboarddaki **💧 Islak-Kuru** paneli artık geçmiş ıslak→kuru geçiş �
 - Panel içinden 1, 2 veya 4 saatlik hazır eşikler seçilebilir; istenirse özel saat değeri uygulanabilir.
 - Her kartta FIFO sırası, mevcut ıslak aşama, beklediği sonraki aşama, bekleme süresi, son hareket, kilo, firma ve reçete görünür.
 
+## Liste Görünümleri ve Dışa Aktarma
+
+Ana liste ve rapor panellerinde **🃏 Kartlar / 📋 Liste** görünüm geçişi bulunur. Liste veya kart görünümü açıkken ilgili panel araçlarından:
+
+- **🖼️ PNG** ile görüntüyü dosya olarak indirebilir,
+- **📱 WhatsApp PNG** ile PNG görüntüsünü WhatsApp paylaşım akışına gönderebilir,
+- **📄 PDF** ile yazdırma/PDF ekranını açabilirsiniz.
+
+PNG ve PDF çıktıları panelin kaydırma alanına değil, panel içeriğine göre hazırlanır.
+
 ## Veri Güncelleme
 
 Ana Excel `..\partiler.xlsx` ise:

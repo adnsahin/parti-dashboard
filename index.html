@@ -2496,8 +2496,9 @@ function githubRepairToRow(r){return{'Parti No':r.parti||'','Tamir Nedeni':r.ned
 
 let wetWaitThresholdHours=2;
 const WET_WAIT_STAGES=['BOYAMA','YAŞ AÇMA','FIRÇA'];
+function isWetWaitStage(value){const key=stageKey(value);return WET_WAIT_STAGES.some(stage=>key===stageKey(stage))}
 function getWetWaitingCards(){
-  return getAllCards().map(k=>{const age=latestUpdateAgeHours(k);return{...k,wetCurrent:cardCurrentStage(k),wetNext:cardNextStage(k),wetAgeHours:age}}).filter(k=>WET_WAIT_STAGES.some(stage=>stageEquals(k.wetCurrent,stage))&&k.wetAgeHours!==null&&k.wetAgeHours>wetWaitThresholdHours).sort((a,b)=>b.wetAgeHours-a.wetAgeHours||fifoCompare(a,b));
+  return getAllCards().map(k=>{const age=latestUpdateAgeHours(k);return{...k,wetCurrent:cardCurrentStage(k),wetNext:cardNextStage(k),wetAgeHours:age}}).filter(k=>isWetWaitStage(k.wetCurrent)&&k.wetAgeHours!==null&&k.wetAgeHours>wetWaitThresholdHours).sort((a,b)=>b.wetAgeHours-a.wetAgeHours||fifoCompare(a,b));
 }
 function wetWaitDuration(hours){
   const total=Math.max(0,Math.floor(hours*60)),days=Math.floor(total/1440),rest=total%1440;

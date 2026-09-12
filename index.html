@@ -1962,7 +1962,7 @@ function renderFlowTargetPanel(target){
     h+=flowWaitPieHtml(title+' bekleme süreleri — kg',cards,x=>'filterFlowTargetWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)');
     h+='</div>';
     h+=flowFifoQueueHtml(target,getFlowQueueCards(target));
-    h+=flowSummaryHtml(title+' aşamasına gelecekler - sadece bir önceki aşama',bucket.incoming,target,'incoming');
+    h+=flowIncomingWaitHtml(target,flowIncomingWaitGroups(target));
     h+=flowSummaryHtml(title+' üzerindekiler - geldiği bir önceki aşama',bucket.currentFrom,target,'currentFrom');
     h+=flowSummaryHtml(title+' üzerindekiler - gideceği bir sonraki aşama',bucket.currentTo,target,'currentTo');
     h+=flowSummaryHtml(title+' sonrası - sadece bir sonraki aşamaya geçmişler',bucket.after,target,'after');
@@ -2013,6 +2013,39 @@ function flowWaitBuckets(cards){
         group.count++;group.kg+=num(k.kilo);group.cards.push(k);
     });
     return groups.filter(x=>x.count);
+}
+function flowIncomingWaitGroups(target){
+    const incoming=makeFlowBuckets(target).incoming,buckets=flowWaitBucketDefs().map(x=>({...x,count:0,kg:0,cards:[],stages:[]}));
+    Object.values(incoming).forEach(stageGroup=>(stageGroup.cards||[]).forEach(k=>{
+        const days=flowWaitDays(k);if(days===null)return;
+        const waitGroup=buckets.find(x=>days>=x.min&&days<x.max)||buckets[buckets.length-1];
+        let stage=waitGroup.stages.find(x=>x.name===stageGroup.name);
+        if(!stage){stage={name:stageGroup.name,count:0,kg:0,cards:[]};waitGroup.stages.push(stage)}
+        waitGroup.count++;waitGroup.kg+=num(k.kilo);waitGroup.cards.push(k);stage.count++;stage.kg+=num(k.kilo);stage.cards.push(k);
+    }));
+    return buckets.filter(x=>x.count).sort((a,b)=>a.min-b.min).map(x=>{x.stages.sort((a,b)=>fifoCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return x});
+}
+function filterFlowIncomingWait(target,key){
+    const group=flowIncomingWaitGroups(target).find(x=>x.key===key);
+    filterCardsDirect(group?group.cards:[]);
+}
+function filterFlowIncomingStageWait(target,key,name){
+    const group=flowIncomingWaitGroups(target).find(x=>x.key===key),stage=group&&group.stages.find(x=>x.name===name);
+    filterCardsDirect(stage?stage.cards:[]);
+}
+function flowIncomingWaitHtml(target,groups){
+    const title=targetTitle(target);
+    let h='<div class="flow-section-title">'+title+' aşamasına gelecekler — önce bekleme süresi, sonra önceki aşama</div>';
+    if(!groups.length)return h+'<div class="list-empty">Kayıt yok</div>';
+    h+='<div class="flow-summary-grid">';
+    groups.forEach(x=>{h+='<div class="flow-summary-card" onclick="filterFlowIncomingWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small></div>'});
+    h+='</div>';
+    groups.forEach(x=>{
+        h+='<div class="flow-section-title">'+esc(x.name)+' — önceki aşamaya göre</div><div class="flow-summary-grid">';
+        x.stages.forEach(stage=>{h+='<div class="flow-summary-card" onclick="filterFlowIncomingStageWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))"><b>'+stage.count+' parti</b>'+Math.round(stage.kg).toLocaleString('tr-TR')+' kg<small>'+esc(stage.name)+'</small></div>'});
+        h+='</div>';
+    });
+    return h;
 }
 function getFlowTargetCards(target){
     const seen=new Set(),out=[];

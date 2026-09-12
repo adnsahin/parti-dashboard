@@ -98,16 +98,6 @@ function messageForNote(card, text) {
         clean(text)
     ].join('\n');
 }
-function messageForForward(group, sender, text) {
-    return [
-        '📲 WhatsApp → Telegram',
-        '',
-        `Grup: ${clean(group) || '-'}`,
-        `Gönderen: ${clean(sender) || '-'}`,
-        '',
-        clean(text)
-    ].join('\n');
-}
 function telegramRequest(method, body) {
     return new Promise((resolve, reject) => {
         const payload = JSON.stringify(body);
@@ -303,16 +293,6 @@ const server = http.createServer(async (req, res) => {
             if (text.length > 4000) { json(res, 400, {ok: false, error: 'Not 4000 karakterden kısa olmalı'}); return; }
             if (!TOKEN || !CHAT_IDS.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
             await sendText(messageForNote(body.card || {parti: body.parti}, text));
-            json(res, 200, {ok: true, sentTo: CHAT_IDS.length});
-            return;
-        }
-        if (req.method === 'POST' && url.pathname === '/api/telegram/forward') {
-            const body = await readBody(req);
-            const text = clean(body.text);
-            if (!text) { json(res, 400, {ok: false, error: 'Aktarılacak mesaj boş bırakılamaz'}); return; }
-            if (text.length > 4000) { json(res, 400, {ok: false, error: 'Mesaj 4000 karakterden kısa olmalı'}); return; }
-            if (!TOKEN || !CHAT_IDS.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
-            await sendText(messageForForward(body.group, body.sender, text));
             json(res, 200, {ok: true, sentTo: CHAT_IDS.length});
             return;
         }

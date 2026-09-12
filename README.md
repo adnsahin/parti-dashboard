@@ -12,8 +12,6 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 - `update_data.ps1`: Veriyi günceller, istenirse git push yapar.
 - `telegram_alarm_service.js`: PC üzerinde çalışan, Telegram bildirim servisi ve yerel dashboard sunucusu.
 - `TELEGRAM_ALARM_BASLAT.bat`: Telegram servisinin token ve Chat ID sorarak başlatılması.
-- `whatsapp_telegram_bridge.js`: Seçilen WhatsApp gruplarındaki metinleri yerel Telegram servisine aktarır.
-- `WHATSAPP_TELEGRAM_BASLAT.bat`: WhatsApp Web köprüsünü QR kodla başlatır.
 - `tools/xlsx.full.min.js`: Excel okuma kütüphanesi.
 
 
@@ -95,13 +93,6 @@ TELEGRAM_DATA_URL=https://raw.githubusercontent.com/adnsahin/parti-dashboard/mai
 
 Parti detayındaki `📝 Not` alanına kısa bir not yazıp `Telegram’a Gönder` düğmesine basabilirsiniz. Not doğrudan botun tanımlı Chat ID’lerine gönderilir; yerel karta kalıcı kaydetmek için ayrıca `Kaydet` düğmesine basın. Kod güncellendikten sonra açık olan `.bat` penceresini kapatıp yeniden başlatın.
 
-## WhatsApp Grubundan Telegram'a Aktarım
-
-WhatsApp Web üzerinden seçtiğiniz grup mesajlarını Telegram'a aktarmak için önce `TELEGRAM_ALARM_BASLAT.bat`, sonra `WHATSAPP_TELEGRAM_BASLAT.bat` dosyasını çalıştırın. İlk çalıştırmada QR kodu WhatsApp uygulamasından `Bağlı cihazlar > Cihaz bağla` menüsüyle okutun.
-
-Başlatıcı, aktarılacak WhatsApp grup adlarını ve isteğe bağlı anahtar kelimeleri sorar. Grup adlarını virgülle girin; anahtar kelime alanını boş bırakırsanız seçilen gruplardaki tüm metin mesajları aktarılır. Mesajlar, Telegram servisinde tanımlı bütün Chat ID'lerine gönderilir.
-
-WhatsApp Web oturumu `.wwebjs_auth/` altında yerel tutulur ve repoya dahil edilmez. Bu köprü resmi WhatsApp Cloud API değil, WhatsApp Web otomasyonudur; WhatsApp hesabı, grup yöneticileri ve grup üyelerinin izniyle kullanın. Hesap engelleme ve oturum kopması riski vardır. Servis ve bilgisayar açık kalmalıdır.
 
 
 ## GitHub Pages

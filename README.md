@@ -80,7 +80,9 @@ Servis `http://127.0.0.1:8783` adresinde çalışır ve dashboardu bu adresten a
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol` veya `Sarım1` seçilebilir. Alarm kayıtları servisle senkronlanır; parti hedef aşamaya geldiğinde mesaj bir kez gönderilir. GitHub Pages üzerindeki HTTPS sayfası, güvenlik nedeniyle yerel HTTP servisine bağlanamaz; Telegram alarmı için dashboardun yerel servis adresinden açılması gerekir.
+Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. Alarm kayıtları servisle senkronlanır; parti hedef aşamaya geldiğinde mesaj bir kez gönderilir. GitHub Pages üzerindeki HTTPS sayfası, güvenlik nedeniyle yerel HTTP servisine bağlanamaz; Telegram alarmı için dashboardun yerel servis adresinden açılması gerekir.
+ 
+Parti detayındaki `📝 Not` alanına kısa bir not yazıp `Telegram’a Gönder` düğmesine basabilirsiniz. Not doğrudan botun tanımlı Chat ID’lerine gönderilir; yerel karta kalıcı kaydetmek için ayrıca `Kaydet` düğmesine basın. Kod güncellendikten sonra açık olan `.bat` penceresini kapatıp yeniden başlatın.
 
 
 ## GitHub Pages

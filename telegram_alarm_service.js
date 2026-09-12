@@ -31,14 +31,14 @@ function stageEquals(a, b) {
     if (x === 'KK' || y === 'KK') {
         return x === y || x.includes('KALITEKONTROL') || x.includes('KALİTEKONTROL') || y.includes('KALITEKONTROL') || y.includes('KALİTEKONTROL');
     }
-    if (x === 'SARIM1' || y === 'SARIM1') return x.includes('SARIM1') || y.includes('SARIM1');
+    if (x === 'SARIM1' || y === 'SARIM1') return x === y || (x === 'SARIM1' ? y.includes('SARIM1') : x.includes('SARIM1'));
     return x.includes(y) || y.includes(x);
 }
 function targetStage(alarm) {
-    const raw = alarm && (alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || '');
+    const raw = clean(alarm && (alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
     if (stageEquals(raw, 'KK') || stageEquals(raw, 'KALİTE KONTROL')) return 'KK';
     if (stageEquals(raw, 'SARIM1')) return 'SARIM1';
-    return '';
+    return raw;
 }
 function cardReachedTarget(card, target) {
     return stageEquals(card && card.bir_sonraki, target) || stageEquals(card && card.son_asama, target) || stageEquals(card && card._asama, target);
@@ -69,17 +69,30 @@ function json(res, status, body) {
 }
 function messageFor(card, alarm, target) {
     const wait = card && (card.bekleme || card.bekleme_gun != null ? (card.bekleme || `${card.bekleme_gun} gün`) : '-');
+    const targetLabel = target === 'KK' ? 'Kalite Kontrol' : target === 'SARIM1' ? 'Sarım1' : target || '-';
     return [
         '🔔 Parti Aşama Alarmı',
         '',
         `Parti: ${clean(card && card.parti) || clean(alarm && alarm.parti) || '-'}`,
-        `Hedef aşama: ${target === 'KK' ? 'Kalite Kontrol' : 'Sarım1'}`,
+        `Hedef aşama: ${targetLabel}`,
         `Önceki/mevcut aşama: ${clean(card && (card._asama || card.asama || card.son_asama)) || '-'}`,
         `Bir sonraki aşama: ${clean(card && card.bir_sonraki) || '-'}`,
         `Kilo: ${Math.round(Number(card && card.kilo) || 0).toLocaleString('tr-TR')} kg`,
         `Bekleme: ${wait}`,
         alarm && alarm.title ? `Alarm: ${clean(alarm.title)}` : ''
     ].filter(Boolean).join('\n');
+}
+function messageForNote(card, text) {
+    return [
+        '📝 Parti Notu',
+        '',
+        `Parti: ${clean(card && card.parti) || '-'}`,
+        `Aşama: ${clean(card && (card._asama || card.asama || card.son_asama)) || '-'}`,
+        `Bir sonraki aşama: ${clean(card && card.bir_sonraki) || '-'}`,
+        `Firma: ${clean(card && (card.line1 || card.firma)) || '-'}`,
+        '',
+        clean(text)
+    ].join('\n');
 }
 function telegramRequest(method, body) {
     return new Promise((resolve, reject) => {
@@ -190,6 +203,16 @@ const server = http.createServer(async (req, res) => {
             if (!TOKEN || !ids.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
             await sendText(text, ids);
             json(res, 200, {ok: true, sentTo: ids.length});
+            return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/telegram/note') {
+            const body = await readBody(req);
+            const text = clean(body.text);
+            if (!text) { json(res, 400, {ok: false, error: 'Not boş bırakılamaz'}); return; }
+            if (text.length > 4000) { json(res, 400, {ok: false, error: 'Not 4000 karakterden kısa olmalı'}); return; }
+            if (!TOKEN || !CHAT_IDS.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
+            await sendText(messageForNote(body.card || {parti: body.parti}, text));
+            json(res, 200, {ok: true, sentTo: CHAT_IDS.length});
             return;
         }
         if (req.method === 'POST' && url.pathname === '/api/telegram/snapshot') {

@@ -2052,7 +2052,7 @@ function getFlowTargetCards(target){
     Object.values(makeFlowBuckets(target)).forEach(groups=>Object.values(groups).forEach(group=>(group.cards||[]).forEach(k=>{
         if(!seen.has(k.id)){seen.add(k.id);out.push(k)}
     })));
-    return out;
+    return out.sort(fifoCompare);
 }
 function flowCategoryPieGroups(bucket){
     const labels={incoming:'Gelecek',currentFrom:'Üzerinde / geldiği',currentTo:'Üzerinde / gideceği',after:'Sonrası'};
@@ -2074,7 +2074,7 @@ function filterFlowTargetWait(target,key){
     filterCardsDirect(getFlowTargetCards(target).filter(k=>{
         const days=flowWaitDays(k);
         return bucket&&days!==null&&days>=bucket.min&&days<bucket.max;
-    }));
+    }).sort(fifoCompare));
 }
 function flowWaitSummaryHtml(target,kind,parentName,cards){
     const groups=flowWaitBuckets(cards),parent=encodeURIComponent(parentName);
@@ -2106,7 +2106,16 @@ function filterFlowWaitDetailCards(target,kind,parentName,key){
     const group=flowWaitGroup(target,kind,parentName,key);
     filterCardsDirect(group?group.cards:[]);
 }
-function renderPostProcessPanel(){const p=document.getElementById('postProcessPanel');const rows=getPostProcessCards();const ttl='KK / Sarım 1 Sonrası Öncelik';let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">Index görünümünde KK ve Sarım1 akış özetleri, sonrası öncelik listesi ve detay kartları.</div><div class="flow-tabs"><button class="flow-tab active" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK Akışı</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1 Akışı</button><button class="btn-all-export" onclick="filterPostProcessCards()">Listeyi Göster</button><button class="btn-fire-export" onclick="exportPostProcessWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;,&quot;kk_sarim_sonrasi.png&quot;)">📱 WhatsApp</button></div>';if(!rows.length)h+='<div class="list-empty">KK/Sarım sonrası kayıt yok</div>';else rows.slice(0,120).forEach((k,i)=>{const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı');const parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / ');const note=postProcessNotes[k.id]||'';h+='<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">'+(i+1)+'. '+esc(k.parti)+'</span><span class="post-score">'+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • '+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="ppnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="savePostProcessNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearPostProcessNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>'});p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',ttl)}
+function postProcessItemHtml(k,i){
+    const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı'),parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),note=postProcessNotes[k.id]||'';
+    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(fifoAgeLabel(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • '+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="ppnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="savePostProcessNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearPostProcessNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
+}
+function renderPostProcessPanel(){
+    const p=document.getElementById('postProcessPanel'),rows=getPostProcessCards(),ttl='KK / Sarım 1 Sonrası Öncelik';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">KK ve Sarım1 sonrası partiler <b>FIFO sırasıyla</b> gösterilir: en uzun bekleyen parti üsttedir. Puan, FIFO sıralamasını değiştirmeyen ikincil bilgidir.</div><div class="flow-tabs"><button class="flow-tab active" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK Akışı</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1 Akışı</button><button class="btn-all-export" onclick="filterPostProcessCards()">Listeyi Göster</button><button class="btn-fire-export" onclick="exportPostProcessWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;,&quot;kk_sarim_sonrasi.png&quot;)">📱 WhatsApp</button></div>';
+    if(!rows.length)h+='<div class="list-empty">KK/Sarım sonrası kayıt yok</div>';else rows.slice(0,120).forEach((k,i)=>h+=postProcessItemHtml(k,i));
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',ttl);
+}
 function savePostProcessNote(id){const el=document.getElementById('ppnote_'+id);if(!el)return;postProcessNotes[id]=el.value.trim();savePostProcessNotes();showToast('✅ Açıklama kaydedildi')}
 function clearPostProcessNote(id){delete postProcessNotes[id];savePostProcessNotes();renderPostProcessPanel()}
 function filterPostProcessCards(){filterCardsDirect(getPostProcessCards())}
@@ -2273,7 +2282,7 @@ function uretimGunlukFilter(list,applyCategory=true){
         if(!/\d{1,2}:\d{2}/.test(hv))return false;
         const t=gecisZamanParse(hv),category=String(x.from||'Bilinmeyen');
         return t&&t>=baslangic&&(bugun?t<=upper:t<upper)&&(!applyCategory||!uretimCategory||category===uretimCategory);
-    }).sort((a,b)=>gecisZamanParse(gecisSaatTamamla(a.k))-gecisZamanParse(gecisSaatTamamla(b.k)));
+    }).sort((a,b)=>fifoCompare(a.k,b.k));
 }
 function uretimCategoryGroups(list){
     const map={};

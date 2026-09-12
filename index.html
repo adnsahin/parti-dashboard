@@ -1925,7 +1925,7 @@ function filterCurrentValidationRows(){const el=document.getElementById('validat
 function showTamirCards(){toggleTamirPanel()}
 function normalizeStageName(v){return String(v||'').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()}
 function stageKey(v){return normalizeStageName(v).replace(/[^\p{L}\p{N}]/gu,'')}
-function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if(x===y)return true;if(x==='KK'||y==='KK')return x===y||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL')||y.includes('KALITEKONTROL')||y.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
+function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if((x==='SUBLİMEBASKI'&&y==='SUBBASKI')||(x==='SUBBASKI'&&y==='SUBLİMEBASKI'))return true;if(x===y)return true;if(x==='KK'||y==='KK')return x===y||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL')||y.includes('KALITEKONTROL')||y.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
 function flowParts(k){return String(k.uretim_asamalari||'').split(',').map(s=>s.trim()).filter(Boolean)}
 function flowIndex(parts,stage){const key=stageKey(stage),exact=parts.findIndex(p=>stageKey(p)===key);return exact>=0?exact:parts.findIndex(p=>stageEquals(p,stage))}
 function targetTitle(target){return target==='kk'?'Kalite Kontrol':'Sarım1'}
@@ -1935,7 +1935,20 @@ function getPostProcessCards(){return getPriorityCards().filter(k=>isAfterQualit
 function togglePostProcessPanel(){safePanelOpen('postProcessPanel','KK / Sarım 1 Sonrası Öncelik',renderPostProcessPanel)}
 function flowRiskScore(k){return fifoAgeDays(k)??0}
 function sortFlowCards(list){return list.sort(fifoCompare)}
-function makeFlowBuckets(target){const t=targetStage(target),b={incoming:{},currentFrom:{},currentTo:{},after:{}};const add=(name,key,k)=>{key=key||'Bilinmeyen';if(!b[name][key])b[name][key]={name:key,count:0,kg:0,cards:[]};b[name][key].count++;b[name][key].kg+=num(k.kilo);b[name][key].cards.push(k)};getPriorityCards().forEach(k=>{const parts=flowParts(k),idx=flowIndex(parts,t),cur=normalizeStageName(k._asama||k.asama),curIdx=flowIndex(parts,cur);if(idx<0)return;const prev=idx>0?parts[idx-1]:'Önceki yok',next=idx<parts.length-1?parts[idx+1]:(k.bir_sonraki||'Sonraki yok');if(stageEquals(cur,t)){add('currentFrom',prev,k);add('currentTo',k.bir_sonraki||next,k);return}if(curIdx===idx-1)add('incoming',prev,k);else if(curIdx===idx+1)add('after',next,k)});Object.values(b).forEach(group=>Object.values(group).forEach(x=>sortFlowCards(x.cards)));const sort=o=>Object.values(o).sort((a,b)=>fifoCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return{incoming:sort(b.incoming),currentFrom:sort(b.currentFrom),currentTo:sort(b.currentTo),after:sort(b.after)}}
+function makeFlowBuckets(target){
+    const t=targetStage(target),b={incoming:{},currentFrom:{},currentTo:{},after:{}};
+    const add=(name,key,k)=>{key=key||'Bilinmeyen';if(!b[name][key])b[name][key]={name:key,count:0,kg:0,cards:[]};b[name][key].count++;b[name][key].kg+=num(k.kilo);b[name][key].cards.push(k)};
+    getPriorityCards().forEach(k=>{
+        const parts=flowParts(k),cur=normalizeStageName(k._asama||k.asama),nextField=String(k.bir_sonraki||'').trim();
+        if(stageEquals(cur,t)){const idx=flowIndex(parts,t),prev=idx>0?parts[idx-1]:'Önceki yok',next=idx<parts.length-1?parts[idx+1]:(nextField||'Sonraki yok');add('currentFrom',prev,k);add('currentTo',nextField||next,k);return}
+        if(stageEquals(nextField,t)){add('incoming',cur||'Önceki yok',k);return}
+        const idx=flowIndex(parts,t),curIdx=flowIndex(parts,cur);if(idx<0)return;
+        const prev=idx>0?parts[idx-1]:'Önceki yok',next=idx<parts.length-1?parts[idx+1]:'Sonraki yok';
+        if(curIdx===idx-1)add('incoming',prev,k);else if(curIdx===idx+1)add('after',next,k);
+    });
+    Object.keys(b).forEach(kind=>{b[kind]=Object.values(b[kind]).sort((a,z)=>fifoCompare(a.cards[0],z.cards[0])||z.kg-a.kg);b[kind].forEach(group=>group.cards.sort(fifoCompare))});
+    return b;
+}
 function getFlowQueueCards(target){
     const b=makeFlowBuckets(target),seen=new Set(),out=[];
     ['incoming','currentFrom'].forEach(kind=>(b[kind]||[]).forEach(group=>(group.cards||[]).forEach(k=>{

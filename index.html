@@ -1943,7 +1943,7 @@ function getFlowQueueCards(target){
     })));
     return out.sort(fifoCompare);
 }
-function filterFlowFifoCards(target){filterCardsDirect(getFlowQueueCards(target))}
+function filterFlowFifoCards(target){showFlowPanelCards(targetTitle(target)+' FIFO kuyruğu',getFlowQueueCards(target),'renderFlowTargetPanel(&quot;'+target+'&quot;)')}
 function flowFifoQueueHtml(target,cards){
     const ordered=[...(cards||[])].sort(fifoCompare),title=targetTitle(target),kg=ordered.reduce((s,k)=>s+num(k.kilo),0);
     let h='<div class="flow-fifo-card"><div class="flow-fifo-head"><span>⏱️ '+title+' FIFO kuyruğu — en eski üstte</span><span class="flow-fifo-meta">'+ordered.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</span><button class="btn-all-export" onclick="filterFlowFifoCards(&quot;'+target+'&quot;)">FIFO kuyruğunu listele</button></div>';
@@ -1954,22 +1954,58 @@ function flowFifoQueueHtml(target,cards){
 }
 function flowSummaryHtml(title,items,target,kind){let h='<div class="flow-section-title">'+title+'</div>';if(!items.length)return h+'<div class="list-empty">Kayıt yok</div>';h+='<div class="flow-summary-grid">';items.forEach(x=>{const top=(x.cards||[]).map(k=>k.recete_adi).filter(Boolean).reduce((m,r)=>{m[r]=(m[r]||0)+1;return m},{});const tr=Object.entries(top).sort((a,b)=>b[1]-a[1])[0];h+='<div class="flow-summary-card" onclick="showFlowDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.name)+'&quot;))"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small>'+(tr?'<small style="color:#FFD54F">🎨 '+esc(tr[0])+' • '+tr[1]+'p</small>':'')+'</div>'});return h+'</div>'}
 function flowDetailCards(cards){const ordered=[...(cards||[])].sort(fifoCompare);if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';let h='<div class="flow-detail-list">';ordered.slice(0,180).forEach((k,i)=>{const due=daysUntilDate(k.termin_tarihi||k.termin_siparis);const dt=due===null?'-':(due<0?Math.abs(due)+' gün geçti':due+' gün kaldı');h+='<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="flow-card-top"><span class="flow-parti">FIFO #'+(i+1)+' • '+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k._asama||k.asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">FIFO yaşı: '+esc(fifoAgeLabel(k))+' • '+esc(waitHoursText(k))+' • Termin bilgisi: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(dt)+') • Tamir: '+((k.tamirler||[]).length)+'</div></div>'});return h+'</div>'}
+function flowWaitStageGroups(target,kind){
+    const source=makeFlowBuckets(target)[kind]||{},buckets=flowWaitBucketDefs().map(x=>({...x,count:0,kg:0,cards:[],stages:[]}));
+    Object.values(source).forEach(stageGroup=>(stageGroup.cards||[]).forEach(k=>{
+        const days=flowWaitDays(k);if(days===null)return;
+        const waitGroup=buckets.find(x=>days>=x.min&&days<x.max)||buckets[buckets.length-1];
+        let stage=waitGroup.stages.find(x=>x.name===stageGroup.name);
+        if(!stage){stage={name:stageGroup.name,count:0,kg:0,cards:[]};waitGroup.stages.push(stage)}
+        waitGroup.count++;waitGroup.kg+=num(k.kilo);waitGroup.cards.push(k);stage.count++;stage.kg+=num(k.kilo);stage.cards.push(k);
+    }));
+    return buckets.filter(x=>x.count).sort((a,b)=>a.min-b.min).map(x=>{
+        x.cards.sort(fifoCompare);x.stages.forEach(s=>s.cards.sort(fifoCompare));
+        x.stages.sort((a,b)=>fifoCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return x;
+    });
+}
+function flowWaitFirstTitle(target,kind){
+    const title=targetTitle(target),labels={incoming:title+' aşamasına gelecekler',currentFrom:title+' üzerindekiler — geldiği bir önceki aşama',currentTo:title+' üzerindekiler — gideceği bir sonraki aşama',after:title+' sonrası'};
+    return labels[kind]||title;
+}
+function flowWaitFirstHtml(target,kind,groups){
+    const title=flowWaitFirstTitle(target,kind);
+    let h='<div class="flow-section-title">'+esc(title)+' — önce bekleme süresi</div>';
+    if(!groups.length)return h+'<div class="list-empty">Kayıt yok</div>';
+    h+='<div class="flow-summary-grid">';
+    groups.forEach(x=>{h+='<div class="flow-summary-card" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+x.key+'&quot;)"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small><small style="color:#90CAF9">Aşama kırılımını aç</small></div>'});
+    return h+'</div>';
+}
+function showFlowWaitStageGroup(target,kind,key){
+    const group=flowWaitStageGroups(target,kind).find(x=>x.key===key),title=flowWaitFirstTitle(target,kind),p=document.getElementById('postProcessPanel');
+    if(!group){renderFlowTargetPanel(target);return}
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+' — '+esc(group.name)+'</h2><div class="panel-summary">'+esc(group.name)+' • '+group.count+' parti • '+Math.round(group.kg).toLocaleString('tr-TR')+' kg</div><div class="flow-tabs"><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;'+target+'&quot;)">← Akış özetine dön</button><button class="flow-tab" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;)">Bekleme grubunu yenile</button></div><div class="flow-section-title">'+esc(group.name)+' — önceki aşama kategorileri</div><div class="flow-summary-grid">';
+    group.stages.forEach(stage=>{h+='<div class="flow-summary-card" onclick="showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))"><b>'+stage.count+' parti</b>'+Math.round(stage.kg).toLocaleString('tr-TR')+' kg<small>'+esc(stage.name)+'</small><small style="color:#90CAF9">FIFO kartlarını aç</small></div>'});
+    h+='</div>';p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' - '+group.name);
+}
+function showFlowWaitStageDetail(target,kind,key,stageName){
+    const group=flowWaitStageGroups(target,kind).find(x=>x.key===key),stage=group&&group.stages.find(x=>x.name===stageName),title=flowWaitFirstTitle(target,kind),p=document.getElementById('postProcessPanel');
+    if(!group||!stage){showFlowWaitStageGroup(target,kind,key);return}
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+' — '+esc(group.name)+' — '+esc(stage.name)+'</h2><div class="panel-summary">'+esc(group.name)+' • '+esc(stage.name)+' • '+stage.count+' parti • '+Math.round(stage.kg).toLocaleString('tr-TR')+' kg • FIFO sıralı</div><div class="flow-tabs"><button class="flow-tab" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;)">← Aşama kategorilerine dön</button><button class="btn-all-export" onclick="showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))">FIFO listesini yenile</button></div>';
+    h+=flowDetailCards(stage.cards);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' - '+group.name+' - '+stage.name);
+}
 function renderFlowTargetPanel(target){
     const p=document.getElementById('postProcessPanel'),bucket=makeFlowBuckets(target),title=targetTitle(target),cards=getFlowTargetCards(target);
-    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+title+' Akış Özeti</h2><div class="panel-summary">Bu görünüm sadece '+title+' aşamasının doğrudan bir önceki ve doğrudan bir sonraki aşamasını sayar. Daha geride veya daha ileride olan partiler iş planını bozmasın diye bu özetlere dahil edilmez.</div><div class="flow-tabs"><button class="flow-tab" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab '+(target==='kk'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK</button><button class="flow-tab '+(target==='sarim1'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1</button><button class="btn-fire-export" onclick="exportFlowTargetWorkbook(&quot;'+target+'&quot;)">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;,&quot;'+target+'_akis.png&quot;)">📱 WhatsApp</button></div>';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+title+' Akış Özeti</h2><div class="panel-summary">Bu görünüm yalnızca panel içinde açılır. Her kategori önce bekleme süresine, sonra aşamaya göre daraltılır; son adım FIFO numaralı parti kartlarıdır.</div><div class="flow-tabs"><button class="flow-tab" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab '+(target==='kk'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK</button><button class="flow-tab '+(target==='sarim1'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;,&quot;'+target+'_akis.png&quot;)">📱 WhatsApp</button></div>';
     h+='<div class="flow-chart-grid">';
-    h+=pieChartHtml(title+' kategorileri — kg',flowCategoryPieGroups(bucket),'kg',x=>'filterFlowCategoryCards(&quot;'+target+'&quot;,&quot;'+x.flowKind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.flowName)+'&quot;))');
-    h+=flowWaitPieHtml(title+' bekleme süreleri — kg',cards,x=>'filterFlowTargetWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)');
+    h+=pieChartHtml(title+' kategorileri — kg',flowCategoryPieGroups(bucket),'kg',x=>'showFlowCategoryDetail(&quot;'+target+'&quot;,&quot;'+x.flowKind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.flowName)+'&quot;))');
+    h+=flowWaitPieHtml(title+' bekleme süreleri — kg',cards,x=>'showFlowTargetWaitDetail(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)');
     h+='</div>';
     h+=flowFifoQueueHtml(target,getFlowQueueCards(target));
-    h+=flowIncomingWaitHtml(target,flowIncomingWaitGroups(target));
-    h+=flowSummaryHtml(title+' üzerindekiler - geldiği bir önceki aşama',bucket.currentFrom,target,'currentFrom');
-    h+=flowSummaryHtml(title+' üzerindekiler - gideceği bir sonraki aşama',bucket.currentTo,target,'currentTo');
-    h+=flowSummaryHtml(title+' sonrası - sadece bir sonraki aşamaya geçmişler',bucket.after,target,'after');
+    ['incoming','currentFrom','currentTo','after'].forEach(kind=>{h+=flowWaitFirstHtml(target,kind,flowWaitStageGroups(target,kind))});
     p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' Akış Özeti');
 }
 function showFlowDetail(target,kind,name){const p=document.getElementById('postProcessPanel'),bucket=makeFlowBuckets(target),grp=(bucket[kind]||[]).find(x=>x.name===name),cards=grp?grp.cards:[],labels={incoming:'Gelecek',currentFrom:'Üzerinde / geldiği',currentTo:'Üzerinde / gideceği',after:'Sonrası'},encName=encodeURIComponent(name),ttl=targetTitle(target)+' - '+(labels[kind]||'Detay');let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">'+esc(name)+' • '+cards.length+' parti • '+Math.round(cards.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR')+' kg</div><div class="flow-tabs"><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;'+target+'&quot;)">← Özete Dön</button><button class="btn-all-export" onclick="filterFlowDetailCards(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encName+'&quot;))">Listeyi Göster</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+ttl+'&quot;,&quot;akis_detay.png&quot;)">📱 WhatsApp</button></div>'+flowDetailCards(cards);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',ttl)}
-function filterFlowDetailCards(target,kind,name){const grp=(makeFlowBuckets(target)[kind]||[]).find(x=>x.name===name);filterCardsDirect(grp?grp.cards:[])}
+function filterFlowDetailCards(target,kind,name){const grp=(makeFlowBuckets(target)[kind]||[]).find(x=>x.name===name);showFlowPanelCards(targetTitle(target)+' — '+name,grp?grp.cards:[],'showFlowDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(name)+'&quot;))')}
 function flowWaitBucketDefs(){
     return[
         {key:'0_3',name:'0–3 gün',min:0,max:3},
@@ -2014,39 +2050,6 @@ function flowWaitBuckets(cards){
     });
     return groups.filter(x=>x.count);
 }
-function flowIncomingWaitGroups(target){
-    const incoming=makeFlowBuckets(target).incoming,buckets=flowWaitBucketDefs().map(x=>({...x,count:0,kg:0,cards:[],stages:[]}));
-    Object.values(incoming).forEach(stageGroup=>(stageGroup.cards||[]).forEach(k=>{
-        const days=flowWaitDays(k);if(days===null)return;
-        const waitGroup=buckets.find(x=>days>=x.min&&days<x.max)||buckets[buckets.length-1];
-        let stage=waitGroup.stages.find(x=>x.name===stageGroup.name);
-        if(!stage){stage={name:stageGroup.name,count:0,kg:0,cards:[]};waitGroup.stages.push(stage)}
-        waitGroup.count++;waitGroup.kg+=num(k.kilo);waitGroup.cards.push(k);stage.count++;stage.kg+=num(k.kilo);stage.cards.push(k);
-    }));
-    return buckets.filter(x=>x.count).sort((a,b)=>a.min-b.min).map(x=>{x.stages.sort((a,b)=>fifoCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return x});
-}
-function filterFlowIncomingWait(target,key){
-    const group=flowIncomingWaitGroups(target).find(x=>x.key===key);
-    filterCardsDirect(group?group.cards:[]);
-}
-function filterFlowIncomingStageWait(target,key,name){
-    const group=flowIncomingWaitGroups(target).find(x=>x.key===key),stage=group&&group.stages.find(x=>x.name===name);
-    filterCardsDirect(stage?stage.cards:[]);
-}
-function flowIncomingWaitHtml(target,groups){
-    const title=targetTitle(target);
-    let h='<div class="flow-section-title">'+title+' aşamasına gelecekler — önce bekleme süresi, sonra önceki aşama</div>';
-    if(!groups.length)return h+'<div class="list-empty">Kayıt yok</div>';
-    h+='<div class="flow-summary-grid">';
-    groups.forEach(x=>{h+='<div class="flow-summary-card" onclick="filterFlowIncomingWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small></div>'});
-    h+='</div>';
-    groups.forEach(x=>{
-        h+='<div class="flow-section-title">'+esc(x.name)+' — önceki aşamaya göre</div><div class="flow-summary-grid">';
-        x.stages.forEach(stage=>{h+='<div class="flow-summary-card" onclick="filterFlowIncomingStageWait(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))"><b>'+stage.count+' parti</b>'+Math.round(stage.kg).toLocaleString('tr-TR')+' kg<small>'+esc(stage.name)+'</small></div>'});
-        h+='</div>';
-    });
-    return h;
-}
 function getFlowTargetCards(target){
     const seen=new Set(),out=[];
     Object.values(makeFlowBuckets(target)).forEach(groups=>Object.values(groups).forEach(group=>(group.cards||[]).forEach(k=>{
@@ -2054,6 +2057,18 @@ function getFlowTargetCards(target){
     })));
     return out.sort(fifoCompare);
 }
+function showFlowPanelCards(title,cards,backAction){
+    const p=document.getElementById('postProcessPanel'),ordered=[...(cards||[])].sort(fifoCompare);
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+'</h2><div class="panel-summary">'+ordered.length+' parti • '+Math.round(ordered.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR')+' kg • FIFO sıralı</div><div class="flow-tabs"><button class="flow-tab" onclick="'+backAction+'">← Akış özetine dön</button></div>';
+    h+=flowDetailCards(ordered);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title);
+}
+function showFlowCategoryDetail(target,kind,name){showFlowDetail(target,kind,name)}
+function filterFlowCategoryCards(target,kind,name){showFlowCategoryDetail(target,kind,name)}
+function showFlowTargetWaitDetail(target,key){
+    const bucket=flowWaitBucketDefs().find(x=>x.key===key),cards=getFlowTargetCards(target).filter(k=>{const days=flowWaitDays(k);return bucket&&days!==null&&days>=bucket.min&&days<bucket.max;});
+    showFlowPanelCards(targetTitle(target)+' — '+(bucket?bucket.name:key),cards,'renderFlowTargetPanel(&quot;'+target+'&quot;)');
+}
+function filterFlowTargetWait(target,key){showFlowTargetWaitDetail(target,key)}
 function flowCategoryPieGroups(bucket){
     const labels={incoming:'Gelecek',currentFrom:'Üzerinde / geldiği',currentTo:'Üzerinde / gideceği',after:'Sonrası'};
     const out=[];
@@ -2062,19 +2077,8 @@ function flowCategoryPieGroups(bucket){
     }));
     return out;
 }
-function filterFlowCategoryCards(target,kind,name){
-    const group=(makeFlowBuckets(target)[kind]||[]).find(x=>x.name===name);
-    filterCardsDirect(group?group.cards:[]);
-}
 function flowWaitPieHtml(title,cards,onClick){
     return pieChartHtml(title,flowWaitBuckets(cards),'kg',onClick);
-}
-function filterFlowTargetWait(target,key){
-    const bucket=flowWaitBucketDefs().find(x=>x.key===key);
-    filterCardsDirect(getFlowTargetCards(target).filter(k=>{
-        const days=flowWaitDays(k);
-        return bucket&&days!==null&&days>=bucket.min&&days<bucket.max;
-    }).sort(fifoCompare));
 }
 function flowWaitSummaryHtml(target,kind,parentName,cards){
     const groups=flowWaitBuckets(cards),parent=encodeURIComponent(parentName);
@@ -2103,8 +2107,8 @@ function showFlowWaitDetail(target,kind,parentName,key){
     p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' - '+parentName+' - '+(bucket?bucket.name:key));
 }
 function filterFlowWaitDetailCards(target,kind,parentName,key){
-    const group=flowWaitGroup(target,kind,parentName,key);
-    filterCardsDirect(group?group.cards:[]);
+    const group=flowWaitGroup(target,kind,parentName,key),bucket=flowWaitBucketDefs().find(x=>x.key===key);
+    showFlowPanelCards(targetTitle(target)+' — '+parentName+' — '+(bucket?bucket.name:key),group?group.cards:[],'showFlowWaitDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(parentName)+'&quot;),&quot;'+key+'&quot;)');
 }
 function postProcessItemHtml(k,i){
     const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı'),parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),note=postProcessNotes[k.id]||'';

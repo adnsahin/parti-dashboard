@@ -10,6 +10,8 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 - `data/hareket_saatleri.json`: Parti bazında son hareket saatlerini sağlar; GitHub Pages yüklemesinde `data/partiler.json` ile birlikte okunur.
 - `convert_excel.js`: Excel dosyasını JSON veriye çevirir.
 - `update_data.ps1`: Veriyi günceller, istenirse git push yapar.
+- `telegram_alarm_service.js`: PC üzerinde çalışan, Telegram bildirim servisi ve yerel dashboard sunucusu.
+- `TELEGRAM_ALARM_BASLAT.bat`: Telegram servisinin token ve Chat ID sorarak başlatılması.
 - `tools/xlsx.full.min.js`: Excel okuma kütüphanesi.
 
 
@@ -67,6 +69,19 @@ python .\update_partiler_json.py ".\partiler.xlsx" ".\data\partiler.json"
 ```
 
 Betik `Son Yapılan Aşama`, `Sonra Yapılacak Aşama` ve `Son Hareket Tarihi` alanlarını her karta ekler. Yalnız `partiler.json` güncellenir; `tamirler.json` dosyasına dokunmaz. Mevcut otomatik BAT'ta, GitHub push işleminden hemen önce bu komutu çalıştırın.
+
+## Telegram Alarm Servisi
+
+PC açıkken ücretsiz Telegram bildirimi göndermek için `TELEGRAM_ALARM_BASLAT.bat` dosyasını çalıştırın. İlk çalıştırmada BotFather tokeni ve alıcı Chat ID bilgileri sorulur; bu bilgiler repoya yazılmaz.
+
+Servis `http://127.0.0.1:8783` adresinde çalışır ve dashboardu bu adresten açın:
+
+```text
+http://127.0.0.1:8783/index.html
+```
+
+Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol` veya `Sarım1` seçilebilir. Alarm kayıtları servisle senkronlanır; parti hedef aşamaya geldiğinde mesaj bir kez gönderilir. GitHub Pages üzerindeki HTTPS sayfası, güvenlik nedeniyle yerel HTTP servisine bağlanamaz; Telegram alarmı için dashboardun yerel servis adresinden açılması gerekir.
+
 
 ## GitHub Pages
 

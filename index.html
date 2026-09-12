@@ -814,7 +814,28 @@ let uploadValidation={mainRows:0,repairRows:0,emptyParti:0,emptyStage:0,zeroKg:0
 function saveChecks(){localStorage.setItem('ck9',JSON.stringify([...checkedCards]))}
 function saveNotes(){localStorage.setItem('nr9',JSON.stringify(noteRecords))}
 function saveFires(){localStorage.setItem('fr9',JSON.stringify(fireRecords))}
-function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords))}
+function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));telegramSyncSnapshot()}
+const TELEGRAM_ALARM_SERVICE_URL=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'':'http://127.0.0.1:8783';
+let telegramSyncTimer=null;
+function telegramSyncSnapshot(){
+    clearTimeout(telegramSyncTimer);
+    telegramSyncTimer=setTimeout(()=>{
+        const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]),cards=typeof getAllCards==='function'?getAllCards():[];
+        fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})}).catch(()=>{});
+    },150);
+}
+function testTelegramConnection(){
+    fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard Telegram bağlantı testi başarılı.'})})
+        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ Telegram mesajı gönderildi.':'⚠️ Telegram: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
+        .catch(()=>showToast('⚠️ Telegram servisi çalışmıyor. Önce telegram_alarm_service.js başlatılmalı.','warning'));
+}
+function insertAlarmTargetField(id,k,dateId,selectId){
+    const date=document.getElementById(dateId),row=date&&date.parentElement&&date.parentElement.parentElement;
+    if(!row||document.getElementById(selectId))return;
+    const guess=stageEquals(k.bir_sonraki,'KK')?'KK':stageEquals(k.bir_sonraki,'SARIM1')?'SARIM1':'';
+    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Telegram hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none"><option value="">Sadece tarih alarmı</option><option value="KK" '+(guess==='KK'?'selected':'')+'>Kalite Kontrol</option><option value="SARIM1" '+(guess==='SARIM1'?'selected':'')+'>Sarım1</option></select>';
+    row.parentElement.insertBefore(wrap,row);
+}
 function saveSelected(){localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
 function saveTamirOverrides(){localStorage.setItem('to9',JSON.stringify(tamirOverrides))}
 function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postProcessNotes))}
@@ -971,7 +992,7 @@ function renderAlarmPanel(){
     else{const active=all.filter(a=>a.active!==false),inactive=all.filter(a=>a.active===false);
     if(active.length){h+='<h4 style="color:#4CAF50;margin:10px 0">🟢 Aktif</h4>';active.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';const dt=a.datetime?new Date(a.datetime).toLocaleString('tr-TR'):'';h+='<div class="alarm-item '+pc+'"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'Orta')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b><br>'+esc(a.description||'')+'</div><div class="alarm-item-time">📅 '+dt+'</div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">⏸️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}
     if(inactive.length){h+='<h4 style="color:#888;margin:10px 0">⚫ Pasif</h4>';inactive.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';h+='<div class="alarm-item '+pc+'" style="opacity:.5"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b></div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">▶️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}}
-    p.innerHTML=h;p.style.display='block';
+    p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 Telegram bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testTelegramConnection;p.insertBefore(test,p.children[2]||null);
 }
 function openAlarmModal(id){
     const k=getCardById(id);if(!k)return;
@@ -979,16 +1000,16 @@ function openAlarmModal(id){
     let existing='';const alarms=getAlarmsList(id);
     if(alarms.length){existing='<div style="margin-bottom:12px">';alarms.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';existing+='<div class="alarm-item '+pc+'" style="margin-bottom:6px"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.title)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'')+'</span></div><div class="alarm-item-time">📅 '+(a.datetime?new Date(a.datetime).toLocaleString('tr-TR'):'')+'</div></div>'});existing+='</div>'}
     const h='<div style="margin-bottom:15px;padding:10px;background:rgba(255,255,255,.05);border-radius:8px"><b style="color:#FFD700">'+esc(k.parti)+'</b> - '+esc(k._asama)+'<br><small style="color:#aaa">'+esc(k.line1||'')+'</small></div>'+existing+'<div style="background:rgba(231,76,60,.1);border:2px solid rgba(231,76,60,.3);border-radius:12px;padding:15px"><h3 style="color:#E74C3C;margin-bottom:12px;font-size:14px">➕ Yeni Alarm</h3><div style="margin-bottom:10px"><input type="text" id="alarm_title_'+id+'" placeholder="Alarm başlığı..." style="width:100%;padding:10px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;font-size:13px;outline:none"></div><div style="margin-bottom:10px"><textarea id="alarm_desc_'+id+'" placeholder="Açıklama..." style="width:100%;padding:10px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;font-size:13px;outline:none;min-height:60px;resize:vertical;font-family:inherit"></textarea></div><div class="datetime-row" style="margin-bottom:10px"><div><label style="color:#64B5F6;font-size:12px;font-weight:bold">Tarih</label><input type="date" id="alarm_date_'+id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none"></div><div><label style="color:#64B5F6;font-size:12px;font-weight:bold">Saat</label><input type="time" id="alarm_time_'+id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none"></div></div><div style="margin-bottom:10px"><label style="color:#64B5F6;font-size:12px;font-weight:bold">Öncelik</label><div class="priority-btns" id="priority_btns_'+id+'">'+prioOpts+'</div></div><div style="display:flex;gap:10px"><button style="flex:1;padding:10px;border-radius:8px;border:none;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#E74C3C,#C0392B);color:white;font-size:13px" onclick="saveAlarm(\''+id+'\')">💾 Kaydet</button><button style="flex:1;padding:10px;border-radius:8px;border:none;font-weight:bold;cursor:pointer;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:13px" onclick="closeAlarmModal()">İptal</button></div></div>';
-    document.getElementById('alarmModalContent').innerHTML=h;document.getElementById('alarmModal').classList.add('show');
+    document.getElementById('alarmModalContent').innerHTML=h;insertAlarmTargetField(id,k,'alarm_date_'+id,'alarm_target_'+id);document.getElementById('alarmModal').classList.add('show');
 }
 function closeAlarmModal(){document.getElementById('alarmModal').classList.remove('show')}
 document.getElementById('alarmModal').addEventListener('click',function(e){if(e.target===this)closeAlarmModal()});
 function selectPriority(btn){document.querySelectorAll('#'+btn.parentElement.id+' .priority-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 function saveAlarm(id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('alarm_title_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
-    const desc=document.getElementById('alarm_desc_'+id).value.trim();const date=document.getElementById('alarm_date_'+id).value;const time=document.getElementById('alarm_time_'+id).value;
-    const datetime=date&&time?date+'T'+time+':00':null;const ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active');const priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',firma:k.line1||'',title,description:desc,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const desc=document.getElementById('alarm_desc_'+id).value.trim(),date=document.getElementById('alarm_date_'+id).value,time=document.getElementById('alarm_time_'+id).value,target=document.getElementById('alarm_target_'+id)?.value||'';
+    const datetime=date&&time?date+'T'+time+':00':null,ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,firma:k.line1||'',title,description:desc,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
     const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Alarm eklendi!');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
 }
 function deleteAlarm(id,uid){if(!confirm('Sil?'))return;const l=getAlarmsList(id).filter(a=>a.uid!==uid);if(l.length)alarmRecords[id]=l;else delete alarmRecords[id];saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards);updateAlarmCount()}
@@ -1775,7 +1796,7 @@ function openDetailModal(id){
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
     h+='<div class="fire-form" style="margin-top:8px"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="mfirekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="mfiremt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="mfiresebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="mfirenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFireM(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFireM(event,\''+k.id+'\')">Hepsini Sil</button></div></div>';
-    document.getElementById('detailModalContent').innerHTML=h;document.getElementById('detailModal').classList.add('show');
+    document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);document.getElementById('detailModal').classList.add('show');
 }
 function closeDetailModal(){
     document.getElementById('detailModal').classList.remove('show');
@@ -1788,9 +1809,9 @@ document.getElementById('detailModal').addEventListener('click',function(e){if(e
 function selectPriorityM(btn){document.querySelectorAll('#'+btn.parentElement.id+' .priority-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 function saveAlarmM(e,id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('mAlarmTitle_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
-    const date=document.getElementById('mAlarmDate_'+id).value;const time=document.getElementById('mAlarmTime_'+id).value;const datetime=date&&time?date+'T'+time+':00':null;
-    const ap=document.querySelector('#mPrioBtns_'+id+' .priority-btn.active');const priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,title,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const date=document.getElementById('mAlarmDate_'+id).value,time=document.getElementById('mAlarmTime_'+id).value,target=document.getElementById('mAlarmTarget_'+id)?.value||'',datetime=date&&time?date+'T'+time+':00':null;
+    const ap=document.querySelector('#mPrioBtns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,title,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
     const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Alarm eklendi!');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
 }
 
@@ -2200,6 +2221,7 @@ function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
     try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
+    telegramSyncSnapshot();
 }
 function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
 function cardStageIndex(k){

@@ -12,11 +12,15 @@ const ROOT = __dirname;
 const PORT = Number(process.env.TELEGRAM_ALARM_PORT || 8783);
 const TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const CHAT_IDS = String(process.env.TELEGRAM_CHAT_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
+const DATA_URL = String(process.env.TELEGRAM_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
+const POLL_SECONDS = Math.max(30, Number(process.env.TELEGRAM_POLL_SECONDS || 300));
 const stateDir = process.env.LOCALAPPDATA
     ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardTelegram')
     : path.join(os.homedir(), '.parti-dashboard-telegram');
 const STATE_FILE = path.join(stateDir, 'state.json');
 const MAX_BODY = 12 * 1024 * 1024;
+let lastPoll = null;
+let lastPollError = '';
 
 function log(...args) { console.log(new Date().toISOString(), ...args); }
 function clean(v) { return String(v == null ? '' : v).trim(); }
@@ -49,9 +53,9 @@ function cardLabel(card) {
 function readState() {
     try {
         const value = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-        return value && typeof value === 'object' ? value : {cards: {}, sent: {}};
+        return value && typeof value === 'object' ? value : {cards: {}, sent: {}, alarms: []};
     } catch (_) {
-        return {cards: {}, sent: {}};
+        return {cards: {}, sent: {}, alarms: []};
     }
 }
 function writeState(state) {
@@ -149,11 +153,77 @@ function cardMap(cards) {
     });
     return out;
 }
+function githubNextStage(flow, waiting, last) {
+    const stages = clean(flow).split(',').map(x => x.trim()).filter(Boolean);
+    if (!stages.length || !clean(waiting)) return '';
+    const lastIndex = stages.reduce((found, stage, i) => stageEquals(stage, last) ? i : found, -1);
+    const waitingIndex = stages.findIndex((stage, i) => stageEquals(stage, waiting) && (lastIndex < 0 || i >= lastIndex));
+    const index = waitingIndex >= 0 ? waitingIndex : stages.findIndex(stage => stageEquals(stage, waiting));
+    return index >= 0 ? stages[index + 1] || '' : '';
+}
+function githubCards(data) {
+    return (data && Array.isArray(data.cards) ? data.cards : []).map(card => ({
+        id: clean(card.id || card.parti),
+        parti: clean(card.parti),
+        _asama: clean(card.stage || card.nextStage),
+        bir_sonraki: githubNextStage(card.flow, card.stage || card.nextStage, card.lastStage),
+        son_asama: clean(card.lastStage),
+        son_asama_tarihi: clean(card.hareket),
+        hareket: clean(card.hareket),
+        kilo: card.kg,
+        bekleme: clean(card.wait),
+        line1: clean(card.firma),
+        uretim_asamalari: clean(card.flow)
+    })).filter(card => card.id && card.parti);
+}
+function fetchJson(urlString) {
+    return new Promise((resolve, reject) => {
+        const target = new URL(urlString);
+        const req = https.get({
+            hostname: target.hostname,
+            port: target.port || 443,
+            path: target.pathname + target.search,
+            headers: {'User-Agent': 'parti-dashboard-telegram-service'}
+        }, response => {
+            let text = '';
+            response.setEncoding('utf8');
+            response.on('data', chunk => { text += chunk; });
+            response.on('end', () => {
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                    reject(new Error(`GitHub veri isteği HTTP ${response.statusCode}`));
+                    return;
+                }
+                try { resolve(JSON.parse(text)); } catch (_) { reject(new Error('GitHub verisi geçersiz JSON')); }
+            });
+        });
+        req.setTimeout(15000, () => req.destroy(new Error('GitHub veri isteği zaman aşımına uğradı')));
+        req.on('error', reject);
+    });
+}
+async function pollGithub() {
+    if (lastPoll && lastPoll.inFlight) return;
+    lastPoll = {inFlight: true, at: new Date().toISOString(), cards: 0, events: 0};
+    try {
+        const separator = DATA_URL.includes('?') ? '&' : '?';
+        const cards = githubCards(await fetchJson(DATA_URL + separator + 'ts=' + Date.now()));
+        const state = readState();
+        const result = await processSnapshot({cards, alarms: Array.isArray(state.alarms) ? state.alarms : []});
+        lastPoll = {inFlight: false, at: new Date().toISOString(), cards: cards.length, events: result.events.length};
+        lastPollError = '';
+        if (result.events.length) log(`GitHub senkronu: ${result.events.length} Telegram alarmı işlendi`);
+    } catch (error) {
+        lastPoll = {...(lastPoll || {}), inFlight: false};
+        lastPollError = error.message;
+        log('GitHub senkron hatası:', error.message);
+    }
+}
 async function processSnapshot(payload) {
+    payload = payload || {};
     const state = readState();
     const previous = state.cards || {};
     const current = cardMap(payload.cards);
-    const alarms = Array.isArray(payload.alarms) ? payload.alarms : [];
+    const hasAlarms = Array.isArray(payload.alarms);
+    const alarms = hasAlarms ? payload.alarms : (Array.isArray(state.alarms) ? state.alarms : []);
     const sent = state.sent || {};
     const events = [];
     for (const alarm of alarms) {
@@ -172,6 +242,7 @@ async function processSnapshot(payload) {
         if (result.sent) sent[eventKey] = new Date().toISOString();
     }
     state.cards = current;
+    state.alarms = alarms;
     state.sent = sent;
     writeState(state);
     return {ok: true, checkedCards: Object.keys(current).length, checkedAlarms: alarms.length, events};
@@ -193,7 +264,17 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     try {
         if (req.method === 'GET' && url.pathname === '/api/telegram/status') {
-            json(res, 200, {ok: true, configured: Boolean(TOKEN && CHAT_IDS.length), chatCount: CHAT_IDS.length, stateFile: STATE_FILE, port: PORT});
+            json(res, 200, {
+                ok: true,
+                configured: Boolean(TOKEN && CHAT_IDS.length),
+                chatCount: CHAT_IDS.length,
+                stateFile: STATE_FILE,
+                port: PORT,
+                githubDataUrl: DATA_URL,
+                pollSeconds: POLL_SECONDS,
+                lastPoll,
+                lastPollError
+            });
             return;
         }
         if (req.method === 'POST' && url.pathname === '/api/telegram/test') {
@@ -236,4 +317,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
     log(`Parti Dashboard Telegram servisi http://127.0.0.1:${PORT}`);
     log(`Telegram ayarı: ${TOKEN && CHAT_IDS.length ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
+    log(`GitHub veri senkronu: ${DATA_URL} / ${POLL_SECONDS} saniye`);
+    pollGithub();
+    setInterval(pollGithub, POLL_SECONDS * 1000);
 });

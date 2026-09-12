@@ -31,6 +31,16 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 - Gün seçimine göre notları ve kategori/alt dal/parti düzenini `localStorage` içinde `partiMindmap.v1` anahtarıyla tarayıcıya kaydeder.
 
 JSON verisinin otomatik yüklenmesi için dashboardu GitHub Pages veya yerel HTTP sunucusu üzerinden açın. `file://` ile doğrudan açıldığında tarayıcı güvenliği JSON isteğini engelleyebilir; bu durumda Excel yükleme alanı kullanılabilir.
+
+## Anlık Islak Bekleyenler
+
+Dashboarddaki **💧 Islak-Kuru** paneli artık geçmiş ıslak→kuru geçiş çizelgesini değil, anlık kart verisindeki bekleyen partileri gösterir:
+
+- Son tamamlanan aşaması `BOYAMA`, `YAŞ AÇMA` veya `FIRÇA` olan kartlar listelenir.
+- Son hareketinden itibaren varsayılan **2 saat** eşiğini aşanlar en uzun bekleyen üstte olacak şekilde kart görünümünde gösterilir.
+- Panel içinden 1, 2 veya 4 saatlik hazır eşikler seçilebilir; istenirse özel saat değeri uygulanabilir.
+- Her kartta FIFO sırası, mevcut ıslak aşama, beklediği sonraki aşama, bekleme süresi, son hareket, kilo, firma ve reçete görünür.
+
 ## Veri Güncelleme
 
 Ana Excel `..\partiler.xlsx` ise:

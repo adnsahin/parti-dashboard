@@ -1917,7 +1917,7 @@ function isDueSoon(k){const d=daysUntilDate(k.termin_tarihi||k.termin_siparis);r
 function getScoreParts(k){const noteRisk=/ACIL|ACİL|SEVK ETME|ONAY|BEKLE/i.test([k.parti_notu,k.siparis_notu,k.planlama_notu,k.termin_notu].join(' '));const parts=[];if(k.seviye==='kritik')parts.push(['Kritik bekleme',100]);else if(k.seviye==='uyari')parts.push(['Uyarı bekleme',45]);const waitDays=fifoAgeDays(k)??num(k.bekleme_gun),waitPts=Math.min(waitDays*8,160);if(waitPts)parts.push(['FIFO bekleme yaşı',Math.round(waitPts)]);const kgPts=Math.min(num(k.kilo)/80,30);if(kgPts)parts.push(['Kilo yükü',Math.round(kgPts)]);if(k.tamirler&&k.tamirler.length)parts.push(['Tamir kaydı',k.tamirler.length*25]);if(k.ic_tamir)parts.push(['İç tamir',55]);if(k.bekleme_asama)parts.push(['Beklemeye alınmış',45]);if(noteRisk)parts.push(['Not riski',25]);return{parts,due:daysUntilDate(k.termin_tarihi||k.termin_siparis),noteRisk,score:parts.reduce((s,p)=>s+p[1],0)}}
 function getPriorityCards(){return getAllCards().map(k=>{const sp=getScoreParts(k);return{...k,score:sp.score,due:sp.due,noteRisk:sp.noteRisk,scoreParts:sp.parts}}).sort((a,b)=>fifoCompare(a,b)||b.score-a.score)}
 function getBottlenecks(){const map={};getAllCards().forEach(k=>{const a=k._asama||k.asama||'Bilinmeyen';if(!map[a])map[a]={asama:a,count:0,kg:0,kritik:0,tamir:0,overdue:0,dueSoon:0,waitSum:0,maxWait:0,priority:0,machines:{},cards:[]};map[a].cards.push(k);map[a].count++;map[a].kg+=num(k.kilo);const wait=fifoAgeDays(k)??num(k.bekleme_gun);map[a].waitSum+=wait;map[a].maxWait=Math.max(map[a].maxWait,wait);if(k.seviye==='kritik')map[a].kritik++;if(k.tamirler&&k.tamirler.length)map[a].tamir++;if(isOverdue(k))map[a].overdue++;if(isDueSoon(k))map[a].dueSoon++;if(num(k.oncelik_no)&&num(k.oncelik_no)<1000)map[a].priority++;const m=k.plan_makina||k.son_makina||'';if(m)map[a].machines[m]=(map[a].machines[m]||0)+1});return Object.values(map).map(r=>{const top=Object.entries(r.machines).sort((a,b)=>b[1]-a[1])[0];r.avgWait=r.count?r.waitSum/r.count:0;r.topMachine=top?top[0]+' ('+top[1]+')':'-';r.loadScore=r.count*2+r.kg/1000+r.avgWait*4+r.maxWait*2+r.kritik*3+r.tamir*2;return r}).sort((a,b)=>b.loadScore-a.loadScore||b.maxWait-a.maxWait||b.count-a.count||b.kg-a.kg)}
-function updateInsightStrip(){const cards=getAllCards();const today=getPriorityCards().filter(k=>k.score>=90).length;const bott=getBottlenecks()[0];const repairParties=new Set(TAMIR_LIST.map(t=>String(t.parti).trim()).filter(Boolean));const problems=(uploadValidation.emptyParti||0)+(uploadValidation.emptyStage||0)+(uploadValidation.unmatchedRepair||0)+(uploadValidation.overdueTermin||0)+(uploadValidation.waitBlocked||0)+(uploadValidation.missingColumns||[]).length;const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('qiToday',today);set('qiBottleneck',bott?bott.count:'-');set('qiValidation',cards.length?problems:'-');set('qiRepair',repairParties.size);set('qiPost',getPostProcessCards().length)}
+function updateInsightStrip(){const cards=getAllCards();const today=getPriorityCards().filter(k=>k.score>=90).length;const bott=getBottlenecks()[0];const repairParties=new Set(TAMIR_LIST.map(t=>String(t.parti).trim()).filter(Boolean));const problems=(uploadValidation.emptyParti||0)+(uploadValidation.emptyStage||0)+(uploadValidation.unmatchedRepair||0)+(uploadValidation.overdueTermin||0)+(uploadValidation.waitBlocked||0)+(uploadValidation.missingColumns||[]).length;const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('qiToday',today);set('qiBottleneck',bott?bott.count:'-');set('qiValidation',cards.length?problems:'-');set('qiRepair',repairParties.size);set('qiPost',getPostProcessCards().length);set('qiWetDry',typeof getWetWaitingCards==='function'?getWetWaitingCards().length:0)}
 function toggleTodayPanel(){safePanelOpen('todayPanel','Bugün Çöz',renderTodayPanel)}
 function renderTodayPanel(){const p=document.getElementById('todayPanel');const rows=getPriorityCards().filter(k=>k.score>=90).slice(0,60);let h='<button class="panel-close" onclick="document.getElementById(\'todayPanel\').style.display=\'none\'">×</button><h2 style="color:#E74C3C">🎯 Bugün Çöz</h2><div class="panel-summary">Termin, öncelik no, iç tamir, beklemeye alınan aşama, not riski ve bekleme süresine göre öncelikli liste</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn-all-export" onclick="filterTodayCards()">Listeyi Göster</button><button class="btn-fire-export" onclick="exportTodayWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;todayPanel&quot;,&quot;Bugün Çöz&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;todayPanel&quot;,&quot;Bugün Çöz&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;todayPanel&quot;,&quot;Bugün Çöz&quot;,&quot;bugun_coz.png&quot;)">📱 WhatsApp</button></div>';if(!rows.length)h+='<div class="list-empty">Öncelikli kayıt yok</div>';else rows.forEach((k,i)=>{const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı');const flags=[k.ic_tamir?'İç tamir':'',k.bekleme_asama?'Beklemeye alınmış':'',k.noteRisk?'Not riskli':'',num(k.oncelik_no)&&num(k.oncelik_no)<1000?'Öncelik '+esc(k.oncelik_no):''].filter(Boolean).join(' • ');const breakdown=(k.scoreParts||[]).map(p=>p[0]+' +'+p[1]).join(' / ');h+='<div class="priority-item" onclick="openDetailModal(\''+k.id+'\')"><div class="pi-top"><span class="pi-parti">'+(i+1)+'. '+esc(k.parti)+'</span><span class="pi-score">'+Math.round(k.score)+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • '+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+')</div>'+(flags?'<small style="color:#FFB74D">'+flags+'</small><br>':'')+'<small>'+esc(k.line1||'')+'</small>'+cardInfoLines(k)+'<br><small style="color:#90CAF9">Puan: '+esc(breakdown)+'</small></div>'});p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('todayPanel','Bugün Çöz')}
 function toggleBottleneckPanel(){safePanelOpen('bottleneckPanel','Darboğaz Analizi',renderBottleneckPanel)}
@@ -2494,43 +2494,33 @@ function githubWaitText(v){const d=Math.max(0,num(v)||0),g=Math.floor(d);let sec
 function githubCardToMainRow(c){const wait=githubWaitText(c.wait);let movement=String(c.hareket||'').trim();if(!movement){try{movement=String(safeParse('hsaat9','{}')[String(c.parti)]||'')}catch(_e){}}if(!movement)movement=String(REMOTE_SAAT[String(c.parti)]||'').trim();if(!movement&&typeof c.wait==='number'&&isFinite(c.wait)&&c.wait>=0){const fallback=new Date();fallback.setDate(fallback.getDate()-Math.round(c.wait));movement=fallback.toLocaleDateString('tr-TR')}return{'Parti No':c.parti||'','Sonra Yapılacak Aşama':c.stage||c.nextStage||'','Son Yapılan Aşama':c.lastStage||'','Kilo':num(c.kg),'Çıkıştan Sonra Geçen Süre':wait,'Geçen Süre (Son Hareketten Sonra)':wait,'Son Hareket Tarihi':movement,'Çıkış Tarihi':movement,'Firma Adı':c.firma||'','Sipariş No':c.order||'','Müşteri Sipariş No':c.customer||'','Ham Adı':c.fabric||'','Reçete Adı':c.recipe||'','Termin Tarihi':c.term||'','Öncelik No':c.pri||'','İç Tamir Durumu':c.inner||'','Beklemeye Alınmış Aşama Var':c.blocked||'','Üretim Aşamaları':c.flow||'','Planlandigi Makina Kodu':c.machine||''}}
 function githubRepairToRow(r){return{'Parti No':r.parti||'','Tamir Nedeni':r.neden||'','Tamir Tipi':r.tip||'','Tamir Notu':r.not||'','Sorumlu':r.stage||'','Tamir Tarihi':r.tarih||''}}
 
+let wetWaitThresholdHours=2;
+const WET_WAIT_STAGES=['BOYAMA','YAŞ AÇMA','FIRÇA'];
+function getWetWaitingCards(){
+  return getAllCards().map(k=>{const age=latestUpdateAgeHours(k);return{...k,wetCurrent:cardCurrentStage(k),wetNext:cardNextStage(k),wetAgeHours:age}}).filter(k=>WET_WAIT_STAGES.some(stage=>stageEquals(k.wetCurrent,stage))&&k.wetAgeHours!==null&&k.wetAgeHours>wetWaitThresholdHours).sort((a,b)=>b.wetAgeHours-a.wetAgeHours||fifoCompare(a,b));
+}
+function wetWaitDuration(hours){
+  const total=Math.max(0,Math.floor(hours*60)),days=Math.floor(total/1440),rest=total%1440;
+  return days+' Gün, '+String(Math.floor(rest/60)).padStart(2,'0')+':'+String(rest%60).padStart(2,'0');
+}
+function wetWaitItemHtml(k,i){
+  const movement=latestUpdateDate(k),movementText=movement?movement.toLocaleString('tr-TR'):(k.son_asama_tarihi||k.hareket||'-');
+  return '<div class="post-item '+esc(k.seviye||'normal')+'"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Islak bekleme: '+esc(wetWaitDuration(k.wetAgeHours))+'</span></div><div><b>Son ıslak aşama:</b> '+esc(k.wetCurrent||'-')+' → <b>Beklediği:</b> '+esc(k.wetNext||'-')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Son hareket: '+esc(movementText)+' • Eşik: '+wetWaitThresholdHours+' saat</div><small>'+esc(k.line1||k.firma||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+'</div>';
+}
+function applyWetWaitThreshold(){
+  const input=document.getElementById('wetWaitThresholdInput'),value=input?Number(input.value):NaN;
+  if(!Number.isFinite(value)||value<0){showToast('Islak bekleme eşiği 0 veya daha büyük olmalı','warning');return}
+  wetWaitThresholdHours=value;renderWetDryPanel();
+}
+function setWetWaitQuick(hours){wetWaitThresholdHours=hours;renderWetDryPanel()}
 function toggleWetDryPanel(){
-  safePanelOpen('wetDryPanel','Islak-Kuru Bekleme',renderWetDryPanel);
+  safePanelOpen('wetDryPanel','💧 Islak Bekleyenler',renderWetDryPanel);
 }
-
-const WET_DRY_DATA_URL='data/wet_dry_report.json';
-const WET_INTERNAL_DATA_URL='data/wet_internal_report.json';
-function wetFetchJson(url){return fetch(url).then(r=>{if(!r.ok)throw new Error('Veri dosyası yüklenemedi ('+r.status+')');return r.json()})}
 function renderWetDryPanel(){
-  const p = document.getElementById('wetDryPanel');
-  const dataUrl = WET_DRY_DATA_URL;
-  let h = '<button class="panel-close" onclick="document.getElementById(\'wetDryPanel\').style.display=\'none\'">×</button><h2 style="color:#4FC3F7">💧 Islak → Kuru Bekleme Raporu</h2><div class="panel-summary">Islak proseslerin son aşaması ile ilk kuru RAM aşaması arasındaki bekleme süreleri. Islak: BOYAMA, YAŞ AÇMA, FIRÇA. Kuru: RAM*</div>';
-  h += '<div style="margin:10px 0"><button style="background:#FF9800;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer" onclick="loadWetInternal()">⚠️ Islak İç Bekleme >2saat</button></div>';
-  h += '<div id="wetDryContent"><p>Yükleniyor...</p></div>';
-  p.innerHTML = h;
-  wetFetchJson(dataUrl).then(rows=>{
-    let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Son Islak</th><th>Islak Çıkış</th><th>İlk Kuru</th><th>Kuru Giriş</th><th>Bekleme Saat</th><th>Bekleme Gün</th></tr></thead><tbody>';
-    rows.slice(0,1000).forEach(r=>{
-      const cls = r.wait_hours>48 ? 'style="background:rgba(255,152,0,0.15)"' : '';
-      tbl += `<tr ${cls}><td><b>${r.parti}</b></td><td>${r.wet_last_stage}</td><td>${r.wet_last_exit}</td><td>${r.dry_first_stage}</td><td>${r.dry_first_entry}</td><td>${r.wait_hours.toFixed(2)}</td><td>${r.wait_days.toFixed(2)}</td></tr>`;
-    });
-    tbl += '</tbody></table></div>';
-    document.getElementById('wetDryContent').innerHTML = tbl;
-  }).catch(e=>{
-    document.getElementById('wetDryContent').innerHTML = '<p style="color:#F44336">Veri yüklenemedi: '+e.message+'</p>';
-  });
-}
-function loadWetInternal(){
-  const el = document.getElementById('wetDryContent');
-  el.innerHTML = '<p>Yükleniyor...</p>';
-  wetFetchJson(WET_INTERNAL_DATA_URL).then(rows=>{
-    let tbl = '<div style="overflow:auto;max-height:65vh"><table class="validation-table"><thead><tr><th>Parti No</th><th>Boya Çıkış</th><th>Yaş Açma Giriş</th><th>Bekleme h</th><th>Yaş Açma Çıkış</th><th>Fırça Giriş</th><th>Bekleme h</th></tr></thead><tbody>';
-    rows.forEach(r=>{
-      tbl += `<tr><td><b>${r.parti}</b></td><td>${r.boyama_cik}</td><td>${r.yasacma_gir}</td><td>${r.delta1_hours.toFixed(2)}</td><td>${r.yasacma_cik}</td><td>${r.firca_gir}</td><td>${r.delta2_hours.toFixed(2)}</td></tr>`;
-    });
-    tbl += '</tbody></table></div>';
-    el.innerHTML = tbl;
-  }).catch(e=>{el.innerHTML = '<p style="color:#F44336">Veri yok</p>';});
+  const p=document.getElementById('wetDryPanel'),rows=getWetWaitingCards(),kg=Math.round(rows.reduce((sum,k)=>sum+num(k.kilo),0));
+  let h='<button class="panel-close" onclick="document.getElementById(&quot;wetDryPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4FC3F7">💧 Islak Bekleyenler</h2><div class="panel-summary">Anlık kart verisine göre BOYAMA, YAŞ AÇMA veya FIRÇA aşamasında olup son hareketinden beri belirlenen eşiği aşan partiler. Bu rapor geçmiş hareket zinciri değil, mevcut bekleyenleri gösterir.</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0"><b style="color:#80DEEA">Eşik:</b><input type="number" id="wetWaitThresholdInput" min="0" step="0.25" value="'+wetWaitThresholdHours+'" style="width:95px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white"><span>saat</span><button style="background:#00897B;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="applyWetWaitThreshold()">Uygula</button><button style="background:#6A1B9A;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(1)">1 saat</button><button style="background:#EF6C00;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(2)">2 saat</button><button style="background:#455A64;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(4)">4 saat</button></div><div class="panel-summary">'+rows.length+' parti • '+kg.toLocaleString('tr-TR')+' kg • FIFO: en uzun bekleyen üstte</div>';
+  if(!rows.length)h+='<div class="list-empty">Bu eşik üzerinde anlık ıslak bekleyen parti yok.</div>';else rows.forEach((k,i)=>{h+=wetWaitItemHtml(k,i)});
+  p.innerHTML=h;p.style.display='block';addPanelFullButton('wetDryPanel');ensureElementFullscreenToolbar('wetDryPanel','Islak Bekleyenler');
 }
 </script>
 <script>

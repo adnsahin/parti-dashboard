@@ -1181,7 +1181,7 @@ function fallbackDownload(blob, filename='tamirler.png') {
 function toggleSelect(e,id){
     e.stopPropagation();
     if(selectedRecords[id])delete selectedRecords[id];
-    else{const k=getCardById(id);const al=getAlarmsList(id);selectedRecords[id]={id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',firma:k.line1||'',ham_adi:k.ham_adi||'',recete_adi:k.recete_adi||'',kilo:k.kilo,bekleme:k.bekleme||'',durum:'',not:'',alarm_info:al.filter(a=>a.active!==false).map(a=>a.title).join(', '),added_at:new Date().toLocaleString('tr-TR')}}
+    else{const k=getCardById(id);const al=getAlarmsList(id);selectedRecords[id]={id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',firma:k.line1||'',ham_adi:k.ham_adi||'',recete_adi:k.recete_adi||'',kilo:k.kilo,bekleme:waitHoursText(k),durum:'',not:'',alarm_info:al.filter(a=>a.active!==false).map(a=>a.title).join(', '),added_at:new Date().toLocaleString('tr-TR')}}
     saveSelected();document.querySelectorAll('.star-'+id).forEach(el=>{el.classList.toggle('active',!!selectedRecords[id]);el.innerHTML=selectedRecords[id]?'🌟':'⭐'});updateStarCount();
     if(document.getElementById('selectionPanel').style.display==='block')renderSelectionPanel();
 }
@@ -1194,6 +1194,7 @@ function updateStarCount(){
 }
 
 function toggleSelectionPanel(){closeAllPanels();const p=document.getElementById('selectionPanel');if(p.style.display==='block')p.style.display='none';else renderSelectionPanel()}
+function selectedWaitText(r){const card=getCardById(r&&r.id)||getAllCards().find(k=>String(k.parti)===String(r&&r.parti));return card?waitHoursText(card):(r&&r.bekleme)||'-'}
 function renderSelectionPanel(){
     const p=document.getElementById('selectionPanel');const rows=Object.values(selectedRecords);
     const ro=['<option value="">-- Durum --</option>'].concat(DURUM_KAT.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
@@ -1207,7 +1208,7 @@ function renderSelectionPanel(){
         rows.sort((a,b)=>a.added_at.localeCompare(b.added_at)).forEach(r=>{
             const sRo=DURUM_KAT.map(dk=>'<option value="'+esc(dk)+'" '+(r.durum===dk?'selected':'')+'>'+esc(dk)+'</option>').join('');
             const card=getCardById(r.id),ts=card?tamirShort(card):tamirSummaryForParti(r.parti);
-            h+='<tr><td>🌟</td><td><b style="color:#FFD700;font-size:14px">'+esc(r.parti)+'</b></td><td><div style="color:#81D4FA;font-weight:bold">'+esc(r.asama)+'</div><div style="color:#FFB74D;font-size:10px">'+esc(r.bir_sonraki||'-')+'</div></td><td><div style="font-weight:bold;color:#E0E0E0">'+esc(r.ham_adi||'-')+'</div><div style="color:#FFD54F;font-size:10px;font-weight:800">🎨 '+esc(r.recete_adi||'-')+'</div></td><td style="color:#FFB37A;font-weight:bold;font-size:11px">'+(ts?'🛠️ '+esc(ts):'-')+'</td><td>'+esc(r.firma||'-')+'</td><td style="text-align:right;font-weight:bold;white-space:nowrap">'+(r.kilo||0).toLocaleString('tr-TR')+' kg</td><td style="font-weight:bold;white-space:nowrap">'+esc(r.bekleme||'-')+'</td><td><select class="sel-select snapshot-hide" onchange="updateSelItem(\''+r.id+'\',\'durum\',this.value)" style="width:100px;margin-bottom:4px">'+sRo+'</select><div style="display:flex;gap:4px"><input type="text" id="sel_not_'+r.id+'" class="sel-input snapshot-hide" value="'+esc(r.not||'')+'" onchange="updateSelItem(\''+r.id+'\',\'not\',this.value)" placeholder="Not..." style="width:110px"><button id="btn_mic_'+r.id+'" class="snapshot-hide" style="background:#9C27B0;color:white;border:none;border-radius:4px;padding:4px 6px;cursor:pointer" onclick="startVoiceNote(\''+r.id+'\')" title="Sesli Not Ekle">🎤</button></div></td><td class="islem-col"><button style="background:#E74C3C;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px" onclick="toggleSelect(event,\''+r.id+'\')">Çıkar</button></td></tr>';
+            h+='<tr><td>🌟</td><td><b style="color:#FFD700;font-size:14px">'+esc(r.parti)+'</b></td><td><div style="color:#81D4FA;font-weight:bold">'+esc(r.asama)+'</div><div style="color:#FFB74D;font-size:10px">'+esc(r.bir_sonraki||'-')+'</div></td><td><div style="font-weight:bold;color:#E0E0E0">'+esc(r.ham_adi||'-')+'</div><div style="color:#FFD54F;font-size:10px;font-weight:800">🎨 '+esc(r.recete_adi||'-')+'</div></td><td style="color:#FFB37A;font-weight:bold;font-size:11px">'+(ts?'🛠️ '+esc(ts):'-')+'</td><td>'+esc(r.firma||'-')+'</td><td style="text-align:right;font-weight:bold;white-space:nowrap">'+(r.kilo||0).toLocaleString('tr-TR')+' kg</td><td style="font-weight:bold;white-space:nowrap">'+esc(selectedWaitText(r))+'</td><td><select class="sel-select snapshot-hide" onchange="updateSelItem(\''+r.id+'\',\'durum\',this.value)" style="width:100px;margin-bottom:4px">'+sRo+'</select><div style="display:flex;gap:4px"><input type="text" id="sel_not_'+r.id+'" class="sel-input snapshot-hide" value="'+esc(r.not||'')+'" onchange="updateSelItem(\''+r.id+'\',\'not\',this.value)" placeholder="Not..." style="width:110px"><button id="btn_mic_'+r.id+'" class="snapshot-hide" style="background:#9C27B0;color:white;border:none;border-radius:4px;padding:4px 6px;cursor:pointer" onclick="startVoiceNote(\''+r.id+'\')" title="Sesli Not Ekle">🎤</button></div></td><td class="islem-col"><button style="background:#E74C3C;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px" onclick="toggleSelect(event,\''+r.id+'\')">Çıkar</button></td></tr>';
         });
         h+='</tbody></table></div></div>';
     } else {
@@ -1252,7 +1253,7 @@ function addManualToSelection(disaridanPartiNo) {
     if (card) {
         if (!selectedRecords[card.id]) {
             const al = getAlarmsList(card.id);
-            selectedRecords[card.id] = {id: card.id, parti: card.parti, asama: card._asama, bir_sonraki: card.bir_sonraki||'', firma: card.line1||'', ham_adi: card.ham_adi||'', recete_adi: card.recete_adi||'', kilo: card.kilo, bekleme: card.bekleme||'', durum: '', not: '', alarm_info: al.filter(a=>a.active!==false).map(a=>a.title).join(', '), added_at: new Date().toLocaleString('tr-TR')};
+            selectedRecords[card.id] = {id: card.id, parti: card.parti, asama: card._asama, bir_sonraki: card.bir_sonraki||'', firma: card.line1||'', ham_adi: card.ham_adi||'', recete_adi: card.recete_adi||'', kilo: card.kilo, bekleme: waitHoursText(card), durum: '', not: '', alarm_info: al.filter(a=>a.active!==false).map(a=>a.title).join(', '), added_at: new Date().toLocaleString('tr-TR')};
             saveSelected();
             document.querySelectorAll('.star-'+card.id).forEach(el=>{el.classList.add('active');el.innerHTML='🌟'});
             updateStarCount();
@@ -1380,7 +1381,7 @@ function restoreAfterExport(){
     if(origDOM.scrollY!==undefined)window.scrollTo(0,origDOM.scrollY);
 }
 function exportSelectionExcel(){
-    const rows=Object.values(selectedRecords).map(r=>({'Parti No':r.parti,'Aşama':r.asama,'Bir Sonraki':r.bir_sonraki,'Firma':r.firma,'Kumaş':r.ham_adi,'Reçete':r.recete_adi,'Kilo':r.kilo,'Bekleme':r.bekleme,'Durum':r.durum||'','Not':r.not||'','Alarm':r.alarm_info||'','Eklenme':r.added_at}));
+    const rows=Object.values(selectedRecords).map(r=>({'Parti No':r.parti,'Aşama':r.asama,'Bir Sonraki':r.bir_sonraki,'Firma':r.firma,'Kumaş':r.ham_adi,'Reçete':r.recete_adi,'Kilo':r.kilo,'Bekleme':selectedWaitText(r),'Durum':r.durum||'','Not':r.not||'','Alarm':r.alarm_info||'','Eklenme':r.added_at}));
     if(!rows.length){alert('Seçim yok');return}downloadWorkbook('Secimler_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Seçili',rows}]);
 }
 function exportSelectionPDF(){

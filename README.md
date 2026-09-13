@@ -140,7 +140,7 @@ Alarm ekranını Netlify'da çalıştırmak için `netlify.toml`, `package.json`
 5. Netlify sayfasında **Ses etkinleştir**, **Tam ekranı dene** ve **Netlify alarmına bağlan** düğmelerine basın.
 6. PC'de `NTFY_ALARM_BASLAT.bat` çalıştırılırken ntfy topic alanını boş bırakın; Netlify alarm endpointi sorusuna aynı `/api/alarm` adresini, token sorusuna da aynı değeri girin.
 
-Token ayarlanmazsa endpoint anonim POST/GET kabul eder; bu yalnızca herkese açık olmayan geçici denemeler için uygundur. Token tarayıcıda kalıcı olarak saklanmaz ve relay isteğinde HTTP başlığıyla gönderilir. Bu akışta telefon ve PC'nin aynı ağda olması gerekmez. PC'nin internete erişmesi ve Netlify sayfasının açık olması yeterlidir. Telefon tarayıcısı arka planda veya ekran kapalıyken çalışmayı durdurabilir; arka plan/kapalı ekran bildirimi için Web Push veya ntfy uygulaması gerekir.
+Token ayarlanmazsa endpoint anonim POST/GET kabul eder; bu yalnızca herkese açık olmayan geçici denemeler için uygundur. Token, demo sayfasında tarayıcının `localStorage` alanına kaydedilir; aynı cihaz ve tarayıcıda tekrar açıldığında otomatik gelir. Tarayıcı verileri temizlenirse yeniden girilmelidir. Relay isteğinde token HTTP başlığıyla gönderilir. Bu akışta telefon ve PC'nin aynı ağda olması gerekmez. PC'nin internete erişmesi ve Netlify sayfasının açık olması yeterlidir. Telefon tarayıcısı arka planda veya ekran kapalıyken çalışmayı durdurabilir; arka plan/kapalı ekran bildirimi için Web Push veya ntfy uygulaması gerekir.
 
 
 ## GitHub Pages

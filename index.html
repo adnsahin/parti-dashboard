@@ -823,8 +823,38 @@ function telegramSyncSnapshot(){
     clearTimeout(telegramSyncTimer);
     telegramSyncTimer=setTimeout(()=>{
         const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]),cards=typeof getAllCards==='function'?getAllCards():[];
-        fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})}).catch(()=>{});
+        fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
+            .then(response=>{if(!response.ok)throw new Error('HTTP '+response.status)})
+            .catch(error=>console.warn('Telegram alarm senkronu başarısız:',error.message));
     },150);
+}
+async function loadSharedAlarms(){
+    try{
+        const response=await fetch('data/alarms.json?ts='+Date.now(),{cache:'no-store'});
+        if(!response.ok)return 0;
+        const payload=await response.json(),rows=Array.isArray(payload)?payload:(Array.isArray(payload.alarms)?payload.alarms:[]);
+        let imported=0;
+        rows.forEach(alarm=>{
+            if(!alarm)return;
+            const card=getAllCards().find(k=>String(k.parti||'')===String(alarm.parti||''))||getCardById(alarm.id);
+            const id=card&&card.id||alarm.id;
+            if(!id)return;
+            const list=getAlarmsList(id);
+            if(list.some(existing=>String(existing.uid||'')===String(alarm.uid||'')))return;
+            list.push({...alarm,id});
+            alarmRecords[id]=list;
+            imported++;
+        });
+        if(imported){
+            localStorage.setItem('ar9',JSON.stringify(alarmRecords));
+            updateAlarmCount();
+            if(location.hostname==='127.0.0.1'||location.hostname==='localhost')telegramSyncSnapshot();
+        }
+        return imported;
+    }catch(error){
+        console.warn('Paylaşılan alarm dosyası okunamadı:',error.message);
+        return 0;
+    }
 }
 function testTelegramConnection(){
     fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard Telegram bağlantı testi başarılı.'})})
@@ -2879,6 +2909,7 @@ function renderWetDryPanel(){
       const info=document.querySelector('.header .info');
       if(info)info.textContent='GitHub veri • '+generated+' • '+c+' parti • '+totalKg+' kg';
       enrichTamirList();setGroupMode('hedef');setViewMode(currentViewMode);showAll();
+      await loadSharedAlarms();
       updateStarCount();updateAlarmCount();updateTamirCount();afterDataLoaded();
       if(typeof window.refreshMindmap==='function')window.refreshMindmap();
       if(st)st.textContent='GitHub verisi otomatik yüklendi. '+c+' parti, '+TAMIR_LIST.length+' tamir eşleşmesi.';

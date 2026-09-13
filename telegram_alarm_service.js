@@ -7,7 +7,7 @@ const https = require('https');
 const os = require('os');
 const path = require('path');
 const {URL} = require('url');
-
+const {execFile} = require('child_process');
 const ROOT = __dirname;
 const PORT = Number(process.env.TELEGRAM_ALARM_PORT || 8783);
 const TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
@@ -17,7 +17,13 @@ const POLL_SECONDS = Math.max(30, Number(process.env.TELEGRAM_POLL_SECONDS || 30
 const stateDir = process.env.LOCALAPPDATA
     ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardTelegram')
     : path.join(os.homedir(), '.parti-dashboard-telegram');
-const STATE_FILE = path.join(stateDir, 'state.json');
+const STATE_FILE = process.env.TELEGRAM_STATE_FILE
+    ? path.resolve(process.env.TELEGRAM_STATE_FILE)
+    : path.join(stateDir, 'state.json');
+const ALARM_FILE_REL = 'data/alarms.json';
+const ALARM_FILE = path.join(ROOT, ALARM_FILE_REL);
+const PUBLISH_ALARMS = !['0','false','no'].includes(String(process.env.TELEGRAM_PUBLISH_ALARMS || '1').trim().toLowerCase());
+let alarmPublishQueue = Promise.resolve();
 const MAX_BODY = 12 * 1024 * 1024;
 let lastPoll = null;
 let lastPollError = '';
@@ -32,20 +38,88 @@ function stageEquals(a, b) {
     if (!x || !y) return false;
     if ((x === 'SUBLİMEBASKI' && y === 'SUBBASKI') || (x === 'SUBBASKI' && y === 'SUBLİMEBASKI')) return true;
     if (x === y) return true;
-    if (x === 'KK' || y === 'KK') {
-        return x === y || x.includes('KALITEKONTROL') || x.includes('KALİTEKONTROL') || y.includes('KALITEKONTROL') || y.includes('KALİTEKONTROL');
-    }
-    if (x === 'SARIM1' || y === 'SARIM1') return x === y || (x === 'SARIM1' ? y.includes('SARIM1') : x.includes('SARIM1'));
+    if ((x === 'KK' && y === 'KALİTEKONTROL') || (x === 'KALİTEKONTROL' && y === 'KK')) return true;
+    if ((x === 'SARIM1' && y === 'SARIM') || (x === 'SARIM' && y === 'SARIM1')) return true;
     return x.includes(y) || y.includes(x);
 }
 function targetStage(alarm) {
     const raw = clean(alarm && (alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
     if (stageEquals(raw, 'KK') || stageEquals(raw, 'KALİTE KONTROL')) return 'KK';
-    if (stageEquals(raw, 'SARIM1')) return 'SARIM1';
+    if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
 }
+function flowStages(card) {
+    return clean(card && (card.uretim_asamalari || card.flow)).split(',').map(clean).filter(Boolean);
+}
+function latestFlowIndex(card, value) {
+    const stages = flowStages(card);
+    let index = -1;
+    stages.forEach((stage, i) => { if (stageEquals(stage, value)) index = i; });
+    return index;
+}
 function cardReachedTarget(card, target) {
-    return stageEquals(card && card.bir_sonraki, target) || stageEquals(card && card.son_asama, target) || stageEquals(card && card._asama, target);
+    if (stageEquals(card && card.bir_sonraki, target) || stageEquals(card && card.son_asama, target) || stageEquals(card && card._asama, target)) return true;
+    const currentIndex = Math.max(
+        latestFlowIndex(card, card && card.son_asama),
+        latestFlowIndex(card, card && card.lastStage),
+        latestFlowIndex(card, card && card._asama)
+    );
+    if (currentIndex < 0) return false;
+    return flowStages(card).some((stage, i) => i <= currentIndex && stageEquals(stage, target));
+}
+function runGit(args) {
+    return new Promise((resolve, reject) => {
+        execFile('git', args, {cwd: ROOT, windowsHide: true}, (error, stdout, stderr) => {
+            if (error) {
+                error.stdout = stdout;
+                error.stderr = stderr;
+                reject(error);
+                return;
+            }
+            resolve({stdout, stderr});
+        });
+    });
+}
+function sharedAlarmRows(alarms) {
+    return (Array.isArray(alarms) ? alarms : []).filter(Boolean).map(alarm => ({
+        uid: clean(alarm.uid),
+        id: clean(alarm.id),
+        parti: clean(alarm.parti),
+        asama: clean(alarm.asama),
+        bir_sonraki: clean(alarm.bir_sonraki),
+        telegramTarget: clean(alarm.telegramTarget || alarm.targetStage),
+        title: clean(alarm.title),
+        description: clean(alarm.description),
+        priority: clean(alarm.priority),
+        datetime: clean(alarm.datetime),
+        active: alarm.active !== false,
+        created_at: clean(alarm.created_at)
+    }));
+}
+async function publishSharedAlarmsNow(alarms) {
+    const content = JSON.stringify({alarms: sharedAlarmRows(alarms)}, null, 2) + '\n';
+    let previous = '';
+    try { previous = fs.readFileSync(ALARM_FILE, 'utf8'); } catch (_) {}
+    if (previous === content) return;
+    fs.mkdirSync(path.dirname(ALARM_FILE), {recursive: true});
+    fs.writeFileSync(ALARM_FILE, content, 'utf8');
+    await runGit(['add', '--', ALARM_FILE_REL]);
+    try {
+        await runGit(['diff', '--cached', '--quiet', '--', ALARM_FILE_REL]);
+        return;
+    } catch (error) {
+        if (Number(error && error.code) !== 1) throw error;
+    }
+    await runGit(['commit', '--only', ALARM_FILE_REL, '-m', 'Sync Telegram alarms']);
+    await runGit(['push', 'origin', 'main']);
+    log('Shared alarm file published:', ALARM_FILE_REL);
+}
+function publishAlarmSnapshot(alarms) {
+    if (!PUBLISH_ALARMS) return Promise.resolve();
+    alarmPublishQueue = alarmPublishQueue.then(() => publishSharedAlarmsNow(alarms)).catch(error => {
+        log('Shared alarm publish failed:', error && (error.stderr || error.message || error));
+    });
+    return alarmPublishQueue;
 }
 function cardLabel(card) {
     return [card && card.parti, card && (card._asama || card.asama), card && card.bir_sonraki].filter(Boolean).join(' • ');
@@ -59,7 +133,7 @@ function readState() {
     }
 }
 function writeState(state) {
-    fs.mkdirSync(stateDir, {recursive: true});
+    fs.mkdirSync(path.dirname(STATE_FILE), {recursive: true});
     fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
 }
 function json(res, status, body) {
@@ -237,14 +311,20 @@ async function processSnapshot(payload) {
         const wasReached = prevCard ? cardReachedTarget(prevCard, target) : false;
         const eventKey = [clean(alarm.uid), clean(card.parti), target, clean(card.son_asama_tarihi || card.hareket || card.bir_sonraki)].join('|');
         if (wasReached || sent[eventKey]) continue;
-        const result = await sendText(messageFor(card, alarm, target));
-        events.push({parti: card.parti, target, sent: result.sent, dryRun: result.dryRun});
-        if (result.sent) sent[eventKey] = new Date().toISOString();
+        try {
+            const result = await sendText(messageFor(card, alarm, target));
+            events.push({parti: card.parti, target, sent: result.sent, dryRun: result.dryRun});
+            if (result.sent) sent[eventKey] = new Date().toISOString();
+        } catch (error) {
+            events.push({parti: card.parti, target, sent: false, error: error.message});
+            log(`Telegram alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
+        }
     }
     state.cards = current;
     state.alarms = alarms;
     state.sent = sent;
     writeState(state);
+    publishAlarmSnapshot(alarms);
     return {ok: true, checkedCards: Object.keys(current).length, checkedAlarms: alarms.length, events};
 }
 function safeStaticPath(requestPath) {
@@ -266,9 +346,12 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'GET' && url.pathname === '/api/telegram/status') {
             json(res, 200, {
                 ok: true,
+                version: 2,
                 configured: Boolean(TOKEN && CHAT_IDS.length),
                 chatCount: CHAT_IDS.length,
                 stateFile: STATE_FILE,
+                sharedAlarmFile: ALARM_FILE,
+                publishAlarms: PUBLISH_ALARMS,
                 port: PORT,
                 githubDataUrl: DATA_URL,
                 pollSeconds: POLL_SECONDS,

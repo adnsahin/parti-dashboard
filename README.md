@@ -100,18 +100,21 @@ Servis `http://127.0.0.1:8783` adresinde çalışır ve dashboardu bu adresten a
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. Alarm kayıtları yerel servise aktarılır; servis bu kayıtları saklar ve parti hedef aşamaya geldiğinde mesajı bir kez gönderir.
+Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. Alarm kaydı `data/alarms.json` dosyasına senkronlanır; servis bu dosyayı yalnızca değiştiğinde `main` dalına push eder. Böylece PC'de kurulan aktif alarmlar GitHub Pages üzerindeki mobil dashboardda da görünür. Yerel Git kimlik bilgileri veya push yetkisi yoksa servis Telegram loguna `Shared alarm publish failed` yazar; mobil görünürlük için alarm dosyasını yetkili bir ortamdan push etmek gerekir.
 
-Servis varsayılan olarak GitHub'daki güncel `data/partiler.json` dosyasını 5 dakikada bir çeker. Böylece alarm kontrolü için dashboardun sürekli açık kalması gerekmez; yalnızca `TELEGRAM_ALARM_BASLAT.bat` penceresi açık kalmalıdır. GitHub Pages üzerindeki dashboard verileri görüntülemek içindir. Alarm oluşturma ve Telegram notu gönderme işlemlerinde yerel adresi kullanın; HTTPS GitHub Pages sayfası yerel HTTP servisine bağlanamaz.
+Servis varsayılan olarak GitHub'daki güncel `data/partiler.json` dosyasını 5 dakikada bir çeker. Hedef aşama iki yoklama arasında geçilmişse akış sırası kullanılarak alarm yine tetiklenir. Alarm, hedef aşama zaten geçildikten sonra oluşturulmuşsa geriye dönük Telegram mesajı gönderilmez. Yalnızca `TELEGRAM_ALARM_BASLAT.bat` penceresi açık kalmalıdır.
+
+GitHub Pages dashboardu `data/alarms.json` dosyasını önbelleksiz okur ve yerel alarmlarla birleştirir. Alarm oluşturma, silme ve Telegram notu gönderme işlemleri için dashboardu PC'de `http://127.0.0.1:8783/index.html` adresinden açın; mobil görünüm paylaşım dosyasını okuma amaçlıdır.
 
 İsterseniz ortam değişkenleriyle ayarı değiştirebilirsiniz:
 
 ```text
 TELEGRAM_POLL_SECONDS=60
 TELEGRAM_DATA_URL=https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json
+TELEGRAM_PUBLISH_ALARMS=false
 ```
 
-Parti detayındaki `📝 Not` alanına kısa bir not yazıp `Telegram’a Gönder` düğmesine basabilirsiniz. Not doğrudan botun tanımlı Chat ID’lerine gönderilir; yerel karta kalıcı kaydetmek için ayrıca `Kaydet` düğmesine basın. Kod güncellendikten sonra açık olan `.bat` penceresini kapatıp yeniden başlatın.
+Parti detayındaki `📝 Not` alanına kısa bir not yazıp `Telegram’a Gönder` düğmesine basabilirsiniz. Not doğrudan botun tanımlı Chat ID'lerine gönderilir; yerel karta kalıcı kaydetmek için ayrıca `Kaydet` düğmesine basın. Kod güncellendikten sonra açık olan `.bat` penceresini kapatıp yeniden başlatın; servis durumunda `version: 2` görünmelidir.
 
 
 

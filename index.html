@@ -839,18 +839,27 @@ function testNtfyConnection(){
         .catch(()=>showToast('⚠️ ntfy servisi çalışmıyor. Önce NTFY_ALARM_BASLAT.bat başlatılmalı.','warning'));
 }
 function notificationTargetStages(k){
-    const out=[{value:'',label:'Sadece tarih alarmı'},{value:'KK',label:'Kalite Kontrol'},{value:'SARIM1',label:'Sarım1'}],seen=new Set(out.map(x=>x.value));
-    const add=value=>{const v=String(value||'').trim();if(!v||seen.has(v)||stageEquals(v,'KK')||stageEquals(v,'SARIM1'))return;seen.add(v);out.push({value:v,label:v})};
-    let after=false;
-    String(k&&k.uretim_asamalari||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(stage=>{if(stageEquals(stage,'KK')||stageEquals(stage,'SARIM1'))after=true;else if(after)add(stage)});
-    if(out.length===3)(typeof BSA_ORDER!=='undefined'?BSA_ORDER:[]).forEach(add);
+    const out=[{value:'',label:'Sadece tarih alarmı'}],seen=new Set(['']);
+    const add=value=>{
+        const raw=String(value||'').trim();
+        if(!raw)return;
+        const v=stageEquals(raw,'KK')?'KK':stageEquals(raw,'SARIM1')?'SARIM1':raw;
+        const key=stageKey(v);
+        if(!key||seen.has(key))return;
+        seen.add(key);
+        out.push({value:v,label:v==='KK'?'Kalite Kontrol':v==='SARIM1'?'Sarım1':v});
+    };
+    String(k&&k.uretim_asamalari||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(add);
+    (typeof BSA_ORDER!=='undefined'?BSA_ORDER:[]).forEach(add);
+    add(k&&k._asama);
+    add(k&&k.bir_sonraki);
     return out;
 }
 function insertAlarmTargetField(id,k,dateId,selectId){
     const date=document.getElementById(dateId),row=date&&date.parentElement&&date.parentElement.parentElement;
     if(!row||document.getElementById(selectId))return;
     const options=notificationTargetStages(k),html=options.map(x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>').join('');
-    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select><small style="display:block;color:#aaa;margin-top:4px">Boş bırakırsanız yalnızca tarih/saat kontrol edilir.</small>';
+    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select><small style="display:block;color:#aaa;margin-top:4px">Bir aşama seçerseniz parti o aşamaya ulaştığında hemen bildirim gider. Boş bırakırsanız yalnızca tarih/saat kontrol edilir.</small>';
     row.parentElement.insertBefore(wrap,row);
 }
 function insertNtfyNoteButton(id){

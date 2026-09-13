@@ -76,8 +76,16 @@ function cardWaitingStage(card){
 function cardActualStage(card){
     return clean(card && (card.son_asama || card.lastStage || card.currentStage));
 }
+function flowStages(card){
+    return clean(card && (card.uretim_asamalari || card.flow)).split(',').map(x => x.trim()).filter(Boolean);
+}
+function flowStageIndex(stages, value){
+    const key = stageKey(value);
+    const exact = stages.findIndex(stage => stageKey(stage) === key);
+    return exact >= 0 ? exact : stages.findIndex(stage => stageEquals(stage, value));
+}
 function cardAtTargetStage(card,target){
-    return stageEquals(cardWaitingStage(card),target) || stageEquals(cardActualStage(card),target);
+    return stageEquals(cardActualStage(card),target);
 }
 function cardWaitingMinutes(card){
     const movement=card && (card.hareket || card.son_asama_tarihi || card.lastMovement);
@@ -90,8 +98,17 @@ function cardWaitingMinutes(card){
     const days=dayMatch?Number(dayMatch[1].replace(',','.')):Number(text.replace(',','.'));
     return Number.isFinite(days)?Math.max(0,days*1440):null;
 }
-function cardReachedTarget(card,target){
-    return cardAtTargetStage(card,target);
+function cardReachedTarget(card,target,previousCard){
+    if(cardAtTargetStage(card,target))return true;
+    const previous=cardActualStage(previousCard);
+    const current=cardActualStage(card);
+    if(!previous||!current)return false;
+    const stages=flowStages(card);
+    if(!stages.length)return false;
+    const previousIndex=flowStageIndex(stages,previous);
+    const currentIndex=flowStageIndex(stages,current);
+    const targetIndex=flowStageIndex(stages,target);
+    return previousIndex>=0 && currentIndex>previousIndex && targetIndex>previousIndex && targetIndex<=currentIndex;
 }
 function cardLabel(card) {
     return [card && card.parti, card && (card._asama || card.asama), card && card.bir_sonraki].filter(Boolean).join(' • ');
@@ -286,6 +303,7 @@ async function processSnapshot(payload) {
     payload = payload || {};
     const state = readState();
     const current = cardMap(payload.cards);
+    const previousCards = state.cards || {};
     const hasAlarms = Array.isArray(payload.alarms);
     const alarms = hasAlarms ? payload.alarms : (Array.isArray(state.alarms) ? state.alarms : []);
     const sent = state.sent || {};
@@ -298,9 +316,10 @@ async function processSnapshot(payload) {
         const key = clean(alarm.id) || clean(alarm.parti);
         const card = Object.values(current).find(x => clean(x.parti) === clean(alarm.parti)) || current[key];
         if (!card) continue;
+        const previousCard = Object.values(previousCards).find(x => clean(x.parti) === clean(card.parti)) || previousCards[key];
         const requiredMinutes = targetDurationMinutes(alarm);
         const elapsedMinutes = cardWaitingMinutes(card);
-        if (target && !cardReachedTarget(card, target)) continue;
+        if (target && !cardReachedTarget(card, target, previousCard)) continue;
         if (requiredMinutes > 0 && (!target || elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
         const eventKey = clean(alarm.uid) || [clean(card.parti), target || 'datetime'].join('|');
         if (sent[eventKey]) continue;

@@ -26,9 +26,8 @@ function authorized(event, body) {
   const supplied = String((suppliedHeader && suppliedHeader[1]) || body.token || '').trim();
   return supplied === expected;
 }
-
 async function store() {
-  return getStore({name: 'parti-alarm-events', consistency: 'strong'});
+  return getStore('parti-alarm-events', {consistency: 'strong'});
 }
 
 exports.handler = async event => {

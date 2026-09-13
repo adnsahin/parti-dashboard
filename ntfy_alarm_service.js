@@ -24,8 +24,16 @@ const STATE_FILE = process.env.NTFY_STATE_FILE
 const MAX_BODY = 12 * 1024 * 1024;
 let lastPoll = null;
 let lastPollError = '';
+const localAlarmClients = new Set();
+let localEventId = 0;
 
 function log(...args) { console.log(new Date().toISOString(), ...args); }
+function broadcastLocalAlarm(payload) {
+    if (!localAlarmClients.size) return;
+    const id = String(++localEventId);
+    const data = JSON.stringify({...payload, id, time: Date.now()});
+    for (const res of localAlarmClients) res.write(`id: ${id}\nevent: message\ndata: ${data}\n\n`);
+}
 function clean(v) { return String(v == null ? '' : v).trim(); }
 function stageKey(v) {
     return clean(v).toLocaleUpperCase('tr-TR').replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '');
@@ -359,9 +367,12 @@ async function processFilterAlarm(alarm, cards, sent, events){
     const pending = matched.filter(card => !sent[filterAlarmEventKey(alarm, card)]);
     if (!pending.length) return;
     try {
-        const result = await sendText(messageForList(alarm.title || 'Filtreli bekleme alarmı', matched));
+        const title = clean(alarm.title) || 'Filtreli bekleme alarmı';
+        const text = messageForList(title, matched);
+        broadcastLocalAlarm({title, message: text, cards: matched, source: 'local-filter'});
+        const result = await sendText(text);
         events.push({filter: true, title: clean(alarm.title), matched: matched.length, newMatches: pending.length, sent: result.sent, dryRun: result.dryRun});
-        if (result.sent) pending.forEach(card => { sent[filterAlarmEventKey(alarm, card)] = new Date().toISOString(); });
+        if (result.sent || result.dryRun) pending.forEach(card => { sent[filterAlarmEventKey(alarm, card)] = new Date().toISOString(); });
     } catch (error) {
         events.push({filter: true, title: clean(alarm.title), matched: matched.length, newMatches: pending.length, sent: false, error: error.message});
         log(`ntfy filtre alarmı gönderilemedi (${clean(alarm.title)}):`, error.message);
@@ -391,14 +402,16 @@ async function processSnapshot(payload) {
         const previousCard = Object.values(previousCards).find(x => clean(x.parti) === clean(card.parti)) || previousCards[key];
         const requiredMinutes = targetDurationMinutes(alarm);
         const elapsedMinutes = cardWaitingMinutes(card);
-        if (target && !cardReachedTarget(card, target, previousCard)) continue;
-        if (requiredMinutes > 0 && (!target || elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
         const eventKey = clean(alarm.uid) || [clean(card.parti), target || 'datetime'].join('|');
+        if (target && !cardReachedTarget(card, target, previousCard)) continue;
         if (sent[eventKey]) continue;
+        if (requiredMinutes > 0 && (!target || elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
         try {
-            const result = await sendText(messageFor(card, alarm, target));
+            const text = messageFor(card, alarm, target);
+            broadcastLocalAlarm({title: clean(alarm.title) || 'Parti Alarmi', message: text, card, source: 'local-card'});
+            const result = await sendText(text);
             events.push({parti: card.parti, target: target || null, requiredMinutes, elapsedMinutes, sent: result.sent, dryRun: result.dryRun});
-            if (result.sent) sent[eventKey] = new Date().toISOString();
+            if (result.sent || result.dryRun) sent[eventKey] = new Date().toISOString();
         } catch (error) {
             events.push({parti: card.parti, target, sent: false, error: error.message});
             log(`ntfy alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
@@ -426,6 +439,20 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { json(res, 204, {}); return; }
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     try {
+        if (req.method === 'GET' && url.pathname === '/api/alarm/stream') {
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream; charset=utf-8',
+                'Cache-Control': 'no-cache, no-transform',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'X-Accel-Buffering': 'no'
+            });
+            res.write(': local alarm stream connected\n\n');
+            localAlarmClients.add(res);
+            const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 25000);
+            req.on('close', () => { clearInterval(heartbeat); localAlarmClients.delete(res); });
+            return;
+        }
         if (req.method === 'GET' && url.pathname === '/api/ntfy/status') {
             json(res, 200, {
                 ok: true,

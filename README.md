@@ -119,6 +119,16 @@ Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saa
 Servis, verideki `Sonra Yapılacak Aşama` / mevcut aşama ve `Son Hareket Tarihi` alanlarını kullanarak geçen bekleme süresini hesaplar. GitHub verisi 15 dakikada bir push ediliyorsa hedef süre kontrolünün veri kaynağına yansıması en fazla yaklaşık 16 dakika sürebilir.
 
 Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repoya veya herkese açık mesaja yazmayın. Servis yerel ağdan dashboard erişimi için `0.0.0.0:8783` üzerinde dinler; bilgisayarın güvenlik duvarında bu porta yalnızca güvenilen yerel ağ erişimi verin. ntfy.sh yerine özel ntfy sunucusu kullanıyorsanız servisi başlatmadan önce `NTFY_SERVER_URL` ortam değişkenini, gerekiyorsa `NTFY_ACCESS_TOKEN` değişkenini ayarlayın.
+### ntfy olmadan yerel alarm ekranı
+
+`NTFY_ALARM_BASLAT.bat` çalıştırılırken ntfy konu adı boş bırakılırsa servis ntfy'ye mesaj göndermez; alarm olaylarını yalnızca yerel SSE ekranına yayınlar. Telefonda ve PC'de aynı Wi‑Fi ağı kullanılır:
+
+1. BAT dosyasında topic sorusunu boş bırakıp Enter'a basın.
+2. Başlatma betiğinin gösterdiği PC IPv4 adresini öğrenin.
+3. Telefonda `http://PC_IP:8783/alarm-demo.html` adresini açın.
+4. `Ses etkinleştir` ve `PC alarmına bağlan` düğmelerine basın.
+
+Bu modda tarayıcı sayfası açık kaldığı sürece kart ve liste alarmları ntfy olmadan gelir. Telefon ekranı kapalıyken veya tarayıcı arka plandayken mobil işletim sistemi web bağlantısını durdurabilir; arka plan bildirimi için ntfy uygulaması gerekir.
 
 
 ## GitHub Pages

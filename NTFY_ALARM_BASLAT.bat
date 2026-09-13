@@ -15,11 +15,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if "%NTFY_TOPIC%"=="" set /p "NTFY_TOPIC=ntfy konu adini girin: "
+if "%NTFY_TOPIC%"=="" set /p "NTFY_TOPIC=ntfy konu adini girin (bos birakirsaniz sadece yerel alarm ekrani calisir): "
 if "%NTFY_TOPIC%"=="" (
-  echo HATA: ntfy konu adi bos birakilamaz.
-  pause
-  exit /b 1
+  echo ntfy kapali. Yerel alarm ekrani http://PC_IP:8783/alarm-demo.html adresinden dinlenebilir.
 )
 
 if "%NTFY_SERVER_URL%"=="" set "NTFY_SERVER_URL=https://ntfy.sh"

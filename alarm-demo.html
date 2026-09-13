@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08152b">
+<title>Parti Alarm Demo</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif;background:#08152b;color:#f5f7fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#08152b,#182b52);padding:24px}.demo{width:min(760px,100%);margin:0 auto}.head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.head h1{margin:0 0 6px;color:#ffd54f;font-size:clamp(24px,6vw,38px)}.head p{margin:0;color:#b8c7dd}.badge{padding:8px 12px;border-radius:999px;background:#1d3966;color:#9bd5ff;font-weight:bold;white-space:nowrap}.panel{background:rgba(9,20,43,.88);border:1px solid #335582;border-radius:18px;padding:18px;box-shadow:0 12px 35px rgba(0,0,0,.28);margin-bottom:16px}label{display:block;color:#b8c7dd;font-weight:bold;font-size:13px;margin-bottom:7px}select,button{font:inherit}select{width:100%;padding:12px;border:1px solid #4d6f9f;border-radius:10px;background:#101f3b;color:#fff}button{border:0;border-radius:12px;padding:12px 15px;color:#fff;font-weight:bold;cursor:pointer;background:#2367b1}button:active{transform:translateY(1px)}button.secondary{background:#41546f}button.green{background:#00897b}button.gold{background:#ad7b00;color:#fff}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.help{color:#b8c7dd;font-size:13px;line-height:1.5;margin:0}.status{min-height:48px;color:#9fe3be;font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap}.alarm-overlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,8,20,.96);padding:clamp(18px,5vw,70px);align-items:center;justify-content:center}.alarm-overlay.show{display:flex}.alarm-box{width:min(720px,100%);border:4px solid #ff4747;border-radius:24px;background:linear-gradient(145deg,#3b1018,#21152c);box-shadow:0 0 0 8px rgba(255,71,71,.12),0 20px 80px rgba(0,0,0,.7);padding:clamp(20px,5vw,48px);text-align:center;animation:pulse 1.2s infinite alternate}.alarm-label{color:#ff8585;font-weight:bold;letter-spacing:.08em;font-size:clamp(14px,3vw,20px)}.alarm-box h2{font-size:clamp(28px,9vw,64px);margin:16px 0;color:#ffd54f}.alarm-box .stage{font-size:clamp(22px,6vw,42px);font-weight:bold;color:#fff}.alarm-info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0}.alarm-info div{background:rgba(255,255,255,.1);border-radius:12px;padding:12px}.alarm-info b{display:block;color:#ffb3b3;font-size:12px;margin-bottom:5px}.alarm-info span{font-size:clamp(16px,4vw,25px);font-weight:bold}.alarm-box button{min-width:180px;background:#c62828}.sr-only{position:absolute;left:-9999px}@keyframes pulse{to{box-shadow:0 0 0 14px rgba(255,71,71,.05),0 20px 80px rgba(255,30,30,.28)}}@media(max-width:560px){body{padding:14px}.head{display:block}.badge{display:inline-block;margin-top:12px}.actions{grid-template-columns:1fr}.alarm-info{grid-template-columns:1fr}.alarm-box{padding:24px 16px}}
+</style>
+</head>
+<body>
+<main class="demo">
+  <header class="head">
+    <div><h1>Parti Alarm Demo</h1><p>Mevcut dashboarddan bağımsız deneme ekranı</p></div>
+    <div class="badge" id="soundState">Ses kapalı</div>
+  </header>
+  <section class="panel">
+    <label for="sampleCard">Test kartı</label>
+    <select id="sampleCard">
+      <option value="8242">(2026) 8242 — SARIM 1</option>
+      <option value="8224">(2026) 8224 — SARIM 1</option>
+      <option value="9042">(2026) 9042 — LAMİNASYON</option>
+    </select>
+    <div class="actions" style="margin-top:12px">
+      <button class="green" id="soundButton" type="button">Ses etkinleştir</button>
+      <button class="gold" id="fullscreenButton" type="button">Tam ekranı dene</button>
+      <button id="alarmButton" type="button">Test alarmı göster</button>
+    </div>
+  </section>
+  <section class="panel">
+    <p class="help"><b>Test sırası:</b> Önce sesi etkinleştirin. Sonra tam ekranı deneyin. Ardından test alarmını gösterin. Alarm ekranı kartı açık şekilde gösterir; kapatınca bu sayfaya dönersiniz.</p>
+  </section>
+  <section class="panel">
+    <b>Durum</b>
+    <p class="status" id="status">Hazır. Gerçek mesaj bağlantısı bu demo ekranına bağlı değil.</p>
+  </section>
+</main>
+<div class="alarm-overlay" id="alarmOverlay" role="dialog" aria-modal="true" aria-label="Parti alarmı">
+  <section class="alarm-box">
+    <div class="alarm-label">PARTİ BEKLEME ALARMI</div>
+    <h2 id="alarmParty">(2026) 8242</h2>
+    <div class="stage" id="alarmStage">SARIM 1</div>
+    <div class="alarm-info"><div><b>Kilo</b><span id="alarmKg">440 kg</span></div><div><b>Bekleme</b><span id="alarmWait">15 dakika</span></div><div><b>Sonraki</b><span id="alarmNext">LAMİNASYON</span></div></div>
+    <button id="closeAlarmButton" type="button">Alarmı kapat</button>
+  </section>
+</div>
+<script>
+'use strict';
+const samples={
+  '8242':{party:'(2026) 8242',stage:'SARIM 1',kg:'440 kg',wait:'15 dakika',next:'LAMİNASYON'},
+  '8224':{party:'(2026) 8224',stage:'SARIM 1',kg:'320 kg',wait:'22 dakika',next:'LAMİNASYON'},
+  '9042':{party:'(2026) 9042',stage:'LAMİNASYON',kg:'220 kg',wait:'17 gün',next:'KK'}
+};
+let audioContext=null,soundEnabled=false;
+const $=id=>document.getElementById(id),status=(text,ok=true)=>{$('status').textContent=new Date().toLocaleTimeString('tr-TR')+' — '+text;$('status').style.color=ok?'#9fe3be':'#ffb3b3'};
+function beep(){if(!soundEnabled||!audioContext)return;const now=audioContext.currentTime;[0,0.22,0.44].forEach(offset=>{const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type='square';osc.frequency.value=offset===0?880:660;gain.gain.setValueAtTime(.0001,now+offset);gain.gain.exponentialRampToValueAtTime(.18,now+offset+.02);gain.gain.exponentialRampToValueAtTime(.0001,now+offset+.16);osc.connect(gain).connect(audioContext.destination);osc.start(now+offset);osc.stop(now+offset+.18)})}
+function enableSound(){audioContext=audioContext||new (window.AudioContext||window.webkitAudioContext)();audioContext.resume();soundEnabled=true;beep();$('soundState').textContent='Ses açık';$('soundState').style.background='#176b4b';$('soundButton').textContent='Ses etkin';status('Ses etkinleştirildi.')}
+async function enterFullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();status('Tarayıcı tam ekranı etkin.')}catch(error){status('Tarayıcı tam ekran izni verilmedi; alarm katmanı yine tam ekran görünecek.',false)}}
+function speak(card){if(!soundEnabled||!('speechSynthesis' in window))return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(card.party+' numaralı parti '+card.stage+' aşamasında bekliyor.');utterance.lang='tr-TR';utterance.rate=.95;window.speechSynthesis.speak(utterance)}
+function showAlarm(){const card=samples[$('sampleCard').value];$('alarmParty').textContent=card.party;$('alarmStage').textContent=card.stage;$('alarmKg').textContent=card.kg;$('alarmWait').textContent=card.wait;$('alarmNext').textContent=card.next;$('alarmOverlay').classList.add('show');beep();speak(card);status(card.party+' alarmı gösterildi.')}
+function closeAlarm(){window.speechSynthesis?.cancel();$('alarmOverlay').classList.remove('show');status('Alarm kapatıldı.')}
+$('soundButton').addEventListener('click',enableSound);$('fullscreenButton').addEventListener('click',enterFullscreen);$('alarmButton').addEventListener('click',showAlarm);$('closeAlarmButton').addEventListener('click',closeAlarm);document.addEventListener('keydown',event=>{if(event.key==='Escape')closeAlarm()});
+</script>
+</body>
+</html>

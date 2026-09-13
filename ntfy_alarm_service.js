@@ -39,14 +39,18 @@ function stageEquals(a, b) {
     return x.includes(y) || y.includes(x);
 }
 function targetStage(alarm) {
-    const raw = clean(alarm && (alarm.notificationTarget || alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
+    const hasNotificationTarget=Boolean(alarm && Object.prototype.hasOwnProperty.call(alarm,'notificationTarget'));
+    const raw = clean(alarm && (hasNotificationTarget ? alarm.notificationTarget : (alarm.telegramTarget ?? alarm.targetStage ?? '')));
     if (stageEquals(raw, 'KK') || stageEquals(raw, 'KALİTE KONTROL')) return 'KK';
     if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
 }
 function alarmTime(alarm){
-    const raw=clean(alarm&&alarm.datetime);
+    const source=alarm&&alarm.datetime;
+    if(typeof source==='number')return Number.isFinite(source)?source:null;
+    const raw=clean(source);
     if(!raw)return null;
+    if(/^\d{10,13}$/.test(raw))return Number(raw);
     const value=Date.parse(raw);
     return Number.isFinite(value)?value:null;
 }

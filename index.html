@@ -828,6 +828,16 @@ function publishAlarmViaGithubIssue(alarm){
     window.location.assign(url);
     return true;
 }
+function publishAllAlarmsViaGithubIssue(){
+    if(IS_LOCAL_DASHBOARD)return false;
+    const alarms=Object.values(alarmRecords||{}).flatMap(value=>Array.isArray(value)?value:[value]).filter(Boolean);
+    if(!alarms.length){showToast('⚠️ Aktarılacak yerel alarm yok.','warning');return false}
+    const body='<!-- PARTI_DASHBOARD_ALARM\n'+JSON.stringify({alarms})+'\n-->\n\nBu issue mobil dashboarddaki mevcut alarmları GitHub Actions alarm listesine aktarır.';
+    const url=GITHUB_ALARM_ISSUE_URL+'?title='+encodeURIComponent('[PARTİ ALARM SYNC] Mevcut mobil alarmlar')+'&body='+encodeURIComponent(body);
+    const opened=window.open(url,'_blank');
+    if(!opened)window.location.assign(url);
+    return true;
+}
 let telegramSyncTimer=null;
 function telegramSyncSnapshot(){
     clearTimeout(telegramSyncTimer);
@@ -1056,6 +1066,7 @@ function renderAlarmPanel(){
     if(active.length){h+='<h4 style="color:#4CAF50;margin:10px 0">🟢 Aktif</h4>';active.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';const dt=a.datetime?new Date(a.datetime).toLocaleString('tr-TR'):'';h+='<div class="alarm-item '+pc+'"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'Orta')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b><br>'+esc(a.description||'')+'</div><div class="alarm-item-time">📅 '+dt+'</div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">⏸️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}
     if(inactive.length){h+='<h4 style="color:#888;margin:10px 0">⚫ Pasif</h4>';inactive.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';h+='<div class="alarm-item '+pc+'" style="opacity:.5"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b></div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">▶️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}}
     p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 Telegram bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testTelegramConnection;p.insertBefore(test,p.children[2]||null);addPanelFullButton('alarmPanel');
+    if(!IS_LOCAL_DASHBOARD){const sync=document.createElement('button');sync.textContent='☁️ Mevcut alarmları GitHub’a aktar';sync.style.cssText='margin:0 0 8px;padding:8px 12px;border:0;border-radius:8px;background:#6C5CE7;color:white;font-weight:bold;cursor:pointer';sync.onclick=publishAllAlarmsViaGithubIssue;p.insertBefore(sync,p.children[2]||null)}
 }
 function openAlarmModal(id){
     const k=getCardById(id);if(!k)return;

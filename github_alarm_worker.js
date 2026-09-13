@@ -95,33 +95,36 @@ function normalizeAlarm(alarm) {
         notifiedAt: clean(alarm.notifiedAt)
     };
 }
-function issueAlarm(issue) {
+function issueAlarms(issue) {
     const body = clean(issue && issue.body);
     const match = body.match(/<!--\s*PARTI_DASHBOARD_ALARM\s*([\s\S]*?)-->/i);
-    if (!match) return null;
+    if (!match) return [];
     try {
         const payload = JSON.parse(match[1].trim());
-        return payload && payload.alarm ? normalizeAlarm(payload.alarm) : null;
+        const rows = Array.isArray(payload && payload.alarms) ? payload.alarms : payload && payload.alarm ? [payload.alarm] : [];
+        return rows.map(normalizeAlarm).filter(alarm => alarm.uid && alarm.parti);
     } catch (_) {
-        return null;
+        return [];
     }
 }
 function ingestIssue() {
     const event = readJson(process.env.GITHUB_EVENT_PATH, {});
     const issue = event.issue;
-    if (!issue || !/^\[PARTİ ALARM\]/i.test(clean(issue.title))) return false;
-    const incoming = issueAlarm(issue);
-    if (!incoming || !incoming.uid || !incoming.parti) throw new Error('Alarm issue gövdesi geçersiz');
+    if (!issue || !/^\[PARTİ ALARM(?: SYNC)?\]/i.test(clean(issue.title))) return false;
+    const incoming = issueAlarms(issue);
+    if (!incoming.length) throw new Error('Alarm issue gövdesi geçersiz');
     const alarms = alarmRows().map(normalizeAlarm);
-    const index = alarms.findIndex(alarm => alarm.uid === incoming.uid);
-    if (event.action === 'deleted' || event.action === 'closed') {
-        if (index >= 0) alarms[index] = {...alarms[index], active: false};
-    } else if (index >= 0) {
-        const targetChanged = targetStage(alarms[index]) !== targetStage(incoming) || alarms[index].parti !== incoming.parti;
-        alarms[index] = targetChanged ? {...incoming, notifiedAt: ''} : {...alarms[index], ...incoming, notifiedAt: alarms[index].notifiedAt};
-    } else {
-        alarms.push(incoming);
-    }
+    incoming.forEach(item => {
+        const index = alarms.findIndex(alarm => alarm.uid === item.uid);
+        if (event.action === 'deleted' || event.action === 'closed') {
+            if (index >= 0) alarms[index] = {...alarms[index], active: false};
+        } else if (index >= 0) {
+            const targetChanged = targetStage(alarms[index]) !== targetStage(item) || alarms[index].parti !== item.parti;
+            alarms[index] = targetChanged ? {...item, notifiedAt: ''} : {...alarms[index], ...item, notifiedAt: alarms[index].notifiedAt};
+        } else {
+            alarms.push(item);
+        }
+    });
     writeJson(ALARM_FILE, {alarms});
     return true;
 }

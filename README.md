@@ -101,6 +101,7 @@ http://127.0.0.1:8783/index.html
 ```
 
 Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. GitHub Pages üzerindeki alarm kaydında formu gönderdikten sonra yeni GitHub issue ekranı açılır; mobilde `Create issue` düğmesine basın. Issue, güvenli biçimde `data/alarms.json` dosyasına aktarılır. Alarm listesi PC ve mobil dashboardda aynı dosyadan görünür.
+Daha önce GitHub dashboardunda tarayıcıya kaydedilmiş alarmlar için `🔔 Alarm` panelini açıp `☁️ Mevcut alarmları GitHub’a aktar` düğmesine basın; açılan tek issue'da `Create issue` seçin.
 
 PC açıkken yerel servis kullanmak isterseniz servis `data/alarms.json` dosyasını değiştiğinde `main` dalına push eder. Yerel Git kimlik bilgileri veya push yetkisi yoksa servis `Shared alarm publish failed` logunu yazar. GitHub Pages alarm akışı için PC servisinin açık olması gerekmez.
 

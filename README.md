@@ -109,6 +109,8 @@ http://127.0.0.1:8783/index.html
 
 Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat, hedef aşama ve hedef bekleme süresini dakika olarak kaydedin. Hedef aşama boş bırakılırsa bu bir tarih/saat alarmıdır ve canlı aşama beklemeden çalışır. Bir hedef aşama seçilirse bildirim, parti o aşamaya ulaştığında gönderilir; bu alarm tipinde tarih/saat alanı dikkate alınmaz. Hedef bekleme süresi `0` ise aşamaya ulaşır ulaşmaz bildirim gönderilir. Hedef süre `60` ise seçilen aşamaya ulaştıktan sonra en az 60 dakika beklenir. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
 
+`KK / Sarım 1 Sonrası Öncelik` panelinde genel liste ve alt kategoriler için `🃏 Kartlar` / `📋 Liste` görünümü bulunur. Panel veya açık alt kategori içindeki `📨 ntfy Liste` düğmesi, listedeki parti özetini tek bir ntfy mesajı olarak gönderir; çok uzun listeler mesaj sınırı nedeniyle otomatik kısaltılır.
+
 Servis, verideki `Sonra Yapılacak Aşama` / mevcut aşama ve `Son Hareket Tarihi` alanlarını kullanarak geçen bekleme süresini hesaplar. GitHub verisi 15 dakikada bir push ediliyorsa hedef süre kontrolünün veri kaynağına yansıması en fazla yaklaşık 16 dakika sürebilir.
 
 Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repoya veya herkese açık mesaja yazmayın. ntfy.sh yerine özel ntfy sunucusu kullanıyorsanız servisi başlatmadan önce `NTFY_SERVER_URL` ortam değişkenini, gerekiyorsa `NTFY_ACCESS_TOKEN` değişkenini ayarlayın.

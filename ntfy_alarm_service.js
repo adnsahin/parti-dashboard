@@ -172,6 +172,27 @@ function messageForNote(card, text) {
         clean(text)
     ].join('\n');
 }
+function messageForList(title, cards) {
+    const items = (Array.isArray(cards) ? cards : []).filter(card => card && clean(card.parti));
+    const totalKg = items.reduce((sum, card) => sum + (Number(card.kilo) || 0), 0);
+    const lines = [
+        `📋 ${clean(title) || 'Parti Listesi'}`,
+        '',
+        `Toplam: ${items.length} parti • ${Math.round(totalKg).toLocaleString('tr-TR')} kg`,
+        ''
+    ];
+    let included = 0;
+    for (const [index, card] of items.entries()) {
+        const stage = clean(card.son_asama || card.lastStage || card._asama || card.asama) || '-';
+        const next = clean(card.bir_sonraki) || '-';
+        const line = `${index + 1}. ${clean(card.parti)} | ${stage} → ${next} | ${Math.round(Number(card.kilo) || 0).toLocaleString('tr-TR')} kg | ${clean(card.bekleme) || '-'}`;
+        if (lines.join('\n').length + line.length + 80 > 3800) break;
+        lines.push(line);
+        included++;
+    }
+    if (included < items.length) lines.push('', `... ${items.length - included} parti daha var; liste kısaltıldı.`);
+    return lines.join('\n');
+}
 function ntfyRequest(text) {
     return new Promise((resolve, reject) => {
         const target = new URL(NTFY_SERVER_URL + '/' + encodeURIComponent(NTFY_TOPIC));
@@ -387,6 +408,15 @@ const server = http.createServer(async (req, res) => {
             if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
             await sendText(messageForNote(body.card || {parti: body.parti}, text));
             json(res, 200, {ok: true, sentTo: 'ntfy'});
+            return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/ntfy/list') {
+            const body = await readBody(req);
+            const cards = Array.isArray(body.cards) ? body.cards : [];
+            if (!cards.length) { json(res, 400, {ok: false, error: 'Gönderilecek liste boş'}); return; }
+            if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
+            await sendText(messageForList(body.title, cards));
+            json(res, 200, {ok: true, sentTo: 'ntfy', count: cards.length});
             return;
         }
         if (req.method === 'POST' && url.pathname === '/api/ntfy/snapshot') {

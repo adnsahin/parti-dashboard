@@ -849,8 +849,8 @@ function notificationTargetStages(k){
 function insertAlarmTargetField(id,k,dateId,selectId){
     const date=document.getElementById(dateId),row=date&&date.parentElement&&date.parentElement.parentElement;
     if(!row||document.getElementById(selectId))return;
-    const options=notificationTargetStages(k),guess=options.slice(1).find(x=>stageEquals(k.bir_sonraki,x.value))?.value||'',html=options.map(x=>'<option value="'+esc(x.value)+'" '+(guess===x.value?'selected':'')+'>'+esc(x.label)+'</option>').join('');
-    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select>';
+    const options=notificationTargetStages(k),html=options.map(x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>').join('');
+    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select><small style="display:block;color:#aaa;margin-top:4px">Boş bırakırsanız yalnızca tarih/saat kontrol edilir.</small>';
     row.parentElement.insertBefore(wrap,row);
 }
 function insertNtfyNoteButton(id){

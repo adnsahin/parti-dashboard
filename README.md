@@ -107,7 +107,7 @@ Servis dashboardu şu adreste sunar:
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat, hedef aşama ve hedef bekleme süresini dakika olarak kaydedin. Hedef bekleme süresi `0` ise yalnızca tarih/saat ve hedef aşama koşulları uygulanır. Hedef süre `60` ise seçilen aşamada en az 60 dakika beklemeden bildirim gönderilmez. Tarih/saat koşulu ve hedef aşama koşulu birlikte sağlanmadan alarm gönderilmez. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
+Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat, hedef aşama ve hedef bekleme süresini dakika olarak kaydedin. Hedef aşama boş bırakılırsa bu bir tarih/saat alarmıdır ve canlı aşama beklemeden çalışır. Hedef bekleme süresi `0` ise seçilen hedef aşama için ek süre şartı aranmaz. Hedef süre `60` ise seçilen aşamada en az 60 dakika beklemeden bildirim gönderilmez. Dolu hedef aşamada tarih/saat ve aşama koşulları birlikte sağlanır. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
 
 Servis, verideki `Sonra Yapılacak Aşama` / mevcut aşama ve `Son Hareket Tarihi` alanlarını kullanarak geçen bekleme süresini hesaplar. GitHub verisi 15 dakikada bir push ediliyorsa hedef süre kontrolünün veri kaynağına yansıması en fazla yaklaşık 16 dakika sürebilir.
 

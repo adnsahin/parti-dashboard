@@ -121,7 +121,7 @@ function durationLabel(minutes){
 }
 function messageFor(card, alarm, target) {
     const wait = card && (card.bekleme || card.bekleme_gun != null ? (card.bekleme || `${card.bekleme_gun} gün`) : '-');
-    const targetLabel = target === 'KK' ? 'Kalite Kontrol' : target === 'SARIM1' ? 'Sarım1' : target || '-';
+    const targetLabel = target === 'KK' ? 'Kalite Kontrol' : target === 'SARIM1' ? 'Sarım1' : target || 'Tarih / saat alarmı';
     const required = targetDurationMinutes(alarm);
     const elapsed = cardWaitingMinutes(card);
     return [
@@ -291,18 +291,18 @@ async function processSnapshot(payload) {
         const scheduledAt = alarmTime(alarm);
         if (scheduledAt !== null && Date.now() < scheduledAt) continue;
         const target = targetStage(alarm);
-        if (!target) continue;
         const key = clean(alarm.id) || clean(alarm.parti);
         const card = Object.values(current).find(x => clean(x.parti) === clean(alarm.parti)) || current[key];
-        if (!card || !cardReachedTarget(card, target)) continue;
+        if (!card) continue;
         const requiredMinutes = targetDurationMinutes(alarm);
         const elapsedMinutes = cardWaitingMinutes(card);
-        if (requiredMinutes > 0 && (elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
-        const eventKey = clean(alarm.uid) || [clean(card.parti), target].join('|');
+        if (target && !cardReachedTarget(card, target)) continue;
+        if (requiredMinutes > 0 && (!target || elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
+        const eventKey = clean(alarm.uid) || [clean(card.parti), target || 'datetime'].join('|');
         if (sent[eventKey]) continue;
         try {
             const result = await sendText(messageFor(card, alarm, target));
-            events.push({parti: card.parti, target, requiredMinutes, elapsedMinutes, sent: result.sent, dryRun: result.dryRun});
+            events.push({parti: card.parti, target: target || null, requiredMinutes, elapsedMinutes, sent: result.sent, dryRun: result.dryRun});
             if (result.sent) sent[eventKey] = new Date().toISOString();
         } catch (error) {
             events.push({parti: card.parti, target, sent: false, error: error.message});

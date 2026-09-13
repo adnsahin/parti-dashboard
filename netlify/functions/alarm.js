@@ -27,7 +27,11 @@ function authorized(event, body) {
   return supplied === expected;
 }
 async function store() {
-  return getStore('parti-alarm-events', {consistency: 'strong'});
+  return getStore('parti-alarm-events', {
+    siteID: String(process.env.NETLIFY_SITE_ID || '').trim() || undefined,
+    token: String(process.env.NETLIFY_AUTH_TOKEN || '').trim() || undefined,
+    consistency: 'strong'
+  });
 }
 
 exports.handler = async event => {

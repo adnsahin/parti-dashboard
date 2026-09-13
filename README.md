@@ -36,7 +36,7 @@ JSON verisinin otomatik yüklenmesi için dashboardu GitHub Pages veya yerel HTT
 
 Dashboarddaki **💧 Islak-Kuru** paneli artık geçmiş ıslak→kuru geçiş çizelgesini değil, anlık kart verisindeki bekleyen partileri gösterir:
 
-- Son tamamlanan aşaması `BOYAMA`, `YAŞ AÇMA` veya `FIRÇA` olan kartlar listelenir.
+- `Bekliyor` veya `Bir Sonraki` alanında `BOYAMA`, `YAŞ AÇMA` ya da `FIRÇA` (ve `BOYA` / `Y.AÇMA` kısaltmaları) olan kartlar taranır.
 - Son hareketinden itibaren varsayılan **2 saat** eşiğini aşanlar en uzun bekleyen üstte olacak şekilde kart görünümünde gösterilir.
 - Panel içinden 1, 2 veya 4 saatlik hazır eşikler seçilebilir; istenirse özel saat değeri uygulanabilir.
 - Her kartta FIFO sırası, mevcut ıslak aşama, beklediği sonraki aşama, bekleme süresi, son hareket, kilo, firma ve reçete görünür.

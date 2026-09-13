@@ -15,9 +15,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if "%GOOGLE_CHAT_WEBHOOK_URL%"=="" set /p "GOOGLE_CHAT_WEBHOOK_URL=Google Chat webhook adresini girin: "
+if "%GOOGLE_CHAT_WEBHOOK_URL%"=="" set /p "GOOGLE_CHAT_WEBHOOK_URL=Google Chat veya Apps Script Web App adresini girin: "
 if "%GOOGLE_CHAT_WEBHOOK_URL%"=="" (
-  echo HATA: Google Chat webhook adresi bos birakilamaz.
+  echo HATA: Google Chat / Apps Script adresi bos birakilamaz.
   pause
   exit /b 1
 )

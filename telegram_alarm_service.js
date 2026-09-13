@@ -93,7 +93,8 @@ function sharedAlarmRows(alarms) {
         priority: clean(alarm.priority),
         datetime: clean(alarm.datetime),
         active: alarm.active !== false,
-        created_at: clean(alarm.created_at)
+        created_at: clean(alarm.created_at),
+        notifiedAt: clean(alarm.notifiedAt)
     }));
 }
 async function publishSharedAlarmsNow(alarms) {

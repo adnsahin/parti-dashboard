@@ -1,0 +1,68 @@
+name: Telegram alarms
+
+on:
+  issues:
+    types: [opened, edited, closed, deleted]
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: telegram-alarms
+  cancel-in-progress: false
+
+jobs:
+  alarms:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Import mobile alarm issue
+        if: ${{ github.event_name == 'issues' }}
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: node github_alarm_worker.js ingest
+
+      - name: Commit imported mobile alarms
+        if: ${{ github.event_name == 'issues' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/alarms.json; then
+            echo "Mobil alarm değişmedi."
+            exit 0
+          fi
+          git add data/alarms.json
+          git commit -m "Add mobile Telegram alarm"
+          git push
+
+      - name: Send due Telegram alarms
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+        run: node github_alarm_worker.js check
+
+      - name: Commit alarm state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/alarms.json; then
+            echo "Alarm state değişmedi."
+            exit 0
+          fi
+          git add data/alarms.json
+          git commit -m "Sync mobile Telegram alarms"
+          git push

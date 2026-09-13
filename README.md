@@ -100,21 +100,30 @@ Servis `http://127.0.0.1:8783` adresinde çalışır ve dashboardu bu adresten a
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. Alarm kaydı `data/alarms.json` dosyasına senkronlanır; servis bu dosyayı yalnızca değiştiğinde `main` dalına push eder. Böylece PC'de kurulan aktif alarmlar GitHub Pages üzerindeki mobil dashboardda da görünür. Yerel Git kimlik bilgileri veya push yetkisi yoksa servis Telegram loguna `Shared alarm publish failed` yazar; mobil görünürlük için alarm dosyasını yetkili bir ortamdan push etmek gerekir.
+Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. GitHub Pages üzerindeki alarm kaydında formu gönderdikten sonra yeni GitHub issue ekranı açılır; mobilde `Create issue` düğmesine basın. Issue, güvenli biçimde `data/alarms.json` dosyasına aktarılır. Alarm listesi PC ve mobil dashboardda aynı dosyadan görünür.
 
-Servis varsayılan olarak GitHub'daki güncel `data/partiler.json` dosyasını 5 dakikada bir çeker. Hedef aşama iki yoklama arasında geçilmişse akış sırası kullanılarak alarm yine tetiklenir. Alarm, hedef aşama zaten geçildikten sonra oluşturulmuşsa geriye dönük Telegram mesajı gönderilmez. Yalnızca `TELEGRAM_ALARM_BASLAT.bat` penceresi açık kalmalıdır.
+PC açıkken yerel servis kullanmak isterseniz servis `data/alarms.json` dosyasını değiştiğinde `main` dalına push eder. Yerel Git kimlik bilgileri veya push yetkisi yoksa servis `Shared alarm publish failed` logunu yazar. GitHub Pages alarm akışı için PC servisinin açık olması gerekmez.
 
-GitHub Pages dashboardu `data/alarms.json` dosyasını önbelleksiz okur ve yerel alarmlarla birleştirir. Alarm oluşturma, silme ve Telegram notu gönderme işlemleri için dashboardu PC'de `http://127.0.0.1:8783/index.html` adresinden açın; mobil görünüm paylaşım dosyasını okuma amaçlıdır.
+### PC kapalıyken GitHub Actions ile Telegram
 
-İsterseniz ortam değişkenleriyle ayarı değiştirebilirsiniz:
+`.github/workflows/telegram-alarms.yml` workflowu mobil alarm issue'larını işler ve her 5 dakikada bir `data/partiler.json` içindeki aşamalarla kontrol eder. PC'nin veya `TELEGRAM_ALARM_BASLAT.bat` penceresinin açık olması gerekmez. GitHub'da `Settings > Secrets and variables > Actions` bölümüne şu iki repository secret'ı ekleyin:
+
+```text
+TELEGRAM_BOT_TOKEN=BotFather tokeni
+TELEGRAM_CHAT_IDS=123456789,987654321
+```
+
+İlk alarmdan sonra `Actions > Telegram alarms` altında workflow çalışmalıdır. GitHub Actions zamanlaması birkaç dakika gecikebilir. Hedef aşama mevcut veride zaten ulaşılmışsa ilk kontrolde bildirim gönderilir; bildirim `notifiedAt` ile bir kez işaretlenir.
+
+GitHub Pages dashboardu `data/alarms.json` dosyasını önbelleksiz okur. Alarm silme veya devre dışı bırakma için ilgili GitHub issue'sunu kapatın; workflow alarmı pasif duruma geçirir.
+
+Yerel servis yine `http://127.0.0.1:8783/index.html` adresinde çalışır ve yalnızca PC tabanlı alarm/not senaryoları içindir. Kod güncellendikten sonra açık `.bat` penceresini kapatıp yeniden başlatın; servis durumunda `version: 2` görünmelidir. Ortam değişkenleri:
 
 ```text
 TELEGRAM_POLL_SECONDS=60
 TELEGRAM_DATA_URL=https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json
 TELEGRAM_PUBLISH_ALARMS=false
 ```
-
-Parti detayındaki `📝 Not` alanına kısa bir not yazıp `Telegram’a Gönder` düğmesine basabilirsiniz. Not doğrudan botun tanımlı Chat ID'lerine gönderilir; yerel karta kalıcı kaydetmek için ayrıca `Kaydet` düğmesine basın. Kod güncellendikten sonra açık olan `.bat` penceresini kapatıp yeniden başlatın; servis durumunda `version: 2` görünmelidir.
 
 
 

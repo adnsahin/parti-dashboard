@@ -28,5 +28,8 @@ if "%TELEGRAM_CHAT_IDS%"=="" (
   exit /b 1
 )
 
+if "%TELEGRAM_POLL_SECONDS%"=="" set "TELEGRAM_POLL_SECONDS=60"
+echo Kontrol araligi: %TELEGRAM_POLL_SECONDS% saniye
+echo.
 node "%~dp0telegram_alarm_service.js"
 pause

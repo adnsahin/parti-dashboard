@@ -9,6 +9,7 @@ const path = require('path');
 const {URL} = require('url');
 const ROOT = __dirname;
 const PORT = Number(process.env.NTFY_ALARM_PORT || 8783);
+const HOST = String(process.env.NTFY_ALARM_HOST || '127.0.0.1').trim() || '127.0.0.1';
 const NTFY_TOPIC = String(process.env.NTFY_TOPIC || '').trim();
 const NTFY_SERVER_URL = String(process.env.NTFY_SERVER_URL || 'https://ntfy.sh').trim().replace(/\/+$/, '');
 const NTFY_ACCESS_TOKEN = String(process.env.NTFY_ACCESS_TOKEN || '').trim();
@@ -224,7 +225,7 @@ function messageForList(title, cards) {
     if (included < items.length) lines.push('', `... ${items.length - included} parti daha var; liste kısaltıldı.`);
     return lines.join('\n');
 }
-function ntfyRequest(text) {
+function ntfyRequest(text, title='Parti Alarmi') {
     return new Promise((resolve, reject) => {
         const target = new URL(NTFY_SERVER_URL + '/' + encodeURIComponent(NTFY_TOPIC));
         const payload = Buffer.from(text, 'utf8');
@@ -232,7 +233,7 @@ function ntfyRequest(text) {
         const headers = {
             'Content-Type': 'text/plain; charset=utf-8',
             'Content-Length': payload.length,
-            'Title': 'Parti Alarmi',
+            'Title': clean(title) || 'Parti Alarmi',
             'Priority': 'high',
             'Tags': 'bell'
         };
@@ -428,9 +429,10 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'GET' && url.pathname === '/api/ntfy/status') {
             json(res, 200, {
                 ok: true,
-                version: 4,
+                version: 5,
                 configured: Boolean(NTFY_TOPIC),
                 channel: 'ntfy',
+                host: HOST,
                 serverUrl: NTFY_SERVER_URL,
                 topicConfigured: Boolean(NTFY_TOPIC),
                 stateFile: STATE_FILE,
@@ -448,6 +450,17 @@ const server = http.createServer(async (req, res) => {
             if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
             await sendText(text);
             json(res, 200, {ok: true, sentTo: 'ntfy'});
+            return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/ntfy/message') {
+            const body = await readBody(req);
+            const title = clean(body.title) || 'Parti Dashboard';
+            const text = clean(body.text);
+            if (!text) { json(res, 400, {ok: false, error: 'Mesaj boş bırakılamaz'}); return; }
+            if (title.length > 120 || text.length > 4000) { json(res, 400, {ok: false, error: 'Başlık 120, mesaj 4000 karakterden kısa olmalı'}); return; }
+            if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
+            await ntfyRequest(text,title);
+            json(res, 200, {ok: true, sentTo: 'ntfy', title});
             return;
         }
         if (req.method === 'POST' && url.pathname === '/api/ntfy/note') {
@@ -486,8 +499,8 @@ const server = http.createServer(async (req, res) => {
         json(res, 500, {ok: false, error: error.message});
     }
 });
-server.listen(PORT, '127.0.0.1', () => {
-    log(`Parti Dashboard ntfy servisi http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+    log(`Parti Dashboard ntfy servisi http://0.0.0.0:${PORT}`);
     log(`ntfy ayarı: ${NTFY_TOPIC ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
     log(`GitHub veri senkronu: ${DATA_URL} / ${POLL_SECONDS} saniye`);
     pollGithub();

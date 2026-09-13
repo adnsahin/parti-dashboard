@@ -386,7 +386,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 @keyframes slideUp{from{transform:translateX(-50%) translateY(100px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
 /* MOBİL GEZİNME BAR STİLLERİ */
-.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;width:100%;height:60px;background:#110e2e;border-top:2px solid #2F75B5;z-index:10001;grid-template-columns:repeat(6,1fr);box-shadow:0 -4px 10px rgba(0,0,0,.3)}
+.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;width:100%;height:60px;background:#110e2e;border-top:2px solid #2F75B5;z-index:10001;grid-template-columns:repeat(8,1fr);box-shadow:0 -4px 10px rgba(0,0,0,.3)}
 .mobile-bottom-nav button{background:transparent;border:none;color:#fff;font-size:10px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px}
 .mobile-bottom-nav button span{font-size:18px}
 .mobile-bottom-nav button:active{background:rgba(255,255,255,.1)}
@@ -674,6 +674,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button class="btn-fire-export" onclick="exportFireWorkbook()">📊 Fire</button>
 <button class="btn-alarm-list" onclick="toggleAlarmPanel()">🔔 Alarm</button>
 <button style="background:#1565C0;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleFilterAlarmPanel()">🔎 Filtre Alarmı</button>
+<button style="background:#00897B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleNtfyMessagePanel()">💬 Mesaj Gönder</button>
 <button class="btn-tamir-list" id="btnTamirList" onclick="toggleTamirPanel()">🛠️ Tamir (0)</button>
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
@@ -694,11 +695,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="bottleneck" onclick="toggleBottleneckPanel()"><span>🏭</span>Darboğaz</button>
 <button onclick="toggleGecisPanel()"><span>📜</span>Rapor</button>
 <button onclick="toggleUretimPanel()"><span>🏭</span>Üretim</button>
+<button onclick="toggleNtfyMessagePanel()"><span>💬</span>Mesaj</button>
 </div>
 
 <div class="panel" id="notePanel"></div>
 <div class="panel" id="firePanel"></div>
 <div class="panel" id="filterAlarmPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="ntfyMessagePanel" style="width:min(620px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="alarmPanel"></div>
 <div class="panel" id="tamirPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="selectionPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
@@ -825,7 +828,13 @@ function alarmDateTimeValue(date,time){
     const value=new Date(date+'T'+time+':00');
     return Number.isNaN(value.getTime())?null:value.getTime();
 }
-const NTFY_ALARM_SERVICE_URL='http://127.0.0.1:8783';
+const NTFY_ALARM_SERVICE_URL=(()=>{
+    const params=new URLSearchParams(location.search);
+    const configured=String(params.get('ntfyService')||localStorage.getItem('ntfyServiceUrl')||'').trim().replace(/\/+$/,'');
+    if(configured)return configured;
+    if(location.protocol==='http:'&&String(location.port||'80')==='8783')return location.origin;
+    return 'http://127.0.0.1:8783';
+})();
 let ntfySyncTimer=null;
 function ntfySyncSnapshot(){
     clearTimeout(ntfySyncTimer);
@@ -840,6 +849,20 @@ function testNtfyConnection(){
     fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard ntfy bağlantı testi başarılı.'})})
         .then(r=>r.json()).then(v=>showToast(v.ok?'✅ ntfy mesajı gönderildi.':'⚠️ ntfy: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
         .catch(()=>showToast('⚠️ ntfy servisi çalışmıyor. Önce NTFY_ALARM_BASLAT.bat başlatılmalı.','warning'));
+}
+function toggleNtfyMessagePanel(){safePanelOpen('ntfyMessagePanel','💬 ntfy Mesaj Gönder',renderNtfyMessagePanel)}
+function renderNtfyMessagePanel(){
+    const p=document.getElementById('ntfyMessagePanel');
+    p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=&quot;none&quot;">×</button><h2 style="color:#00897B">💬 Dashboard Mesajı</h2><div class="panel-summary">Bu mesajı dashboardu açtığınız cihazdan ntfy kanalına gönderir. PC ve aynı Wi‑Fi ağındaki telefon aynı paneli kullanabilir.</div><label>Başlık<input id="ntfyMessageTitle" type="text" maxlength="120" value="Parti Dashboard" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>Mesaj<textarea id="ntfyMessageText" maxlength="4000" rows="7" placeholder="Gönderilecek mesajı yazın..." style="width:100%;padding:8px;margin-top:5px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C;resize:vertical"></textarea></label><small style="display:block;color:#aaa;margin-top:8px">Bağlı servis: '+esc(NTFY_ALARM_SERVICE_URL)+'</small><button class="btn-all-export" style="margin-top:12px;background:#00897B" onclick="sendNtfyMessage(event)">📨 ntfy’ye Gönder</button>';
+}
+function sendNtfyMessage(e){
+    const title=String(document.getElementById('ntfyMessageTitle')?.value||'Parti Dashboard').trim(),text=String(document.getElementById('ntfyMessageText')?.value||'').trim();
+    if(!text){showToast('⚠️ Mesaj boş bırakılamaz.','warning');return}
+    const button=e&&e.currentTarget;if(button)button.disabled=true;
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,text})})
+        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');showToast('✅ Mesaj ntfy’ye gönderildi.','success');document.getElementById('ntfyMessageText').value=''})
+        .catch(error=>showToast('⚠️ Mesaj gönderilemedi: '+error.message,'warning'))
+        .finally(()=>{if(button)button.disabled=false});
 }
 function notificationTargetStages(k){
     const out=[{value:'',label:'Sadece tarih alarmı'}],seen=new Set(['']);

@@ -10,8 +10,8 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 - `data/hareket_saatleri.json`: Parti bazında son hareket saatlerini sağlar; GitHub Pages yüklemesinde `data/partiler.json` ile birlikte okunur.
 - `convert_excel.js`: Excel dosyasını JSON veriye çevirir.
 - `update_data.ps1`: Veriyi günceller, istenirse git push yapar.
-- `telegram_alarm_service.js`: PC üzerinde çalışan, Telegram bildirim servisi ve yerel dashboard sunucusu.
-- `TELEGRAM_ALARM_BASLAT.bat`: Telegram servisinin token ve Chat ID sorarak başlatılması.
+- `google_chat_alarm_service.js`: PC üzerinde çalışan, GitHub parti verisini ve dashboard alarmlarını kontrol edip Google Chat webhookuna mesaj gönderen yerel alarm servisi.
+- `GOOGLE_CHAT_ALARM_BASLAT.bat`: Google Chat webhook adresini sorarak alarm servisini başlatır.
 - `tools/xlsx.full.min.js`: Excel okuma kütüphanesi.
 
 
@@ -90,42 +90,28 @@ python .\update_partiler_json.py ".\partiler.xlsx" ".\data\partiler.json"
 
 Betik `Son Yapılan Aşama`, `Sonra Yapılacak Aşama` ve `Son Hareket Tarihi` alanlarını her karta ekler. Yalnız `partiler.json` güncellenir; `tamirler.json` dosyasına dokunmaz. Mevcut otomatik BAT'ta, GitHub push işleminden hemen önce bu komutu çalıştırın.
 
-## Telegram Alarm Servisi
+## Google Chat Alarm Servisi
 
-PC açıkken ücretsiz Telegram bildirimi göndermek için `TELEGRAM_ALARM_BASLAT.bat` dosyasını çalıştırın. İlk çalıştırmada BotFather tokeni ve alıcı Chat ID bilgileri sorulur; bu bilgiler repoya yazılmaz.
+İş yeri PC'si açıkken Google Chat mobil bildirimleri göndermek için `GOOGLE_CHAT_ALARM_BASLAT.bat` dosyasını çalıştırın. İlk çalıştırmada Google Chat alanınızın webhook adresini girin; bu adres repoya yazılmaz.
 
-Servis `http://127.0.0.1:8783` adresinde çalışır ve dashboardu bu adresten açın:
+Servis `http://127.0.0.1:8783` adresinde dashboardu sunar:
 
 ```text
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboarddaki alarm formunda Telegram hedefi olarak `Kalite Kontrol`, `Sarım1` veya üretim akışında bunlardan sonraki aşamalardan biri seçilebilir. GitHub Pages üzerindeki alarm kaydında formu gönderdikten sonra yeni GitHub issue ekranı açılır; mobilde `Create issue` düğmesine basın. Issue, güvenli biçimde `data/alarms.json` dosyasına aktarılır. Alarm listesi PC ve mobil dashboardda aynı dosyadan görünür.
-Yerel PC kullanımında `TELEGRAM_ALARM_BASLAT.bat` ile açılan dashboardda alarm kaydı doğrudan çalışan servise aktarılır; GitHub issue açılması gerekmez. Alarmın tarih ve saati gelmeden mesaj gönderilmez. Aşama ulaşıldığında Telegram mesajında parti bilgileri, kartın mevcut aşaması, hedef aşama ve alarm açıklaması/notu yer alır.
-Daha önce GitHub dashboardunda tarayıcıya kaydedilmiş alarmlar için `🔔 Alarm` panelini açıp `☁️ Mevcut alarmları GitHub’a aktar` düğmesine basın; açılan tek issue'da `Create issue` seçin.
+Google Chat kurulumu:
 
-PC açıkken yerel servis kullanmak isterseniz servis `data/alarms.json` dosyasını değiştiğinde `main` dalına push eder. Yerel Git kimlik bilgileri veya push yetkisi yoksa servis `Shared alarm publish failed` logunu yazar. GitHub Pages alarm akışı için PC servisinin açık olması gerekmez.
+1. Google Chat'te bir `Parti Alarm` alanı oluşturun.
+2. Bildirim alacak kullanıcıları bu alana ekleyin.
+3. Alan ayarlarından bir incoming webhook oluşturun.
+4. Webhook adresini `GOOGLE_CHAT_ALARM_BASLAT.bat` çalışırken girin.
 
-### PC kapalıyken GitHub Actions ile Telegram
+Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat ve hedef aşamayı kaydedin. Alarm doğrudan yerel servise aktarılır; Google Sheet, GitHub issue veya Telegram gerekmez. Tarih ve saat gelmeden mesaj gönderilmez. Parti hedef aşamaya ulaştığında kart bilgileri ve not Google Chat alanına gönderilir. Aynı alarm bir kez gönderilir.
 
-`.github/workflows/telegram-alarms.yml` workflowu mobil alarm issue'larını işler ve her 5 dakikada bir `data/partiler.json` içindeki aşamalarla kontrol eder. PC'nin veya `TELEGRAM_ALARM_BASLAT.bat` penceresinin açık olması gerekmez. GitHub'da `Settings > Secrets and variables > Actions` bölümüne şu iki repository secret'ı ekleyin:
+Veri kontrolü varsayılan olarak 60 saniyede bir yapılır. GitHub verisi `data/partiler.json` dosyasından okunur; veri kaynağı 15 dakikada bir push ediliyorsa bildirim aşama değişikliğinin GitHub'a yansımasından sonra gönderilir.
 
-```text
-TELEGRAM_BOT_TOKEN=BotFather tokeni
-TELEGRAM_CHAT_IDS=123456789,987654321
-```
-
-İlk alarmdan sonra `Actions > Telegram alarms` altında workflow çalışmalıdır. GitHub Actions zamanlaması birkaç dakika gecikebilir. Hedef aşama mevcut veride zaten ulaşılmışsa ilk kontrolde bildirim gönderilir; bildirim `notifiedAt` ile bir kez işaretlenir.
-
-GitHub Pages dashboardu `data/alarms.json` dosyasını önbelleksiz okur. Alarm silme veya devre dışı bırakma için ilgili GitHub issue'sunu kapatın; workflow alarmı pasif duruma geçirir.
-
-Yerel servis yine `http://127.0.0.1:8783/index.html` adresinde çalışır ve yalnızca PC tabanlı alarm/not senaryoları içindir. Kod güncellendikten sonra açık `.bat` penceresini kapatıp yeniden başlatın; servis durumunda `version: 2` görünmelidir. Ortam değişkenleri:
-
-```text
-TELEGRAM_POLL_SECONDS=60
-TELEGRAM_DATA_URL=https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json
-TELEGRAM_PUBLISH_ALARMS=false
-```
+Webhook adresi yalnızca PC'deki servis ortamında tutulur; `index.html` içine yazılmaz. Böylece GitHub Pages kaynak kodunda görünmez.
 
 
 

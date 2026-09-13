@@ -9,20 +9,19 @@ const path = require('path');
 const {URL} = require('url');
 const {execFile} = require('child_process');
 const ROOT = __dirname;
-const PORT = Number(process.env.TELEGRAM_ALARM_PORT || 8783);
-const TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const CHAT_IDS = String(process.env.TELEGRAM_CHAT_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
-const DATA_URL = String(process.env.TELEGRAM_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
-const POLL_SECONDS = Math.max(30, Number(process.env.TELEGRAM_POLL_SECONDS || 300));
+const PORT = Number(process.env.GOOGLE_CHAT_ALARM_PORT || 8783);
+const GOOGLE_CHAT_WEBHOOK_URL = String(process.env.GOOGLE_CHAT_WEBHOOK_URL || '').trim();
+const DATA_URL = String(process.env.GOOGLE_CHAT_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
+const POLL_SECONDS = Math.max(30, Number(process.env.GOOGLE_CHAT_POLL_SECONDS || 300));
 const stateDir = process.env.LOCALAPPDATA
-    ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardTelegram')
-    : path.join(os.homedir(), '.parti-dashboard-telegram');
-const STATE_FILE = process.env.TELEGRAM_STATE_FILE
-    ? path.resolve(process.env.TELEGRAM_STATE_FILE)
+    ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardGoogleChat')
+    : path.join(os.homedir(), '.parti-dashboard-google-chat');
+const STATE_FILE = process.env.GOOGLE_CHAT_STATE_FILE
+    ? path.resolve(process.env.GOOGLE_CHAT_STATE_FILE)
     : path.join(stateDir, 'state.json');
 const ALARM_FILE_REL = 'data/alarms.json';
 const ALARM_FILE = path.join(ROOT, ALARM_FILE_REL);
-const PUBLISH_ALARMS = !['0','false','no'].includes(String(process.env.TELEGRAM_PUBLISH_ALARMS || '1').trim().toLowerCase());
+const PUBLISH_ALARMS = ['1','true','yes'].includes(String(process.env.GOOGLE_CHAT_PUBLISH_ALARMS || '0').trim().toLowerCase());
 let alarmPublishQueue = Promise.resolve();
 const MAX_BODY = 12 * 1024 * 1024;
 let lastPoll = null;
@@ -43,7 +42,7 @@ function stageEquals(a, b) {
     return x.includes(y) || y.includes(x);
 }
 function targetStage(alarm) {
-    const raw = clean(alarm && (alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
+    const raw = clean(alarm && (alarm.notificationTarget || alarm.googleChatTarget || alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
     if (stageEquals(raw, 'KK') || stageEquals(raw, 'KALİTE KONTROL')) return 'KK';
     if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
@@ -93,7 +92,7 @@ function sharedAlarmRows(alarms) {
         parti: clean(alarm.parti),
         asama: clean(alarm.asama),
         bir_sonraki: clean(alarm.bir_sonraki),
-        telegramTarget: clean(alarm.telegramTarget || alarm.targetStage),
+        notificationTarget: clean(alarm.notificationTarget || alarm.googleChatTarget || alarm.telegramTarget || alarm.targetStage),
         title: clean(alarm.title),
         description: clean(alarm.description),
         priority: clean(alarm.priority),
@@ -117,7 +116,7 @@ async function publishSharedAlarmsNow(alarms) {
     } catch (error) {
         if (Number(error && error.code) !== 1) throw error;
     }
-    await runGit(['commit', '--only', ALARM_FILE_REL, '-m', 'Sync Telegram alarms']);
+    await runGit(['commit', '--only', ALARM_FILE_REL, '-m', 'Sync Google Chat alarms']);
     await runGit(['push', 'origin', 'main']);
     log('Shared alarm file published:', ALARM_FILE_REL);
 }
@@ -180,38 +179,39 @@ function messageForNote(card, text) {
         clean(text)
     ].join('\n');
 }
-function telegramRequest(method, body) {
+function googleChatRequest(text) {
     return new Promise((resolve, reject) => {
-        const payload = JSON.stringify(body);
-        const req = https.request({
-            hostname: 'api.telegram.org',
-            path: `/bot${TOKEN}/${method}`,
+        const target = new URL(GOOGLE_CHAT_WEBHOOK_URL);
+        const payload = JSON.stringify({text});
+        const transport = target.protocol === 'http:' ? http : https;
+        const req = transport.request({
+            hostname: target.hostname,
+            port: target.port || 443,
+            path: target.pathname + target.search,
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload)},
             timeout: 15000
         }, response => {
-            let text = '';
+            let body = '';
             response.setEncoding('utf8');
-            response.on('data', chunk => { text += chunk; });
+            response.on('data', chunk => { body += chunk; });
             response.on('end', () => {
-                let value;
-                try { value = JSON.parse(text); } catch (_) { value = {ok: false, description: text}; }
-                if (response.statusCode >= 200 && response.statusCode < 300 && value.ok !== false) resolve(value);
-                else reject(new Error(value.description || `Telegram HTTP ${response.statusCode}`));
+                if (response.statusCode >= 200 && response.statusCode < 300) resolve(body);
+                else reject(new Error(`Google Chat HTTP ${response.statusCode}: ${body || 'mesaj gönderilemedi'}`));
             });
         });
-        req.on('timeout', () => req.destroy(new Error('Telegram isteği zaman aşımına uğradı')));
+        req.on('timeout', () => req.destroy(new Error('Google Chat isteği zaman aşımına uğradı')));
         req.on('error', reject);
         req.write(payload);
         req.end();
     });
 }
-async function sendText(text, chatIds = CHAT_IDS) {
-    if (!TOKEN || !chatIds.length) {
-        log('[DRY-RUN] Telegram ayarı eksik; gönderilecek mesaj:\n' + text);
+async function sendText(text) {
+    if (!GOOGLE_CHAT_WEBHOOK_URL) {
+        log('[DRY-RUN] GOOGLE_CHAT_WEBHOOK_URL ayarı eksik; gönderilecek mesaj:\n' + text);
         return {sent: false, dryRun: true};
     }
-    for (const chatId of chatIds) await telegramRequest('sendMessage', {chat_id: chatId, text});
+    await googleChatRequest(text);
     return {sent: true, dryRun: false};
 }
 function readBody(req) {
@@ -265,7 +265,7 @@ function fetchJson(urlString) {
             hostname: target.hostname,
             port: target.port || 443,
             path: target.pathname + target.search,
-            headers: {'User-Agent': 'parti-dashboard-telegram-service'}
+            headers: {'User-Agent': 'parti-dashboard-google-chat-service'}
         }, response => {
             let text = '';
             response.setEncoding('utf8');
@@ -292,7 +292,7 @@ async function pollGithub() {
         const result = await processSnapshot({cards, alarms: Array.isArray(state.alarms) ? state.alarms : []});
         lastPoll = {inFlight: false, at: new Date().toISOString(), cards: cards.length, events: result.events.length};
         lastPollError = '';
-        if (result.events.length) log(`GitHub senkronu: ${result.events.length} Telegram alarmı işlendi`);
+        if (result.events.length) log(`Google Chat senkronu: ${result.events.length} alarm işlendi`);
     } catch (error) {
         lastPoll = {...(lastPoll || {}), inFlight: false};
         lastPollError = error.message;
@@ -324,7 +324,7 @@ async function processSnapshot(payload) {
             if (result.sent) sent[eventKey] = new Date().toISOString();
         } catch (error) {
             events.push({parti: card.parti, target, sent: false, error: error.message});
-            log(`Telegram alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
+            log(`Google Chat alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
         }
     }
     state.cards = current;
@@ -350,12 +350,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { json(res, 204, {}); return; }
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     try {
-        if (req.method === 'GET' && url.pathname === '/api/telegram/status') {
+        if (req.method === 'GET' && url.pathname === '/api/google-chat/status') {
             json(res, 200, {
                 ok: true,
-                version: 2,
-                configured: Boolean(TOKEN && CHAT_IDS.length),
-                chatCount: CHAT_IDS.length,
+                version: 3,
+                configured: Boolean(GOOGLE_CHAT_WEBHOOK_URL),
+                channel: 'Google Chat',
                 stateFile: STATE_FILE,
                 sharedAlarmFile: ALARM_FILE,
                 publishAlarms: PUBLISH_ALARMS,
@@ -367,26 +367,25 @@ const server = http.createServer(async (req, res) => {
             });
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/telegram/test') {
+        if (req.method === 'POST' && url.pathname === '/api/google-chat/test') {
             const body = await readBody(req);
-            const text = clean(body.text) || '✅ Parti Dashboard Telegram bağlantı testi başarılı.';
-            const ids = Array.isArray(body.chatIds) ? body.chatIds.map(clean).filter(Boolean) : CHAT_IDS;
-            if (!TOKEN || !ids.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
-            await sendText(text, ids);
-            json(res, 200, {ok: true, sentTo: ids.length});
+            const text = clean(body.text) || '✅ Parti Dashboard Google Chat bağlantı testi başarılı.';
+            if (!GOOGLE_CHAT_WEBHOOK_URL) { json(res, 400, {ok: false, error: 'GOOGLE_CHAT_WEBHOOK_URL ayarlanmalı'}); return; }
+            await sendText(text);
+            json(res, 200, {ok: true, sentTo: 'Google Chat'});
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/telegram/note') {
+        if (req.method === 'POST' && url.pathname === '/api/google-chat/note') {
             const body = await readBody(req);
             const text = clean(body.text);
             if (!text) { json(res, 400, {ok: false, error: 'Not boş bırakılamaz'}); return; }
             if (text.length > 4000) { json(res, 400, {ok: false, error: 'Not 4000 karakterden kısa olmalı'}); return; }
-            if (!TOKEN || !CHAT_IDS.length) { json(res, 400, {ok: false, error: 'TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_IDS ayarlanmalı'}); return; }
+            if (!GOOGLE_CHAT_WEBHOOK_URL) { json(res, 400, {ok: false, error: 'GOOGLE_CHAT_WEBHOOK_URL ayarlanmalı'}); return; }
             await sendText(messageForNote(body.card || {parti: body.parti}, text));
-            json(res, 200, {ok: true, sentTo: CHAT_IDS.length});
+            json(res, 200, {ok: true, sentTo: 'Google Chat'});
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/telegram/snapshot') {
+        if (req.method === 'POST' && url.pathname === '/api/google-chat/snapshot') {
             json(res, 200, await processSnapshot(await readBody(req)));
             return;
         }
@@ -403,10 +402,9 @@ const server = http.createServer(async (req, res) => {
         json(res, 500, {ok: false, error: error.message});
     }
 });
-
 server.listen(PORT, '127.0.0.1', () => {
-    log(`Parti Dashboard Telegram servisi http://127.0.0.1:${PORT}`);
-    log(`Telegram ayarı: ${TOKEN && CHAT_IDS.length ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
+    log(`Parti Dashboard Google Chat servisi http://127.0.0.1:${PORT}`);
+    log(`Google Chat ayarı: ${GOOGLE_CHAT_WEBHOOK_URL ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
     log(`GitHub veri senkronu: ${DATA_URL} / ${POLL_SECONDS} saniye`);
     pollGithub();
     setInterval(pollGithub, POLL_SECONDS * 1000);

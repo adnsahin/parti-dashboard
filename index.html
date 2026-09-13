@@ -816,78 +816,29 @@ let uploadValidation={mainRows:0,repairRows:0,emptyParti:0,emptyStage:0,zeroKg:0
 function saveChecks(){localStorage.setItem('ck9',JSON.stringify([...checkedCards]))}
 function saveNotes(){localStorage.setItem('nr9',JSON.stringify(noteRecords))}
 function saveFires(){localStorage.setItem('fr9',JSON.stringify(fireRecords))}
-const IS_LOCAL_DASHBOARD=location.hostname==='127.0.0.1'||location.hostname==='localhost';
-function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));if(IS_LOCAL_DASHBOARD)telegramSyncSnapshot()}
+function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));googleChatSyncSnapshot()}
 function alarmDateTimeValue(date,time){
     if(!date||!time)return null;
     const value=new Date(date+'T'+time+':00');
     return Number.isNaN(value.getTime())?null:value.toISOString();
 }
-const TELEGRAM_ALARM_SERVICE_URL=IS_LOCAL_DASHBOARD?'':'http://127.0.0.1:8783';
-const GITHUB_ALARM_ISSUE_URL='https://github.com/adnsahin/parti-dashboard/issues/new';
-function publishAlarmViaGithubIssue(alarm){
-    if(IS_LOCAL_DASHBOARD)return false;
-    const body='<!-- PARTI_DASHBOARD_ALARM\n'+JSON.stringify({alarm})+'\n-->\n\nBu alarmı kaydetmek için bu GitHub issue\'sunu oluşturun. Telegram kontrolü GitHub Actions tarafından yapılır.';
-    const url=GITHUB_ALARM_ISSUE_URL+'?title='+encodeURIComponent('[PARTİ ALARM] '+alarm.parti+' - '+alarm.title)+'&body='+encodeURIComponent(body);
-    const opened=window.open(url,'_blank');
-    if(opened)return true;
-    window.location.assign(url);
-    return true;
-}
-function publishAllAlarmsViaGithubIssue(){
-    if(IS_LOCAL_DASHBOARD)return false;
-    const alarms=Object.values(alarmRecords||{}).flatMap(value=>Array.isArray(value)?value:[value]).filter(Boolean);
-    if(!alarms.length){showToast('⚠️ Aktarılacak yerel alarm yok.','warning');return false}
-    const body='<!-- PARTI_DASHBOARD_ALARM\n'+JSON.stringify({alarms})+'\n-->\n\nBu issue mobil dashboarddaki mevcut alarmları GitHub Actions alarm listesine aktarır.';
-    const url=GITHUB_ALARM_ISSUE_URL+'?title='+encodeURIComponent('[PARTİ ALARM SYNC] Mevcut mobil alarmlar')+'&body='+encodeURIComponent(body);
-    const opened=window.open(url,'_blank');
-    if(!opened)window.location.assign(url);
-    return true;
-}
-let telegramSyncTimer=null;
-function telegramSyncSnapshot(){
-    clearTimeout(telegramSyncTimer);
-    telegramSyncTimer=setTimeout(()=>{
+const GOOGLE_CHAT_ALARM_SERVICE_URL='http://127.0.0.1:8783';
+let googleChatSyncTimer=null;
+function googleChatSyncSnapshot(){
+    clearTimeout(googleChatSyncTimer);
+    googleChatSyncTimer=setTimeout(()=>{
         const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]),cards=typeof getAllCards==='function'?getAllCards():[];
-        fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
+        fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
             .then(response=>{if(!response.ok)throw new Error('HTTP '+response.status)})
-            .catch(error=>console.warn('Telegram alarm senkronu başarısız:',error.message));
+            .catch(error=>console.warn('Google Chat alarm senkronu başarısız:',error.message));
     },150);
 }
-async function loadSharedAlarms(){
-    try{
-        const response=await fetch('data/alarms.json?ts='+Date.now(),{cache:'no-store'});
-        if(!response.ok)return 0;
-        const payload=await response.json(),rows=Array.isArray(payload)?payload:(Array.isArray(payload.alarms)?payload.alarms:[]);
-        let imported=0;
-        rows.forEach(alarm=>{
-            if(!alarm)return;
-            const card=getAllCards().find(k=>String(k.parti||'')===String(alarm.parti||''))||getCardById(alarm.id);
-            const id=card&&card.id||alarm.id;
-            if(!id)return;
-            const list=getAlarmsList(id);
-            if(list.some(existing=>String(existing.uid||'')===String(alarm.uid||'')))return;
-            list.push({...alarm,id});
-            alarmRecords[id]=list;
-            imported++;
-        });
-        if(imported){
-            localStorage.setItem('ar9',JSON.stringify(alarmRecords));
-            updateAlarmCount();
-            if(location.hostname==='127.0.0.1'||location.hostname==='localhost')telegramSyncSnapshot();
-        }
-        return imported;
-    }catch(error){
-        console.warn('Paylaşılan alarm dosyası okunamadı:',error.message);
-        return 0;
-    }
+function testGoogleChatConnection(){
+    fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard Google Chat bağlantı testi başarılı.'})})
+        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ Google Chat mesajı gönderildi.':'⚠️ Google Chat: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
+        .catch(()=>showToast('⚠️ Google Chat servisi çalışmıyor. Önce GOOGLE_CHAT_ALARM_BASLAT.bat başlatılmalı.','warning'));
 }
-function testTelegramConnection(){
-    fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard Telegram bağlantı testi başarılı.'})})
-        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ Telegram mesajı gönderildi.':'⚠️ Telegram: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
-        .catch(()=>showToast('⚠️ Telegram servisi çalışmıyor. Önce telegram_alarm_service.js başlatılmalı.','warning'));
-}
-function telegramTargetStages(k){
+function notificationTargetStages(k){
     const out=[{value:'',label:'Sadece tarih alarmı'},{value:'KK',label:'Kalite Kontrol'},{value:'SARIM1',label:'Sarım1'}],seen=new Set(out.map(x=>x.value));
     const add=value=>{const v=String(value||'').trim();if(!v||seen.has(v)||stageEquals(v,'KK')||stageEquals(v,'SARIM1'))return;seen.add(v);out.push({value:v,label:v})};
     let after=false;
@@ -898,22 +849,22 @@ function telegramTargetStages(k){
 function insertAlarmTargetField(id,k,dateId,selectId){
     const date=document.getElementById(dateId),row=date&&date.parentElement&&date.parentElement.parentElement;
     if(!row||document.getElementById(selectId))return;
-    const options=telegramTargetStages(k),guess=options.slice(1).find(x=>stageEquals(k.bir_sonraki,x.value))?.value||'',html=options.map(x=>'<option value="'+esc(x.value)+'" '+(guess===x.value?'selected':'')+'>'+esc(x.label)+'</option>').join('');
-    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Telegram hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select>';
+    const options=notificationTargetStages(k),guess=options.slice(1).find(x=>stageEquals(k.bir_sonraki,x.value))?.value||'',html=options.map(x=>'<option value="'+esc(x.value)+'" '+(guess===x.value?'selected':'')+'>'+esc(x.label)+'</option>').join('');
+    const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select>';
     row.parentElement.insertBefore(wrap,row);
 }
-function insertTelegramNoteButton(id){
+function insertGoogleChatNoteButton(id){
     const note=document.getElementById('mnote_'+id),actions=note&&note.parentElement&&note.parentElement.querySelector('.note-actions');
     if(!actions||actions.querySelector('.btn-send-note'))return;
-    const button=document.createElement('button');button.className='btn-send-note';button.type='button';button.textContent='Telegram’a Gönder';button.onclick=e=>sendTelegramNoteM(e,id);actions.appendChild(button);
+    const button=document.createElement('button');button.className='btn-send-note';button.type='button';button.textContent='Google Chat’a Gönder';button.onclick=e=>sendGoogleChatNoteM(e,id);actions.appendChild(button);
 }
-function sendTelegramNoteM(e,id){
+function sendGoogleChatNoteM(e,id){
     e.stopPropagation();const k=getCardById(id),note=document.getElementById('mnote_'+id),text=note&&note.value.trim();if(!k||!text){showToast('⚠️ Gönderilecek not boş.','warning');return}
     const button=e.currentTarget;button.disabled=true;button.textContent='Gönderiliyor...';
-    fetch(TELEGRAM_ALARM_SERVICE_URL+'/api/telegram/note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parti:k.parti,text,card:{parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''}})})
-        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'Telegram servisi hata verdi');showToast('✅ Not Telegram’a gönderildi.','success')})
-        .catch(error=>showToast('⚠️ Telegram notu gönderilemedi: '+error.message,'warning'))
-        .finally(()=>{button.disabled=false;button.textContent='Telegram’a Gönder'});
+    fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parti:k.parti,text,card:{parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''}})})
+        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'Google Chat servisi hata verdi');showToast('✅ Not Google Chat’e gönderildi.','success')})
+        .catch(error=>showToast('⚠️ Google Chat notu gönderilemedi: '+error.message,'warning'))
+        .finally(()=>{button.disabled=false;button.textContent='Google Chat’a Gönder'});
 }
 function saveSelected(){localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
 function saveTamirOverrides(){localStorage.setItem('to9',JSON.stringify(tamirOverrides))}
@@ -1071,8 +1022,7 @@ function renderAlarmPanel(){
     else{const active=all.filter(a=>a.active!==false),inactive=all.filter(a=>a.active===false);
     if(active.length){h+='<h4 style="color:#4CAF50;margin:10px 0">🟢 Aktif</h4>';active.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';const dt=a.datetime?new Date(a.datetime).toLocaleString('tr-TR'):'';h+='<div class="alarm-item '+pc+'"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'Orta')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b><br>'+esc(a.description||'')+'</div><div class="alarm-item-time">📅 '+dt+'</div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">⏸️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}
     if(inactive.length){h+='<h4 style="color:#888;margin:10px 0">⚫ Pasif</h4>';inactive.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';h+='<div class="alarm-item '+pc+'" style="opacity:.5"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b></div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">▶️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}}
-    p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 Telegram bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testTelegramConnection;p.insertBefore(test,p.children[2]||null);addPanelFullButton('alarmPanel');
-    if(!IS_LOCAL_DASHBOARD){const sync=document.createElement('button');sync.textContent='☁️ Mevcut alarmları GitHub’a aktar';sync.style.cssText='margin:0 0 8px;padding:8px 12px;border:0;border-radius:8px;background:#6C5CE7;color:white;font-weight:bold;cursor:pointer';sync.onclick=publishAllAlarmsViaGithubIssue;p.insertBefore(sync,p.children[2]||null)}
+    p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 Google Chat bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testGoogleChatConnection;p.insertBefore(test,p.children[2]||null);addPanelFullButton('alarmPanel');
 }
 function openAlarmModal(id){
     const k=getCardById(id);if(!k)return;
@@ -1089,8 +1039,8 @@ function saveAlarm(id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('alarm_title_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
     const desc=document.getElementById('alarm_desc_'+id).value.trim(),date=document.getElementById('alarm_date_'+id).value,time=document.getElementById('alarm_time_'+id).value,target=document.getElementById('alarm_target_'+id)?.value||'';
     const datetime=alarmDateTimeValue(date,time),ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,firma:k.line1||'',title,description:desc||String(noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
-    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;const issueOpened=publishAlarmViaGithubIssue(alarm);saveAlarms();showToast(IS_LOCAL_DASHBOARD?'✅ Alarm eklendi!':issueOpened?'✅ GitHub alarm gönderim ekranı açıldı. Issue\'yu oluşturun.':'⚠️ GitHub alarm ekranı açılamadı.');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',notificationTarget:target,firma:k.line1||'',title,description:desc||String(noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Google Chat alarmı kaydedildi.');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
 }
 function deleteAlarm(id,uid){if(!confirm('Sil?'))return;const l=getAlarmsList(id).filter(a=>a.uid!==uid);if(l.length)alarmRecords[id]=l;else delete alarmRecords[id];saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards);updateAlarmCount()}
 function toggleAlarmActive(id,uid){const l=getAlarmsList(id);const a=l.find(x=>x.uid===uid);if(a){a.active=!a.active;alarmRecords[id]=l;saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards)}}
@@ -1897,7 +1847,7 @@ function openDetailModal(id){
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
     h+='<div class="fire-form" style="margin-top:8px"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="mfirekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="mfiremt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="mfiresebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="mfirenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFireM(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFireM(event,\''+k.id+'\')">Hepsini Sil</button></div></div>';
-    document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);insertTelegramNoteButton(k.id);document.getElementById('detailModal').classList.add('show');
+    document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);insertGoogleChatNoteButton(k.id);document.getElementById('detailModal').classList.add('show');
 }
 function closeDetailModal(){
     document.getElementById('detailModal').classList.remove('show');
@@ -1912,8 +1862,8 @@ function saveAlarmM(e,id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('mAlarmTitle_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
     const date=document.getElementById('mAlarmDate_'+id).value,time=document.getElementById('mAlarmTime_'+id).value,target=document.getElementById('mAlarmTarget_'+id)?.value||'',datetime=alarmDateTimeValue(date,time);
     const ap=document.querySelector('#mPrioBtns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,title,description:String(document.getElementById('mnote_'+id)?.value||noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
-    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;const issueOpened=publishAlarmViaGithubIssue(alarm);saveAlarms();showToast(IS_LOCAL_DASHBOARD?'✅ Alarm eklendi!':issueOpened?'✅ GitHub alarm gönderim ekranı açıldı. Issue\'yu oluşturun.':'⚠️ GitHub alarm ekranı açılamadı.');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',notificationTarget:target,title,description:String(document.getElementById('mnote_'+id)?.value||noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Google Chat alarmı kaydedildi.');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
 }
 
 /* ── NAV & FİLTRE ── */
@@ -2330,7 +2280,7 @@ function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
     try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
-    telegramSyncSnapshot();
+    googleChatSyncSnapshot();
 }
 function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
 function cardStageIndex(k){
@@ -2972,7 +2922,6 @@ function renderWetDryPanel(){
       const info=document.querySelector('.header .info');
       if(info)info.textContent='GitHub veri • '+generated+' • '+c+' parti • '+totalKg+' kg';
       enrichTamirList();setGroupMode('hedef');setViewMode(currentViewMode);showAll();
-      await loadSharedAlarms();
       updateStarCount();updateAlarmCount();updateTamirCount();afterDataLoaded();
       if(typeof window.refreshMindmap==='function')window.refreshMindmap();
       if(st)st.textContent='GitHub verisi otomatik yüklendi. '+c+' parti, '+TAMIR_LIST.length+' tamir eşleşmesi.';

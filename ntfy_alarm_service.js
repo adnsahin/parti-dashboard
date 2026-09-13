@@ -310,9 +310,9 @@ async function processSnapshot(payload) {
     const events = [];
     for (const alarm of alarms) {
         if (!alarm || alarm.active === false) continue;
-        const scheduledAt = alarmTime(alarm);
-        if (scheduledAt !== null && Date.now() < scheduledAt) continue;
         const target = targetStage(alarm);
+        const scheduledAt = alarmTime(alarm);
+        if (!target && scheduledAt !== null && Date.now() < scheduledAt) continue;
         const key = clean(alarm.id) || clean(alarm.parti);
         const card = Object.values(current).find(x => clean(x.parti) === clean(alarm.parti)) || current[key];
         if (!card) continue;

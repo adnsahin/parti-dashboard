@@ -62,13 +62,14 @@ function targetDurationMinutes(alarm){
 function parseMovementTime(value){
     const raw=clean(value);
     if(!raw)return null;
-    const direct=Date.parse(raw);
-    if(Number.isFinite(direct))return direct;
     const match=raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-    if(!match)return null;
-    const year=Number(match[3].length===2?'20'+match[3]:match[3]);
-    const valueDate=new Date(year,Number(match[2])-1,Number(match[1]),Number(match[4]||0),Number(match[5]||0),Number(match[6]||0));
-    return Number.isNaN(valueDate.getTime())?null:valueDate.getTime();
+    if(match){
+        const year=Number(match[3].length===2?'20'+match[3]:match[3]);
+        const valueDate=new Date(year,Number(match[2])-1,Number(match[1]),Number(match[4]||0),Number(match[5]||0),Number(match[6]||0));
+        return Number.isNaN(valueDate.getTime())?null:valueDate.getTime();
+    }
+    const direct=Date.parse(raw);
+    return Number.isFinite(direct)?direct:null;
 }
 function cardWaitingStage(card){
     return clean(card && (card._asama || card.asama || card.stage || card.waitingStage));
@@ -306,6 +307,8 @@ function githubCards(data) {
         kilo: card.kg,
         bekleme: clean(card.wait),
         line1: clean(card.firma),
+        ham_adi: clean(card.fabric || card.ham_adi || card.kumas),
+        recete_adi: clean(card.recipe || card.recete_adi || card.recete),
         uretim_asamalari: clean(card.flow)
     })).filter(card => card.id && card.parti);
 }

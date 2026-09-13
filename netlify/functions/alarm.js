@@ -27,9 +27,11 @@ function authorized(event, body) {
   return supplied === expected;
 }
 async function store() {
+  const siteID = String(process.env.PARTI_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || '').trim() || undefined;
+  const token = String(process.env.PARTI_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN || '').trim() || undefined;
   return getStore('parti-alarm-events', {
-    siteID: String(process.env.NETLIFY_SITE_ID || '').trim() || undefined,
-    token: String(process.env.NETLIFY_AUTH_TOKEN || '').trim() || undefined,
+    siteID,
+    token,
     consistency: 'strong'
   });
 }

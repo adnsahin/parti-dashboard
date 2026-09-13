@@ -7,22 +7,19 @@ const https = require('https');
 const os = require('os');
 const path = require('path');
 const {URL} = require('url');
-const {execFile} = require('child_process');
 const ROOT = __dirname;
-const PORT = Number(process.env.GOOGLE_CHAT_ALARM_PORT || 8783);
-const GOOGLE_CHAT_WEBHOOK_URL = String(process.env.GOOGLE_CHAT_WEBHOOK_URL || '').trim();
-const DATA_URL = String(process.env.GOOGLE_CHAT_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
-const POLL_SECONDS = Math.max(30, Number(process.env.GOOGLE_CHAT_POLL_SECONDS || 300));
+const PORT = Number(process.env.NTFY_ALARM_PORT || 8783);
+const NTFY_TOPIC = String(process.env.NTFY_TOPIC || '').trim();
+const NTFY_SERVER_URL = String(process.env.NTFY_SERVER_URL || 'https://ntfy.sh').trim().replace(/\/+$/, '');
+const NTFY_ACCESS_TOKEN = String(process.env.NTFY_ACCESS_TOKEN || '').trim();
+const DATA_URL = String(process.env.NTFY_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
+const POLL_SECONDS = Math.max(30, Number(process.env.NTFY_POLL_SECONDS || 300));
 const stateDir = process.env.LOCALAPPDATA
-    ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardGoogleChat')
-    : path.join(os.homedir(), '.parti-dashboard-google-chat');
-const STATE_FILE = process.env.GOOGLE_CHAT_STATE_FILE
-    ? path.resolve(process.env.GOOGLE_CHAT_STATE_FILE)
+    ? path.join(process.env.LOCALAPPDATA, 'PartiDashboardNtfy')
+    : path.join(os.homedir(), '.parti-dashboard-ntfy');
+const STATE_FILE = process.env.NTFY_STATE_FILE
+    ? path.resolve(process.env.NTFY_STATE_FILE)
     : path.join(stateDir, 'state.json');
-const ALARM_FILE_REL = 'data/alarms.json';
-const ALARM_FILE = path.join(ROOT, ALARM_FILE_REL);
-const PUBLISH_ALARMS = ['1','true','yes'].includes(String(process.env.GOOGLE_CHAT_PUBLISH_ALARMS || '0').trim().toLowerCase());
-let alarmPublishQueue = Promise.resolve();
 const MAX_BODY = 12 * 1024 * 1024;
 let lastPoll = null;
 let lastPollError = '';
@@ -42,7 +39,7 @@ function stageEquals(a, b) {
     return x.includes(y) || y.includes(x);
 }
 function targetStage(alarm) {
-    const raw = clean(alarm && (alarm.notificationTarget || alarm.googleChatTarget || alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
+    const raw = clean(alarm && (alarm.notificationTarget || alarm.telegramTarget || alarm.targetStage || alarm.bir_sonraki || ''));
     if (stageEquals(raw, 'KK') || stageEquals(raw, 'KALİTE KONTROL')) return 'KK';
     if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
@@ -71,61 +68,6 @@ function cardReachedTarget(card, target) {
     );
     if (currentIndex < 0) return false;
     return flowStages(card).some((stage, i) => i <= currentIndex && stageEquals(stage, target));
-}
-function runGit(args) {
-    return new Promise((resolve, reject) => {
-        execFile('git', args, {cwd: ROOT, windowsHide: true}, (error, stdout, stderr) => {
-            if (error) {
-                error.stdout = stdout;
-                error.stderr = stderr;
-                reject(error);
-                return;
-            }
-            resolve({stdout, stderr});
-        });
-    });
-}
-function sharedAlarmRows(alarms) {
-    return (Array.isArray(alarms) ? alarms : []).filter(Boolean).map(alarm => ({
-        uid: clean(alarm.uid),
-        id: clean(alarm.id),
-        parti: clean(alarm.parti),
-        asama: clean(alarm.asama),
-        bir_sonraki: clean(alarm.bir_sonraki),
-        notificationTarget: clean(alarm.notificationTarget || alarm.googleChatTarget || alarm.telegramTarget || alarm.targetStage),
-        title: clean(alarm.title),
-        description: clean(alarm.description),
-        priority: clean(alarm.priority),
-        datetime: clean(alarm.datetime),
-        active: alarm.active !== false,
-        created_at: clean(alarm.created_at),
-        notifiedAt: clean(alarm.notifiedAt)
-    }));
-}
-async function publishSharedAlarmsNow(alarms) {
-    const content = JSON.stringify({alarms: sharedAlarmRows(alarms)}, null, 2) + '\n';
-    let previous = '';
-    try { previous = fs.readFileSync(ALARM_FILE, 'utf8'); } catch (_) {}
-    if (previous === content) return;
-    fs.mkdirSync(path.dirname(ALARM_FILE), {recursive: true});
-    fs.writeFileSync(ALARM_FILE, content, 'utf8');
-    await runGit(['add', '--', ALARM_FILE_REL]);
-    try {
-        await runGit(['diff', '--cached', '--quiet', '--', ALARM_FILE_REL]);
-        return;
-    } catch (error) {
-        if (Number(error && error.code) !== 1) throw error;
-    }
-    await runGit(['commit', '--only', ALARM_FILE_REL, '-m', 'Sync Google Chat alarms']);
-    await runGit(['push', 'origin', 'main']);
-    log('Shared alarm file published:', ALARM_FILE_REL);
-}
-function publishAlarmSnapshot(alarms) {
-    if (!PUBLISH_ALARMS) return Promise.resolve();
-    alarmPublishQueue = alarmPublishQueue.then(() => publishSharedAlarmsNow(alarms)).catch(error => {
-        log('Shared alarm publish failed:', error && (error.stderr || error.message || error));
-    });
-    return alarmPublishQueue;
 }
 function cardLabel(card) {
     return [card && card.parti, card && (card._asama || card.asama), card && card.bir_sonraki].filter(Boolean).join(' • ');
@@ -179,17 +121,25 @@ function messageForNote(card, text) {
         clean(text)
     ].join('\n');
 }
-function googleChatRequest(text) {
+function ntfyRequest(text) {
     return new Promise((resolve, reject) => {
-        const target = new URL(GOOGLE_CHAT_WEBHOOK_URL);
-        const payload = JSON.stringify({text});
+        const target = new URL(NTFY_SERVER_URL + '/' + encodeURIComponent(NTFY_TOPIC));
+        const payload = Buffer.from(text, 'utf8');
         const transport = target.protocol === 'http:' ? http : https;
+        const headers = {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Length': payload.length,
+            'Title': 'Parti Alarmi',
+            'Priority': 'high',
+            'Tags': 'bell'
+        };
+        if (NTFY_ACCESS_TOKEN) headers.Authorization = `Bearer ${NTFY_ACCESS_TOKEN}`;
         const req = transport.request({
             hostname: target.hostname,
-            port: target.port || 443,
+            port: target.port || (target.protocol === 'http:' ? 80 : 443),
             path: target.pathname + target.search,
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload)},
+            headers,
             timeout: 15000
         }, response => {
             let body = '';
@@ -197,21 +147,20 @@ function googleChatRequest(text) {
             response.on('data', chunk => { body += chunk; });
             response.on('end', () => {
                 if (response.statusCode >= 200 && response.statusCode < 300) resolve(body);
-                else reject(new Error(`Google Chat HTTP ${response.statusCode}: ${body || 'mesaj gönderilemedi'}`));
+                else reject(new Error(`ntfy HTTP ${response.statusCode}: ${body || 'mesaj gönderilemedi'}`));
             });
         });
-        req.on('timeout', () => req.destroy(new Error('Google Chat isteği zaman aşımına uğradı')));
+        req.on('timeout', () => req.destroy(new Error('ntfy isteği zaman aşımına uğradı')));
         req.on('error', reject);
-        req.write(payload);
-        req.end();
+        req.end(payload);
     });
 }
 async function sendText(text) {
-    if (!GOOGLE_CHAT_WEBHOOK_URL) {
-        log('[DRY-RUN] GOOGLE_CHAT_WEBHOOK_URL ayarı eksik; gönderilecek mesaj:\n' + text);
+    if (!NTFY_TOPIC) {
+        log('[DRY-RUN] NTFY_TOPIC ayarı eksik; gönderilecek mesaj:\n' + text);
         return {sent: false, dryRun: true};
     }
-    await googleChatRequest(text);
+    await ntfyRequest(text);
     return {sent: true, dryRun: false};
 }
 function readBody(req) {
@@ -265,7 +214,7 @@ function fetchJson(urlString) {
             hostname: target.hostname,
             port: target.port || 443,
             path: target.pathname + target.search,
-            headers: {'User-Agent': 'parti-dashboard-google-chat-service'}
+            headers: {'User-Agent': 'parti-dashboard-ntfy-service'}
         }, response => {
             let text = '';
             response.setEncoding('utf8');
@@ -292,7 +241,7 @@ async function pollGithub() {
         const result = await processSnapshot({cards, alarms: Array.isArray(state.alarms) ? state.alarms : []});
         lastPoll = {inFlight: false, at: new Date().toISOString(), cards: cards.length, events: result.events.length};
         lastPollError = '';
-        if (result.events.length) log(`Google Chat senkronu: ${result.events.length} alarm işlendi`);
+        if (result.events.length) log(`ntfy senkronu: ${result.events.length} alarm işlendi`);
     } catch (error) {
         lastPoll = {...(lastPoll || {}), inFlight: false};
         lastPollError = error.message;
@@ -324,14 +273,13 @@ async function processSnapshot(payload) {
             if (result.sent) sent[eventKey] = new Date().toISOString();
         } catch (error) {
             events.push({parti: card.parti, target, sent: false, error: error.message});
-            log(`Google Chat alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
+            log(`ntfy alarmı gönderilemedi (${card.parti} / ${target}):`, error.message);
         }
     }
     state.cards = current;
     state.alarms = alarms;
     state.sent = sent;
     writeState(state);
-    publishAlarmSnapshot(alarms);
     return {ok: true, checkedCards: Object.keys(current).length, checkedAlarms: alarms.length, events};
 }
 function safeStaticPath(requestPath) {
@@ -350,15 +298,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { json(res, 204, {}); return; }
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     try {
-        if (req.method === 'GET' && url.pathname === '/api/google-chat/status') {
+        if (req.method === 'GET' && url.pathname === '/api/ntfy/status') {
             json(res, 200, {
                 ok: true,
-                version: 3,
-                configured: Boolean(GOOGLE_CHAT_WEBHOOK_URL),
-                channel: 'Google Chat',
+                version: 4,
+                configured: Boolean(NTFY_TOPIC),
+                channel: 'ntfy',
+                serverUrl: NTFY_SERVER_URL,
+                topicConfigured: Boolean(NTFY_TOPIC),
                 stateFile: STATE_FILE,
-                sharedAlarmFile: ALARM_FILE,
-                publishAlarms: PUBLISH_ALARMS,
                 port: PORT,
                 githubDataUrl: DATA_URL,
                 pollSeconds: POLL_SECONDS,
@@ -367,25 +315,25 @@ const server = http.createServer(async (req, res) => {
             });
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/google-chat/test') {
+        if (req.method === 'POST' && url.pathname === '/api/ntfy/test') {
             const body = await readBody(req);
-            const text = clean(body.text) || '✅ Parti Dashboard Google Chat bağlantı testi başarılı.';
-            if (!GOOGLE_CHAT_WEBHOOK_URL) { json(res, 400, {ok: false, error: 'GOOGLE_CHAT_WEBHOOK_URL ayarlanmalı'}); return; }
+            const text = clean(body.text) || '✅ Parti Dashboard ntfy bağlantı testi başarılı.';
+            if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
             await sendText(text);
-            json(res, 200, {ok: true, sentTo: 'Google Chat'});
+            json(res, 200, {ok: true, sentTo: 'ntfy'});
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/google-chat/note') {
+        if (req.method === 'POST' && url.pathname === '/api/ntfy/note') {
             const body = await readBody(req);
             const text = clean(body.text);
             if (!text) { json(res, 400, {ok: false, error: 'Not boş bırakılamaz'}); return; }
             if (text.length > 4000) { json(res, 400, {ok: false, error: 'Not 4000 karakterden kısa olmalı'}); return; }
-            if (!GOOGLE_CHAT_WEBHOOK_URL) { json(res, 400, {ok: false, error: 'GOOGLE_CHAT_WEBHOOK_URL ayarlanmalı'}); return; }
+            if (!NTFY_TOPIC) { json(res, 400, {ok: false, error: 'NTFY_TOPIC ayarlanmalı'}); return; }
             await sendText(messageForNote(body.card || {parti: body.parti}, text));
-            json(res, 200, {ok: true, sentTo: 'Google Chat'});
+            json(res, 200, {ok: true, sentTo: 'ntfy'});
             return;
         }
-        if (req.method === 'POST' && url.pathname === '/api/google-chat/snapshot') {
+        if (req.method === 'POST' && url.pathname === '/api/ntfy/snapshot') {
             json(res, 200, await processSnapshot(await readBody(req)));
             return;
         }
@@ -403,8 +351,8 @@ const server = http.createServer(async (req, res) => {
     }
 });
 server.listen(PORT, '127.0.0.1', () => {
-    log(`Parti Dashboard Google Chat servisi http://127.0.0.1:${PORT}`);
-    log(`Google Chat ayarı: ${GOOGLE_CHAT_WEBHOOK_URL ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
+    log(`Parti Dashboard ntfy servisi http://127.0.0.1:${PORT}`);
+    log(`ntfy ayarı: ${NTFY_TOPIC ? 'hazır' : 'kuru çalışma / ayar bekliyor'}`);
     log(`GitHub veri senkronu: ${DATA_URL} / ${POLL_SECONDS} saniye`);
     pollGithub();
     setInterval(pollGithub, POLL_SECONDS * 1000);

@@ -10,8 +10,8 @@ Bu klasör GitHub Pages ile yayınlanacak sürümdür.
 - `data/hareket_saatleri.json`: Parti bazında son hareket saatlerini sağlar; GitHub Pages yüklemesinde `data/partiler.json` ile birlikte okunur.
 - `convert_excel.js`: Excel dosyasını JSON veriye çevirir.
 - `update_data.ps1`: Veriyi günceller, istenirse git push yapar.
-- `google_chat_alarm_service.js`: PC üzerinde çalışan, GitHub parti verisini ve dashboard alarmlarını kontrol edip Google Chat webhookuna mesaj gönderen yerel alarm servisi.
-- `GOOGLE_CHAT_ALARM_BASLAT.bat`: Google Chat webhook adresini sorarak alarm servisini başlatır.
+- `ntfy_alarm_service.js`: PC üzerinde çalışan, GitHub parti verisini ve dashboard alarmlarını kontrol edip ntfy mobil bildirimine gönderen yerel alarm servisi.
+- `NTFY_ALARM_BASLAT.bat`: ntfy konu adını sorarak alarm servisini başlatır.
 - `tools/xlsx.full.min.js`: Excel okuma kütüphanesi.
 
 
@@ -90,29 +90,28 @@ python .\update_partiler_json.py ".\partiler.xlsx" ".\data\partiler.json"
 
 Betik `Son Yapılan Aşama`, `Sonra Yapılacak Aşama` ve `Son Hareket Tarihi` alanlarını her karta ekler. Yalnız `partiler.json` güncellenir; `tamirler.json` dosyasına dokunmaz. Mevcut otomatik BAT'ta, GitHub push işleminden hemen önce bu komutu çalıştırın.
 
-## Google Chat Alarm Servisi
+## ntfy Mobil Alarm Servisi
 
-İş yeri PC'si açıkken Google Chat mobil bildirimleri göndermek için `GOOGLE_CHAT_ALARM_BASLAT.bat` dosyasını çalıştırın. İlk çalıştırmada Google Chat alanınızın webhook adresini girin; bu adres repoya yazılmaz.
+İş yeri PC'si açıkken birden fazla telefona mobil bildirim göndermek için `NTFY_ALARM_BASLAT.bat` dosyasını çalıştırın. Bildirim kanalı olarak ücretsiz ntfy uygulaması kullanılır; Google Chat, Google Sheet, Apps Script, Telegram veya GitHub issue gerekmez.
 
-Servis `http://127.0.0.1:8783` adresinde dashboardu sunar:
+Kurulum:
+
+1. Android veya iPhone'a **ntfy** uygulamasını kurun.
+2. Sadece bu ekipte paylaşacağınız uzun ve tahmin edilmesi zor bir konu adı seçin. Örnek: `parti-alarm-2026-ekip-7f3k9m2q`.
+3. Bildirim alacak her telefonda ntfy uygulamasını açıp aynı konu adına abone olun.
+4. İş yeri PC'sinde `NTFY_ALARM_BASLAT.bat` dosyasını çalıştırıp aynı konu adını girin.
+
+Servis dashboardu şu adreste sunar:
 
 ```text
 http://127.0.0.1:8783/index.html
 ```
 
-Google Chat kurulumu:
+Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat ve hedef aşamayı kaydedin. Alarm yerel servise aktarılır; tarih ve saat gelmeden mesaj gönderilmez. Parti hedef aşamaya ulaştığında kart bilgileri ve not ntfy konusuna gönderilir. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
 
-1. Google Chat'te bir `Parti Alarm` alanı oluşturun.
-2. Bildirim alacak kullanıcıları bu alana ekleyin.
-3. Alan ayarlarından bir incoming webhook oluşturun.
-4. Webhook adresini `GOOGLE_CHAT_ALARM_BASLAT.bat` çalışırken girin.
+Veri kontrolü varsayılan olarak 60 saniyede bir yapılır. GitHub verisi `data/partiler.json` dosyasından okunur; veri kaynağı 15 dakikada bir push ediliyorsa aşama değişikliğinin bildirime yansıması en fazla yaklaşık 16 dakika sürebilir.
 
-Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat ve hedef aşamayı kaydedin. Alarm doğrudan yerel servise aktarılır; Google Sheet, GitHub issue veya Telegram gerekmez. Tarih ve saat gelmeden mesaj gönderilmez. Parti hedef aşamaya ulaştığında kart bilgileri ve not Google Chat alanına gönderilir. Aynı alarm bir kez gönderilir.
-
-Veri kontrolü varsayılan olarak 60 saniyede bir yapılır. GitHub verisi `data/partiler.json` dosyasından okunur; veri kaynağı 15 dakikada bir push ediliyorsa bildirim aşama değişikliğinin GitHub'a yansımasından sonra gönderilir.
-
-Webhook adresi yalnızca PC'deki servis ortamında tutulur; `index.html` içine yazılmaz. Böylece GitHub Pages kaynak kodunda görünmez.
-
+Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repoya veya herkese açık mesaja yazmayın. ntfy.sh yerine özel ntfy sunucusu kullanıyorsanız servisi başlatmadan önce `NTFY_SERVER_URL` ortam değişkenini, gerekiyorsa `NTFY_ACCESS_TOKEN` değişkenini ayarlayın.
 
 
 ## GitHub Pages

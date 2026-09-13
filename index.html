@@ -816,27 +816,27 @@ let uploadValidation={mainRows:0,repairRows:0,emptyParti:0,emptyStage:0,zeroKg:0
 function saveChecks(){localStorage.setItem('ck9',JSON.stringify([...checkedCards]))}
 function saveNotes(){localStorage.setItem('nr9',JSON.stringify(noteRecords))}
 function saveFires(){localStorage.setItem('fr9',JSON.stringify(fireRecords))}
-function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));googleChatSyncSnapshot()}
+function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));ntfySyncSnapshot()}
 function alarmDateTimeValue(date,time){
     if(!date||!time)return null;
     const value=new Date(date+'T'+time+':00');
-    return Number.isNaN(value.getTime())?null:value.toISOString();
+    return Number.isNaN(value.getTime())?null:value.getTime();
 }
-const GOOGLE_CHAT_ALARM_SERVICE_URL='http://127.0.0.1:8783';
-let googleChatSyncTimer=null;
-function googleChatSyncSnapshot(){
-    clearTimeout(googleChatSyncTimer);
-    googleChatSyncTimer=setTimeout(()=>{
+const NTFY_ALARM_SERVICE_URL='http://127.0.0.1:8783';
+let ntfySyncTimer=null;
+function ntfySyncSnapshot(){
+    clearTimeout(ntfySyncTimer);
+    ntfySyncTimer=setTimeout(()=>{
         const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]),cards=typeof getAllCards==='function'?getAllCards():[];
-        fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
+        fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
             .then(response=>{if(!response.ok)throw new Error('HTTP '+response.status)})
-            .catch(error=>console.warn('Google Chat alarm senkronu başarısız:',error.message));
+            .catch(error=>console.warn('ntfy alarm senkronu başarısız:',error.message));
     },150);
 }
-function testGoogleChatConnection(){
-    fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard Google Chat bağlantı testi başarılı.'})})
-        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ Google Chat mesajı gönderildi.':'⚠️ Google Chat: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
-        .catch(()=>showToast('⚠️ Google Chat servisi çalışmıyor. Önce GOOGLE_CHAT_ALARM_BASLAT.bat başlatılmalı.','warning'));
+function testNtfyConnection(){
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard ntfy bağlantı testi başarılı.'})})
+        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ ntfy mesajı gönderildi.':'⚠️ ntfy: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
+        .catch(()=>showToast('⚠️ ntfy servisi çalışmıyor. Önce NTFY_ALARM_BASLAT.bat başlatılmalı.','warning'));
 }
 function notificationTargetStages(k){
     const out=[{value:'',label:'Sadece tarih alarmı'},{value:'KK',label:'Kalite Kontrol'},{value:'SARIM1',label:'Sarım1'}],seen=new Set(out.map(x=>x.value));
@@ -853,18 +853,18 @@ function insertAlarmTargetField(id,k,dateId,selectId){
     const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select>';
     row.parentElement.insertBefore(wrap,row);
 }
-function insertGoogleChatNoteButton(id){
+function insertNtfyNoteButton(id){
     const note=document.getElementById('mnote_'+id),actions=note&&note.parentElement&&note.parentElement.querySelector('.note-actions');
     if(!actions||actions.querySelector('.btn-send-note'))return;
-    const button=document.createElement('button');button.className='btn-send-note';button.type='button';button.textContent='Google Chat’a Gönder';button.onclick=e=>sendGoogleChatNoteM(e,id);actions.appendChild(button);
+    const button=document.createElement('button');button.className='btn-send-note';button.type='button';button.textContent='ntfy’a Gönder';button.onclick=e=>sendNtfyNoteM(e,id);actions.appendChild(button);
 }
-function sendGoogleChatNoteM(e,id){
+function sendNtfyNoteM(e,id){
     e.stopPropagation();const k=getCardById(id),note=document.getElementById('mnote_'+id),text=note&&note.value.trim();if(!k||!text){showToast('⚠️ Gönderilecek not boş.','warning');return}
     const button=e.currentTarget;button.disabled=true;button.textContent='Gönderiliyor...';
-    fetch(GOOGLE_CHAT_ALARM_SERVICE_URL+'/api/google-chat/note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parti:k.parti,text,card:{parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''}})})
-        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'Google Chat servisi hata verdi');showToast('✅ Not Google Chat’e gönderildi.','success')})
-        .catch(error=>showToast('⚠️ Google Chat notu gönderilemedi: '+error.message,'warning'))
-        .finally(()=>{button.disabled=false;button.textContent='Google Chat’a Gönder'});
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parti:k.parti,text,card:{parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''}})})
+        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');showToast('✅ Not ntfy’ye gönderildi.','success')})
+        .catch(error=>showToast('⚠️ ntfy notu gönderilemedi: '+error.message,'warning'))
+        .finally(()=>{button.disabled=false;button.textContent='ntfy’a Gönder'});
 }
 function saveSelected(){localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
 function saveTamirOverrides(){localStorage.setItem('to9',JSON.stringify(tamirOverrides))}
@@ -1022,7 +1022,7 @@ function renderAlarmPanel(){
     else{const active=all.filter(a=>a.active!==false),inactive=all.filter(a=>a.active===false);
     if(active.length){h+='<h4 style="color:#4CAF50;margin:10px 0">🟢 Aktif</h4>';active.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';const dt=a.datetime?new Date(a.datetime).toLocaleString('tr-TR'):'';h+='<div class="alarm-item '+pc+'"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'Orta')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b><br>'+esc(a.description||'')+'</div><div class="alarm-item-time">📅 '+dt+'</div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">⏸️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}
     if(inactive.length){h+='<h4 style="color:#888;margin:10px 0">⚫ Pasif</h4>';inactive.forEach(a=>{const pc=a.priority?.toLowerCase()||'dusuk';h+='<div class="alarm-item '+pc+'" style="opacity:.5"><div class="alarm-item-header"><span class="alarm-item-parti">'+esc(a.parti)+'</span><span class="alarm-item-priority '+pc+'">'+esc(a.priority||'')+'</span></div><div class="alarm-item-content"><b>'+esc(a.title)+'</b></div><div class="alarm-item-actions"><button class="btn-toggle-alarm" onclick="toggleAlarmActive(\''+a.id+'\',\''+a.uid+'\')">▶️</button><button class="btn-delete-alarm" onclick="deleteAlarm(\''+a.id+'\',\''+a.uid+'\')">🗑️</button></div></div>'})}}
-    p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 Google Chat bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testGoogleChatConnection;p.insertBefore(test,p.children[2]||null);addPanelFullButton('alarmPanel');
+    p.innerHTML=h;p.style.display='block';const test=document.createElement('button');test.textContent='📨 ntfy bağlantı testi';test.style.cssText='margin:8px 0;padding:8px 12px;border:0;border-radius:8px;background:#229ED9;color:white;font-weight:bold;cursor:pointer';test.onclick=testNtfyConnection;p.insertBefore(test,p.children[2]||null);addPanelFullButton('alarmPanel');
 }
 function openAlarmModal(id){
     const k=getCardById(id);if(!k)return;
@@ -1040,7 +1040,7 @@ function saveAlarm(id){
     const desc=document.getElementById('alarm_desc_'+id).value.trim(),date=document.getElementById('alarm_date_'+id).value,time=document.getElementById('alarm_time_'+id).value,target=document.getElementById('alarm_target_'+id)?.value||'';
     const datetime=alarmDateTimeValue(date,time),ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
     const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',notificationTarget:target,firma:k.line1||'',title,description:desc||String(noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
-    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Google Chat alarmı kaydedildi.');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
+    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ ntfy alarmı kaydedildi.');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
 }
 function deleteAlarm(id,uid){if(!confirm('Sil?'))return;const l=getAlarmsList(id).filter(a=>a.uid!==uid);if(l.length)alarmRecords[id]=l;else delete alarmRecords[id];saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards);updateAlarmCount()}
 function toggleAlarmActive(id,uid){const l=getAlarmsList(id);const a=l.find(x=>x.uid===uid);if(a){a.active=!a.active;alarmRecords[id]=l;saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards)}}
@@ -1847,7 +1847,7 @@ function openDetailModal(id){
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
     h+='<div class="fire-form" style="margin-top:8px"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="mfirekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="mfiremt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="mfiresebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="mfirenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFireM(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFireM(event,\''+k.id+'\')">Hepsini Sil</button></div></div>';
-    document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);insertGoogleChatNoteButton(k.id);document.getElementById('detailModal').classList.add('show');
+    document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);insertNtfyNoteButton(k.id);document.getElementById('detailModal').classList.add('show');
 }
 function closeDetailModal(){
     document.getElementById('detailModal').classList.remove('show');
@@ -1863,7 +1863,7 @@ function saveAlarmM(e,id){
     const date=document.getElementById('mAlarmDate_'+id).value,time=document.getElementById('mAlarmTime_'+id).value,target=document.getElementById('mAlarmTarget_'+id)?.value||'',datetime=alarmDateTimeValue(date,time);
     const ap=document.querySelector('#mPrioBtns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
     const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',notificationTarget:target,title,description:String(document.getElementById('mnote_'+id)?.value||noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
-    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ Google Chat alarmı kaydedildi.');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
+    const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;saveAlarms();showToast('✅ ntfy alarmı kaydedildi.');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
 }
 
 /* ── NAV & FİLTRE ── */
@@ -2280,7 +2280,7 @@ function afterDataLoaded(isExcel){
     try{gecisDiffToast()}catch(e){}
     try{cacheHareketSaatleri()}catch(e){}
     saveDataSnapshot();updateInsightStrip();
-    googleChatSyncSnapshot();
+    ntfySyncSnapshot();
 }
 function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
 function cardStageIndex(k){

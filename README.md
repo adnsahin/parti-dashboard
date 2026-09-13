@@ -108,8 +108,8 @@ http://127.0.0.1:8783/index.html
 ```
 
 Telefon ve PC aynı Wi‑Fi ağındaysa telefonda `http://PC_IP:8783/index.html` adresini açın. Dashboarddaki `💬 Mesaj Gönder` paneli iki cihazdan da aynı ntfy kanalına mesaj gönderir. `PC_IP`, iş yeri bilgisayarının yerel IPv4 adresidir; başlatma betiği bu adresi ekranda gösterir.
-Dashboardu başka bir HTTP adresinden açıyorsanız adres sonuna `?ntfyService=http://PC_IP:8783` ekleyin; böylece kart, not ve liste gönderim düğmeleri PC'deki servise bağlanır.
-GitHub Pages gibi HTTPS bir dashboardda PC'nin `http://` servisine bağlanılamazsa `💬 Mesaj Gönder` içinden `Doğrudan ntfy (mobil/GitHub Pages)` seçin; aynı ntfy sunucusunu ve BAT'ta kullandığınız konu adını girin. Bu seçim yapıldığında kart, not ve liste gönderimleri de doğrudan telefondan gönderilir. Konu adı yalnızca o cihazın tarayıcısında saklanır.
+Dashboardu başka bir HTTP adresinden açıyorsanız adres sonuna `?ntfyService=http://PC_IP:8783` ekleyin; böylece mesaj düğmesi PC'deki servise bağlanır.
+GitHub Pages gibi HTTPS bir dashboardda PC'nin `http://` servisine bağlanılamazsa `💬 Mesaj Gönder` içinden `Doğrudan ntfy (mobil/GitHub Pages)` seçin; aynı ntfy sunucusunu ve BAT'ta kullandığınız konu adını girin. Konu adı yalnızca o cihazın tarayıcısında saklanır.
 
 Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat, hedef aşama ve hedef bekleme süresini dakika olarak kaydedin. Hedef aşama boş bırakılırsa bu bir tarih/saat alarmıdır ve canlı aşama beklemeden çalışır. Bir hedef aşama seçilirse bildirim, parti o aşamaya ulaştığında gönderilir; bu alarm tipinde tarih/saat alanı dikkate alınmaz. Hedef bekleme süresi `0` ise aşamaya ulaşır ulaşmaz bildirim gönderilir. Hedef süre `60` ise seçilen aşamaya ulaştıktan sonra en az 60 dakika beklenir. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
 

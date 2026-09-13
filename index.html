@@ -845,27 +845,10 @@ function ntfySyncSnapshot(){
             .catch(error=>console.warn('ntfy alarm senkronu başarısız:',error.message));
     },150);
 }
-function ntfyDashboardMode(){return localStorage.getItem('ntfyMessageMode')||((location.protocol==='https:')?'direct':'service')}
-function saveNtfyDirectSettings(){
-    const server=String(document.getElementById('ntfyDirectServer')?.value||'').trim().replace(/\/+$/,''),topic=String(document.getElementById('ntfyDirectTopic')?.value||'').trim();
-    if(server)localStorage.setItem('ntfyDirectServer',server);
-    if(topic)localStorage.setItem('ntfyDirectTopic',topic);
-}
-function ntfyDirectRequest(title,text){
-    const server=String(localStorage.getItem('ntfyDirectServer')||'https://ntfy.sh').trim().replace(/\/+$/,''),topic=String(localStorage.getItem('ntfyDirectTopic')||'').trim();
-    if(!/^https?:\/\//i.test(server)||!topic)return Promise.reject(new Error('Önce Mesaj Gönder panelinden ntfy konu adını kaydedin.'));
-    return fetch(server+'/'+encodeURIComponent(topic),{method:'POST',headers:{Title:title,Priority:'high',Tags:'speech_balloon'},body:text}).then(r=>{if(!r.ok)throw new Error('ntfy HTTP '+r.status);return r});
-}
-function ntfyServiceRequest(path,body){
-    return fetch(NTFY_ALARM_SERVICE_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(async r=>{let v={};try{v=await r.json()}catch(_e){}if(!r.ok||!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');return v});
-}
-function ntfySendDashboard(title,text,path,body){
-    return ntfyDashboardMode()==='direct'?ntfyDirectRequest(title,text):ntfyServiceRequest(path,body);
-}
 function testNtfyConnection(){
-    ntfySendDashboard('Parti Dashboard','✅ Parti Dashboard ntfy bağlantı testi başarılı.','/api/ntfy/test',{text:'✅ Parti Dashboard ntfy bağlantı testi başarılı.'})
-        .then(()=>showToast('✅ ntfy mesajı gönderildi.','success'))
-        .catch(error=>showToast('⚠️ ntfy bağlantı testi başarısız: '+error.message,'warning'));
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard ntfy bağlantı testi başarılı.'})})
+        .then(r=>r.json()).then(v=>showToast(v.ok?'✅ ntfy mesajı gönderildi.':'⚠️ ntfy: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
+        .catch(()=>showToast('⚠️ ntfy servisi çalışmıyor. Önce NTFY_ALARM_BASLAT.bat başlatılmalı.','warning'));
 }
 function toggleNtfyMessagePanel(){safePanelOpen('ntfyMessagePanel','💬 ntfy Mesaj Gönder',renderNtfyMessagePanel)}
 function setNtfyMessageMode(){
@@ -875,21 +858,23 @@ function setNtfyMessageMode(){
 }
 function renderNtfyMessagePanel(){
     const p=document.getElementById('ntfyMessagePanel'),savedMode=localStorage.getItem('ntfyMessageMode')||((location.protocol==='https:')?'direct':'service'),server=localStorage.getItem('ntfyDirectServer')||'https://ntfy.sh',topic=localStorage.getItem('ntfyDirectTopic')||'';
-    p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=&quot;none&quot;">×</button><h2 style="color:#00897B">💬 Dashboard Mesajı</h2><div class="panel-summary">Kart, liste ve serbest mesaj gönderimleri seçtiğiniz yoldan çalışır. GitHub Pages/HTTPS üzerinden açtıysanız doğrudan ntfy seçeneğini kullanın.</div><label>Gönderim yolu<select id="ntfyMessageMode" onchange="setNtfyMessageMode()" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"><option value="service" '+(savedMode==='service'?'selected':'')+'>PC ntfy servisi</option><option value="direct" '+(savedMode==='direct'?'selected':'')+'>Doğrudan ntfy (mobil/GitHub Pages)</option></select></label><div id="ntfyDirectFields" style="display:'+(savedMode==='direct'?'block':'none')+'"><label>ntfy sunucusu<input id="ntfyDirectServer" type="url" value="'+esc(server)+'" placeholder="https://ntfy.sh" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>ntfy konu adı<input id="ntfyDirectTopic" type="text" value="'+esc(topic)+'" placeholder="PC’de BAT ile kullandığınız konu adı" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><small style="display:block;color:#FFCC80;margin-bottom:8px">Doğrudan gönderimde konu adı bu cihazın tarayıcısında saklanır; yalnızca güvendiğiniz cihazlarda kullanın.</small></div><label>Başlık<input id="ntfyMessageTitle" type="text" maxlength="120" value="Parti Dashboard" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>Mesaj<textarea id="ntfyMessageText" maxlength="4000" rows="7" placeholder="Gönderilecek mesajı yazın..." style="width:100%;padding:8px;margin-top:5px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C;resize:vertical"></textarea></label><small style="display:block;color:#aaa;margin-top:8px">PC servis adresi: '+esc(NTFY_ALARM_SERVICE_URL)+'</small><button class="btn-all-export" style="margin-top:12px;background:#00897B" onclick="sendNtfyMessage(event)">📨 ntfy’ye Gönder</button>';
-    ['ntfyDirectServer','ntfyDirectTopic'].forEach(id=>document.getElementById(id)?.addEventListener('input',saveNtfyDirectSettings));
+    p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=&quot;none&quot;">×</button><h2 style="color:#00897B">💬 Dashboard Mesajı</h2><div class="panel-summary">PC ve telefondan aynı ntfy kanalına mesaj gönderebilirsiniz. GitHub Pages/HTTPS üzerinden açtıysanız doğrudan ntfy seçeneğini kullanın.</div><label>Gönderim yolu<select id="ntfyMessageMode" onchange="setNtfyMessageMode()" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"><option value="service" '+(savedMode==='service'?'selected':'')+'>PC ntfy servisi</option><option value="direct" '+(savedMode==='direct'?'selected':'')+'>Doğrudan ntfy (mobil/GitHub Pages)</option></select></label><div id="ntfyDirectFields" style="display:'+(savedMode==='direct'?'block':'none')+'"><label>ntfy sunucusu<input id="ntfyDirectServer" type="url" value="'+esc(server)+'" placeholder="https://ntfy.sh" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>ntfy konu adı<input id="ntfyDirectTopic" type="text" value="'+esc(topic)+'" placeholder="PC’de BAT ile kullandığınız konu adı" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><small style="display:block;color:#FFCC80;margin-bottom:8px">Doğrudan gönderimde konu adı bu cihazın tarayıcısında saklanır; yalnızca güvendiğiniz cihazlarda kullanın.</small></div><label>Başlık<input id="ntfyMessageTitle" type="text" maxlength="120" value="Parti Dashboard" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>Mesaj<textarea id="ntfyMessageText" maxlength="4000" rows="7" placeholder="Gönderilecek mesajı yazın..." style="width:100%;padding:8px;margin-top:5px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C;resize:vertical"></textarea></label><small style="display:block;color:#aaa;margin-top:8px">PC servis adresi: '+esc(NTFY_ALARM_SERVICE_URL)+'</small><button class="btn-all-export" style="margin-top:12px;background:#00897B" onclick="sendNtfyMessage(event)">📨 ntfy’ye Gönder</button>';
 }
 function sendNtfyMessage(e){
     const title=String(document.getElementById('ntfyMessageTitle')?.value||'Parti Dashboard').trim(),text=String(document.getElementById('ntfyMessageText')?.value||'').trim(),mode=document.getElementById('ntfyMessageMode')?.value||'service';
     if(!text){showToast('⚠️ Mesaj boş bırakılamaz.','warning');return}
     if(title.length>120||text.length>4000){showToast('⚠️ Başlık 120, mesaj 4000 karakter sınırını aşamaz.','warning');return}
     const button=e&&e.currentTarget;if(button)button.disabled=true;
+    let request;
     if(mode==='direct'){
         const server=String(document.getElementById('ntfyDirectServer')?.value||'').trim().replace(/\/+$/,''),topic=String(document.getElementById('ntfyDirectTopic')?.value||'').trim();
         if(!/^https?:\/\//i.test(server)||!topic){if(button)button.disabled=false;showToast('⚠️ ntfy sunucusu ve konu adı gerekli.','warning');return}
         localStorage.setItem('ntfyDirectServer',server);localStorage.setItem('ntfyDirectTopic',topic);
+        request=fetch(server+'/'+encodeURIComponent(topic),{method:'POST',headers:{Title:title,Priority:'high',Tags:'speech_balloon'},body:text});
+    }else{
+        request=fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,text})});
     }
-    ntfySendDashboard(title,text,'/api/ntfy/message',{title,text})
-        .then(()=>{showToast('✅ Mesaj ntfy’ye gönderildi.','success');document.getElementById('ntfyMessageText').value=''})
+    request.then(async r=>{let v={};try{v=await r.json()}catch(_e){}if(!r.ok||mode==='service'&&!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');showToast('✅ Mesaj ntfy’ye gönderildi.','success');document.getElementById('ntfyMessageText').value=''})
         .catch(error=>showToast('⚠️ Mesaj gönderilemedi: '+error.message,'warning'))
         .finally(()=>{if(button)button.disabled=false});
 }
@@ -917,36 +902,27 @@ function insertAlarmTargetField(id,k,dateId,selectId){
     const wrap=document.createElement('div');wrap.style.marginBottom='10px';wrap.innerHTML='<label style="color:#64B5F6;font-size:12px;font-weight:bold">Bildirim hedef aşaması</label><select id="'+selectId+'" style="width:100%;padding:8px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:white;outline:none">'+html+'</select><small style="display:block;color:#aaa;margin-top:4px">Bir aşama seçerseniz parti o aşamaya ulaştığında hemen bildirim gider. Boş bırakırsanız yalnızca tarih/saat kontrol edilir.</small>';
     row.parentElement.insertBefore(wrap,row);
 }
-function ntfyNoteMessageText(card,text){
-    return ['📝 Parti Notu','',`Parti: ${String(card&&card.parti||'-')}`,`Aşama: ${String(card&&(card._asama||card.asama||card.son_asama)||'-')}`,`Bir sonraki aşama: ${String(card&&card.bir_sonraki||'-')}`,`Firma: ${String(card&&(card.line1||card.firma)||'-')}`,'',String(text||'').trim()].join('\n');
+function insertNtfyNoteButton(id){
+    const note=document.getElementById('mnote_'+id),actions=note&&note.parentElement&&note.parentElement.querySelector('.note-actions');
+    if(!actions||actions.querySelector('.btn-send-note'))return;
+    const button=document.createElement('button');button.className='btn-send-note';button.type='button';button.textContent='ntfy’a Gönder';button.onclick=e=>sendNtfyNoteM(e,id);actions.appendChild(button);
 }
 function sendNtfyNoteM(e,id){
     e.stopPropagation();const k=getCardById(id),note=document.getElementById('mnote_'+id),text=note&&note.value.trim();if(!k||!text){showToast('⚠️ Gönderilecek not boş.','warning');return}
     const button=e.currentTarget;button.disabled=true;button.textContent='Gönderiliyor...';
-    const card={parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''};
-    ntfySendDashboard('Parti Notu',ntfyNoteMessageText(card,text),'/api/ntfy/note',{parti:k.parti,text,card})
-        .then(()=>showToast('✅ Not ntfy’ye gönderildi.','success'))
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parti:k.parti,text,card:{parti:k.parti,_asama:k._asama,bir_sonraki:k.bir_sonraki||'',line1:k.line1||k.firma||''}})})
+        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');showToast('✅ Not ntfy’ye gönderildi.','success')})
         .catch(error=>showToast('⚠️ ntfy notu gönderilemedi: '+error.message,'warning'))
         .finally(()=>{button.disabled=false;button.textContent='ntfy’a Gönder'});
-}
-function ntfyListMessageText(title,cards){
-    const items=(Array.isArray(cards)?cards:[]).filter(card=>card&&String(card.parti||'').trim()),totalKg=items.reduce((sum,card)=>sum+(Number(card.kilo)||0),0),lines=[`📋 ${String(title||'Parti Listesi').trim()||'Parti Listesi'}`,'',`Toplam: ${items.length} parti • ${Math.round(totalKg).toLocaleString('tr-TR')} kg`,''];
-    let included=0;
-    for(const [index,card] of items.entries()){
-        const stage=String(card.son_asama||card.lastStage||card._asama||card.asama||'-'),next=String(card.bir_sonraki||'-'),line=`${index+1}. ${String(card.parti)} | ${stage} → ${next} | ${Math.round(Number(card.kilo)||0).toLocaleString('tr-TR')} kg | ${String(card.bekleme||'-')}`;
-        if(lines.join('\n').length+line.length+80>3800)break;
-        lines.push(line);included++;
-    }
-    if(included<items.length)lines.push('',`... ${items.length-included} parti daha var; liste kısaltıldı.`);
-    return lines.join('\n');
 }
 function sendNtfyList(title,cards,e){
     const list=(Array.isArray(cards)?cards:[]).filter(k=>k&&String(k.parti||'').trim());
     if(!list.length){showToast('⚠️ Gönderilecek liste boş.','warning');return}
-    const button=e&&e.currentTarget;if(button)button.disabled=true;
+    const button=e&&e.currentTarget;
+    if(button)button.disabled=true;
     const payload=list.map(k=>({parti:k.parti,son_asama:k.son_asama||'',_asama:k._asama||k.asama||'',bir_sonraki:k.bir_sonraki||'',kilo:k.kilo,bekleme:k.bekleme||'',line1:k.line1||k.firma||''}));
-    ntfySendDashboard(title,ntfyListMessageText(title,payload),'/api/ntfy/list',{title,cards:payload})
-        .then(()=>showToast('✅ '+list.length+' partilik liste ntfy’ye gönderildi.','success'))
+    fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,cards:payload})})
+        .then(async r=>{const v=await r.json();if(!r.ok||!v.ok)throw new Error(v.error||'ntfy servisi hata verdi');showToast('✅ '+v.count+' partilik liste ntfy’ye gönderildi.','success')})
         .catch(error=>showToast('⚠️ Liste ntfy’ye gönderilemedi: '+error.message,'warning'))
         .finally(()=>{if(button)button.disabled=false});
 }

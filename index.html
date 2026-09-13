@@ -818,9 +818,15 @@ function saveNotes(){localStorage.setItem('nr9',JSON.stringify(noteRecords))}
 function saveFires(){localStorage.setItem('fr9',JSON.stringify(fireRecords))}
 const IS_LOCAL_DASHBOARD=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));if(IS_LOCAL_DASHBOARD)telegramSyncSnapshot()}
+function alarmDateTimeValue(date,time){
+    if(!date||!time)return null;
+    const value=new Date(date+'T'+time+':00');
+    return Number.isNaN(value.getTime())?null:value.toISOString();
+}
 const TELEGRAM_ALARM_SERVICE_URL=IS_LOCAL_DASHBOARD?'':'http://127.0.0.1:8783';
 const GITHUB_ALARM_ISSUE_URL='https://github.com/adnsahin/parti-dashboard/issues/new';
 function publishAlarmViaGithubIssue(alarm){
+    if(IS_LOCAL_DASHBOARD)return false;
     const body='<!-- PARTI_DASHBOARD_ALARM\n'+JSON.stringify({alarm})+'\n-->\n\nBu alarmı kaydetmek için bu GitHub issue\'sunu oluşturun. Telegram kontrolü GitHub Actions tarafından yapılır.';
     const url=GITHUB_ALARM_ISSUE_URL+'?title='+encodeURIComponent('[PARTİ ALARM] '+alarm.parti+' - '+alarm.title)+'&body='+encodeURIComponent(body);
     const opened=window.open(url,'_blank');
@@ -1082,8 +1088,8 @@ function selectPriority(btn){document.querySelectorAll('#'+btn.parentElement.id+
 function saveAlarm(id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('alarm_title_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
     const desc=document.getElementById('alarm_desc_'+id).value.trim(),date=document.getElementById('alarm_date_'+id).value,time=document.getElementById('alarm_time_'+id).value,target=document.getElementById('alarm_target_'+id)?.value||'';
-    const datetime=date&&time?date+'T'+time+':00':null,ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,firma:k.line1||'',title,description:desc,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const datetime=alarmDateTimeValue(date,time),ap=document.querySelector('#priority_btns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,firma:k.line1||'',title,description:desc||String(noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
     const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;const issueOpened=publishAlarmViaGithubIssue(alarm);saveAlarms();showToast(IS_LOCAL_DASHBOARD?'✅ Alarm eklendi!':issueOpened?'✅ GitHub alarm gönderim ekranı açıldı. Issue\'yu oluşturun.':'⚠️ GitHub alarm ekranı açılamadı.');closeAlarmModal();renderCards(currentDisplayedCards);updateAlarmCount();
 }
 function deleteAlarm(id,uid){if(!confirm('Sil?'))return;const l=getAlarmsList(id).filter(a=>a.uid!==uid);if(l.length)alarmRecords[id]=l;else delete alarmRecords[id];saveAlarms();renderAlarmPanel();renderCards(currentDisplayedCards);updateAlarmCount()}
@@ -1904,9 +1910,9 @@ document.getElementById('detailModal').addEventListener('click',function(e){if(e
 function selectPriorityM(btn){document.querySelectorAll('#'+btn.parentElement.id+' .priority-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 function saveAlarmM(e,id){
     const k=getCardById(id);if(!k)return;const title=document.getElementById('mAlarmTitle_'+id).value.trim();if(!title){alert('Başlık gerekli!');return}
-    const date=document.getElementById('mAlarmDate_'+id).value,time=document.getElementById('mAlarmTime_'+id).value,target=document.getElementById('mAlarmTarget_'+id)?.value||'',datetime=date&&time?date+'T'+time+':00':null;
+    const date=document.getElementById('mAlarmDate_'+id).value,time=document.getElementById('mAlarmTime_'+id).value,target=document.getElementById('mAlarmTarget_'+id)?.value||'',datetime=alarmDateTimeValue(date,time);
     const ap=document.querySelector('#mPrioBtns_'+id+' .priority-btn.active'),priority=ap?ap.dataset.priority:'Orta';
-    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,title,priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
+    const alarm={uid:'al_'+Date.now()+'_'+Math.random().toString(16).slice(2),id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',telegramTarget:target,title,description:String(document.getElementById('mnote_'+id)?.value||noteRecords[id]?.note||'').trim(),priority,datetime,active:true,created_at:new Date().toLocaleString('tr-TR')};
     const alarms=getAlarmsList(id);alarms.push(alarm);alarmRecords[id]=alarms;const issueOpened=publishAlarmViaGithubIssue(alarm);saveAlarms();showToast(IS_LOCAL_DASHBOARD?'✅ Alarm eklendi!':issueOpened?'✅ GitHub alarm gönderim ekranı açıldı. Issue\'yu oluşturun.':'⚠️ GitHub alarm ekranı açılamadı.');openDetailModal(id);renderCards(currentDisplayedCards);updateAlarmCount();
 }
 

@@ -39,6 +39,12 @@ function targetStage(alarm) {
     if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
 }
+function alarmTime(alarm) {
+    const raw = clean(alarm && alarm.datetime);
+    if (!raw) return null;
+    const value = Date.parse(raw);
+    return Number.isFinite(value) ? value : null;
+}
 function flowStages(card) {
     return clean(card && (card.flow || card.uretim_asamalari)).split(',').map(clean).filter(Boolean);
 }
@@ -159,6 +165,8 @@ async function checkAlarms() {
     let changed = false;
     for (const alarm of alarms) {
         if (!alarm.active || alarm.notifiedAt) continue;
+        const scheduledAt = alarmTime(alarm);
+        if (scheduledAt !== null && Date.now() < scheduledAt) continue;
         const card = cards.find(item => item.parti === alarm.parti) || cards.find(item => item.id === alarm.id);
         const target = targetStage(alarm);
         if (!card || !target || !cardReachedTarget(card, target)) continue;

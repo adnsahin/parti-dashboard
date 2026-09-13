@@ -48,6 +48,12 @@ function targetStage(alarm) {
     if (stageEquals(raw, 'SARIM1') || stageEquals(raw, 'SARIM 1')) return 'SARIM1';
     return raw;
 }
+function alarmTime(alarm){
+    const raw=clean(alarm&&alarm.datetime);
+    if(!raw)return null;
+    const value=Date.parse(raw);
+    return Number.isFinite(value)?value:null;
+}
 function flowStages(card) {
     return clean(card && (card.uretim_asamalari || card.flow)).split(',').map(clean).filter(Boolean);
 }
@@ -158,7 +164,8 @@ function messageFor(card, alarm, target) {
         `Bir sonraki aşama: ${clean(card && card.bir_sonraki) || '-'}`,
         `Kilo: ${Math.round(Number(card && card.kilo) || 0).toLocaleString('tr-TR')} kg`,
         `Bekleme: ${wait}`,
-        alarm && alarm.title ? `Alarm: ${clean(alarm.title)}` : ''
+        alarm && alarm.title ? `Alarm: ${clean(alarm.title)}` : '',
+        alarm && alarm.description ? `Not: ${clean(alarm.description)}` : ''
     ].filter(Boolean).join('\n');
 }
 function messageForNote(card, text) {
@@ -295,7 +302,6 @@ async function pollGithub() {
 async function processSnapshot(payload) {
     payload = payload || {};
     const state = readState();
-    const previous = state.cards || {};
     const current = cardMap(payload.cards);
     const hasAlarms = Array.isArray(payload.alarms);
     const alarms = hasAlarms ? payload.alarms : (Array.isArray(state.alarms) ? state.alarms : []);
@@ -303,15 +309,15 @@ async function processSnapshot(payload) {
     const events = [];
     for (const alarm of alarms) {
         if (!alarm || alarm.active === false) continue;
+        const scheduledAt = alarmTime(alarm);
+        if (scheduledAt !== null && Date.now() < scheduledAt) continue;
         const target = targetStage(alarm);
         if (!target) continue;
         const key = clean(alarm.id) || clean(alarm.parti);
         const card = Object.values(current).find(x => clean(x.parti) === clean(alarm.parti)) || current[key];
         if (!card || !cardReachedTarget(card, target)) continue;
-        const prevCard = Object.values(previous).find(x => clean(x.parti) === clean(alarm.parti)) || previous[key];
-        const wasReached = prevCard ? cardReachedTarget(prevCard, target) : false;
-        const eventKey = [clean(alarm.uid), clean(card.parti), target, clean(card.son_asama_tarihi || card.hareket || card.bir_sonraki)].join('|');
-        if (wasReached || sent[eventKey]) continue;
+        const eventKey = clean(alarm.uid) || [clean(card.parti), target].join('|');
+        if (sent[eventKey]) continue;
         try {
             const result = await sendText(messageFor(card, alarm, target));
             events.push({parti: card.parti, target, sent: result.sent, dryRun: result.dryRun});

@@ -13,6 +13,8 @@ const HOST = String(process.env.NTFY_ALARM_HOST || '127.0.0.1').trim() || '127.0
 const NTFY_TOPIC = String(process.env.NTFY_TOPIC || '').trim();
 const NTFY_SERVER_URL = String(process.env.NTFY_SERVER_URL || 'https://ntfy.sh').trim().replace(/\/+$/, '');
 const NTFY_ACCESS_TOKEN = String(process.env.NTFY_ACCESS_TOKEN || '').trim();
+const ALARM_RELAY_URL = String(process.env.ALARM_RELAY_URL || '').trim().replace(/\/+$/, '');
+const ALARM_RELAY_TOKEN = String(process.env.ALARM_RELAY_TOKEN || '').trim();
 const DATA_URL = String(process.env.NTFY_DATA_URL || 'https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json').trim();
 const POLL_SECONDS = Math.max(30, Number(process.env.NTFY_POLL_SECONDS || 300));
 const stateDir = process.env.LOCALAPPDATA
@@ -267,6 +269,39 @@ function ntfyRequest(text, title='Parti Alarmi') {
         req.end(payload);
     });
 }
+function relayAlarm(payload) {
+    if (!ALARM_RELAY_URL) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        let target;
+        try { target = new URL(ALARM_RELAY_URL); } catch (_) { reject(new Error('ALARM_RELAY_URL geçersiz')); return; }
+        if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+            reject(new Error('ALARM_RELAY_URL yalnızca HTTP veya HTTPS olabilir'));
+            return;
+        }
+        const body = Buffer.from(JSON.stringify(payload), 'utf8');
+        const transport = target.protocol === 'http:' ? http : https;
+        const headers = {'Content-Type': 'application/json', 'Content-Length': body.length};
+        if (ALARM_RELAY_TOKEN) headers['X-Alarm-Token'] = ALARM_RELAY_TOKEN;
+        const req = transport.request({
+            hostname: target.hostname,
+            port: target.port || (target.protocol === 'http:' ? 80 : 443),
+            path: target.pathname + target.search,
+            method: 'POST',
+            headers,
+            timeout: 15000
+        }, response => {
+            let text = '';
+            response.setEncoding('utf8');
+            response.on('data', chunk => { text += chunk; });
+            response.on('end', () => response.statusCode >= 200 && response.statusCode < 300
+                ? resolve()
+                : reject(new Error(`alarm relay HTTP ${response.statusCode}: ${text || 'istek reddedildi'}`)));
+        });
+        req.on('timeout', () => req.destroy(new Error('alarm relay zaman aşımı')));
+        req.on('error', reject);
+        req.end(body);
+    });
+}
 async function sendText(text) {
     if (!NTFY_TOPIC) {
         log('[DRY-RUN] NTFY_TOPIC ayarı eksik; gönderilecek mesaj:\n' + text);
@@ -370,6 +405,7 @@ async function processFilterAlarm(alarm, cards, sent, events){
         const title = clean(alarm.title) || 'Filtreli bekleme alarmı';
         const text = messageForList(title, matched);
         broadcastLocalAlarm({title, message: text, cards: matched, source: 'local-filter'});
+        await relayAlarm({title, message: text, cards: matched, source: 'netlify-filter'});
         const result = await sendText(text);
         events.push({filter: true, title: clean(alarm.title), matched: matched.length, newMatches: pending.length, sent: result.sent, dryRun: result.dryRun});
         if (result.sent || result.dryRun) pending.forEach(card => { sent[filterAlarmEventKey(alarm, card)] = new Date().toISOString(); });
@@ -409,6 +445,7 @@ async function processSnapshot(payload) {
         try {
             const text = messageFor(card, alarm, target);
             broadcastLocalAlarm({title: clean(alarm.title) || 'Parti Alarmi', message: text, card, source: 'local-card'});
+            await relayAlarm({title: clean(alarm.title) || 'Parti Alarmi', message: text, card, source: 'netlify-card'});
             const result = await sendText(text);
             events.push({parti: card.parti, target: target || null, requiredMinutes, elapsedMinutes, sent: result.sent, dryRun: result.dryRun});
             if (result.sent || result.dryRun) sent[eventKey] = new Date().toISOString();

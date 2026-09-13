@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/alarm"
+  to = "/.netlify/functions/alarm"
+  status = 200

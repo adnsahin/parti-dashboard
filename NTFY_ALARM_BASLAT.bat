@@ -19,6 +19,8 @@ if "%NTFY_TOPIC%"=="" set /p "NTFY_TOPIC=ntfy konu adini girin (bos birakirsaniz
 if "%NTFY_TOPIC%"=="" (
   echo ntfy kapali. Yerel alarm ekrani http://PC_IP:8783/alarm-demo.html adresinden dinlenebilir.
 )
+if "%ALARM_RELAY_URL%"=="" set /p "ALARM_RELAY_URL=Netlify alarm endpointi (bos birakabilirsiniz): "
+if not "%ALARM_RELAY_URL%"=="" if "%ALARM_RELAY_TOKEN%"=="" set /p "ALARM_RELAY_TOKEN=Netlify alarm tokeni (ayarlandiysa girin): "
 
 if "%NTFY_SERVER_URL%"=="" set "NTFY_SERVER_URL=https://ntfy.sh"
 if "%NTFY_POLL_SECONDS%"=="" set "NTFY_POLL_SECONDS=60"

@@ -129,6 +129,18 @@ Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repo
 4. `Ses etkinleştir` ve `PC alarmına bağlan` düğmelerine basın.
 
 Bu modda tarayıcı sayfası açık kaldığı sürece kart ve liste alarmları ntfy olmadan gelir. Telefon ekranı kapalıyken veya tarayıcı arka plandayken mobil işletim sistemi web bağlantısını durdurabilir; arka plan bildirimi için ntfy uygulaması gerekir.
+## Netlify üzerinden bağımsız alarm
+
+Alarm ekranını Netlify'da çalıştırmak için `netlify.toml`, `package.json` ve `netlify/functions/alarm.js` dosyaları kullanılır. Netlify Blobs, son 100 alarmı kalıcı depoda tutar; demo sayfası bu endpoint'i üç saniyede bir kontrol eder.
+
+1. Bu repoyu Netlify'da yayınlayın.
+2. Netlify panelinde **Site configuration > Environment variables** bölümüne güçlü ve gizli bir `ALARM_RELAY_TOKEN` ekleyin. Değişkeni ekledikten sonra yeni deploy yapın.
+3. Netlify adresindeki `alarm-demo.html` sayfasını açın.
+4. Sayfadaki **Netlify alarm adresi** alanına `https://SITENIZ.netlify.app/api/alarm` yazın; token alanına aynı gizli değeri girin.
+5. Netlify sayfasında **Ses etkinleştir**, **Tam ekranı dene** ve **Netlify alarmına bağlan** düğmelerine basın.
+6. PC'de `NTFY_ALARM_BASLAT.bat` çalıştırılırken ntfy topic alanını boş bırakın; Netlify alarm endpointi sorusuna aynı `/api/alarm` adresini, token sorusuna da aynı değeri girin.
+
+Token ayarlanmazsa endpoint anonim POST/GET kabul eder; bu yalnızca herkese açık olmayan geçici denemeler için uygundur. Token tarayıcıda kalıcı olarak saklanmaz ve relay isteğinde HTTP başlığıyla gönderilir. Bu akışta telefon ve PC'nin aynı ağda olması gerekmez. PC'nin internete erişmesi ve Netlify sayfasının açık olması yeterlidir. Telefon tarayıcısı arka planda veya ekran kapalıyken çalışmayı durdurabilir; arka plan/kapalı ekran bildirimi için Web Push veya ntfy uygulaması gerekir.
 
 
 ## GitHub Pages

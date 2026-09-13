@@ -828,29 +828,50 @@ function alarmDateTimeValue(date,time){
     const value=new Date(date+'T'+time+':00');
     return Number.isNaN(value.getTime())?null:value.getTime();
 }
+const dashboardParams=new URLSearchParams(location.search);
+const APPS_SCRIPT_ALARM_URL=(()=>{
+    const configured=String(dashboardParams.get('appsScript')||localStorage.getItem('appsScriptAlarmUrl')||'').trim().replace(/\/+$/,'');
+    if(dashboardParams.get('appsScript'))localStorage.setItem('appsScriptAlarmUrl',configured);
+    return configured;
+})();
+const APPS_SCRIPT_ALARM_TOKEN=(()=>{
+    const configured=String(dashboardParams.get('appsScriptToken')||localStorage.getItem('appsScriptAlarmToken')||'').trim();
+    if(dashboardParams.get('appsScriptToken'))localStorage.setItem('appsScriptAlarmToken',configured);
+    return configured;
+})();
 const NTFY_ALARM_SERVICE_URL=(()=>{
-    const params=new URLSearchParams(location.search);
-    const configured=String(params.get('ntfyService')||localStorage.getItem('ntfyServiceUrl')||'').trim().replace(/\/+$/,'');
+    const configured=String(dashboardParams.get('ntfyService')||localStorage.getItem('ntfyServiceUrl')||'').trim().replace(/\/+$/,'');
     if(configured)return configured;
     if(location.protocol==='http:'&&String(location.port||'80')==='8783')return location.origin;
     return 'http://127.0.0.1:8783';
 })();
 let ntfySyncTimer=null;
+function appsScriptRequest(payload){
+    if(!APPS_SCRIPT_ALARM_URL)return Promise.resolve();
+    return fetch(APPS_SCRIPT_ALARM_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,token:APPS_SCRIPT_ALARM_TOKEN})});
+}
 function ntfySyncSnapshot(){
     clearTimeout(ntfySyncTimer);
     ntfySyncTimer=setTimeout(()=>{
         const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]).concat(Array.isArray(filterAlarmRecords)?filterAlarmRecords:[]),cards=typeof getAllCards==='function'?getAllCards():[];
+        if(APPS_SCRIPT_ALARM_URL){
+            appsScriptRequest({action:'sync',alarms}).catch(error=>console.warn('Apps Script alarm senkronu başarısız:',error.message));
+            return;
+        }
         fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
             .then(response=>{if(!response.ok)throw new Error('HTTP '+response.status)})
             .catch(error=>console.warn('ntfy alarm senkronu başarısız:',error.message));
     },150);
 }
 function testNtfyConnection(){
+    if(APPS_SCRIPT_ALARM_URL){
+        appsScriptRequest({action:'test'}).then(()=>showToast('✅ Apps Script alarm testi gönderildi.','success')).catch(error=>showToast('⚠️ Apps Script testi gönderilemedi: '+error.message,'warning'));
+        return;
+    }
     fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'✅ Parti Dashboard ntfy bağlantı testi başarılı.'})})
         .then(r=>r.json()).then(v=>showToast(v.ok?'✅ ntfy mesajı gönderildi.':'⚠️ ntfy: '+(v.error||'ayar eksik'),v.ok?'success':'warning'))
         .catch(()=>showToast('⚠️ ntfy servisi çalışmıyor. Önce NTFY_ALARM_BASLAT.bat başlatılmalı.','warning'));
 }
-function toggleNtfyMessagePanel(){safePanelOpen('ntfyMessagePanel','💬 ntfy Mesaj Gönder',renderNtfyMessagePanel)}
 function renderNtfyMessagePanel(){
     const p=document.getElementById('ntfyMessagePanel');
     p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=&quot;none&quot;">×</button><h2 style="color:#00897B">💬 Dashboard Mesajı</h2><div class="panel-summary">Bu mesajı dashboardu açtığınız cihazdan ntfy kanalına gönderir. PC ve aynı Wi‑Fi ağındaki telefon aynı paneli kullanabilir.</div><label>Başlık<input id="ntfyMessageTitle" type="text" maxlength="120" value="Parti Dashboard" style="width:100%;padding:8px;margin:5px 0 10px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C"></label><label>Mesaj<textarea id="ntfyMessageText" maxlength="4000" rows="7" placeholder="Gönderilecek mesajı yazın..." style="width:100%;padding:8px;margin-top:5px;border-radius:8px;background:rgba(0,0,0,.3);color:white;border:1px solid #78909C;resize:vertical"></textarea></label><small style="display:block;color:#aaa;margin-top:8px">Bağlı servis: '+esc(NTFY_ALARM_SERVICE_URL)+'</small><button class="btn-all-export" style="margin-top:12px;background:#00897B" onclick="sendNtfyMessage(event)">📨 ntfy’ye Gönder</button>';

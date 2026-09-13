@@ -92,9 +92,9 @@ Betik `Son Yapılan Aşama`, `Sonra Yapılacak Aşama` ve `Son Hareket Tarihi` a
 
 ## ntfy Mobil Alarm Servisi
 
-İş yeri PC'si açıkken birden fazla telefona mobil bildirim göndermek için `NTFY_ALARM_BASLAT.bat` dosyasını çalıştırın. Bildirim kanalı olarak ücretsiz ntfy uygulaması kullanılır; Google Chat, Google Sheet, Apps Script, Telegram veya GitHub issue gerekmez.
+İş yeri PC'si açıkken çalışan eski yöntem için `NTFY_ALARM_BASLAT.bat` dosyasını kullanabilirsiniz. PC bağımlılığı olmadan, telefon ekranı kapalıyken gerçek bildirim almak için aşağıdaki **Apps Script + ntfy** yöntemini kullanın. Bildirim kanalı olarak ücretsiz ntfy uygulaması kullanılır.
 
-Kurulum:
+Eski PC yöntemi kurulumu:
 
 1. Android veya iPhone'a **ntfy** uygulamasını kurun.
 2. Sadece bu ekipte paylaşacağınız uzun ve tahmin edilmesi zor bir konu adı seçin. Örnek: `parti-alarm-2026-ekip-7f3k9m2q`.
@@ -142,6 +142,36 @@ Alarm ekranını Netlify'da çalıştırmak için `netlify.toml`, `package.json`
 
 Token ayarlanmazsa endpoint anonim POST/GET kabul eder; bu yalnızca herkese açık olmayan geçici denemeler için uygundur. Token, demo sayfasında tarayıcının `localStorage` alanına kaydedilir; aynı cihaz ve tarayıcıda tekrar açıldığında otomatik gelir. Tarayıcı verileri temizlenirse yeniden girilmelidir. Relay isteğinde token HTTP başlığıyla gönderilir. Bu akışta telefon ve PC'nin aynı ağda olması gerekmez. PC'nin internete erişmesi ve Netlify sayfasının açık olması yeterlidir. Telefon tarayıcısı arka planda veya ekran kapalıyken çalışmayı durdurabilir; arka plan/kapalı ekran bildirimi için Web Push veya ntfy uygulaması gerekir.
 
+
+## PC'siz Apps Script alarmı
+
+Telefon ekranı kapalıyken de bildirim almak için `apps-script/Code.gs` dosyasını Google Apps Script projesine yükleyin. Apps Script alarm motoru GitHub'daki `data/partiler.json` dosyasını beş dakikada bir kontrol eder ve ntfy uygulamasına gerçek mobil bildirim gönderir.
+
+Kurulum:
+
+1. `https://script.google.com` adresinde yeni proje oluşturun ve `apps-script/Code.gs` içeriğini yapıştırın.
+2. **Project Settings > Script properties** bölümünde şu değerleri ekleyin:
+
+```text
+ALARM_SYNC_TOKEN = dashboard ile paylaşacağınız gizli senkron tokeni
+NTFY_TOPIC = ntfy konu adı
+NTFY_SERVER_URL = https://ntfy.sh
+NTFY_ACCESS_TOKEN = isteğe bağlı ntfy erişim tokeni
+DATA_URL = https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/partiler.json
+```
+
+3. Apps Script editöründe `setup` fonksiyonunu bir kez çalıştırıp izinleri onaylayın. Bu işlem beş dakikalık zaman tetikleyicisini kurar.
+4. **Deploy > New deployment > Web app** seçin. **Execute as** hesabınızı, erişimi **Anyone** seçin ve `/exec` adresini kopyalayın.
+5. Dashboardu şu biçimde açın:
+
+```text
+https://adnsahin.github.io/parti-dashboard/?appsScript=WEB_APP_EXEC_URL&appsScriptToken=ALARM_SYNC_TOKEN
+```
+
+URL içindeki `WEB_APP_EXEC_URL` ve `ALARM_SYNC_TOKEN` değerlerini gerçek değerlerle değiştirin. Dashboard açıldıktan sonra alarm ekleyin veya mevcut alarmı yeniden kaydedin; alarm listesi Apps Script'e senkronlanır.
+6. Telefonlarda ntfy uygulamasını kurup `NTFY_TOPIC` konusuna abone olun. Bu yöntemde PC'de `NTFY_ALARM_BASLAT.bat` çalıştırmak gerekmez.
+
+Zaman tetikleyicileri tam saniye hassasiyetinde değildir; bildirim veri güncellemesi ve beş dakikalık kontrol aralığı içinde gönderilir. Web uygulaması tokeni alarm tanımlarını senkronlamak için tarayıcıya gönderildiğinden, Apps Script URL'sini ve tokenini herkese açık şekilde paylaşmayın.
 
 ## GitHub Pages
 

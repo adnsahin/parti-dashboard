@@ -138,7 +138,9 @@ function targetStage_(alarm) {
 function alarmTime_(alarm) {
   const source = alarm && alarm.datetime;
   if (typeof source === 'number' && Number.isFinite(source)) return source;
-  const value = Date.parse(clean_(source));
+  const raw = clean_(source);
+  if (/^\d{10,13}$/.test(raw)) return Number(raw);
+  const value = Date.parse(raw);
   return Number.isFinite(value) ? value : null;
 }
 

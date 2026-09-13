@@ -673,6 +673,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button class="btn-fire-list" onclick="toggleFirePanel()">🔥</button>
 <button class="btn-fire-export" onclick="exportFireWorkbook()">📊 Fire</button>
 <button class="btn-alarm-list" onclick="toggleAlarmPanel()">🔔 Alarm</button>
+<button style="background:#1565C0;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleFilterAlarmPanel()">🔎 Filtre Alarmı</button>
 <button class="btn-tamir-list" id="btnTamirList" onclick="toggleTamirPanel()">🛠️ Tamir (0)</button>
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
@@ -697,6 +698,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 
 <div class="panel" id="notePanel"></div>
 <div class="panel" id="firePanel"></div>
+<div class="panel" id="filterAlarmPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="alarmPanel"></div>
 <div class="panel" id="tamirPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="selectionPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
@@ -808,6 +810,7 @@ const checkedCards=safeSet('ck9');
 let fireRecords=safeParse('fr9','{}');
 let noteRecords=safeParse('nr9','{}');
 let alarmRecords=safeParse('ar9','{}');
+let filterAlarmRecords=safeParse('far9','[]');
 let selectedRecords=safeParse('sr9','{}');
 let tamirOverrides=safeParse('to9','{}'); // Tamir durum & not özelleştirmeleri
 let postProcessNotes=safeParse('ppn9','{}');
@@ -815,8 +818,8 @@ let uploadValidation={mainRows:0,repairRows:0,emptyParti:0,emptyStage:0,zeroKg:0
 
 function saveChecks(){localStorage.setItem('ck9',JSON.stringify([...checkedCards]))}
 function saveNotes(){localStorage.setItem('nr9',JSON.stringify(noteRecords))}
-function saveFires(){localStorage.setItem('fr9',JSON.stringify(fireRecords))}
 function saveAlarms(){localStorage.setItem('ar9',JSON.stringify(alarmRecords));ntfySyncSnapshot()}
+function saveFilterAlarms(){localStorage.setItem('far9',JSON.stringify(filterAlarmRecords));ntfySyncSnapshot()}
 function alarmDateTimeValue(date,time){
     if(!date||!time)return null;
     const value=new Date(date+'T'+time+':00');
@@ -827,7 +830,7 @@ let ntfySyncTimer=null;
 function ntfySyncSnapshot(){
     clearTimeout(ntfySyncTimer);
     ntfySyncTimer=setTimeout(()=>{
-        const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]),cards=typeof getAllCards==='function'?getAllCards():[];
+        const alarms=Object.values(alarmRecords||{}).flatMap(v=>Array.isArray(v)?v:[v]).concat(Array.isArray(filterAlarmRecords)?filterAlarmRecords:[]),cards=typeof getAllCards==='function'?getAllCards():[];
         fetch(NTFY_ALARM_SERVICE_URL+'/api/ntfy/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alarms,cards})})
             .then(response=>{if(!response.ok)throw new Error('HTTP '+response.status)})
             .catch(error=>console.warn('ntfy alarm senkronu başarısız:',error.message));
@@ -886,6 +889,53 @@ function sendNtfyList(title,cards,e){
         .catch(error=>showToast('⚠️ Liste ntfy’ye gönderilemedi: '+error.message,'warning'))
         .finally(()=>{if(button)button.disabled=false});
 }
+function filterAlarmFabricValues(){
+    const values=new Set();
+    getAllCards().forEach(k=>String(k.ham_adi||'').split(/\s*\|\s*|\s*,\s*/).map(v=>v.trim()).filter(Boolean).forEach(v=>values.add(v)));
+    return [...values].sort((a,b)=>a.localeCompare(b,'tr'));
+}
+function filterAlarmStageValues(){
+    const values=[],seen=new Set();
+    const add=value=>{
+        const raw=String(value||'').trim();if(!raw)return;
+        const v=stageEquals(raw,'KK')?'KK':stageEquals(raw,'SARIM1')?'SARIM1':raw,key=stageKey(v);
+        if(!key||seen.has(key))return;seen.add(key);values.push(v);
+    };
+    getAllCards().forEach(k=>{
+        String(k.uretim_asamalari||'').split(',').forEach(add);
+        add(k._asama);add(k.bir_sonraki);add(k.son_asama);
+    });
+    ASAMA_ORDER.forEach(add);BSA_ORDER.forEach(add);
+    return values;
+}
+function filterAlarmOptions(options,selected){
+    const chosen=new Set(selected||[]);
+    return options.map(value=>'<option value="'+esc(value)+'" '+(chosen.has(value)?'selected':'')+'>'+esc(value==='KK'?'Kalite Kontrol':value==='SARIM1'?'Sarım1':value)+'</option>').join('');
+}
+function filterAlarmStageLabel(field){
+    return field==='actualStage'?'Son yapılan aşama':field==='nextStage'?'Bir sonraki aşama':'Şu an beklediği aşama';
+}
+function toggleFilterAlarmPanel(){closeAllPanels();const p=document.getElementById('filterAlarmPanel');if(p.style.display==='block')p.style.display='none';else renderFilterAlarmPanel()}
+function renderFilterAlarmPanel(){
+    const p=document.getElementById('filterAlarmPanel'),records=Array.isArray(filterAlarmRecords)?filterAlarmRecords:[];
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;filterAlarmPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#1565C0">🔎 Filtreli ntfy Alarmları</h2><div class="panel-summary">Seçilen kumaş ve aşama koşulunu, minimum bekleme süresiyle birlikte otomatik izler. Yeni eşleşmeler tek liste mesajı olarak gönderilir.</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Kumaş türleri <small>(boş = tümü)</small><select id="filterAlarmFabrics" multiple size="7" style="width:100%;padding:6px;border-radius:8px;background:rgba(0,0,0,.3);color:white">'+filterAlarmOptions(filterAlarmFabricValues(),[])+'</select></label><label>Aşama <select id="filterAlarmStages" multiple size="7" style="width:100%;padding:6px;border-radius:8px;background:rgba(0,0,0,.3);color:white">'+filterAlarmOptions(filterAlarmStageValues(),[])+'</select></label></div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><label>Aşama alanı<select id="filterAlarmStageField" style="width:100%;padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white"><option value="waitingStage">Şu an beklediği aşama</option><option value="nextStage">Bir sonraki aşama</option><option value="actualStage">Son yapılan aşama</option></select></label><label>Minimum bekleme (dakika)<input id="filterAlarmMinMinutes" type="number" min="1" step="1" placeholder="Örn. 120" style="width:100%;padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white"></label></div>';
+    h+='<label style="display:block;margin-top:10px">Alarm adı<input id="filterAlarmTitle" type="text" placeholder="Örn. PES - KK 2 saat bekleme" style="width:100%;padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white"></label><button class="btn-all-export" style="margin-top:10px" onclick="saveFilterAlarm()">➕ Filtre alarmı kaydet</button>';
+    h+='<div class="flow-section-title">Kayıtlı filtre alarmları</div>';
+    if(!records.length)h+='<div class="list-empty">Kayıtlı filtre alarmı yok</div>';
+    records.forEach(r=>{h+='<div class="list-item"><b>'+esc(r.title||'Filtre alarmı')+'</b><br><small>Kumaş: '+esc((r.fabricTypes||[]).join(', ')||'Tümü')+' • Aşama: '+esc((r.targetStages||[]).join(', ')||'Tümü')+' • '+esc(filterAlarmStageLabel(r.stageField))+' • En az '+esc(r.minWaitingMinutes)+' dakika</small><div style="margin-top:6px"><button onclick="toggleFilterAlarm(&quot;'+esc(r.uid)+'&quot;)">'+(r.active===false?'▶️ Aç':'⏸️ Duraklat')+'</button><button onclick="deleteFilterAlarm(&quot;'+esc(r.uid)+'&quot;)">🗑️ Sil</button></div></div>'});
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('filterAlarmPanel');
+}
+function saveFilterAlarm(){
+    const fabrics=[...(document.getElementById('filterAlarmFabrics')?.selectedOptions||[])].map(x=>x.value),stages=[...(document.getElementById('filterAlarmStages')?.selectedOptions||[])].map(x=>x.value),min=Number(document.getElementById('filterAlarmMinMinutes')?.value||0),title=document.getElementById('filterAlarmTitle')?.value.trim()||'Filtreli bekleme alarmı',stageField=document.getElementById('filterAlarmStageField')?.value||'waitingStage';
+    if(!stages.length){showToast('⚠️ En az bir aşama seçin.','warning');return}
+    if(!Number.isFinite(min)||min<=0){showToast('⚠️ Minimum bekleme süresi 0’dan büyük olmalı.','warning');return}
+    filterAlarmRecords.push({uid:'fal_'+Date.now()+'_'+Math.random().toString(16).slice(2),kind:'filter',fabricTypes:fabrics,targetStages:stages,stageField,minWaitingMinutes:min,title,active:true,created_at:new Date().toLocaleString('tr-TR')});
+    saveFilterAlarms();showToast('✅ Filtre ntfy alarmı kaydedildi.','success');renderFilterAlarmPanel();
+}
+function toggleFilterAlarm(uid){const r=filterAlarmRecords.find(x=>x.uid===uid);if(r){r.active=r.active===false;saveFilterAlarms();renderFilterAlarmPanel()}}
+function deleteFilterAlarm(uid){filterAlarmRecords=filterAlarmRecords.filter(x=>x.uid!==uid);saveFilterAlarms();renderFilterAlarmPanel()}
 function saveSelected(){localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
 function saveTamirOverrides(){localStorage.setItem('to9',JSON.stringify(tamirOverrides))}
 function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postProcessNotes))}
@@ -1563,7 +1613,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','filterAlarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','wetDryPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}

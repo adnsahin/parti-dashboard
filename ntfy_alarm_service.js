@@ -98,6 +98,36 @@ function cardWaitingMinutes(card){
     const days=dayMatch?Number(dayMatch[1].replace(',','.')):Number(text.replace(',','.'));
     return Number.isFinite(days)?Math.max(0,days*1440):null;
 }
+function filterValues(value){
+    return clean(value).split(/\s*\|\s*|\s*,\s*/).map(x => x.trim()).filter(Boolean);
+}
+function filterCardStage(card, field){
+    if (field === 'actualStage') return cardActualStage(card);
+    if (field === 'nextStage') return clean(card && (card.bir_sonraki || card.nextStage));
+    return cardWaitingStage(card);
+}
+function filterValueMatches(selected, value){
+    const key = stageKey(value);
+    return Boolean(key) && selected.some(item => {
+        const wanted = stageKey(item);
+        return wanted && (wanted === key || wanted.includes(key) || key.includes(wanted));
+    });
+}
+function filterAlarmMatches(card, alarm){
+    const fabrics = Array.isArray(alarm.fabricTypes) ? alarm.fabricTypes.filter(Boolean) : [];
+    const cardFabrics = filterValues(card && (card.ham_adi || card.fabric || card.kumas));
+    if (fabrics.length && !fabrics.some(fabric => filterValueMatches([fabric], cardFabrics.join(' | ')))) return false;
+    const stages = Array.isArray(alarm.targetStages) ? alarm.targetStages.filter(Boolean) : [];
+    if (stages.length && !filterValueMatches(stages, filterCardStage(card, clean(alarm.stageField) || 'waitingStage'))) return false;
+    const required = Number(alarm.minWaitingMinutes);
+    const elapsed = cardWaitingMinutes(card);
+    return Number.isFinite(required) && required > 0 && elapsed !== null && elapsed >= required;
+}
+function filterAlarmEventKey(alarm, card){
+    const stage = filterCardStage(card, clean(alarm.stageField) || 'waitingStage');
+    const movement = card && (card.hareket || card.son_asama_tarihi || card.lastMovement || '');
+    return ['filter', clean(alarm.uid), clean(card && card.parti), stage, movement].join('|');
+}
 function cardReachedTarget(card,target,previousCard){
     if(cardAtTargetStage(card,target))return true;
     const previous=cardActualStage(previousCard);
@@ -320,6 +350,19 @@ async function pollGithub() {
         log('GitHub senkron hatası:', error.message);
     }
 }
+async function processFilterAlarm(alarm, cards, sent, events){
+    const matched = Object.values(cards).filter(card => filterAlarmMatches(card, alarm));
+    const pending = matched.filter(card => !sent[filterAlarmEventKey(alarm, card)]);
+    if (!pending.length) return;
+    try {
+        const result = await sendText(messageForList(alarm.title || 'Filtreli bekleme alarmı', matched));
+        events.push({filter: true, title: clean(alarm.title), matched: matched.length, newMatches: pending.length, sent: result.sent, dryRun: result.dryRun});
+        if (result.sent) pending.forEach(card => { sent[filterAlarmEventKey(alarm, card)] = new Date().toISOString(); });
+    } catch (error) {
+        events.push({filter: true, title: clean(alarm.title), matched: matched.length, newMatches: pending.length, sent: false, error: error.message});
+        log(`ntfy filtre alarmı gönderilemedi (${clean(alarm.title)}):`, error.message);
+    }
+}
 async function processSnapshot(payload) {
     payload = payload || {};
     const state = readState();
@@ -331,6 +374,10 @@ async function processSnapshot(payload) {
     const events = [];
     for (const alarm of alarms) {
         if (!alarm || alarm.active === false) continue;
+        if (alarm.kind === 'filter') {
+            await processFilterAlarm(alarm, current, sent, events);
+            continue;
+        }
         const target = targetStage(alarm);
         const scheduledAt = alarmTime(alarm);
         if (!target && scheduledAt !== null && Date.now() < scheduledAt) continue;

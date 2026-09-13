@@ -111,6 +111,8 @@ Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saa
 
 `KK / Sarım 1 Sonrası Öncelik` panelinde genel liste ve alt kategoriler için `🃏 Kartlar` / `📋 Liste` görünümü bulunur. Panel veya açık alt kategori içindeki `📨 ntfy Liste` düğmesi, listedeki parti özetini tek bir ntfy mesajı olarak gönderir; çok uzun listeler mesaj sınırı nedeniyle otomatik kısaltılır.
 
+`🔎 Filtre Alarmı` panelinden bir veya birden fazla kumaş türü, aşama alanı (`Şu an beklediği aşama`, `Bir sonraki aşama` veya `Son yapılan aşama`), aşama ve minimum bekleme dakikası seçilebilir. Koşulları sağlayan yeni partiler otomatik olarak tek liste halinde ntfy’ye gönderilir; aynı parti ve hareket kaydı tekrar gönderilmez.
+
 Servis, verideki `Sonra Yapılacak Aşama` / mevcut aşama ve `Son Hareket Tarihi` alanlarını kullanarak geçen bekleme süresini hesaplar. GitHub verisi 15 dakikada bir push ediliyorsa hedef süre kontrolünün veri kaynağına yansıması en fazla yaklaşık 16 dakika sürebilir.
 
 Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repoya veya herkese açık mesaja yazmayın. ntfy.sh yerine özel ntfy sunucusu kullanıyorsanız servisi başlatmadan önce `NTFY_SERVER_URL` ortam değişkenini, gerekiyorsa `NTFY_ACCESS_TOKEN` değişkenini ayarlayın.

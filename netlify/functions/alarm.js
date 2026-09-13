@@ -29,10 +29,10 @@ function authorized(event, body) {
 async function store() {
   const siteID = String(process.env.PARTI_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || '').trim() || undefined;
   const token = String(process.env.PARTI_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN || '').trim() || undefined;
-  return getStore('parti-alarm-events', {
+  return getStore({
+    name: 'parti-alarm-events',
     siteID,
-    token,
-    consistency: 'strong'
+    token
   });
 }
 

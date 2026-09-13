@@ -107,9 +107,9 @@ Servis dashboardu şu adreste sunar:
 http://127.0.0.1:8783/index.html
 ```
 
-Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat ve hedef aşamayı kaydedin. Alarm yerel servise aktarılır; tarih ve saat gelmeden mesaj gönderilmez. Parti hedef aşamaya ulaştığında kart bilgileri ve not ntfy konusuna gönderilir. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
+Dashboardda parti kartındaki alarm düğmesine basıp başlık, not, tarih, saat, hedef aşama ve hedef bekleme süresini dakika olarak kaydedin. Hedef bekleme süresi `0` ise yalnızca tarih/saat ve hedef aşama koşulları uygulanır. Hedef süre `60` ise seçilen aşamada en az 60 dakika beklemeden bildirim gönderilmez. Tarih/saat koşulu ve hedef aşama koşulu birlikte sağlanmadan alarm gönderilmez. Aynı alarm bir kez gönderilir. “ntfy bağlantı testi” düğmesiyle mobil kanalı sınayabilirsiniz.
 
-Veri kontrolü varsayılan olarak 60 saniyede bir yapılır. GitHub verisi `data/partiler.json` dosyasından okunur; veri kaynağı 15 dakikada bir push ediliyorsa aşama değişikliğinin bildirime yansıması en fazla yaklaşık 16 dakika sürebilir.
+Servis, verideki `Sonra Yapılacak Aşama` / mevcut aşama ve `Son Hareket Tarihi` alanlarını kullanarak geçen bekleme süresini hesaplar. GitHub verisi 15 dakikada bir push ediliyorsa hedef süre kontrolünün veri kaynağına yansıması en fazla yaklaşık 16 dakika sürebilir.
 
 Konu adı ntfy.sh üzerinde fiilen paylaşılmış bir kanal anahtarıdır; repoya veya herkese açık mesaja yazmayın. ntfy.sh yerine özel ntfy sunucusu kullanıyorsanız servisi başlatmadan önce `NTFY_SERVER_URL` ortam değişkenini, gerekiyorsa `NTFY_ACCESS_TOKEN` değişkenini ayarlayın.
 

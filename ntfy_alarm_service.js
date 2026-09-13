@@ -50,24 +50,44 @@ function alarmTime(alarm){
     const value=Date.parse(raw);
     return Number.isFinite(value)?value:null;
 }
-function flowStages(card) {
-    return clean(card && (card.uretim_asamalari || card.flow)).split(',').map(clean).filter(Boolean);
+function targetDurationMinutes(alarm){
+    const raw=alarm && (alarm.targetDurationMinutes ?? alarm.targetDuration ?? alarm.hedefSureDakika);
+    const value=Number(String(raw ?? '').replace(',','.'));
+    return Number.isFinite(value) && value > 0 ? value : 0;
 }
-function latestFlowIndex(card, value) {
-    const stages = flowStages(card);
-    let index = -1;
-    stages.forEach((stage, i) => { if (stageEquals(stage, value)) index = i; });
-    return index;
+function parseMovementTime(value){
+    const raw=clean(value);
+    if(!raw)return null;
+    const direct=Date.parse(raw);
+    if(Number.isFinite(direct))return direct;
+    const match=raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if(!match)return null;
+    const year=Number(match[3].length===2?'20'+match[3]:match[3]);
+    const valueDate=new Date(year,Number(match[2])-1,Number(match[1]),Number(match[4]||0),Number(match[5]||0),Number(match[6]||0));
+    return Number.isNaN(valueDate.getTime())?null:valueDate.getTime();
 }
-function cardReachedTarget(card, target) {
-    if (stageEquals(card && card.bir_sonraki, target) || stageEquals(card && card.son_asama, target) || stageEquals(card && card._asama, target)) return true;
-    const currentIndex = Math.max(
-        latestFlowIndex(card, card && card.son_asama),
-        latestFlowIndex(card, card && card.lastStage),
-        latestFlowIndex(card, card && card._asama)
-    );
-    if (currentIndex < 0) return false;
-    return flowStages(card).some((stage, i) => i <= currentIndex && stageEquals(stage, target));
+function cardWaitingStage(card){
+    return clean(card && (card._asama || card.asama || card.stage || card.waitingStage));
+}
+function cardActualStage(card){
+    return clean(card && (card.son_asama || card.lastStage || card.currentStage));
+}
+function cardAtTargetStage(card,target){
+    return stageEquals(cardWaitingStage(card),target) || stageEquals(cardActualStage(card),target);
+}
+function cardWaitingMinutes(card){
+    const movement=card && (card.hareket || card.son_asama_tarihi || card.lastMovement);
+    const movementTime=parseMovementTime(movement);
+    if(movementTime!==null)return Math.max(0,(Date.now()-movementTime)/60000);
+    const raw=card && (card.bekleme_gun ?? card.bekleme ?? card.wait);
+    const text=clean(raw);
+    if(!text)return null;
+    const dayMatch=text.match(/(-?\d+(?:[.,]\d+)?)\s*g[üu]n/i);
+    const days=dayMatch?Number(dayMatch[1].replace(',','.')):Number(text.replace(',','.'));
+    return Number.isFinite(days)?Math.max(0,days*1440):null;
+}
+function cardReachedTarget(card,target){
+    return cardAtTargetStage(card,target);
 }
 function cardLabel(card) {
     return [card && card.parti, card && (card._asama || card.asama), card && card.bir_sonraki].filter(Boolean).join(' • ');
@@ -93,18 +113,28 @@ function json(res, status, body) {
     });
     res.end(JSON.stringify(body));
 }
+function durationLabel(minutes){
+    if(minutes===null || !Number.isFinite(minutes))return '-';
+    if(minutes<60)return `${Math.floor(minutes)} dakika`;
+    const hours=minutes/60;
+    return `${hours.toFixed(hours<10?1:0)} saat`;
+}
 function messageFor(card, alarm, target) {
     const wait = card && (card.bekleme || card.bekleme_gun != null ? (card.bekleme || `${card.bekleme_gun} gün`) : '-');
     const targetLabel = target === 'KK' ? 'Kalite Kontrol' : target === 'SARIM1' ? 'Sarım1' : target || '-';
+    const required = targetDurationMinutes(alarm);
+    const elapsed = cardWaitingMinutes(card);
     return [
         '🔔 Parti Aşama Alarmı',
         '',
         `Parti: ${clean(card && card.parti) || clean(alarm && alarm.parti) || '-'}`,
         `Hedef aşama: ${targetLabel}`,
-        `Önceki/mevcut aşama: ${clean(card && (card._asama || card.asama || card.son_asama)) || '-'}`,
+        `Önceki/mevcut aşama: ${clean(card && (card.son_asama || card.lastStage || card._asama || card.asama)) || '-'}`,
         `Bir sonraki aşama: ${clean(card && card.bir_sonraki) || '-'}`,
         `Kilo: ${Math.round(Number(card && card.kilo) || 0).toLocaleString('tr-TR')} kg`,
         `Bekleme: ${wait}`,
+        required > 0 ? `Hedef süre: ${durationLabel(required)}` : '',
+        required > 0 ? `Geçen süre: ${durationLabel(elapsed)}` : '',
         alarm && alarm.title ? `Alarm: ${clean(alarm.title)}` : '',
         alarm && alarm.description ? `Not: ${clean(alarm.description)}` : ''
     ].filter(Boolean).join('\n');
@@ -265,11 +295,14 @@ async function processSnapshot(payload) {
         const key = clean(alarm.id) || clean(alarm.parti);
         const card = Object.values(current).find(x => clean(x.parti) === clean(alarm.parti)) || current[key];
         if (!card || !cardReachedTarget(card, target)) continue;
+        const requiredMinutes = targetDurationMinutes(alarm);
+        const elapsedMinutes = cardWaitingMinutes(card);
+        if (requiredMinutes > 0 && (elapsedMinutes === null || elapsedMinutes < requiredMinutes)) continue;
         const eventKey = clean(alarm.uid) || [clean(card.parti), target].join('|');
         if (sent[eventKey]) continue;
         try {
             const result = await sendText(messageFor(card, alarm, target));
-            events.push({parti: card.parti, target, sent: result.sent, dryRun: result.dryRun});
+            events.push({parti: card.parti, target, requiredMinutes, elapsedMinutes, sent: result.sent, dryRun: result.dryRun});
             if (result.sent) sent[eventKey] = new Date().toISOString();
         } catch (error) {
             events.push({parti: card.parti, target, sent: false, error: error.message});

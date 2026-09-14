@@ -662,6 +662,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button type="button" style="background:#455A64;color:white" onclick="clearLatestUpdateFilter()" title="Son güncelleme filtresini temizle">×</button>
 </div>
 <button class="btn-numpad" onclick="openNumpad()">🔢 Klavye</button>
+<div class="wait-filter" title="Son X saat içinde seçilen aşamada hareket eden partileri listeler">
+<span>🎯 Aşama/Saat:</span>
+<input type="number" id="stageAgeQuickHours" min="0" step="0.5" value="24" placeholder="son saat" aria-label="Son kaç saat">
+<button type="button" style="background:#00897B;color:white" onclick="openStageAgePanel()">Listele</button>
+<button type="button" style="background:#6A1B9A;color:white" onclick="setStageAgeQuick(2)">Son 2 saat</button>
+<button type="button" style="background:#6A1B9A;color:white" onclick="setStageAgeQuick(24)">Son 24 saat</button>
+<button type="button" style="background:#455A64;color:white" onclick="clearStageAgeFilter()" title="Aşama/saat filtresini temizle">×</button>
+</div>
 <button class="btn-voice" onclick="startVoiceSearch()">🎤 Sesli</button>
 <button style="background:#009688;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="openStageFilter()">⚙️ Aşama Seç</button>
 <button style="background:#E74C3C;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="exportPDF()">📄 PDF</button>
@@ -679,7 +687,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#8E44AD;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleGecisPanel()">📜 Geçiş Raporu</button><button style="background:#2E7D32;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimPanel()">🏭 Günlük Üretim</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#8E44AD;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleGecisPanel()">📜 Geçiş Raporu</button><button style="background:#2E7D32;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimPanel()">🏭 Günlük Üretim</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button id="btnMindmap" style="background:#673AB7;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleMindmapPanel()">🧠 Günlük Mindmap</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
@@ -709,7 +717,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="bottleneckPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="validationPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="postProcessPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
+<div class="panel" id="kkSarimPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="gecisPanel" style="width:min(920px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="uretimPanel" style="width:min(960px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
 <div class="panel" id="mindmapPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
@@ -1657,7 +1667,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','filterAlarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','wetDryPanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','filterAlarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','gecisPanel','uretimPanel','wetDryPanel','stageAgePanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -2034,7 +2044,88 @@ function clearWaitFilter(){
     if(minEl)minEl.value='';if(maxEl)maxEl.value='';
     filterCards();
 }
-function showAll(){activeStages=[];currentSeviye=null;waitFilterMin=null;waitFilterMax=null;latestUpdateMinHours=null;latestUpdateMaxHours=null;document.getElementById('searchBox').value='';const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput'),latestMinEl=document.getElementById('latestUpdateMinInput'),latestMaxEl=document.getElementById('latestUpdateMaxInput');if(minEl)minEl.value='';if(maxEl)maxEl.value='';if(latestMinEl)latestMinEl.value='';if(latestMaxEl)latestMaxEl.value='';listSortCol=null;renderSummaries();filterCards()}
+/* ── YENİ: AŞAMA + SAAT FİLTRESİ (son X saat içinde seçilen aşamada hareket eden partiler) ── */
+let stageAgeHours=24,stageAgeField='last',stageAgeStageSelection=[],stageAgeRows=[];
+function stageAgeFieldLabel(f){return f==='next'?'Bir sonraki aşama':f==='waiting'?'Şu an beklediği aşama':'Son yapılan aşama'}
+function stageAgeCardValue(k,field){if(field==='next')return String(k.bir_sonraki||'').trim();if(field==='waiting')return String(k._asama||k.asama||'').trim();return String(k.son_asama||k._asama||k.asama||'').trim()}
+function stageAgeParseHours(raw){const n=Number(String(raw==null?'':raw).replace(',','.').trim());return Number.isFinite(n)&&n>0?n:null}
+function stageAgeDurationText(hours){if(!Number.isFinite(hours))return'-';const total=Math.round(hours*60),g=Math.floor(total/1440),sa=Math.floor((total%1440)/60),dk=total%60;return(g?g+' gün ':'')+(sa?sa+' saat ':'')+dk+' dk'}
+function stageAgeAgedCards(){return getAllCards().map(k=>({k,age:latestUpdateAgeHours(k)})).filter(r=>r.age!==null&&Number.isFinite(r.age)).sort((a,b)=>a.age-b.age)}
+function stageAgeMatches(hours,field,stages){
+    const h=stageAgeParseHours(hours),picked=(stages||[]).filter(Boolean);
+    if(h===null)return[];
+    return stageAgeAgedCards().filter(r=>r.age<=h)
+        .filter(r=>!picked.length||picked.some(s=>stageEquals(stageAgeCardValue(r.k,field),s)))
+        .sort((a,b)=>a.age-b.age||fifoCompare(a.k,b.k))
+        .map(r=>Object.assign({},r.k,{stageAgeHours:r.age,stageAgeStage:stageAgeCardValue(r.k,field)}));
+}
+function stageAgeClearStageSelection(){stageAgeCaptureInputs();stageAgeStageSelection=[];renderStageAgePanel()}
+function setStageAgeStageSelectionOnly(value){stageAgeCaptureInputs();stageAgeStageSelection=value?[value]:[];renderStageAgePanel()}
+function stageAgeCaptureInputs(){
+    const hoursEl=document.getElementById('stageAgeHoursInput'),fieldEl=document.getElementById('stageAgeFieldSelect'),stageEl=document.getElementById('stageAgeStageSelect');
+    const h=stageAgeParseHours(hoursEl?hoursEl.value:'');if(h!==null)stageAgeHours=h;
+    if(fieldEl&&fieldEl.value)stageAgeField=fieldEl.value;
+    if(stageEl)stageAgeStageSelection=[...stageEl.selectedOptions].map(o=>o.value);
+}
+function stageAgeResetAll(){stageAgeStageSelection=[];stageAgeRows=[];const el=document.getElementById('stageAgeQuickHours');if(el)el.value='24';const p=document.getElementById('stageAgePanel');if(p)p.style.display='none'}
+function setStageAgeQuick(hours){const el=document.getElementById('stageAgeQuickHours');if(el)el.value=String(hours);stageAgeHours=Number(hours);openStageAgePanel()}
+function setStageAgePanelHours(hours){stageAgeCaptureInputs();stageAgeHours=Number(hours);renderStageAgePanel()}
+function applyStageAgePanelFilter(){stageAgeCaptureInputs();renderStageAgePanel()}
+function clearStageAgeFilter(){const el=document.getElementById('stageAgeQuickHours');if(el)el.value='24';stageAgeResetAll();showToast('Aşama/saat filtresi temizlendi')}
+function openStageAgePanel(){const el=document.getElementById('stageAgeQuickHours');const h=stageAgeParseHours(el?el.value:'');if(h!==null)stageAgeHours=h;closeAllPanels();renderStageAgePanel()}
+function stageAgeShowCards(){if(!stageAgeRows.length){showToast('Liste boş','warning');return}filterCardsDirect(stageAgeRows)}
+function stageAgeExportWorkbook(){
+    if(!stageAgeRows.length){showToast('Liste boş','warning');return}
+    const alan=stageAgeFieldLabel(stageAgeField),rows=stageAgeRows.map(k=>Object.assign(cardExportRow(k),{'Aşama Alanı':alan,'Alan Değeri':k.stageAgeStage||'','Son Hareketten Geçen Saat':Number((k.stageAgeHours||0).toFixed(2)),'Son Hareket':k.son_asama_tarihi||k.hareket||''}));
+    downloadWorkbook('asama_saat_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Asama_Saat',rows}]);
+}
+function renderStageAgePanel(){
+    const p=document.getElementById('stageAgePanel');if(!p)return;
+    const hours=stageAgeParseHours(stageAgeHours)||24;
+    stageAgeRows=stageAgeMatches(hours,stageAgeField,stageAgeStageSelection);
+    const missing=getAllCards().filter(k=>latestUpdateAgeHours(k)===null).length;
+    const agedList=stageAgeAgedCards();
+    const newest=agedList.length?agedList[0].age:null,newestCard=agedList.length?agedList[0].k:null;
+    const totalKg=stageAgeRows.reduce((s,k)=>s+num(k.kilo),0);
+    let h='<button class="panel-close" onclick="document.getElementById(\'stageAgePanel\').style.display=\'none\'">×</button><h2 style="color:#00A8CC">🎯 Aşama + Saat Filtresi</h2>';
+    h+='<div class="panel-summary">Son hareketinden itibaren girilen süre içinde hareket eden partileri, seçilen aşama alanına ve aşamalara göre listeler. Aşama seçilmezse tüm aşamalar listelenir.</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0">';
+    h+='<label style="display:flex;align-items:center;gap:4px">Son <input id="stageAgeHoursInput" type="number" min="0" step="0.5" value="'+esc(String(hours))+'" style="width:90px;padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white"> saat</label>';
+    h+='<label style="display:flex;align-items:center;gap:4px">Aşama alanı <select id="stageAgeFieldSelect" style="padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white"><option value="last" '+(stageAgeField==='last'?'selected':'')+'>Son yapılan aşama</option><option value="waiting" '+(stageAgeField==='waiting'?'selected':'')+'>Şu an beklediği aşama</option><option value="next" '+(stageAgeField==='next'?'selected':'')+'>Bir sonraki aşama</option></select></label>';
+    h+='<button class="btn-all-export" onclick="applyStageAgePanelFilter()">🔎 Filtrele</button>';
+    [1,2,4,8,12,24,48].forEach(v=>{h+='<button style="background:'+(hours===v?'#00897B':'#455A64')+';color:white;border:none;padding:8px 12px;border-radius:20px;cursor:pointer;font-weight:bold" onclick="setStageAgePanelHours('+v+')">Son '+v+' saat</button>'});
+    h+='</div>';
+    h+='<label style="display:block;margin:6px 0 10px">Aşamalar <small>(boş = tümü, çoklu seçim için Ctrl)</small><br><select id="stageAgeStageSelect" multiple size="6" style="width:100%;padding:6px;border-radius:8px;background:rgba(0,0,0,.3);color:white">'+filterAlarmOptions(filterAlarmStageValues(),stageAgeStageSelection)+'</select></label>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><span style="font-weight:bold;color:#80DEEA">'+stageAgeRows.length+' parti • '+Math.round(totalKg).toLocaleString('tr-TR')+' kg • '+esc(stageAgeFieldLabel(stageAgeField))+' • son '+esc(String(hours))+' saat • en yeni hareket: '+(newest===null?'okunamadı':esc(stageAgeDurationText(newest))+' önce')+(missing?' • '+missing+' kartın hareket tarihi yok':'')+'</span>';
+    h+='<button class="btn-all-export" onclick="stageAgeShowCards()">🃏 Kart görünümünde göster</button><button class="btn-fire-export" onclick="stageAgeExportWorkbook()">📊 Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;stageAgePanel&quot;,&quot;Aşama + Saat Filtresi&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;stageAgePanel&quot;,&quot;Aşama + Saat Filtresi&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;stageAgePanel&quot;,&quot;Aşama + Saat Filtresi&quot;,&quot;asama_saat.png&quot;)">📱 WhatsApp</button></div>';
+    if(!stageAgeRows.length){
+        const noStage=stageAgeMatches(hours,stageAgeField,[]);
+        h+='<div class="list-empty"><b>Liste boş.</b><br>';
+        if(newest===null){
+            h+='Hiçbir kartta okunabilir son hareket tarihi yok. Veri güncellenmemişse Excel/GitHub verisini yenileyip tekrar dene.';
+        }else if(hours<newest){
+            h+='Son '+esc(String(hours))+' saat içinde hareket eden kart yok. En yeni hareket <b>'+esc(stageAgeDurationText(newest))+' önce</b>'+(newestCard?' ('+esc(newestCard.parti)+' • '+esc(stageAgeCardValue(newestCard,stageAgeField))+' = '+esc(stageAgeFieldLabel(stageAgeField))+')':'')+'. Aşağıdaki butonlarla süreyi genişlet.';
+            const wider=[];[Math.ceil(newest),24,48,168].forEach(v=>{if(v>hours&&!wider.includes(v))wider.push(v)});
+            h+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">'+wider.slice(0,4).map(v=>'<button class="btn-all-export" onclick="setStageAgePanelHours('+v+')">Son '+v+' saat ('+stageAgeMatches(v,stageAgeField,[]).length+' kayıt)</button>').join('')+'</div>';
+        }else{
+            const counts={};noStage.forEach(k=>{const v=String(k.stageAgeStage||'').trim();if(v)counts[v]=(counts[v]||0)+1});
+            const top=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).slice(0,6);
+            h+='Son '+esc(String(hours))+' saat içinde '+noStage.length+' kayıt hareket etmiş, ancak seçtiğin aşamalarda değil. En çok kayıt: '+(top.map(t=>esc(t)+' ('+counts[t]+')').join(', ')||'-')+'.';
+            h+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn-all-export" onclick="stageAgeClearStageSelection()">Aşama filtresini temizle ('+noStage.length+' kayıt)</button>'+top.map(t=>'<button style="background:#455A64;color:white;border:none;padding:8px 12px;border-radius:20px;cursor:pointer;font-weight:bold" onclick="setStageAgeStageSelectionOnly(&quot;'+esc(t)+'&quot;)">'+esc(t)+' ('+counts[t]+')</button>').join('')+'</div>';
+        }
+        h+='</div>';
+    }
+    else{
+        h+='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Aşamadaki değer</th><th>Şu an beklediği / Sonraki</th><th>Son hareket</th><th>Geçen süre</th><th>Kilo</th><th>Firma / Reçete</th></tr></thead><tbody>';
+        stageAgeRows.forEach((k,i)=>{
+            const movement=latestUpdateDate(k),movementText=movement?movement.toLocaleString('tr-TR'):(k.son_asama_tarihi||k.hareket||'-');
+            h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b><br><small>'+esc(k.line1||'')+'</small></td><td><b>'+esc(k.stageAgeStage||'-')+'</b><br><small>'+esc(stageAgeFieldLabel(stageAgeField))+'</small></td><td>'+esc(k._asama||'-')+' → '+esc(k.bir_sonraki||'Son/Yok')+'</td><td>'+esc(movementText)+'</td><td style="font-weight:800;color:#FFB74D">'+esc(stageAgeDurationText(k.stageAgeHours))+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td><small>'+esc(k.line2||'')+'</small></td></tr>';
+        });
+        h+='</tbody></table></div>';
+    }
+    p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('stageAgePanel','Aşama + Saat Filtresi');
+}
+function showAll(){activeStages=[];currentSeviye=null;waitFilterMin=null;waitFilterMax=null;latestUpdateMinHours=null;latestUpdateMaxHours=null;document.getElementById('searchBox').value='';const minEl=document.getElementById('waitMinInput'),maxEl=document.getElementById('waitMaxInput'),latestMinEl=document.getElementById('latestUpdateMinInput'),latestMaxEl=document.getElementById('latestUpdateMaxInput');if(minEl)minEl.value='';if(maxEl)maxEl.value='';if(latestMinEl)latestMinEl.value='';if(latestMaxEl)latestMaxEl.value='';listSortCol=null;renderSummaries();filterCards();if(typeof stageAgeResetAll==='function')stageAgeResetAll()}
 function filterSeviye(s){currentSeviye=s;renderCards(getFilteredCards())}
 function filterCards(){renderCards(getFilteredCards())}
 
@@ -2115,9 +2206,15 @@ function stageKey(v){return normalizeStageName(v).replace(/[^\p{L}\p{N}]/gu,'')}
 function stageEquals(a,b){const x=stageKey(a),y=stageKey(b);if(!x||!y)return false;if((x==='SUBLİMEBASKI'&&y==='SUBBASKI')||(x==='SUBBASKI'&&y==='SUBLİMEBASKI'))return true;if(x===y)return true;if(x==='KK'||y==='KK')return x===y||x.includes('KALITEKONTROL')||x.includes('KALİTEKONTROL')||y.includes('KALITEKONTROL')||y.includes('KALİTEKONTROL');if(y==='SARIM1')return x.includes('SARIM1');return x.includes(y)||y.includes(x)}
 function flowParts(k){return String(k.uretim_asamalari||'').split(',').map(s=>s.trim()).filter(Boolean)}
 function flowIndex(parts,stage){const key=stageKey(stage),exact=parts.findIndex(p=>stageKey(p)===key);return exact>=0?exact:parts.findIndex(p=>stageEquals(p,stage))}
+function flowLastIndex(parts,stage){
+    const key=stageKey(stage);
+    for(let i=parts.length-1;i>=0;i--)if(stageKey(parts[i])===key)return i;
+    for(let i=parts.length-1;i>=0;i--)if(stageEquals(parts[i],stage))return i;
+    return -1;
+}
 function targetTitle(target){return target==='kk'?'Kalite Kontrol':'Sarım1'}
 function targetStage(target){return target==='kk'?'KK':'SARIM1'}
-function isAfterQualityOrSarım(k){const parts=flowParts(k);const cur=normalizeStageName(k._asama||k.asama);if(!cur)return false;const ci=flowIndex(parts,cur);const refs=[flowIndex(parts,'KK'),flowIndex(parts,'SARIM1')].filter(i=>i>=0);if(ci<0)return refs.length&&refs.some(i=>!stageEquals(cur,'KK')&&!stageEquals(cur,'SARIM1'));return refs.some(i=>ci>i)}
+function isAfterQualityOrSarım(k){const parts=flowParts(k);const cur=normalizeStageName(k._asama||k.asama);if(!cur)return false;const ci=flowLastIndex(parts,cur);if(ci<0)return false;const refs=[flowLastIndex(parts,'KK'),flowLastIndex(parts,'SARIM1')].filter(i=>i>=0);return refs.some(i=>ci>i)}
 function getPostProcessCards(){return getPriorityCards().filter(k=>isAfterQualityOrSarım(k)).map(k=>{const extra=[];if(k.tamirler&&k.tamirler.length)extra.push(['Son aşamalarda tamir etkisi',k.tamirler.length*30]);const score=Math.round(k.score+extra.reduce((s,p)=>s+p[1],0));return{...k,postScore:score,postParts:[...(k.scoreParts||[]),...extra]}}).sort((a,b)=>fifoCompare(a,b)||b.postScore-a.postScore)}
 function togglePostProcessPanel(){safePanelOpen('postProcessPanel','KK / Sarım 1 Sonrası Öncelik',renderPostProcessPanel)}
 function flowRiskScore(k){return fifoAgeDays(k)??0}
@@ -2354,6 +2451,253 @@ function renderPostProcessPanel(){
 function savePostProcessNote(id){const el=document.getElementById('ppnote_'+id);if(!el)return;postProcessNotes[id]=el.value.trim();savePostProcessNotes();showToast('✅ Açıklama kaydedildi')}
 function clearPostProcessNote(id){delete postProcessNotes[id];savePostProcessNotes();renderPostProcessPanel()}
 function filterPostProcessCards(){filterCardsDirect(getPostProcessCards())}
+
+/* ════════ 📈 KK / SARIM1 ZAMAN ANALİZİ ════════ */
+let kkSarimTab='current';
+let kkSarimViewMode='cards';
+let kkSarimFilterUnit='gun'; // 'gun' | 'saat' | 'dakika'
+let kkSarimFilterValue=null; // null = Tümü (filtresiz)
+let kkSarimShiftMode=false; // true = bugün işbaşından (08:00) itibaren
+function todayShiftWindow(){const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,0,0);return{start,end:now}}
+function isCurrentlyStage(k,stage){const cur=normalizeStageName(k._asama||k.asama);return stageEquals(cur,stage)}
+function isCurrentlyQualityOrSarim(k){return isCurrentlyStage(k,'KK')||isCurrentlyStage(k,'SARIM1')}
+function isAfterStage(k,stage){
+    const parts=flowParts(k),cur=normalizeStageName(k._asama||k.asama);
+    if(!cur)return false;
+    const ci=flowLastIndex(parts,cur),si=flowLastIndex(parts,stage);
+    if(ci<0||si<0)return false;
+    return ci>si;
+}
+function getKkSarimCurrentCards(){return getPriorityCards().filter(isCurrentlyQualityOrSarim).sort(fifoCompare)}
+function getKkSarimAfterCards(){return getPostProcessCards()}
+function kkSarimGroups(rows){return[{key:'kk',label:'Kalite Kontrol',icon:'🔵',cards:rows.filter(k=>isCurrentlyStage(k,'KK'))},{key:'sarim1',label:'Sarım 1',icon:'🟣',cards:rows.filter(k=>isCurrentlyStage(k,'SARIM1'))}]}
+function kkSarimAfterGroups(rows){return[{key:'kk',label:'Kalite Kontrol\'den Geçmiş',icon:'✅',cards:rows.filter(k=>isAfterStage(k,'KK'))},{key:'sarim1',label:'Sarım 1\'den Geçmiş',icon:'✅',cards:rows.filter(k=>isAfterStage(k,'SARIM1'))}]}
+function kkSarimStageFlowStats(stage){
+    const all=getPriorityCards(),waiting=all.filter(k=>isCurrentlyStage(k,stage)),passed=all.filter(k=>isAfterStage(k,stage));
+    return{waitingCount:waiting.length,waitingKg:waiting.reduce((s,k)=>s+num(k.kilo),0),passedCount:passed.length,passedKg:passed.reduce((s,k)=>s+num(k.kilo),0)};
+}
+function kkSarimCompletionPieHtml(stage,label,icon){
+    const s=kkSarimStageFlowStats(stage),total=s.waitingCount+s.passedCount,pct=total?Math.round(s.passedCount/total*100):0;
+    const groups=[{name:icon+' Şu An Bekliyor',count:s.waitingCount,kg:s.waitingKg},{name:'✅ Geçmiş (Tüm Zamanlar)',count:s.passedCount,kg:s.passedKg}];
+    return pieChartHtml(label+' — akış oranı (kg) • Geçiş oranı %'+pct,groups,'kg');
+}
+function kkSarimComparisonPieHtml(title,groups){
+    const data=groups.map(g=>({name:g.label,count:g.cards.length,kg:g.cards.reduce((s,k)=>s+num(k.kilo),0)}));
+    return pieChartHtml(title,data,'kg');
+}
+function kkSarimFilterMs(){if(!kkSarimFilterValue||kkSarimFilterValue<=0)return null;const mult=kkSarimFilterUnit==='saat'?3600000:kkSarimFilterUnit==='dakika'?60000:86400000;return kkSarimFilterValue*mult}
+function applyKkSarimDateFilter(rows){
+    if(kkSarimShiftMode){const{start,end}=todayShiftWindow();return rows.filter(k=>{const d=latestUpdateDate(k);return d&&d>=start&&d<=end})}
+    const ms=kkSarimFilterMs();if(ms===null)return rows;const now=Date.now();return rows.filter(k=>{const d=latestUpdateDate(k);return d&&(now-d.getTime())<=ms})
+}
+function getKkSarimRows(){return applyKkSarimDateFilter(kkSarimTab==='after'?getKkSarimAfterCards():getKkSarimCurrentCards())}
+function setKkSarimTab(t){kkSarimTab=t==='after'?'after':'current';renderKkSarimPanel()}
+function setKkSarimViewMode(m){kkSarimViewMode=m==='list'?'list':'cards';renderKkSarimPanel()}
+function setKkSarimFilterUnit(u){kkSarimFilterUnit=(u==='saat'||u==='dakika')?u:'gun'}
+function applyKkSarimTimeFilter(){kkSarimShiftMode=false;const el=document.getElementById('kkSarimFilterValueInput');const v=el?parseFloat(el.value):NaN;kkSarimFilterValue=Number.isFinite(v)&&v>0?v:null;renderKkSarimPanel()}
+function clearKkSarimTimeFilter(){kkSarimFilterValue=null;kkSarimShiftMode=false;renderKkSarimPanel()}
+function setKkSarimShiftMode(){kkSarimShiftMode=true;kkSarimFilterValue=null;renderKkSarimPanel()}
+function toggleKkSarimPanel(){safePanelOpen('kkSarimPanel','KK / Sarım1 Zaman Analizi',renderKkSarimPanel)}
+function kkSarimTodayStats(stage){
+    const{start,end}=todayShiftWindow();
+    const inWindow=k=>{const d=latestUpdateDate(k);return d&&d>=start&&d<=end};
+    const all=getPriorityCards();
+    const gelen=all.filter(k=>isCurrentlyStage(k,stage)&&inWindow(k));
+    const tamam=all.filter(k=>isAfterStage(k,stage)&&inWindow(k));
+    return{gelenCount:gelen.length,gelenKg:gelen.reduce((s,k)=>s+num(k.kilo),0),tamamCount:tamam.length,tamamKg:tamam.reduce((s,k)=>s+num(k.kilo),0)};
+}
+function kkSarimTodayTileHtml(count,kg,label,color,onClick){
+    return '<div class="flow-summary-card" style="border-left:4px solid '+color+'" onclick="'+onClick+'"><b>'+count+' parti</b>'+Math.round(kg).toLocaleString('tr-TR')+' kg<small>'+label+'</small></div>';
+}
+function kkSarimTodayDurumHtml(delta){
+    const color=delta>0?'#E74C3C':delta<0?'#2E7D32':'#607D8B';
+    const label=delta>0?'🔴 Birikinti artıyor':delta<0?'🟢 Yetişiliyor':'⚪ Dengede';
+    const detail=delta>0?(delta+' parti geride kalındı'):delta<0?(Math.abs(delta)+' parti fazla tamamlandı'):'Gelen = Tamamlanan';
+    return '<div class="flow-summary-card" style="border-left:4px solid '+color+'"><b>'+(delta>0?'+':'')+delta+'</b>'+esc(detail)+'<small>'+label+'</small></div>';
+}
+function kkSarimTodayOverviewHtml(){
+    const kk=kkSarimTodayStats('KK'),sr=kkSarimTodayStats('SARIM1');
+    const kkDelta=kk.gelenCount-kk.tamamCount,srDelta=sr.gelenCount-sr.tamamCount;
+    let h='<div class="flow-section-title">🌅 Bugün İşbaşından İtibaren (08:00–şimdi) — Gelen vs Tamamlanan</div><div class="flow-summary-grid">';
+    h+=kkSarimTodayTileHtml(kk.gelenCount,kk.gelenKg,'🔵 KK\'ya Bugün Gelen','#2196F3','setKkSarimTab(&quot;current&quot;);setKkSarimShiftMode()');
+    h+=kkSarimTodayTileHtml(kk.tamamCount,kk.tamamKg,'✅ KK\'dan Bugün Tamamlanan','#4CAF50','setKkSarimTab(&quot;after&quot;);setKkSarimShiftMode()');
+    h+=kkSarimTodayDurumHtml(kkDelta);
+    h+=kkSarimTodayTileHtml(sr.gelenCount,sr.gelenKg,'🟣 Sarım1\'e Bugün Gelen','#9C27B0','setKkSarimTab(&quot;current&quot;);setKkSarimShiftMode()');
+    h+=kkSarimTodayTileHtml(sr.tamamCount,sr.tamamKg,'✅ Sarım1\'den Bugün Tamamlanan','#4CAF50','setKkSarimTab(&quot;after&quot;);setKkSarimShiftMode()');
+    h+=kkSarimTodayDurumHtml(srDelta);
+    return h+'</div>';
+}
+
+/* ── Parti İzleme Uyarısı (sesli + tam ekran) ── */
+let kkSarimWatchList=safeParse('kksw9','[]');
+let kkSarimWatchState=safeParse('kkswst9','{}');
+function saveKkSarimWatchList(){try{localStorage.setItem('kksw9',JSON.stringify(kkSarimWatchList))}catch(e){}}
+function saveKkSarimWatchState(){try{localStorage.setItem('kkswst9',JSON.stringify(kkSarimWatchState))}catch(e){}}
+function addKkSarimWatch(){
+    const el=document.getElementById('kkSarimWatchInput');
+    const pn=el?String(el.value||'').trim():'';
+    if(!pn)return;
+    if(!kkSarimWatchList.includes(pn)){
+        kkSarimWatchList.push(pn);
+        const k=getAllCards().find(x=>String(x.parti).trim()===pn);
+        kkSarimWatchState[pn]=k?stageKey(k._asama||k.asama||''):'__yok__';
+        saveKkSarimWatchList();saveKkSarimWatchState();
+        showToast('👁️ '+pn+' izlemeye alındı');
+    }
+    if(el)el.value='';
+    renderKkSarimPanel();
+}
+function removeKkSarimWatch(pn){
+    kkSarimWatchList=kkSarimWatchList.filter(x=>x!==pn);
+    delete kkSarimWatchState[pn];
+    saveKkSarimWatchList();saveKkSarimWatchState();
+    renderKkSarimPanel();
+}
+function kkSarimWatchListHtml(){
+    if(!kkSarimWatchList.length)return '<div class="list-empty" style="padding:10px;text-align:left">Henüz izlenen parti yok. Parti no girip <b>＋ İzle</b>\'ye basın — KK veya Sarım1\'e geldiğinde sesli + tam ekran uyarı alırsınız (bu tarayıcı sekmesi açıkken).</div>';
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px">'+kkSarimWatchList.map(pn=>'<span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px">👁️ '+esc(pn)+'<button type="button" onclick="removeKkSarimWatch(&quot;'+esc(pn)+'&quot;)" title="İzlemeyi bırak" style="background:none;border:none;color:#FF8A80;cursor:pointer;font-weight:bold;font-size:14px;line-height:1">×</button></span>').join('')+'</div>';
+}
+function kkSarimWatchControlHtml(){
+    return '<div class="flow-section-title">🔔 Parti İzleme Uyarısı — KK veya Sarım1\'e gelince sesli + tam ekran uyarı</div>'
+        +'<div class="wait-filter" style="margin:6px 0"><input type="text" id="kkSarimWatchInput" placeholder="Parti no (ör: (2026) 8142)" style="min-width:220px" onkeydown="if(event.key===&quot;Enter&quot;)addKkSarimWatch()"><button type="button" style="background:#00897B;color:white" onclick="addKkSarimWatch()">＋ İzle</button><button type="button" style="background:#F39C12;color:white" onclick="testKkSarimAlert()">🔊 Test Uyarısı</button></div>'
+        +kkSarimWatchListHtml();
+}
+function playKkSarimAlertSound(){
+    try{
+        const Ctx=window.AudioContext||window.webkitAudioContext;
+        if(!Ctx)return;
+        const ctx=new Ctx();
+        [0,0.28,0.56].forEach((t,i)=>{
+            const o=ctx.createOscillator(),g=ctx.createGain();
+            o.type='sine';o.frequency.value=i%2?880:660;
+            o.connect(g);g.connect(ctx.destination);
+            const at=ctx.currentTime+t;
+            g.gain.setValueAtTime(0.0001,at);
+            g.gain.exponentialRampToValueAtTime(0.5,at+0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001,at+0.24);
+            o.start(at);o.stop(at+0.26);
+        });
+        setTimeout(()=>{try{ctx.close()}catch(e){}},1200);
+    }catch(e){console.warn('uyarı sesi çalınamadı',e)}
+}
+let kkSarimFlashTimer=null;
+function showKkSarimFlashOverlay(pn,rec,stageLabel){
+    let ov=document.getElementById('kkSarimFlashOverlay');
+    if(!ov){ov=document.createElement('div');ov.id='kkSarimFlashOverlay';document.body.appendChild(ov)}
+    const kg=rec&&rec.kg!==undefined&&rec.kg!==null?Math.round(num(rec.kg)).toLocaleString('tr-TR')+' kg':'-';
+    const firma=rec&&rec.firma?rec.firma:'-';
+    ov.innerHTML='<div class="kksarim-flash-card"><div class="kksarim-flash-icon">🚨</div><div class="kksarim-flash-title">'+esc(stageLabel)+'\'e Geldi!</div><div class="kksarim-flash-parti">'+esc(pn)+'</div><div class="kksarim-flash-meta">'+esc(kg)+' • '+esc(firma)+'</div><button type="button" class="kksarim-flash-close" onclick="closeKkSarimFlashOverlay()">Kapat</button></div>';
+    ov.classList.add('active');
+    if(kkSarimFlashTimer)clearTimeout(kkSarimFlashTimer);
+    kkSarimFlashTimer=setTimeout(closeKkSarimFlashOverlay,20000);
+}
+function closeKkSarimFlashOverlay(){const ov=document.getElementById('kkSarimFlashOverlay');if(ov)ov.classList.remove('active');if(kkSarimFlashTimer){clearTimeout(kkSarimFlashTimer);kkSarimFlashTimer=null}}
+function fireKkSarimWatchAlert(pn,rec,stageLabel){
+    try{playKkSarimAlertSound()}catch(e){}
+    try{speakText(pn+' partisi '+stageLabel+' aşamasına geldi')}catch(e){}
+    showKkSarimFlashOverlay(pn,rec,stageLabel);
+}
+function testKkSarimAlert(){fireKkSarimWatchAlert('TEST PARTİ',{kg:100,firma:'Test Firma'},'Kalite Kontrol')}
+async function kkSarimWatchPoll(){
+    if(!kkSarimWatchList.length)return;
+    try{
+        const res=await fetch('data/partiler.json?ts='+Date.now(),{cache:'no-store'});
+        if(!res.ok)return;
+        const pdata=await res.json();
+        const cards=pdata.cards||[];
+        let changed=false;
+        kkSarimWatchList.forEach(pn=>{
+            const rec=cards.find(c=>String(c.parti||'').trim()===pn);
+            if(!rec)return;
+            const stageRaw=String(rec.stage||'');
+            const curKey=stageKey(stageRaw);
+            const isKK=stageEquals(stageRaw,'KK'),isSR=stageEquals(stageRaw,'SARIM1');
+            const prevKey=kkSarimWatchState[pn];
+            if((isKK||isSR)&&prevKey!==curKey)fireKkSarimWatchAlert(pn,rec,isKK?'Kalite Kontrol':'Sarım 1');
+            if(prevKey!==curKey){kkSarimWatchState[pn]=curKey;changed=true}
+        });
+        if(changed)saveKkSarimWatchState();
+    }catch(e){console.warn('kkSarim izleme kontrolü hatası',e)}
+}
+setInterval(kkSarimWatchPoll,60000);
+(function injectKkSarimFlashStyles(){
+    const style=document.createElement('style');
+    style.textContent='#kkSarimFlashOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:99999}'
+        +'#kkSarimFlashOverlay.active{display:flex;animation:kksFadeIn .2s ease}'
+        +'.kksarim-flash-card{background:linear-gradient(135deg,#F39C12,#E67E22);color:#1a1a2e;border-radius:20px;padding:36px 48px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);max-width:90vw;animation:kksPulse 1s ease-in-out infinite}'
+        +'.kksarim-flash-icon{font-size:56px;margin-bottom:10px}'
+        +'.kksarim-flash-title{font-size:26px;font-weight:900;margin-bottom:6px}'
+        +'.kksarim-flash-parti{font-size:34px;font-weight:900;margin-bottom:8px;word-break:break-word}'
+        +'.kksarim-flash-meta{font-size:16px;font-weight:700;opacity:.85;margin-bottom:18px}'
+        +'.kksarim-flash-close{background:#1a1a2e;color:white;border:none;padding:10px 26px;border-radius:25px;font-weight:bold;cursor:pointer;font-size:15px}'
+        +'@keyframes kksFadeIn{from{opacity:0}to{opacity:1}}'
+        +'@keyframes kksPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}';
+    document.head.appendChild(style);
+})();
+function kkSarimTimeFilterHtml(){
+    const opts=[['gun','Gün'],['saat','Saat'],['dakika','Dakika']].map(u=>'<option value="'+u[0]+'" '+(kkSarimFilterUnit===u[0]?'selected':'')+'>'+u[1]+'</option>').join('');
+    return '<div class="wait-filter" style="margin:8px 0" title="Son hareketten itibaren geçen süreye göre partileri filtreler"><span>📅 Son Hareket ≤</span><input type="number" id="kkSarimFilterValueInput" min="0" step="1" placeholder="değer" value="'+(kkSarimFilterValue||'')+'" onkeydown="if(event.key===&quot;Enter&quot;)applyKkSarimTimeFilter()"><select id="kkSarimFilterUnitSelect" onchange="setKkSarimFilterUnit(this.value)">'+opts+'</select><button type="button" style="background:#00897B;color:white" onclick="applyKkSarimTimeFilter()">Uygula</button><button type="button" style="background:'+(kkSarimShiftMode?'#F39C12':'#6A1B9A')+';color:white" onclick="setKkSarimShiftMode()">🌅 Bugün (İşbaşından)</button><button type="button" style="background:#455A64;color:white" onclick="clearKkSarimTimeFilter()" title="Zaman filtresini temizle (Tümü)">×</button></div>';
+}
+function kkSarimGroupHeaderHtml(g){
+    const kg=g.cards.reduce((s,k)=>s+num(k.kilo),0);
+    return '<div class="group-header"><div class="gh-name">'+g.icon+' '+esc(g.label)+'</div><div class="gh-stats">'+g.cards.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</div></div>';
+}
+function kkSarimCardHtml(k,i){
+    return '<div class="post-item" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="post-head"><span class="post-parti"><b>#'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div>'+esc(k._asama||k.asama||'-')+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</div><div><b>⏱ '+esc(waitHoursText(k))+'</b></div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'</div>';
+}
+function kkSarimAfterItemHtml(k,i){
+    const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı'),parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),note=postProcessNotes[k.id]||'';
+    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(waitHoursText(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="kkspnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="saveKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
+}
+function saveKkSarimNote(id){const el=document.getElementById('kkspnote_'+id);if(!el)return;postProcessNotes[id]=el.value.trim();savePostProcessNotes();showToast('✅ Açıklama kaydedildi')}
+function clearKkSarimNote(id){delete postProcessNotes[id];savePostProcessNotes();renderKkSarimPanel()}
+function kkSarimListHtml(rows){
+    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>Parti</th><th>Aşama → Sonraki</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    rows.slice(0,200).forEach(k=>{h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">'+esc(k.parti)+'</b></td><td>'+esc(k._asama||k.asama||'-')+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(waitHoursText(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>'});
+    return h+'</tbody></table></div>';
+}
+function kkSarimSummaryHtml(rows){
+    const kg=rows.reduce((s,k)=>s+num(k.kilo),0);
+    return '<div class="panel-summary"><b>'+rows.length+'</b> parti • <b>'+Math.round(kg).toLocaleString('tr-TR')+' kg</b></div>';
+}
+function filterKkSarimCards(){filterCardsDirect(getKkSarimRows())}
+function exportKkSarimWorkbook(){
+    const rows=getKkSarimRows(),groups=kkSarimTab==='after'?kkSarimAfterGroups(rows):kkSarimGroups(rows);
+    const toRows=list=>list.map(k=>({...cardExportRow(k),'Bekleme (gün saat dakika)':waitHoursText(k)}));
+    const sheets=groups.filter(g=>g.cards.length).map(g=>({name:g.key.toUpperCase().slice(0,31),rows:toRows(g.cards)}));
+    if(!sheets.length)sheets.push({name:'KK_Sarim1',rows:toRows(rows)});
+    downloadWorkbook('kk_sarim1_zaman_analizi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',sheets);
+}
+function renderKkSarimPanel(){
+    const p=document.getElementById('kkSarimPanel'),ttl='KK / Sarım1 Zaman Analizi';
+    const rows=getKkSarimRows();
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;kkSarimPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📈 '+ttl+' <button type="button" style="font-size:12px;background:#2F75B5;color:white;border:none;padding:6px 12px;border-radius:20px;cursor:pointer;vertical-align:middle" onclick="loadGithubJsonDashboard().then(()=>{renderKkSarimPanel();showToast(&quot;🔄 Veri yenilendi&quot;)})">🔄 Canlı Yenile</button></h2>';
+    h+=kkSarimTodayOverviewHtml();
+    h+=kkSarimWatchControlHtml();
+    h+='<div class="flow-tabs"><button class="flow-tab '+(kkSarimTab==='current'?'active':'')+'" onclick="setKkSarimTab(&quot;current&quot;)">🔵 Şu An KK/Sarım1\'de</button><button class="flow-tab '+(kkSarimTab==='after'?'active':'')+'" onclick="setKkSarimTab(&quot;after&quot;)">🧭 KK/Sarım1 Sonrasına Geçmiş</button></div>';
+    h+=kkSarimTimeFilterHtml();
+    h+=kkSarimSummaryHtml(rows);
+    const groups=kkSarimTab==='after'?kkSarimAfterGroups(rows):kkSarimGroups(rows);
+    const compareTitle=kkSarimTab==='after'?'Kalite Kontrol vs Sarım 1 — Sonrasına Geçmiş Karşılaştırma (kg)':'Kalite Kontrol vs Sarım 1 — Şu An Bekleyen Karşılaştırma (kg)';
+    h+='<div class="flow-section-title">📊 Karşılaştırmalı Grafikler ve Oranlar'+(kkSarimFilterMs()!==null?' — liste seçili zaman aralığına göre, akış oranları tüm veriye göre':'')+'</div>';
+    h+='<div class="flow-chart-grid">'+kkSarimComparisonPieHtml(compareTitle,groups)+kkSarimCompletionPieHtml('KK','Kalite Kontrol','🔵')+kkSarimCompletionPieHtml('SARIM1','Sarım 1','🟣')+'</div>';
+    h+='<div class="view-mode-bar" style="margin:8px 0;justify-content:flex-start"><button class="view-mode-btn '+(kkSarimViewMode==='cards'?'active':'')+'" onclick="setKkSarimViewMode(&quot;cards&quot;)">🃏 Kartlar</button><button class="view-mode-btn '+(kkSarimViewMode==='list'?'active':'')+'" onclick="setKkSarimViewMode(&quot;list&quot;)">📋 Liste</button><button class="btn-all-export" onclick="filterKkSarimCards()">Listeyi Göster</button><button class="btn-fire-export" onclick="exportKkSarimWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;kkSarimPanel&quot;,&quot;'+ttl+'&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;kkSarimPanel&quot;,&quot;'+ttl+'&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;kkSarimPanel&quot;,&quot;'+ttl+'&quot;,&quot;kk_sarim1_analiz.png&quot;)">📱 WhatsApp</button></div>';
+    if(!groups.some(g=>g.cards.length)){h+='<div class="list-empty">Seçilen aralıkta kayıt yok</div>';}
+    else if(kkSarimTab==='after'){
+        groups.forEach(g=>{
+            if(!g.cards.length)return;
+            h+=kkSarimGroupHeaderHtml(g);
+            h+=kkSarimViewMode==='list'?kkSarimListHtml(g.cards):g.cards.slice(0,120).map((k,i)=>kkSarimAfterItemHtml(k,i)).join('');
+        });
+    }else{
+        groups.forEach(g=>{
+            if(!g.cards.length)return;
+            h+=kkSarimGroupHeaderHtml(g);
+            h+=kkSarimViewMode==='list'?kkSarimListHtml(g.cards):g.cards.slice(0,150).map((k,i)=>kkSarimCardHtml(k,i)).join('');
+        });
+    }
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('kkSarimPanel');ensureElementFullscreenToolbar('kkSarimPanel',ttl);
+}
 
 /* ════════ 📜 KK / SARIM GEÇİŞ KARŞILAŞTIRMA RAPORU ════════ */
 let gecisSkip=1;
@@ -3029,6 +3373,7 @@ function renderWetDryPanel(){
   window.toggleMindmapFullscreen=toggleMindmapFullscreen;
   window.mindmapSetCategory=setCategory;window.mindmapSetBranch=setBranch;window.mindmapAddCategory=addCategory;window.mindmapRenameCategory=renameCategory;window.mindmapRemoveCategory=removeCategory;window.mindmapAddBranch=addBranch;window.mindmapRenameBranch=renameBranch;window.mindmapRemoveBranch=removeBranch;window.mindmapAddParty=addParty;window.mindmapRemoveParty=removeParty;window.mindmapAddNote=addNote;window.mindmapRemoveNote=removeNote;window.mindmapStartVoice=startVoice;window.mindmapChangeDate=changeDate;window.mindmapOpenParty=openPartyFromNode;window.mindmapEnableAutoMode=enableAutoMode;window.mindmapDisableAutoMode=disableAutoMode;
   window.refreshMindmap=function(){const p=document.getElementById('mindmapPanel');if(p&&getComputedStyle(p).display!=='none')render()};
+  window.loadGithubJsonDashboard=loadGithubJsonDashboard;
   async function loadGithubJsonDashboard(){
     const st=document.getElementById('uploadStatus');
     try{

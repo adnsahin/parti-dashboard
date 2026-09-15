@@ -561,7 +561,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
   if(window.__emergencyClickRouter)return;
   window.__emergencyClickRouter=true;
   function byId(id){return document.getElementById(id)}
-  function hidePanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','gecisPanel','uretimPanel','mindmapPanel'].forEach(function(id){var el=byId(id);if(el)el.style.display='none'})}
+  function hidePanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel'].forEach(function(id){var el=byId(id);if(el)el.style.display='none'})}
   function htmlEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
   function openEmergencyPanel(id,title,renderName){
     var p=byId(id); if(!p){alert('Panel bulunamadı: '+id);return}
@@ -681,15 +681,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button class="btn-fire-list" onclick="toggleFirePanel()">🔥</button>
 <button class="btn-fire-export" onclick="exportFireWorkbook()">📊 Fire</button>
 <button class="btn-alarm-list" onclick="toggleAlarmPanel()">🔔 Alarm</button>
-<button style="background:#1565C0;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleFilterAlarmPanel()">🔎 Filtre Alarmı</button>
-<button style="background:#00897B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleNtfyMessagePanel()">💬 Mesaj Gönder</button>
 <button class="btn-tamir-list" id="btnTamirList" onclick="toggleTamirPanel()">🛠️ Tamir (0)</button>
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#8E44AD;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleGecisPanel()">📜 Geçiş Raporu</button><button style="background:#2E7D32;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimPanel()">🏭 Günlük Üretim</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
-<button id="btnMindmap" style="background:#673AB7;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleMindmapPanel()">🧠 Günlük Mindmap</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
 <div class="total-bar" id="totalBar"></div>
@@ -701,15 +698,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" onclick="toggleTodayPanel()"><span>🎯</span>Bugün</button>
 <button onclick="toggleTamirPanel()" id="btnTamirBottom"><span>🛠️</span>Tamir (0)</button>
 <button data-action="bottleneck" onclick="toggleBottleneckPanel()"><span>🏭</span>Darboğaz</button>
-<button onclick="toggleGecisPanel()"><span>📜</span>Rapor</button>
-<button onclick="toggleUretimPanel()"><span>🏭</span>Üretim</button>
-<button onclick="toggleNtfyMessagePanel()"><span>💬</span>Mesaj</button>
 </div>
 
 <div class="panel" id="notePanel"></div>
 <div class="panel" id="firePanel"></div>
-<div class="panel" id="filterAlarmPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
-<div class="panel" id="ntfyMessagePanel" style="width:min(620px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="alarmPanel"></div>
 <div class="panel" id="tamirPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="selectionPanel" style="width:min(900px,calc(100vw - 32px));max-height:85vh"></div>
@@ -718,9 +710,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="validationPanel" style="width:min(760px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="postProcessPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="kkSarimPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
-<div class="panel" id="gecisPanel" style="width:min(920px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="uretimPanel" style="width:min(960px,calc(100vw - 32px));max-height:85vh"></div><div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
-<div class="panel" id="mindmapPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
 <div class="mini-cards-container" id="miniCardsContainer" style="display:none"></div>
@@ -1667,7 +1658,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','filterAlarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','gecisPanel','uretimPanel','wetDryPanel','stageAgePanel','mindmapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','wetDryPanel','stageAgePanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -2531,11 +2522,15 @@ function kkSarimTodayOverviewHtml(){
 /* ── Parti İzleme Uyarısı (sesli + tam ekran) ── */
 let kkSarimWatchList=safeParse('kksw9','[]');
 let kkSarimWatchState=safeParse('kkswst9','{}');
+let kkSarimWatchNotes=safeParse('kkswn9','{}');
 function saveKkSarimWatchList(){try{localStorage.setItem('kksw9',JSON.stringify(kkSarimWatchList))}catch(e){}}
 function saveKkSarimWatchState(){try{localStorage.setItem('kkswst9',JSON.stringify(kkSarimWatchState))}catch(e){}}
+function saveKkSarimWatchNotes(){try{localStorage.setItem('kkswn9',JSON.stringify(kkSarimWatchNotes))}catch(e){}}
 function addKkSarimWatch(){
     const el=document.getElementById('kkSarimWatchInput');
+    const noteEl=document.getElementById('kkSarimWatchNoteInput');
     const pn=el?String(el.value||'').trim():'';
+    const note=noteEl?String(noteEl.value||'').trim():'';
     if(!pn)return;
     if(!kkSarimWatchList.includes(pn)){
         kkSarimWatchList.push(pn);
@@ -2544,29 +2539,86 @@ function addKkSarimWatch(){
         saveKkSarimWatchList();saveKkSarimWatchState();
         showToast('👁️ '+pn+' izlemeye alındı');
     }
+    if(note){kkSarimWatchNotes[pn]=note;saveKkSarimWatchNotes()}
     if(el)el.value='';
+    if(noteEl)noteEl.value='';
     renderKkSarimPanel();
 }
 function removeKkSarimWatch(pn){
     kkSarimWatchList=kkSarimWatchList.filter(x=>x!==pn);
     delete kkSarimWatchState[pn];
-    saveKkSarimWatchList();saveKkSarimWatchState();
+    delete kkSarimWatchNotes[pn];
+    saveKkSarimWatchList();saveKkSarimWatchState();saveKkSarimWatchNotes();
     renderKkSarimPanel();
+}
+function editKkSarimWatchNote(pn){
+    const current=kkSarimWatchNotes[pn]||'';
+    const next=window.prompt('"'+pn+'" için ilgili personele iletilecek not:',current);
+    if(next===null)return;
+    const trimmed=next.trim();
+    if(trimmed)kkSarimWatchNotes[pn]=trimmed;else delete kkSarimWatchNotes[pn];
+    saveKkSarimWatchNotes();
+    renderKkSarimPanel();
+    renderKkSarimWatchOnlyScreen();
+}
+async function seedKkSarimWatchBaseline(pn){
+    try{
+        const res=await fetch('data/partiler.json?ts='+Date.now(),{cache:'no-store'});
+        if(!res.ok)return;
+        const pdata=await res.json();
+        const rec=(pdata.cards||[]).find(c=>String(c.parti||'').trim()===pn);
+        kkSarimWatchState[pn]=rec?stageKey(String(rec.stage||'')):'__yok__';
+        saveKkSarimWatchState();
+    }catch(e){console.warn('izleme başlangıç durumu alınamadı',e)}
+}
+function kkSarimWatchLink(){
+    const base=location.origin+location.pathname;
+    let url=base+'?watchOnly=1';
+    if(kkSarimWatchList.length){
+        url+='&watch='+encodeURIComponent(kkSarimWatchList.join(','));
+        const notesForWatched={};
+        kkSarimWatchList.forEach(pn=>{if(kkSarimWatchNotes[pn])notesForWatched[pn]=kkSarimWatchNotes[pn]});
+        if(Object.keys(notesForWatched).length)url+='&wnotes='+encodeURIComponent(JSON.stringify(notesForWatched));
+    }
+    const activeRules=kkSarimAutoRules.filter(r=>r.active).map(r=>({mode:r.mode,fabric:r.fabric,waitMinutes:r.waitMinutes}));
+    if(activeRules.length)url+='&rules='+encodeURIComponent(JSON.stringify(activeRules));
+    return url;
+}
+function copyKkSarimWatchLink(){
+    const link=kkSarimWatchLink();
+    const done=()=>showToast('🔗 İzleme linki kopyalandı — telefonda açın');
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(done).catch(()=>window.prompt('Bu linki kopyalayıp telefonda açın:',link));
+    else window.prompt('Bu linki kopyalayıp telefonda açın:',link);
+}
+function kkSarimWatchChipHtml(pn){
+    const note=kkSarimWatchNotes[pn]||'';
+    return '<span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:6px 10px;font-size:12px;display:inline-flex;flex-direction:column;gap:2px;max-width:260px">'
+        +'<span style="display:flex;align-items:center;gap:6px"><b style="cursor:pointer" onclick="editKkSarimWatchNote(&quot;'+esc(pn)+'&quot;)" title="Not eklemek/düzenlemek için tıklayın">👁️ '+esc(pn)+'</b><button type="button" onclick="removeKkSarimWatch(&quot;'+esc(pn)+'&quot;)" title="İzlemeyi bırak" style="background:none;border:none;color:#FF8A80;cursor:pointer;font-weight:bold;font-size:14px;line-height:1;margin-left:auto">×</button></span>'
+        +(note?'<span style="color:#FFD54F;font-size:11px;cursor:pointer;white-space:normal" onclick="editKkSarimWatchNote(&quot;'+esc(pn)+'&quot;)">📝 '+esc(note)+'</span>':'<span style="color:#78909C;font-size:10px;cursor:pointer" onclick="editKkSarimWatchNote(&quot;'+esc(pn)+'&quot;)">+ not ekle</span>')
+        +'</span>';
 }
 function kkSarimWatchListHtml(){
     if(!kkSarimWatchList.length)return '<div class="list-empty" style="padding:10px;text-align:left">Henüz izlenen parti yok. Parti no girip <b>＋ İzle</b>\'ye basın — KK veya Sarım1\'e geldiğinde sesli + tam ekran uyarı alırsınız (bu tarayıcı sekmesi açıkken).</div>';
-    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px">'+kkSarimWatchList.map(pn=>'<span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px">👁️ '+esc(pn)+'<button type="button" onclick="removeKkSarimWatch(&quot;'+esc(pn)+'&quot;)" title="İzlemeyi bırak" style="background:none;border:none;color:#FF8A80;cursor:pointer;font-weight:bold;font-size:14px;line-height:1">×</button></span>').join('')+'</div>';
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px">'+kkSarimWatchList.map(pn=>kkSarimWatchChipHtml(pn)).join('')+'</div>';
 }
 function kkSarimWatchControlHtml(){
     return '<div class="flow-section-title">🔔 Parti İzleme Uyarısı — KK veya Sarım1\'e gelince sesli + tam ekran uyarı</div>'
-        +'<div class="wait-filter" style="margin:6px 0"><input type="text" id="kkSarimWatchInput" placeholder="Parti no (ör: (2026) 8142)" style="min-width:220px" onkeydown="if(event.key===&quot;Enter&quot;)addKkSarimWatch()"><button type="button" style="background:#00897B;color:white" onclick="addKkSarimWatch()">＋ İzle</button><button type="button" style="background:#F39C12;color:white" onclick="testKkSarimAlert()">🔊 Test Uyarısı</button></div>'
+        +'<div class="panel-summary" style="margin-bottom:6px">Bu ekranda ve <b>🔗 linki başka bir telefon/PC\'de açtığınızda</b> — ntfy veya PC servisi olmadan, doğrudan bu tarayıcı sekmesi açıkken çalışır. Not eklerseniz uyarı çıktığında ekranda görünür, sesli okunur ve linkle birlikte diğer cihaza da taşınır.</div>'
+        +'<div class="wait-filter" style="margin:6px 0;flex-wrap:wrap"><input type="text" id="kkSarimWatchInput" placeholder="Parti no (ör: (2026) 8142)" style="min-width:180px" onkeydown="if(event.key===&quot;Enter&quot;)addKkSarimWatch()"><input type="text" id="kkSarimWatchNoteInput" placeholder="Not (opsiyonel — ör: Ahmet\'e haber ver)" style="min-width:220px;flex:1" onkeydown="if(event.key===&quot;Enter&quot;)addKkSarimWatch()"><button type="button" style="background:#00897B;color:white" onclick="addKkSarimWatch()">＋ İzle</button><button type="button" style="background:#F39C12;color:white" onclick="testKkSarimAlert()">🔊 Test Uyarısı</button><button type="button" style="background:#1565C0;color:white" onclick="copyKkSarimWatchLink()">🔗 İzleme Linki Kopyala</button></div>'
         +kkSarimWatchListHtml();
 }
+function kkSarimAudioCtx(){
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return null;
+    if(!window.__kksAudioCtx)window.__kksAudioCtx=new Ctx();
+    if(window.__kksAudioCtx.state==='suspended')window.__kksAudioCtx.resume().catch(()=>{});
+    return window.__kksAudioCtx;
+}
+function unlockKkSarimAudio(){try{kkSarimAudioCtx()}catch(e){}}
 function playKkSarimAlertSound(){
     try{
-        const Ctx=window.AudioContext||window.webkitAudioContext;
-        if(!Ctx)return;
-        const ctx=new Ctx();
+        const ctx=kkSarimAudioCtx();
+        if(!ctx)return;
         [0,0.28,0.56].forEach((t,i)=>{
             const o=ctx.createOscillator(),g=ctx.createGain();
             o.type='sine';o.frequency.value=i%2?880:660;
@@ -2577,29 +2629,227 @@ function playKkSarimAlertSound(){
             g.gain.exponentialRampToValueAtTime(0.0001,at+0.24);
             o.start(at);o.stop(at+0.26);
         });
-        setTimeout(()=>{try{ctx.close()}catch(e){}},1200);
     }catch(e){console.warn('uyarı sesi çalınamadı',e)}
 }
 let kkSarimFlashTimer=null;
-function showKkSarimFlashOverlay(pn,rec,stageLabel){
+function showKkSarimFlashOverlay(pn,rec,titleText,note){
     let ov=document.getElementById('kkSarimFlashOverlay');
     if(!ov){ov=document.createElement('div');ov.id='kkSarimFlashOverlay';document.body.appendChild(ov)}
     const kg=rec&&rec.kg!==undefined&&rec.kg!==null?Math.round(num(rec.kg)).toLocaleString('tr-TR')+' kg':'-';
     const firma=rec&&rec.firma?rec.firma:'-';
-    ov.innerHTML='<div class="kksarim-flash-card"><div class="kksarim-flash-icon">🚨</div><div class="kksarim-flash-title">'+esc(stageLabel)+'\'e Geldi!</div><div class="kksarim-flash-parti">'+esc(pn)+'</div><div class="kksarim-flash-meta">'+esc(kg)+' • '+esc(firma)+'</div><button type="button" class="kksarim-flash-close" onclick="closeKkSarimFlashOverlay()">Kapat</button></div>';
+    ov.innerHTML='<div class="kksarim-flash-card"><div class="kksarim-flash-icon">🚨</div><div class="kksarim-flash-title">'+esc(titleText)+'</div><div class="kksarim-flash-parti">'+esc(pn)+'</div><div class="kksarim-flash-meta">'+esc(kg)+' • '+esc(firma)+'</div>'+(note?'<div class="kksarim-flash-note">📝 '+esc(note)+'</div>':'')+'<button type="button" class="kksarim-flash-close" onclick="closeKkSarimFlashOverlay()">Kapat</button></div>';
     ov.classList.add('active');
     if(kkSarimFlashTimer)clearTimeout(kkSarimFlashTimer);
     kkSarimFlashTimer=setTimeout(closeKkSarimFlashOverlay,20000);
 }
 function closeKkSarimFlashOverlay(){const ov=document.getElementById('kkSarimFlashOverlay');if(ov)ov.classList.remove('active');if(kkSarimFlashTimer){clearTimeout(kkSarimFlashTimer);kkSarimFlashTimer=null}}
-function fireKkSarimWatchAlert(pn,rec,stageLabel){
+function fireKkSarimWatchAlert(pn,rec,stageLabel,extraNote){
+    const note=[kkSarimWatchNotes[pn]||'',extraNote||''].filter(Boolean).join(' • ');
     try{playKkSarimAlertSound()}catch(e){}
-    try{speakText(pn+' partisi '+stageLabel+' aşamasına geldi')}catch(e){}
-    showKkSarimFlashOverlay(pn,rec,stageLabel);
+    try{speakText(pn+' partisi '+stageLabel+' aşamasına geldi'+(note?'. Not: '+note:''))}catch(e){}
+    showKkSarimFlashOverlay(pn,rec,stageLabel+'\'e Geldi!',note);
 }
-function testKkSarimAlert(){fireKkSarimWatchAlert('TEST PARTİ',{kg:100,firma:'Test Firma'},'Kalite Kontrol')}
+function kkSarimMinutesLabel(m){
+    if(m>=1440)return Math.round(m/1440*10)/10+' gün';
+    if(m>=60)return Math.round(m/60*10)/10+' saat';
+    return Math.round(m)+' dk';
+}
+function fireKkSarimOverwaitAlert(pn,rec,stageLabel,waitMinutes,extraNote){
+    const note=[kkSarimWatchNotes[pn]||'',extraNote||''].filter(Boolean).join(' • ');
+    const waitText=kkSarimMinutesLabel(waitMinutes);
+    try{playKkSarimAlertSound()}catch(e){}
+    try{speakText(pn+' partisi '+stageLabel+' aşamasında '+waitText+' bekliyor'+(note?'. Not: '+note:''))}catch(e){}
+    showKkSarimFlashOverlay(pn,rec,'⏱ Aşırı Bekliyor! ('+esc(stageLabel)+' • '+waitText+')',note);
+}
+function testKkSarimAlert(){
+    const all=typeof getAllCards==='function'?getAllCards():[];
+    const watched=kkSarimWatchList[0]?all.find(x=>String(x.parti).trim()===kkSarimWatchList[0]):null;
+    const sample=watched||all.find(k=>isCurrentlyStage(k,'KK')||isCurrentlyStage(k,'SARIM1'))||all[0];
+    if(sample){
+        const label=isCurrentlyStage(sample,'SARIM1')?'Sarım 1':'Kalite Kontrol';
+        fireKkSarimWatchAlert(sample.parti,{kg:sample.kilo,firma:sample.line1},label);
+    }else{
+        fireKkSarimWatchAlert('TEST PARTİ',{kg:100,firma:'Test Firma'},'Kalite Kontrol');
+    }
+}
+/* ── Otomatik İzleme Kuralları (kumaş adı / bekleme süresi eşleşince) ── */
+let kkSarimAutoRules=safeParse('kksar9','[]');
+let kkSarimRuleAlerted=safeParse('kksra9','{}');
+function saveKkSarimAutoRules(){try{localStorage.setItem('kksar9',JSON.stringify(kkSarimAutoRules))}catch(e){}}
+function saveKkSarimRuleAlerted(){try{localStorage.setItem('kksra9',JSON.stringify(kkSarimRuleAlerted))}catch(e){}}
+function kkSarimRuleLabel(r){
+    const bits=[r.mode==='bekleme'?'⏱ Aşırı bekleme':'📦 KK/Sarım1 varış'];
+    if(r.fabric)bits.push('Kumaş: "'+r.fabric+'"');
+    if(r.waitMinutes)bits.push('≥'+kkSarimMinutesLabel(r.waitMinutes));
+    return bits.join(' • ');
+}
+function addKkSarimAutoRule(){
+    const modeEl=document.getElementById('kkSarimRuleMode'),fabricEl=document.getElementById('kkSarimRuleFabric'),waitEl=document.getElementById('kkSarimRuleWait');
+    const mode=modeEl?modeEl.value:'varis';
+    const fabric=fabricEl?String(fabricEl.value||'').trim():'';
+    const waitRaw=waitEl?parseFloat(waitEl.value):NaN;
+    const waitMinutes=Number.isFinite(waitRaw)&&waitRaw>0?waitRaw:0;
+    if(!fabric&&!waitMinutes){showToast('⚠️ Kumaş adı veya bekleme süresi girin','warning');return}
+    if(mode==='bekleme'&&!waitMinutes){showToast('⚠️ Aşırı bekleme kuralı için süre (dakika) gerekli','warning');return}
+    kkSarimAutoRules.push({uid:'kkr_'+Date.now()+'_'+Math.random().toString(16).slice(2),mode,fabric,waitMinutes,active:true,created_at:new Date().toLocaleString('tr-TR')});
+    saveKkSarimAutoRules();
+    if(fabricEl)fabricEl.value='';
+    if(waitEl)waitEl.value='';
+    showToast('⚙️ Otomatik kural eklendi');
+    renderKkSarimPanel();
+}
+function toggleKkSarimAutoRule(uid){const r=kkSarimAutoRules.find(x=>x.uid===uid);if(r){r.active=!r.active;saveKkSarimAutoRules();renderKkSarimPanel()}}
+function removeKkSarimAutoRule(uid){kkSarimAutoRules=kkSarimAutoRules.filter(x=>x.uid!==uid);saveKkSarimAutoRules();renderKkSarimPanel()}
+function kkSarimAutoRuleListHtml(){
+    if(!kkSarimAutoRules.length)return '<div class="list-empty" style="padding:10px;text-align:left">Henüz otomatik kural yok.</div>';
+    return '<div style="display:flex;flex-direction:column;gap:6px;margin:6px 0 10px">'+kkSarimAutoRules.map(r=>
+        '<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap">'
+        +'<span style="'+(r.active?'':'opacity:.5;text-decoration:line-through')+'">'+esc(kkSarimRuleLabel(r))+'</span>'
+        +'<span style="display:flex;gap:4px"><button type="button" onclick="toggleKkSarimAutoRule(&quot;'+r.uid+'&quot;)" style="background:'+(r.active?'#455A64':'#00897B')+';color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer">'+(r.active?'Durdur':'Başlat')+'</button><button type="button" onclick="removeKkSarimAutoRule(&quot;'+r.uid+'&quot;)" style="background:#E74C3C;color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer">Sil</button></span>'
+        +'</div>'
+    ).join('')+'</div>';
+}
+function kkSarimAutoRuleControlHtml(){
+    return '<div class="flow-section-title">⚙️ Otomatik İzleme Kuralları — kumaş adı ve/veya bekleme süresine göre otomatik uyarı</div>'
+        +'<div class="panel-summary" style="margin-bottom:6px"><b>KK/Sarım1\'e Varış</b>: eşleşen partiler oraya ulaşınca uyarır. <b>Aşırı Bekleme</b>: hangi aşamada olursa olsun süre aşılınca hemen uyarır.</div>'
+        +'<div class="wait-filter" style="margin:6px 0;flex-wrap:wrap">'
+        +'<select id="kkSarimRuleMode" style="padding:8px;border-radius:6px"><option value="varis">📦 KK/Sarım1\'e Varış</option><option value="bekleme">⏱ Herhangi Aşamada Aşırı Bekleme</option></select>'
+        +'<input type="text" id="kkSarimRuleFabric" placeholder="Kumaş adı içersin (opsiyonel)" style="min-width:180px">'
+        +'<input type="number" id="kkSarimRuleWait" placeholder="Bekleme (dakika)" min="0" style="width:140px">'
+        +'<button type="button" style="background:#00897B;color:white" onclick="addKkSarimAutoRule()">＋ Kural Ekle</button>'
+        +'</div>'
+        +kkSarimAutoRuleListHtml();
+}
+function openDetailModalByParti(pn){
+    const k=(typeof getAllCards==='function'?getAllCards():[]).find(x=>String(x.parti).trim()===String(pn).trim());
+    if(k&&typeof openDetailModal==='function')openDetailModal(k.id);else showToast('Bu parti güncel veride bulunamadı (aşaması değişmiş olabilir)','warning');
+}
+const KKSRL_COLS=[
+    {key:'ts',label:'Tarih',sortKey:'tsRaw',numeric:true},
+    {key:'ruleLabel',label:'Kural'},
+    {key:'parti',label:'Parti'},
+    {key:'stage',label:'Aşama'},
+    {key:'fabric',label:'Kumaş'},
+    {key:'kg',label:'Kilo',numeric:true},
+    {key:'waitMinutes',label:'Bekleme',numeric:true},
+    {key:'firma',label:'Firma'}
+];
+let kkSarimRuleLogSort={col:'ts',dir:-1};
+let kkSarimRuleLogFilters={};
+function setKkSarimRuleLogSort(col){
+    if(kkSarimRuleLogSort.col===col)kkSarimRuleLogSort.dir*=-1;else kkSarimRuleLogSort={col,dir:1};
+    renderKkSarimPanel();
+}
+function setKkSarimRuleLogFilter(col,label){
+    const current=kkSarimRuleLogFilters[col]||'';
+    const next=window.prompt(label+' sütununda filtrelenecek metin (boş bırakırsan filtre kalkar):',current);
+    if(next===null)return;
+    const trimmed=next.trim();
+    if(trimmed)kkSarimRuleLogFilters[col]=trimmed;else delete kkSarimRuleLogFilters[col];
+    renderKkSarimPanel();
+}
+function clearKkSarimRuleLogFilters(){kkSarimRuleLogFilters={};renderKkSarimPanel()}
+function getKkSarimRuleLogRows(){
+    let rows=kkSarimRuleLog.slice();
+    Object.keys(kkSarimRuleLogFilters).forEach(col=>{
+        const needle=kkSarimRuleLogFilters[col].toLocaleUpperCase('tr-TR');
+        rows=rows.filter(e=>String(e[col]??'').toLocaleUpperCase('tr-TR').includes(needle));
+    });
+    if(kkSarimRuleLogSort.col){
+        const colDef=KKSRL_COLS.find(c=>c.key===kkSarimRuleLogSort.col)||{};
+        const sortKey=colDef.sortKey||kkSarimRuleLogSort.col,numeric=colDef.numeric,dir=kkSarimRuleLogSort.dir;
+        rows.sort((a,b)=>numeric?(num(a[sortKey])-num(b[sortKey]))*dir:String(a[sortKey]??'').localeCompare(String(b[sortKey]??''),'tr')*dir);
+    }
+    return rows;
+}
+function kkSarimRuleLogHeaderHtml(){
+    return '<tr>'+KKSRL_COLS.map(c=>{
+        const arrow=kkSarimRuleLogSort.col===c.key?(kkSarimRuleLogSort.dir===1?' ▲':' ▼'):'';
+        const filtered=kkSarimRuleLogFilters[c.key];
+        return '<th style="cursor:pointer;white-space:nowrap" onclick="setKkSarimRuleLogSort(&quot;'+c.key+'&quot;)">'+esc(c.label)+arrow+' <span title="Bu sütunda filtrele" style="cursor:pointer;'+(filtered?'color:#FFD700':'opacity:.45')+'" onclick="event.stopPropagation();setKkSarimRuleLogFilter(&quot;'+c.key+'&quot;,&quot;'+esc(c.label)+'&quot;)">🔍</span></th>';
+    }).join('')+'</tr>';
+}
+function kkSarimRuleLogHtml(){
+    if(!kkSarimRuleLog.length)return '<div class="list-empty" style="padding:10px;text-align:left">Henüz kayıt yok.</div>';
+    const rows=getKkSarimRuleLogRows();
+    const activeFilters=Object.keys(kkSarimRuleLogFilters).length;
+    let h=(activeFilters?'<div class="panel-summary" style="margin-bottom:6px">🔍 '+activeFilters+' sütun filtreleniyor ('+rows.length+'/'+kkSarimRuleLog.length+' kayıt) — <span style="cursor:pointer;color:#64B5F6;text-decoration:underline" onclick="clearKkSarimRuleLogFilters()">filtreleri temizle</span></div>':'');
+    h+='<div class="kksrl-scroll" style="overflow:auto;max-height:320px"><table class="sel-panel-table kksrl-table"><thead>'+kkSarimRuleLogHeaderHtml()+'</thead><tbody>';
+    if(!rows.length)h+='<tr><td colspan="'+KKSRL_COLS.length+'" class="list-empty">Filtreyle eşleşen kayıt yok</td></tr>';
+    rows.forEach(e=>{
+        h+='<tr><td>'+esc(e.ts)+'</td><td>'+esc(e.ruleLabel)+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModalByParti(&quot;'+esc(e.parti)+'&quot;)">'+esc(e.parti)+'</b></td><td>'+esc(e.stage||'-')+'</td><td>'+esc(e.fabric||'-')+'</td><td style="text-align:right">'+Math.round(e.kg).toLocaleString('tr-TR')+' kg</td><td>'+esc(kkSarimMinutesLabel(e.waitMinutes||0))+'</td><td>'+esc(e.firma||'-')+'</td></tr>';
+    });
+    return h+'</tbody></table></div>';
+}
+function exportKkSarimRuleLog(){
+    if(!kkSarimRuleLog.length){showToast('Kayıt yok','warning');return}
+    const rows=getKkSarimRuleLogRows().map(e=>({'Tarih':e.ts,'Kural':e.ruleLabel,'Parti':e.parti,'Aşama':e.stage,'Kumaş':e.fabric,'Kilo':e.kg,'Bekleme (dk)':e.waitMinutes,'Firma':e.firma}));
+    downloadWorkbook('otomatik_uyari_kayitlari_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Kayitlar',rows}]);
+}
+function clearKkSarimRuleLog(){
+    if(!window.confirm('Tüm otomatik uyarı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'))return;
+    kkSarimRuleLog=[];saveKkSarimRuleLog();renderKkSarimPanel();showToast('🗑 Kayıtlar temizlendi');
+}
+function kkSarimRuleLogControlHtml(){
+    return '<div class="flow-section-title">📋 Uygunsuzluk Kayıtları — otomatik kuralların geçmiş tetiklenme listesi ('+kkSarimRuleLog.length+' kayıt)</div>'
+        +'<div class="panel-summary" style="margin-bottom:6px">Bu kayıt, bu cihazda (bu tarayıcı sekmesi açıkken) tespit edilen otomatik uyarıları listeler. Birden fazla cihaz (PC + telefonlar) aynı anda açıksa, her biri kendi tespitlerini kendi kaydında tutar — tek/ortak bir merkez yoktur; en eksiksiz kayıt genelde sürekli açık kalan PC ekranındaki olur. Başlığa tıklayınca sıralanır, 🔍 ikonuna tıklayınca o sütunda filtrelenir.</div>'
+        +'<div class="wait-filter" style="margin:6px 0"><button type="button" style="background:#1565C0;color:white" onclick="exportKkSarimRuleLog()">📥 Excel\'e Aktar</button><button type="button" style="background:#455A64;color:white" onclick="clearKkSarimRuleLog()">🗑 Kaydı Temizle</button></div>'
+        +kkSarimRuleLogHtml();
+}
+function fabricMatchesKkSarimRule(rec,fabric){
+    if(!fabric)return true;
+    return String(rec.fabric||'').toLocaleUpperCase('tr-TR').includes(fabric.toLocaleUpperCase('tr-TR'));
+}
+let kkSarimRuleLog=safeParse('kksrl9','[]');
+function saveKkSarimRuleLog(){try{localStorage.setItem('kksrl9',JSON.stringify(kkSarimRuleLog))}catch(e){}}
+function logKkSarimRuleEvent(rule,rec,stageRaw,waitMinutes){
+    kkSarimRuleLog.unshift({
+        ts:new Date().toLocaleString('tr-TR'),
+        tsRaw:Date.now(),
+        ruleLabel:kkSarimRuleLabel(rule),
+        mode:rule.mode,
+        parti:String(rec.parti||''),
+        stage:stageRaw,
+        fabric:String(rec.fabric||''),
+        kg:num(rec.kg),
+        firma:String(rec.firma||''),
+        waitMinutes:waitMinutes
+    });
+    if(kkSarimRuleLog.length>500)kkSarimRuleLog.length=500;
+    saveKkSarimRuleLog();
+}
+function checkKkSarimAutoRules(cards){
+    const active=kkSarimAutoRules.filter(r=>r.active);
+    if(!active.length)return;
+    let changed=false;
+    active.forEach(rule=>{
+        cards.forEach(rec=>{
+            const pn=String(rec.parti||'').trim();
+            if(!pn)return;
+            const key=rule.uid+'|'+pn;
+            if(kkSarimRuleAlerted[key])return;
+            if(!fabricMatchesKkSarimRule(rec,rule.fabric))return;
+            const stageRaw=String(rec.stage||'')||'Bilinmeyen aşama',waitMinutes=Math.round(num(rec.wait)*1440);
+            const ruleNote='⚙️ Otomatik kural: '+kkSarimRuleLabel(rule);
+            if(rule.mode==='varis'){
+                const isKK=stageEquals(stageRaw,'KK'),isSR=stageEquals(stageRaw,'SARIM1');
+                if(!(isKK||isSR))return;
+                if(rule.waitMinutes&&waitMinutes<rule.waitMinutes)return;
+                kkSarimRuleAlerted[key]=true;changed=true;
+                logKkSarimRuleEvent(rule,rec,stageRaw,waitMinutes);
+                fireKkSarimWatchAlert(pn,rec,isKK?'Kalite Kontrol':'Sarım 1',ruleNote);
+            }else if(rule.mode==='bekleme'&&rule.waitMinutes){
+                if(waitMinutes<rule.waitMinutes)return;
+                kkSarimRuleAlerted[key]=true;changed=true;
+                logKkSarimRuleEvent(rule,rec,stageRaw,waitMinutes);
+                fireKkSarimOverwaitAlert(pn,rec,stageRaw,waitMinutes,ruleNote);
+            }
+        });
+    });
+    if(changed)saveKkSarimRuleAlerted();
+}
 async function kkSarimWatchPoll(){
-    if(!kkSarimWatchList.length)return;
+    if(!kkSarimWatchList.length&&!kkSarimAutoRules.some(r=>r.active))return;
     try{
         const res=await fetch('data/partiler.json?ts='+Date.now(),{cache:'no-store'});
         if(!res.ok)return;
@@ -2617,9 +2867,90 @@ async function kkSarimWatchPoll(){
             if(prevKey!==curKey){kkSarimWatchState[pn]=curKey;changed=true}
         });
         if(changed)saveKkSarimWatchState();
+        checkKkSarimAutoRules(cards);
     }catch(e){console.warn('kkSarim izleme kontrolü hatası',e)}
 }
 setInterval(kkSarimWatchPoll,60000);
+(function seedKkSarimWatchFromUrl(){
+    const raw=dashboardParams.get('watch'),rawNotes=dashboardParams.get('wnotes'),rawRules=dashboardParams.get('rules');
+    let added=false,notesChanged=false,rulesChanged=false;
+    if(rawNotes){
+        try{
+            const parsed=JSON.parse(rawNotes);
+            if(parsed&&typeof parsed==='object')Object.keys(parsed).forEach(pn=>{if(parsed[pn]){kkSarimWatchNotes[pn]=String(parsed[pn]);notesChanged=true}});
+        }catch(e){}
+    }
+    if(raw)raw.split(',').map(s=>s.trim()).filter(Boolean).forEach(pn=>{
+        if(!kkSarimWatchList.includes(pn)){kkSarimWatchList.push(pn);seedKkSarimWatchBaseline(pn);added=true}
+    });
+    if(rawRules){
+        try{
+            const parsed=JSON.parse(rawRules);
+            if(Array.isArray(parsed))parsed.forEach(r=>{
+                if(!r||typeof r!=='object')return;
+                const exists=kkSarimAutoRules.some(x=>x.mode===r.mode&&x.fabric===(r.fabric||'')&&x.waitMinutes===(r.waitMinutes||0));
+                if(!exists){kkSarimAutoRules.push({uid:'kkr_'+Date.now()+'_'+Math.random().toString(16).slice(2),mode:r.mode==='bekleme'?'bekleme':'varis',fabric:String(r.fabric||''),waitMinutes:Number(r.waitMinutes)||0,active:true,created_at:new Date().toLocaleString('tr-TR')});rulesChanged=true}
+            });
+        }catch(e){}
+    }
+    if(added)saveKkSarimWatchList();
+    if(notesChanged)saveKkSarimWatchNotes();
+    if(rulesChanged)saveKkSarimAutoRules();
+})();
+/* ── Ayrı "İzleme Ekranı" modu (?watchOnly=1) — ntfy/PC servisi gerekmeden, sadece bu sekme açıkken sesli+tam ekran uyarı ── */
+function renderKkSarimWatchOnlyScreen(){
+    const el=document.getElementById('kkSarimWatchOnlyScreen');
+    if(!el)return;
+    const chips=kkSarimWatchList.length?kkSarimWatchList.map(pn=>{
+        const note=kkSarimWatchNotes[pn]||'';
+        return '<span class="kkswo-chip"><span style="display:flex;align-items:center;gap:6px"><b style="cursor:pointer" onclick="editKkSarimWatchOnlyNote(&quot;'+esc(pn)+'&quot;)">👁️ '+esc(pn)+'</b><button type="button" onclick="removeKkSarimWatchOnly(&quot;'+esc(pn)+'&quot;)">×</button></span>'+(note?'<span style="display:block;color:#FFD54F;font-size:10px;margin-top:2px;cursor:pointer" onclick="editKkSarimWatchOnlyNote(&quot;'+esc(pn)+'&quot;)">📝 '+esc(note)+'</span>':'')+'</span>';
+    }).join(''):'<span style="opacity:.7">İzlenen parti yok</span>';
+    el.innerHTML='<div class="kkswo-card"><div class="kkswo-icon">👁️</div><h1>Parti İzleme Ekranı</h1>'
+        +'<div class="kkswo-status" id="kkswoStatus">🔇 Ses kapalı — başlatmak için dokunun</div>'
+        +'<button type="button" class="kkswo-start" onclick="startKkSarimWatchOnly()">🔊 Başlat</button>'
+        +'<div class="kkswo-list">'+chips+'</div>'
+        +'<div style="display:flex;gap:6px"><input type="text" id="kkswoInput" placeholder="Parti no ekle" onkeydown="if(event.key===&quot;Enter&quot;)addKkSarimWatchOnly()"><button type="button" onclick="addKkSarimWatchOnly()">＋</button></div>'
+        +'<button type="button" style="margin-top:12px;background:none;border:1px solid rgba(255,255,255,.3);color:#90CAF9;padding:8px 16px;border-radius:20px;cursor:pointer" onclick="testKkSarimAlert()">🚨 Uyarıyı Test Et</button>'
+        +'<small style="display:block;margin-top:14px;color:#90CAF9">Bu ekranı açık bırakın. İzlenen bir parti Kalite Kontrol veya Sarım1\'e geldiğinde burada sesli ve tam ekran uyarı çıkar.</small></div>';
+}
+function startKkSarimWatchOnly(){
+    unlockKkSarimAudio();
+    playKkSarimAlertSound();
+    const st=document.getElementById('kkswoStatus');
+    if(st)st.textContent='✅ Aktif — bu ekranı açık bırakın';
+    kkSarimWatchPoll();
+}
+function addKkSarimWatchOnly(){
+    const el=document.getElementById('kkswoInput');
+    const pn=el?String(el.value||'').trim():'';
+    if(!pn)return;
+    if(!kkSarimWatchList.includes(pn)){kkSarimWatchList.push(pn);seedKkSarimWatchBaseline(pn);saveKkSarimWatchList()}
+    if(el)el.value='';
+    renderKkSarimWatchOnlyScreen();
+}
+function removeKkSarimWatchOnly(pn){
+    kkSarimWatchList=kkSarimWatchList.filter(x=>x!==pn);
+    delete kkSarimWatchState[pn];
+    delete kkSarimWatchNotes[pn];
+    saveKkSarimWatchList();saveKkSarimWatchState();saveKkSarimWatchNotes();
+    renderKkSarimWatchOnlyScreen();
+}
+function editKkSarimWatchOnlyNote(pn){
+    const current=kkSarimWatchNotes[pn]||'';
+    const next=window.prompt('"'+pn+'" için not:',current);
+    if(next===null)return;
+    const trimmed=next.trim();
+    if(trimmed)kkSarimWatchNotes[pn]=trimmed;else delete kkSarimWatchNotes[pn];
+    saveKkSarimWatchNotes();
+    renderKkSarimWatchOnlyScreen();
+}
+(function initKkSarimWatchOnlyMode(){
+    if(dashboardParams.get('watchOnly')!=='1')return;
+    const el=document.createElement('div');
+    el.id='kkSarimWatchOnlyScreen';
+    document.body.appendChild(el);
+    renderKkSarimWatchOnlyScreen();
+})();
 (function injectKkSarimFlashStyles(){
     const style=document.createElement('style');
     style.textContent='#kkSarimFlashOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:99999}'
@@ -2628,10 +2959,23 @@ setInterval(kkSarimWatchPoll,60000);
         +'.kksarim-flash-icon{font-size:56px;margin-bottom:10px}'
         +'.kksarim-flash-title{font-size:26px;font-weight:900;margin-bottom:6px}'
         +'.kksarim-flash-parti{font-size:34px;font-weight:900;margin-bottom:8px;word-break:break-word}'
-        +'.kksarim-flash-meta{font-size:16px;font-weight:700;opacity:.85;margin-bottom:18px}'
+        +'.kksarim-flash-meta{font-size:16px;font-weight:700;opacity:.85;margin-bottom:12px}'
+        +'.kksarim-flash-note{background:rgba(26,26,46,.25);border:1px dashed rgba(26,26,46,.5);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700;margin-bottom:18px;text-align:left}'
         +'.kksarim-flash-close{background:#1a1a2e;color:white;border:none;padding:10px 26px;border-radius:25px;font-weight:bold;cursor:pointer;font-size:15px}'
         +'@keyframes kksFadeIn{from{opacity:0}to{opacity:1}}'
-        +'@keyframes kksPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}';
+        +'@keyframes kksPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}'
+        +'#kkSarimWatchOnlyScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;z-index:99998;padding:20px;box-sizing:border-box}'
+        +'.kkswo-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:36px 32px;text-align:center;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box}'
+        +'.kkswo-icon{font-size:48px;margin-bottom:8px}'
+        +'.kkswo-card h1{color:#F39C12;font-size:22px;margin:0 0 14px}'
+        +'.kkswo-status{color:#90CAF9;font-size:14px;margin-bottom:16px;font-weight:700}'
+        +'.kkswo-start{background:#00897B;color:white;border:none;padding:14px 28px;border-radius:30px;font-weight:900;font-size:16px;cursor:pointer;margin-bottom:20px}'
+        +'.kkswo-list{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px}'
+        +'.kkswo-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:6px 10px;font-size:12px;color:white;display:inline-flex;align-items:center;gap:6px}'
+        +'.kkswo-chip button{background:none;border:none;color:#FF8A80;cursor:pointer;font-weight:bold;font-size:13px}'
+        +'#kkswoInput{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:white;box-sizing:border-box}'
+        +'.kksrl-table thead th{position:sticky;top:0;background:#181233;z-index:1;user-select:none}'
+        +'.kksrl-table thead th:hover{background:#241c4a}';
     document.head.appendChild(style);
 })();
 function kkSarimTimeFilterHtml(){
@@ -2674,6 +3018,8 @@ function renderKkSarimPanel(){
     let h='<button class="panel-close" onclick="document.getElementById(&quot;kkSarimPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📈 '+ttl+' <button type="button" style="font-size:12px;background:#2F75B5;color:white;border:none;padding:6px 12px;border-radius:20px;cursor:pointer;vertical-align:middle" onclick="loadGithubJsonDashboard().then(()=>{renderKkSarimPanel();showToast(&quot;🔄 Veri yenilendi&quot;)})">🔄 Canlı Yenile</button></h2>';
     h+=kkSarimTodayOverviewHtml();
     h+=kkSarimWatchControlHtml();
+    h+=kkSarimAutoRuleControlHtml();
+    h+=kkSarimRuleLogControlHtml();
     h+='<div class="flow-tabs"><button class="flow-tab '+(kkSarimTab==='current'?'active':'')+'" onclick="setKkSarimTab(&quot;current&quot;)">🔵 Şu An KK/Sarım1\'de</button><button class="flow-tab '+(kkSarimTab==='after'?'active':'')+'" onclick="setKkSarimTab(&quot;after&quot;)">🧭 KK/Sarım1 Sonrasına Geçmiş</button></div>';
     h+=kkSarimTimeFilterHtml();
     h+=kkSarimSummaryHtml(rows);
@@ -2729,7 +3075,7 @@ function gecisDiffToast(){
             if(ki>=0&&ci>ki&&!(pi>=0&&pi>ki))kk++;
             if(si>=0&&ci>si&&!(pi>=0&&pi>si))sr++;
         });
-        if(kk||sr)showToast('📊 Yeni veri: '+kk+' parti Kalite Kontrol\'ü, '+sr+' parti Sarım1\'i geçti — 📜 Geçiş Raporu\'na bakın','warning');
+        if(kk||sr)showToast('📊 Yeni veri: '+kk+' parti Kalite Kontrol\'ü, '+sr+' parti Sarım1\'i geçti — 📈 KK/Sarım1 Analiz\'e bakın','warning');
     }catch(e){console.warn(e)}
 }
 let REMOTE_SAAT={};

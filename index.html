@@ -369,7 +369,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .kanban-card .kc-badge.uyari{background:#FFC300;color:#222}
 .kanban-card .kc-badge.normal{background:#4CAF50;color:white}
 
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10000;justify-content:center;align-items:center;backdrop-filter:blur(5px)}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10030;justify-content:center;align-items:center;backdrop-filter:blur(5px)}
 .modal-overlay.show{display:flex}
 .modal-box{background:rgba(15,12,41,.97);border:1px solid rgba(255,255,255,.18);border-radius:16px;width:min(500px,calc(100vw - 36px));max-height:85vh;overflow-y:auto;padding:22px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.55)}
 .modal-box .modal-close{position:absolute;right:12px;top:10px;width:32px;height:32px;border:none;border-radius:50%;cursor:pointer;font-size:17px;font-weight:900;background:rgba(255,255,255,.1);color:white}
@@ -2253,7 +2253,7 @@ function flowListHtml(cards){
     const ordered=[...(cards||[])].sort(fifoCompare);
     if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';
     let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Mevcut aşama</th><th>Sonraki aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
-    ordered.slice(0,180).forEach((k,i)=>{h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(k.son_asama||k._asama||k.asama||'-')+'</td><td>'+esc(k.bir_sonraki||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>'});
+    ordered.slice(0,180).forEach((k,i)=>{h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td>'+esc(k.bir_sonraki||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>'});
     return h+'</tbody></table></div>';
 }
 function sendNtfyFlowDetail(target,kind,name,e){
@@ -3052,9 +3052,13 @@ function renderKkSarimPanel(){
     p.innerHTML=h;p.style.display='block';addPanelFullButton('kkSarimPanel');ensureElementFullscreenToolbar('kkSarimPanel',ttl);
 }
 
-/* ════════ 🌡️ FINVIZ TARZI ISI HARİTASI (TREEMAP) — D3.js ════════ */
+/* ════════ 🌡️ ISI HARİTASI (ÇUBUK GRAFİK) ════════ */
 const HEATMAP_DIMENSIONS={
-    asama:{label:'Aşama',get:k=>k._asama||k.asama||'Bilinmeyen'},
+    asama:{label:'Aşama',get:k=>{
+        if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))return'Kalite Kontrol\'e Gelecek';
+        if(!isCurrentlyStage(k,'SARIM1')&&stageEquals(cardNextStage(k),'SARIM1'))return'Sarım1\'e Gelecek';
+        return cardCurrentStage(k)||'Bilinmeyen';
+    }},
     firma:{label:'Firma',get:k=>k.line1||k.firma||'Bilinmeyen'},
     kumas:{label:'Kumaş',get:k=>k.ham_adi||'Bilinmeyen'},
     recete:{label:'Reçete',get:k=>k.recete_adi||'Bilinmeyen'},
@@ -3065,7 +3069,7 @@ const HEATMAP_DIMENSIONS={
         return def.name;
     }}
 };
-let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapZoomGroup=null,heatmapLeafView=null;
+let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapZoomGroup=null,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set();
 function setHeatmapDim(which,val){
     if(which==='top')heatmapTopGroup=val;else heatmapSubGroup=val;
     heatmapZoomGroup=null;heatmapLeafView=null;
@@ -3074,132 +3078,194 @@ function setHeatmapDim(which,val){
 function setHeatmapMetric(val){heatmapMetric=val==='count'?'count':'kg';renderHeatmapPanel()}
 function setHeatmapTopN(val){heatmapTopN=parseInt(val,10)||30;renderHeatmapPanel()}
 function zoomHeatmapGroup(name){heatmapZoomGroup=name;heatmapLeafView=null;renderHeatmapPanel()}
-function clearHeatmapZoom(){heatmapZoomGroup=null;renderHeatmapPanel()}
-function showHeatmapLeafCards(title,cards){heatmapLeafView={title,cards};renderHeatmapPanel()}
-function clearHeatmapLeafView(){heatmapLeafView=null;renderHeatmapPanel()}
-function makeHeatmapTicker(name,maxChars){
-    maxChars=maxChars||4;
-    const s=String(name||'').trim();
-    if(!s)return'';
-    let t=s.split(/\s+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase();
-    if(t.length<2)t=s.replace(/[^A-Za-zÇĞİÖŞÜçğıöşü0-9]/g,'').toUpperCase();
-    return t.slice(0,maxChars);
+function clearHeatmapZoom(){heatmapZoomGroup=null;heatmapLeafView=null;renderHeatmapPanel()}
+function showHeatmapLeafCards(title,cards){heatmapLeafView={title,cards};heatmapLeafSelection=new Set();renderHeatmapPanel()}
+function clearHeatmapLeafView(){heatmapLeafView=null;heatmapLeafSelection=new Set();renderHeatmapPanel()}
+function toggleHeatmapLeafSelect(id){
+    if(heatmapLeafSelection.has(id))heatmapLeafSelection.delete(id);else heatmapLeafSelection.add(id);
+    renderHeatmapPanel();
 }
-function aggregateHeatmapHierarchy(cards,topKey,subKey,metric,topN){
-    const topDim=HEATMAP_DIMENSIONS[topKey]||HEATMAP_DIMENSIONS.asama,subDim=HEATMAP_DIMENSIONS[subKey]||HEATMAP_DIMENSIONS.firma;
-    const map=new Map();
+function toggleHeatmapLeafSelectAll(){
+    if(!heatmapLeafView)return;
+    const allChecked=heatmapLeafView.cards.every(k=>heatmapLeafSelection.has(k.id));
+    if(allChecked)heatmapLeafSelection.clear();
+    else heatmapLeafView.cards.forEach(k=>heatmapLeafSelection.add(k.id));
+    renderHeatmapPanel();
+}
+function heatmapChkHtml(on,onclick){
+    return '<span class="kkheat-chk'+(on?' on':'')+'" onclick="'+onclick+'">'+(on?'✓':'')+'</span>';
+}
+function heatmapLeafTableHtml(cards){
+    const ordered=[...(cards||[])].sort(fifoCompare);
+    if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';
+    const allChecked=ordered.every(k=>heatmapLeafSelection.has(k.id));
+    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th style="width:24px">'+heatmapChkHtml(allChecked,'toggleHeatmapLeafSelectAll()')+'</th><th>FIFO / Parti</th><th>Mevcut aşama</th><th>Sonraki aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    ordered.slice(0,180).forEach((k,i)=>{
+        h+='<tr><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td>'+esc(k.bir_sonraki||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
+    });
+    return h+'</tbody></table></div>';
+}
+function heatmapLeafExportRows(onlySelected){
+    if(!heatmapLeafView)return[];
+    const cards=[...heatmapLeafView.cards].sort(fifoCompare);
+    const filtered=onlySelected?cards.filter(k=>heatmapLeafSelection.has(k.id)):cards;
+    return filtered.map(k=>({'Parti':k.parti,'Mevcut Aşama':cardCurrentStage(k)||'-','Sonraki Aşama':k.bir_sonraki||'-','Kilo':num(k.kilo),'Bekleme':fifoAgeLabel(k),'Firma':k.line1||'-'}));
+}
+function exportHeatmapLeafExcel(onlySelected){
+    const rows=heatmapLeafExportRows(onlySelected);
+    if(!rows.length){alert('Aktarılacak kayıt yok');return}
+    downloadWorkbook('isi_haritasi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Partiler',rows}]);
+}
+function heatmapLeafExportTableHtml(rows){
+    let h='<table class="sel-panel-table"><thead><tr><th>Parti</th><th>Mevcut Aşama</th><th>Sonraki Aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    rows.forEach(r=>{h+='<tr><td>'+esc(r['Parti'])+'</td><td>'+esc(r['Mevcut Aşama'])+'</td><td>'+esc(r['Sonraki Aşama'])+'</td><td style="text-align:right">'+Math.round(r['Kilo']).toLocaleString('tr-TR')+' kg</td><td>'+esc(r['Bekleme'])+'</td><td>'+esc(r['Firma'])+'</td></tr>'});
+    return h+'</tbody></table>';
+}
+function buildHeatmapLeafExportEl(rows,onlySelected){
+    const wrap=document.createElement('div');
+    wrap.style.cssText='width:900px;background:#1a1a2e;color:#fff;padding:16px';
+    const title=(heatmapLeafView?heatmapLeafView.title:'Parti Listesi')+(onlySelected?' (Seçili)':'');
+    wrap.innerHTML='<h2 style="color:#FFD700;margin:0 0 10px">'+esc(title)+'</h2>'+heatmapLeafExportTableHtml(rows);
+    const outer=document.createElement('div');
+    outer.style.cssText='position:fixed;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    outer.appendChild(wrap);
+    document.body.appendChild(outer);
+    wrap._exportOuter=outer;
+    return wrap;
+}
+function removeHeatmapExportEl(el){
+    if(el._exportOuter)el._exportOuter.remove();else el.remove();
+}
+function exportHeatmapLeafPNG(onlySelected){
+    const rows=heatmapLeafExportRows(onlySelected);
+    if(!rows.length){alert('Aktarılacak kayıt yok');return}
+    const el=buildHeatmapLeafExportEl(rows,onlySelected);
+    showToast('🖼️ PNG hazırlanıyor...','warning');
+    html2pdf().set({html2canvas:{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0}}).from(el).toCanvas().get('canvas').then(canvas=>{
+        canvas.toBlob(blob=>{
+            removeHeatmapExportEl(el);
+            if(blob){fallbackDownload(blob,'isi_haritasi_'+(onlySelected?'secili_':'')+'liste.png');showToast('✅ PNG indirildi')}else alert('PNG oluşturulamadı');
+        });
+    }).catch(err=>{removeHeatmapExportEl(el);alert('PNG hatası: '+err)});
+}
+function exportHeatmapLeafPDF(onlySelected){
+    const rows=heatmapLeafExportRows(onlySelected);
+    if(!rows.length){alert('Aktarılacak kayıt yok');return}
+    const el=buildHeatmapLeafExportEl(rows,onlySelected);
+    showToast('📄 PDF hazırlanıyor...','warning');
+    html2pdf().set({margin:.3,filename:'isi_haritasi_'+(onlySelected?'secili_':'')+'liste.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(el).save().then(()=>{removeHeatmapExportEl(el);showToast('✅ PDF indirildi')}).catch(err=>{removeHeatmapExportEl(el);alert('Hata: '+err)});
+}
+function heatmapGroupCards(cards,dimKey){
+    const dim=HEATMAP_DIMENSIONS[dimKey]||HEATMAP_DIMENSIONS.asama,map=new Map();
     cards.forEach(k=>{
-        const top=topDim.get(k),sub=subDim.get(k);
-        if(!map.has(top))map.set(top,new Map());
-        const subMap=map.get(top);
-        if(!subMap.has(sub))subMap.set(sub,{count:0,kg:0,cards:[]});
-        const cell=subMap.get(sub);
+        const name=dim.get(k);
+        if(!map.has(name))map.set(name,{count:0,kg:0,cards:[]});
+        const cell=map.get(name);
         cell.count++;cell.kg+=num(k.kilo);cell.cards.push(k);
     });
-    const leaves=[];
-    map.forEach((subMap,top)=>subMap.forEach((cell,sub)=>{
-        const value=metric==='count'?cell.count:cell.kg;
-        if(value>0)leaves.push({top,sub,value,count:cell.count,kg:cell.kg,cards:cell.cards});
-    }));
-    leaves.sort((a,b)=>b.value-a.value);
-    const limited=leaves.slice(0,topN),topGroups=new Map();
-    limited.forEach(l=>{
-        if(!topGroups.has(l.top))topGroups.set(l.top,[]);
-        topGroups.get(l.top).push(l);
-    });
-    const children=Array.from(topGroups.entries()).map(([top,arr])=>({name:top,children:arr.map(l=>({name:l.sub,value:l.value,count:l.count,kg:l.kg,cards:l.cards}))}));
-    const maxValue=limited.length?Math.max.apply(null,limited.map(l=>l.value)):1;
-    return{hierarchy:{name:'root',children},maxValue};
+    return map;
 }
-function computeHeatmapData(){
+function heatmapBarRows(map,metric,topN){
+    const rows=Array.from(map.entries()).map(([name,cell])=>({name,count:cell.count,kg:cell.kg,cards:cell.cards,value:metric==='count'?cell.count:cell.kg}));
+    rows.sort((a,b)=>b.value-a.value);
+    return topN?rows.slice(0,topN):rows;
+}
+function computeHeatmapTopBars(){
     const all=typeof getAllCards==='function'?getAllCards():[];
-    const{hierarchy,maxValue}=aggregateHeatmapHierarchy(all,heatmapTopGroup,heatmapSubGroup,heatmapMetric,heatmapTopN);
-    if(heatmapZoomGroup){
-        const grp=(hierarchy.children||[]).find(c=>c.name===heatmapZoomGroup);
-        if(grp)return{hierarchy:{name:'root',children:[grp]},maxValue,zoomed:true};
-    }
-    return{hierarchy,maxValue,zoomed:false};
+    return heatmapBarRows(heatmapGroupCards(all,heatmapTopGroup),heatmapMetric,heatmapTopN);
 }
-function drawPartiHeatmapTreemap(svgEl,width,height,hierarchyData,maxValue,metric){
-    if(typeof d3==='undefined'||!svgEl)return;
-    const sel=d3.select(svgEl);
-    sel.selectAll('*').remove();
-    sel.attr('width',width).attr('height',height).attr('viewBox','0 0 '+width+' '+height);
-    if(!hierarchyData.children||!hierarchyData.children.length){
-        sel.append('text').attr('x',width/2).attr('y',height/2).attr('text-anchor','middle').style('fill','#90A4AE').style('font-size','14px').text('Grafik için kayıt yok');
-        return;
-    }
-    const marginTop=6,marginBottom=32,marginLeft=6,marginRight=6;
-    const root=d3.hierarchy(hierarchyData).sum(d=>d.value||0).sort((a,b)=>(b.value||0)-(a.value||0));
-    d3.treemap().size([Math.max(width-marginLeft-marginRight,10),Math.max(height-marginTop-marginBottom,10)]).paddingInner(3).paddingTop(d=>d.depth===1?22:0).round(true)(root);
-    const g=sel.append('g').attr('transform','translate('+marginLeft+','+marginTop+')');
-    const leaves=root.leaves();
-    const colorScale=d3.scaleLinear().domain([0,0.5*maxValue,maxValue]).range(['#2e7d32','#fbc02d','#c62828']).interpolate(d3.interpolateRgb);
-    let tooltip=d3.select('body').select('div.kkheat-tooltip');
-    if(tooltip.empty())tooltip=d3.select('body').append('div').attr('class','kkheat-tooltip');
-    const groups=g.selectAll('g.kkheat-group').data(root.children||[]).enter().append('g').attr('class','kkheat-group').attr('transform',d=>'translate('+d.x0+','+d.y0+')');
-    groups.append('rect').attr('width',d=>Math.max(d.x1-d.x0,0)).attr('height',d=>Math.max(d.y1-d.y0,0)).attr('fill','none').attr('stroke','rgba(255,255,255,.35)').attr('stroke-width',1.5).attr('rx',8).style('cursor','pointer').on('click',(e,d)=>zoomHeatmapGroup(d.data.name));
-    groups.append('text').attr('x',6).attr('y',15).text(d=>d.data.name).style('font-weight',800).style('font-size','11px').style('fill','#FFD700').style('cursor','pointer').style('paint-order','stroke fill').style('stroke','rgba(0,0,0,.75)').style('stroke-width',3).on('click',(e,d)=>zoomHeatmapGroup(d.data.name));
-    const leafG=g.selectAll('g.kkheat-leaf').data(leaves).enter().append('g').attr('class','kkheat-leaf').attr('transform',d=>'translate('+d.x0+','+d.y0+')');
-    leafG.append('rect').attr('rx',5).attr('width',d=>Math.max(d.x1-d.x0,0)).attr('height',d=>Math.max(d.y1-d.y0,0)).attr('fill',d=>colorScale(d.data.value||0)).attr('stroke','rgba(0,0,0,.3)').style('cursor','pointer')
-        .on('mousemove',function(e,d){
-            tooltip.style('opacity',.98).html('<div style="font-weight:800;margin-bottom:4px">'+esc(d.parent&&d.parent.data?d.parent.data.name:'')+' • '+esc(d.data.name)+'</div><div style="font-weight:700;margin-top:2px">'+Math.round(d.data.kg).toLocaleString('tr-TR')+' kg • '+d.data.count+' parti</div>').style('left',(e.pageX+14)+'px').style('top',(e.pageY-10)+'px');
-        })
-        .on('mouseleave',function(){tooltip.style('opacity',0)})
-        .on('click',(e,d)=>showHeatmapLeafCards((d.parent&&d.parent.data?d.parent.data.name:'')+' — '+d.data.name,d.data.cards));
-    leafG.each(function(d){
-        const w=d.x1-d.x0,h=d.y1-d.y0,area=w*h,s2=d3.select(this);
-        if(area>=1800&&w>=90&&h>=42){
-            const nm=d.data.name.length>24?d.data.name.slice(0,23)+'…':d.data.name;
-            s2.append('text').attr('x',6).attr('y',15).text(nm).style('font-weight',800).style('font-size','10px').style('fill','#0a0a0a').style('paint-order','stroke fill').style('stroke','rgba(255,255,255,.85)').style('stroke-width',2.5);
-            s2.append('text').attr('x',6).attr('y',30).text(metric==='count'?d.data.count+' parti':Math.round(d.data.kg).toLocaleString('tr-TR')+' kg').style('font-weight',700).style('font-size','9px').style('fill','#0a0a0a').style('paint-order','stroke fill').style('stroke','rgba(255,255,255,.8)').style('stroke-width',2);
-        }else if(area>=500&&w>=32&&h>=20){
-            const ticker=makeHeatmapTicker(d.data.name,4);
-            s2.append('text').attr('x',w/2).attr('y',h/2+3).attr('text-anchor','middle').text(ticker).style('font-weight',800).style('font-size','9px').style('fill','#0a0a0a').style('paint-order','stroke fill').style('stroke','rgba(255,255,255,.85)').style('stroke-width',2);
-        }
+function computeHeatmapSubBars(topName){
+    const all=typeof getAllCards==='function'?getAllCards():[],topDim=HEATMAP_DIMENSIONS[heatmapTopGroup]||HEATMAP_DIMENSIONS.asama;
+    const filtered=all.filter(k=>topDim.get(k)===topName);
+    return heatmapBarRows(heatmapGroupCards(filtered,heatmapSubGroup),heatmapMetric,heatmapTopN);
+}
+function heatmapColorScale(metric,maxValue){
+    if(typeof d3==='undefined')return()=>'#4CAF50';
+    return metric==='count'
+        ?d3.scaleLinear().domain([0,maxValue||1]).range(['#c8e6c9','#c62828']).interpolate(d3.interpolateRgb)
+        :d3.scaleLinear().domain([0,0.5*(maxValue||1),maxValue||1]).range(['#2e7d32','#fff176','#c62828']).interpolate(d3.interpolateRgb);
+}
+function heatmapBarClick(i){
+    const r=heatmapBarRowsCache[i];
+    if(!r)return;
+    if(heatmapZoomGroup)showHeatmapLeafCards(heatmapZoomGroup+' — '+r.name,r.cards);
+    else zoomHeatmapGroup(r.name);
+}
+function heatmapLegendHtml(metric){
+    return '<div class="kkheat-legend"><span>'+(metric==='count'?'Düşük adet':'Düşük oran')+'</span><div class="kkheat-legend-bar"></div><span>'+(metric==='count'?'Yüksek adet':'Yüksek oran')+'</span></div>';
+}
+function heatmapBarChartHtml(rows,metric){
+    heatmapBarRowsCache=rows;
+    if(!rows.length)return'<div class="list-empty">Grafik için kayıt yok</div>';
+    const maxValue=Math.max.apply(null,rows.map(r=>r.value))||1,colorScale=heatmapColorScale(metric,maxValue);
+    let h='<div class="kkheat-bars">';
+    rows.forEach((r,i)=>{
+        const pct=Math.max(3,Math.round(r.value/maxValue*100));
+        const mainText=metric==='count'?r.count.toLocaleString('tr-TR')+' adet':Math.round(r.kg).toLocaleString('tr-TR')+' kg';
+        const subText=metric==='count'?Math.round(r.kg).toLocaleString('tr-TR')+' kg':r.count.toLocaleString('tr-TR')+' parti';
+        h+='<div class="kkheat-bar-row" onclick="heatmapBarClick('+i+')" title="'+esc(r.name)+'">'
+            +'<div class="kkheat-bar-label">'+esc(r.name)+'</div>'
+            +'<div class="kkheat-bar-track"><div class="kkheat-bar-fill" style="width:'+pct+'%;background:'+colorScale(r.value)+'"></div></div>'
+            +'<div class="kkheat-bar-value">'+mainText+' <span class="kkheat-bar-sub">('+subText+')</span></div>'
+            +'</div>';
     });
-    const legendW=Math.min(220,width-20),legendX=width-legendW-marginRight,legendY=height-24;
-    const legendG=sel.append('g').attr('transform','translate('+legendX+','+legendY+')'),steps=60;
-    for(let i=0;i<steps;i++)legendG.append('rect').attr('x',i/steps*legendW).attr('y',0).attr('width',legendW/steps+1).attr('height',10).attr('fill',colorScale(i/steps*maxValue));
-    legendG.append('text').attr('x',0).attr('y',22).style('font-size','10px').style('fill','#ccc').text('Düşük');
-    legendG.append('text').attr('x',legendW).attr('y',22).attr('text-anchor','end').style('font-size','10px').style('fill','#ccc').text('Yüksek');
+    h+='</div>';
+    h+=heatmapLegendHtml(metric);
+    return h;
 }
 function toggleHeatmapTreemapPanel(){safePanelOpen('heatmapTreemapPanel','🌡️ Isı Haritası',renderHeatmapPanel)}
 function heatmapDimSelectHtml(id,which,current){
     return '<select id="'+id+'" class="filter-select" onchange="setHeatmapDim(&quot;'+which+'&quot;,this.value)">'+Object.keys(HEATMAP_DIMENSIONS).map(k=>'<option value="'+k+'" '+(current===k?'selected':'')+'>'+HEATMAP_DIMENSIONS[k].label+'</option>').join('')+'</select>';
 }
 function renderHeatmapPanel(){
-    const p=document.getElementById('heatmapTreemapPanel'),ttl='Isı Haritası (Finviz Tarzı)';
+    const p=document.getElementById('heatmapTreemapPanel'),ttl='Isı Haritası (Çubuk Grafik)';
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapTreemapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🌡️ '+ttl+'</h2>';
-    h+='<div class="panel-summary">Kutu büyüklüğü seçilen metriğe (kg/adet) göre değişir; renk yoğunluğu değerin şiddetini gösterir (yeşil=düşük, kırmızı=yüksek). Alt kutuya tıklayınca o gruptaki partilerin listesi açılır; üst grup başlığına tıklayınca o gruba yakınlaşılır.</div>';
+    h+='<div class="panel-summary">Çubuk uzunluğu ve rengi seçilen metriğin (kg/adet) değerine göre değişir (yeşil=düşük, kırmızı=yüksek). Bir çubuğa tıklayınca o gruba ait kırılım yine çubuk grafik olarak açılır; kırılımdaki bir çubuğa tıklayınca partilerin listesi görünür.</div>';
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Üst Grup</label>'+heatmapDimSelectHtml('heatmapTopGroupSel','top',heatmapTopGroup)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Alt Grup</label>'+heatmapDimSelectHtml('heatmapSubGroupSel','sub',heatmapSubGroup)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Metrik</label><select class="filter-select" onchange="setHeatmapMetric(this.value)"><option value="kg" '+(heatmapMetric==='kg'?'selected':'')+'>Kg</option><option value="count" '+(heatmapMetric==='count'?'selected':'')+'>Adet</option></select></div>';
-    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Top N (Yaprak)</label><select class="filter-select" onchange="setHeatmapTopN(this.value)">'+[20,30,40,60].map(n=>'<option value="'+n+'" '+(heatmapTopN===n?'selected':'')+'>'+n+'</option>').join('')+'</select></div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Top N (Çubuk)</label><select class="filter-select" onchange="setHeatmapTopN(this.value)">'+[10,20,30,40,60].map(n=>'<option value="'+n+'" '+(heatmapTopN===n?'selected':'')+'>'+n+'</option>').join('')+'</select></div>';
     if(heatmapZoomGroup)h+='<button type="button" class="flow-tab" onclick="clearHeatmapZoom()">← Tüm Gruplara Dön</button>';
     h+='<button type="button" class="btn-fire-export" onclick="renderHeatmapPanel()">🔄 Yenile</button>';
     h+='</div>';
-    h+='<svg id="heatmapTreemapSvg" class="treemap-svg"></svg>';
+    if(heatmapZoomGroup)h+='<div class="flow-section-title">'+esc(heatmapZoomGroup)+'</div>';
+    const rows=heatmapZoomGroup?computeHeatmapSubBars(heatmapZoomGroup):computeHeatmapTopBars();
+    h+=heatmapBarChartHtml(rows,heatmapMetric);
     if(heatmapLeafView){
         const kg=heatmapLeafView.cards.reduce((s,k)=>s+num(k.kilo),0);
+        const selCount=heatmapLeafView.cards.filter(k=>heatmapLeafSelection.has(k.id)).length,offCls=selCount?'':' kkheat-btn-off';
         h+='<div class="flow-section-title">'+esc(heatmapLeafView.title)+' — '+heatmapLeafView.cards.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg <button type="button" class="flow-tab" onclick="clearHeatmapLeafView()" style="margin-left:8px">× Kapat</button></div>';
-        h+=flowListHtml(heatmapLeafView.cards);
+        h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 10px">';
+        h+='<span style="font-size:11px;color:#90A4AE;font-weight:800">Tümünü Aktar:</span>';
+        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafPNG(false)">🖼️ PNG</button>';
+        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafPDF(false)">📄 PDF</button>';
+        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafExcel(false)">📊 Excel</button>';
+        h+='<span style="font-size:11px;color:#90A4AE;font-weight:800;margin-left:10px">Seçilenleri Aktar ('+selCount+'):</span>';
+        h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPNG(true)">🖼️ PNG</button>';
+        h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPDF(true)">📄 PDF</button>';
+        h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafExcel(true)">📊 Excel</button>';
+        h+='</div>';
+        h+=heatmapLeafTableHtml(heatmapLeafView.cards);
     }
     p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapTreemapPanel');ensureElementFullscreenToolbar('heatmapTreemapPanel',ttl);
-    setTimeout(()=>{
-        const svgEl=document.getElementById('heatmapTreemapSvg');
-        if(!svgEl)return;
-        const width=svgEl.parentElement?svgEl.parentElement.clientWidth||900:900,height=560;
-        const data=computeHeatmapData();
-        drawPartiHeatmapTreemap(svgEl,width,height,data.hierarchy,data.maxValue,heatmapMetric);
-    },0);
 }
-(function injectHeatmapTreemapStyles(){
+(function injectHeatmapBarStyles(){
     const style=document.createElement('style');
-    style.textContent='.treemap-svg{width:100%;height:560px;display:block;background:rgba(0,0,0,.2);border-radius:10px}'
-        +'.filter-select{padding:8px 10px;border-radius:6px;background:#211944;color:#fff;border:1px solid rgba(255,255,255,.25);font-size:12px}'
-        +'div.kkheat-tooltip{position:fixed;z-index:99999;background:rgba(17,24,39,.95);color:#fff;padding:10px 12px;border-radius:10px;font:12px Inter,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .1s}';
+    style.textContent='.filter-select{padding:8px 10px;border-radius:6px;background:#211944;color:#fff;border:1px solid rgba(255,255,255,.25);font-size:12px}'
+        +'.kkheat-bars{display:flex;flex-direction:column;gap:8px;margin:10px 0;max-height:560px;overflow-y:auto;padding-right:4px}'
+        +'.kkheat-bar-row{display:grid;grid-template-columns:minmax(120px,220px) 1fr auto;gap:10px;align-items:center;cursor:pointer;padding:4px 2px;border-radius:8px;transition:background .12s}'
+        +'.kkheat-bar-row:hover{background:rgba(255,255,255,.06)}'
+        +'.kkheat-bar-label{font-size:12px;font-weight:700;color:#ECEFF1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+        +'.kkheat-bar-track{position:relative;height:22px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}'
+        +'.kkheat-bar-fill{height:100%;border-radius:6px;transition:width .25s}'
+        +'.kkheat-bar-value{font-size:11px;font-weight:700;color:#ECEFF1;white-space:nowrap;min-width:110px;text-align:right}'
+        +'.kkheat-bar-sub{font-weight:500;color:#90A4AE}'
+        +'.kkheat-legend{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#90A4AE}'
+        +'.kkheat-legend-bar{flex:1;max-width:260px;height:10px;border-radius:5px;background:linear-gradient(90deg,#2e7d32,#fff176,#c62828)}'
+        +'#heatmapTreemapPanel .btn-fire-export.kkheat-btn-off{opacity:.4;cursor:not-allowed;pointer-events:none}'
+        +'.kkheat-chk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:2px solid #FFD700;border-radius:4px;cursor:pointer;color:#1a1a2e;font-weight:900;font-size:12px;line-height:1;background:transparent}'
+        +'.kkheat-chk.on{background:#FFD700}';
     document.head.appendChild(style);
 })();
 
@@ -3268,7 +3334,7 @@ function afterDataLoaded(isExcel){
     saveDataSnapshot();updateInsightStrip();
     ntfySyncSnapshot();
 }
-function cardCurrentStage(k){return k.son_asama||k._asama||k.asama||''}
+function cardCurrentStage(k){return k._asama||k.asama||k.son_asama||''}
 function cardStageIndex(k){
     const parts=flowParts(k),current=cardCurrentStage(k),key=stageKey(current),exact=parts.findIndex(p=>stageKey(p)===key);
     return exact>=0?exact:parts.findIndex(p=>stageEquals(p,current)||stageEquals(current,p));

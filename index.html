@@ -3069,7 +3069,7 @@ const HEATMAP_DIMENSIONS={
         return def.name;
     }}
 };
-let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapZoomGroup=null,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set();
+let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapZoomGroup=null,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set(),heatmapLeafSearch='',heatmapLeafSort={col:null,dir:1};
 function setHeatmapDim(which,val){
     if(which==='top')heatmapTopGroup=val;else heatmapSubGroup=val;
     heatmapZoomGroup=null;heatmapLeafView=null;
@@ -3079,37 +3079,86 @@ function setHeatmapMetric(val){heatmapMetric=val==='count'?'count':'kg';renderHe
 function setHeatmapTopN(val){heatmapTopN=parseInt(val,10)||30;renderHeatmapPanel()}
 function zoomHeatmapGroup(name){heatmapZoomGroup=name;heatmapLeafView=null;renderHeatmapPanel()}
 function clearHeatmapZoom(){heatmapZoomGroup=null;heatmapLeafView=null;renderHeatmapPanel()}
-function showHeatmapLeafCards(title,cards){heatmapLeafView={title,cards};heatmapLeafSelection=new Set();renderHeatmapPanel()}
-function clearHeatmapLeafView(){heatmapLeafView=null;heatmapLeafSelection=new Set();renderHeatmapPanel()}
+function showHeatmapLeafCards(title,cards){heatmapLeafView={title,cards};heatmapLeafSelection=new Set();heatmapLeafSearch='';heatmapLeafSort={col:null,dir:1};renderHeatmapPanel()}
+function clearHeatmapLeafView(){heatmapLeafView=null;heatmapLeafSelection=new Set();heatmapLeafSearch='';heatmapLeafSort={col:null,dir:1};renderHeatmapPanel()}
+function heatmapLeafMatchesSearch(k,q){
+    const hay=[k.parti,cardCurrentStage(k),k.line1||k.firma].filter(Boolean).join(' | ').toLocaleLowerCase('tr-TR');
+    return hay.includes(q);
+}
+function heatmapLeafFilteredCards(){
+    if(!heatmapLeafView)return[];
+    const q=heatmapLeafSearch.trim().toLocaleLowerCase('tr-TR');
+    if(!q)return heatmapLeafView.cards;
+    return heatmapLeafView.cards.filter(k=>heatmapLeafMatchesSearch(k,q));
+}
+function setHeatmapLeafSearch(v){
+    heatmapLeafSearch=v;
+    const inp=document.getElementById('heatmapLeafSearchInput'),pos=inp?inp.selectionStart:null;
+    renderHeatmapPanel();
+    const inp2=document.getElementById('heatmapLeafSearchInput');
+    if(inp2){inp2.focus();if(pos!=null)inp2.setSelectionRange(pos,pos)}
+}
+function clearHeatmapLeafSearch(){heatmapLeafSearch='';renderHeatmapPanel()}
 function toggleHeatmapLeafSelect(id){
     if(heatmapLeafSelection.has(id))heatmapLeafSelection.delete(id);else heatmapLeafSelection.add(id);
     renderHeatmapPanel();
 }
 function toggleHeatmapLeafSelectAll(){
     if(!heatmapLeafView)return;
-    const allChecked=heatmapLeafView.cards.every(k=>heatmapLeafSelection.has(k.id));
-    if(allChecked)heatmapLeafSelection.clear();
-    else heatmapLeafView.cards.forEach(k=>heatmapLeafSelection.add(k.id));
+    const visible=heatmapLeafFilteredCards(),allChecked=visible.every(k=>heatmapLeafSelection.has(k.id));
+    if(allChecked)visible.forEach(k=>heatmapLeafSelection.delete(k.id));
+    else visible.forEach(k=>heatmapLeafSelection.add(k.id));
     renderHeatmapPanel();
 }
 function heatmapChkHtml(on,onclick){
     return '<span class="kkheat-chk'+(on?' on':'')+'" onclick="'+onclick+'">'+(on?'✓':'')+'</span>';
 }
+function heatmapLeafSortValue(k,col){
+    switch(col){
+        case'parti':return String(k.parti||'');
+        case'asama':return String(cardCurrentStage(k)||'');
+        case'kilo':return num(k.kilo);
+        case'bekleme':return fifoAgeDays(k)??-1;
+        case'firma':return String(k.line1||k.firma||'');
+        default:return'';
+    }
+}
+function setHeatmapLeafSort(col){
+    if(heatmapLeafSort.col===col)heatmapLeafSort.dir*=-1;else heatmapLeafSort={col,dir:1};
+    renderHeatmapPanel();
+}
+function heatmapLeafSortCards(cards){
+    const arr=[...(cards||[])];
+    if(!heatmapLeafSort.col)return arr.sort(fifoCompare);
+    const col=heatmapLeafSort.col,dir=heatmapLeafSort.dir;
+    arr.sort((a,b)=>{
+        const va=heatmapLeafSortValue(a,col),vb=heatmapLeafSortValue(b,col);
+        if(typeof va==='number'&&typeof vb==='number')return(va-vb)*dir;
+        return String(va).localeCompare(String(vb),'tr')*dir;
+    });
+    return arr;
+}
+function heatmapLeafSortTh(label,col){
+    const active=heatmapLeafSort.col===col,arrow=active?(heatmapLeafSort.dir===1?' ▲':' ▼'):'';
+    return '<th style="cursor:pointer;user-select:none" onclick="setHeatmapLeafSort(&quot;'+col+'&quot;)">'+esc(label)+arrow+'</th>';
+}
 function heatmapLeafTableHtml(cards){
-    const ordered=[...(cards||[])].sort(fifoCompare);
+    const ordered=heatmapLeafSortCards(cards);
     if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';
     const allChecked=ordered.every(k=>heatmapLeafSelection.has(k.id));
-    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th style="width:24px">'+heatmapChkHtml(allChecked,'toggleHeatmapLeafSelectAll()')+'</th><th>FIFO / Parti</th><th>Mevcut aşama</th><th>Sonraki aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th style="width:24px">'+heatmapChkHtml(allChecked,'toggleHeatmapLeafSelectAll()')+'</th>'
+        +heatmapLeafSortTh('FIFO / Parti','parti')+heatmapLeafSortTh('Mevcut aşama','asama')+heatmapLeafSortTh('Kilo','kilo')+heatmapLeafSortTh('Bekleme','bekleme')+heatmapLeafSortTh('Firma','firma')
+        +'</tr></thead><tbody>';
     ordered.slice(0,180).forEach((k,i)=>{
-        h+='<tr><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td>'+esc(k.bir_sonraki||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
+        h+='<tr><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
     });
     return h+'</tbody></table></div>';
 }
 function heatmapLeafExportRows(onlySelected){
     if(!heatmapLeafView)return[];
-    const cards=[...heatmapLeafView.cards].sort(fifoCompare);
-    const filtered=onlySelected?cards.filter(k=>heatmapLeafSelection.has(k.id)):cards;
-    return filtered.map(k=>({'Parti':k.parti,'Mevcut Aşama':cardCurrentStage(k)||'-','Sonraki Aşama':k.bir_sonraki||'-','Kilo':num(k.kilo),'Bekleme':fifoAgeLabel(k),'Firma':k.line1||'-'}));
+    const base=onlySelected?heatmapLeafView.cards.filter(k=>heatmapLeafSelection.has(k.id)):heatmapLeafFilteredCards();
+    const cards=heatmapLeafSortCards(base);
+    return cards.map(k=>({'Parti':k.parti,'Mevcut Aşama':cardCurrentStage(k)||'-','Kilo':num(k.kilo),'Bekleme':fifoAgeLabel(k),'Firma':k.line1||'-'}));
 }
 function exportHeatmapLeafExcel(onlySelected){
     const rows=heatmapLeafExportRows(onlySelected);
@@ -3117,8 +3166,8 @@ function exportHeatmapLeafExcel(onlySelected){
     downloadWorkbook('isi_haritasi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Partiler',rows}]);
 }
 function heatmapLeafExportTableHtml(rows){
-    let h='<table class="sel-panel-table"><thead><tr><th>Parti</th><th>Mevcut Aşama</th><th>Sonraki Aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
-    rows.forEach(r=>{h+='<tr><td>'+esc(r['Parti'])+'</td><td>'+esc(r['Mevcut Aşama'])+'</td><td>'+esc(r['Sonraki Aşama'])+'</td><td style="text-align:right">'+Math.round(r['Kilo']).toLocaleString('tr-TR')+' kg</td><td>'+esc(r['Bekleme'])+'</td><td>'+esc(r['Firma'])+'</td></tr>'});
+    let h='<table class="sel-panel-table"><thead><tr><th>Parti</th><th>Mevcut Aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    rows.forEach(r=>{h+='<tr><td>'+esc(r['Parti'])+'</td><td>'+esc(r['Mevcut Aşama'])+'</td><td style="text-align:right">'+Math.round(r['Kilo']).toLocaleString('tr-TR')+' kg</td><td>'+esc(r['Bekleme'])+'</td><td>'+esc(r['Firma'])+'</td></tr>'});
     return h+'</tbody></table>';
 }
 function buildHeatmapLeafExportEl(rows,onlySelected){
@@ -3234,19 +3283,26 @@ function renderHeatmapPanel(){
     h+=heatmapBarChartHtml(rows,heatmapMetric);
     if(heatmapLeafView){
         const kg=heatmapLeafView.cards.reduce((s,k)=>s+num(k.kilo),0);
+        const visible=heatmapLeafFilteredCards(),searching=!!heatmapLeafSearch.trim();
         const selCount=heatmapLeafView.cards.filter(k=>heatmapLeafSelection.has(k.id)).length,offCls=selCount?'':' kkheat-btn-off';
+        const allOffCls=visible.length?'':' kkheat-btn-off';
         h+='<div class="flow-section-title">'+esc(heatmapLeafView.title)+' — '+heatmapLeafView.cards.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg <button type="button" class="flow-tab" onclick="clearHeatmapLeafView()" style="margin-left:8px">× Kapat</button></div>';
+        h+='<div style="display:flex;gap:8px;align-items:center;margin:8px 0">';
+        h+='<input type="text" id="heatmapLeafSearchInput" class="filter-select" style="flex:1;min-width:160px" placeholder="🔍 Parti, firma, aşama ara..." value="'+esc(heatmapLeafSearch)+'" oninput="setHeatmapLeafSearch(this.value)">';
+        if(searching)h+='<button type="button" class="flow-tab" onclick="clearHeatmapLeafSearch()">× Temizle</button>';
+        h+='<span style="font-size:11px;color:#90A4AE;white-space:nowrap">'+(searching?visible.length+' / '+heatmapLeafView.cards.length+' sonuç':heatmapLeafView.cards.length+' parti')+'</span>';
+        h+='</div>';
         h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 10px">';
-        h+='<span style="font-size:11px;color:#90A4AE;font-weight:800">Tümünü Aktar:</span>';
-        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafPNG(false)">🖼️ PNG</button>';
-        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafPDF(false)">📄 PDF</button>';
-        h+='<button type="button" class="btn-fire-export" onclick="exportHeatmapLeafExcel(false)">📊 Excel</button>';
+        h+='<span style="font-size:11px;color:#90A4AE;font-weight:800">'+(searching?'Aranan Sonuçları Aktar ('+visible.length+'):':'Tümünü Aktar:')+'</span>';
+        h+='<button type="button" class="btn-fire-export'+allOffCls+'" onclick="exportHeatmapLeafPNG(false)">🖼️ PNG</button>';
+        h+='<button type="button" class="btn-fire-export'+allOffCls+'" onclick="exportHeatmapLeafPDF(false)">📄 PDF</button>';
+        h+='<button type="button" class="btn-fire-export'+allOffCls+'" onclick="exportHeatmapLeafExcel(false)">📊 Excel</button>';
         h+='<span style="font-size:11px;color:#90A4AE;font-weight:800;margin-left:10px">Seçilenleri Aktar ('+selCount+'):</span>';
         h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPNG(true)">🖼️ PNG</button>';
         h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPDF(true)">📄 PDF</button>';
         h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafExcel(true)">📊 Excel</button>';
         h+='</div>';
-        h+=heatmapLeafTableHtml(heatmapLeafView.cards);
+        h+=heatmapLeafTableHtml(visible);
     }
     p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapTreemapPanel');ensureElementFullscreenToolbar('heatmapTreemapPanel',ttl);
 }

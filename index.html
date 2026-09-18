@@ -3504,7 +3504,19 @@ function drawHeatmapMindConnectors(panelId){
         +'.kkmind-leaf-row{position:relative;z-index:1;display:flex;align-items:center;gap:8px}'
         +'.kkmind-leaf{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);font-size:12px;font-weight:600;cursor:pointer;color:#ECEFF1;white-space:nowrap}'
         +'.kkmind-leaf:hover{background:rgba(255,255,255,.15)}'
-        +'.kkmind-leaf .cnt{font-weight:500;color:#90A4AE;font-size:11px}';
+        +'.kkmind-leaf .cnt{font-weight:500;color:#90A4AE;font-size:11px}'
+        +'@media(max-width:600px){'
+        +'.kkmind-wrap{padding:4px 2px 10px}'
+        +'.kkmind-root{padding:8px 10px;font-size:11px;margin-right:16px;border-radius:10px}'
+        +'.kkmind-branch{gap:16px}'
+        +'.kkmind-branches{gap:5px}'
+        +'.kkmind-node{padding:5px 9px;font-size:10.5px;gap:3px;border-radius:14px}'
+        +'.kkmind-node .cnt{font-size:9px;margin-left:0}'
+        +'.kkmind-leaf-row{gap:5px}'
+        +'.kkmind-leaf{padding:4px 8px;font-size:10px;gap:3px;border-radius:12px}'
+        +'.kkmind-leaf .cnt{font-size:9px}'
+        +'.kkmind-chk-cell .kkheat-chk,.kkmind-leaf-row .kkheat-chk{width:14px;height:14px;font-size:9px;border-radius:3px}'
+        +'}';
     document.head.appendChild(style);
 })();
 

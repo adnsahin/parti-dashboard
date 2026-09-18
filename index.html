@@ -691,7 +691,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -718,6 +718,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="kkSarimPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="heatmapTreemapPanel" style="width:min(1200px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="heatmapMindmapPanel" style="width:min(1200px,calc(100vw - 32px));max-height:90vh"></div>
+<div class="panel" id="liveScreenPanel" style="width:min(1300px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
 
@@ -1666,7 +1667,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','wetDryPanel','stageAgePanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -3076,7 +3077,7 @@ const HEATMAP_DIMENSIONS={
     }},
     parti:{label:'Parti No',get:k=>String(k.parti||'Bilinmeyen')}
 };
-let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapZoomGroup=null,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set(),heatmapLeafSearch='',heatmapLeafSort={col:null,dir:1};
+let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set(),heatmapLeafSearch='',heatmapLeafSort={col:null,dir:1},heatmapBarPath=[];
 function renderActiveHeatmapPanels(){
     const bar=document.getElementById('heatmapTreemapPanel');
     if(bar&&bar.style.display!=='none')renderHeatmapPanel();
@@ -3085,13 +3086,11 @@ function renderActiveHeatmapPanels(){
 }
 function setHeatmapDim(which,val){
     if(which==='top')heatmapTopGroup=val;else heatmapSubGroup=val;
-    heatmapZoomGroup=null;heatmapLeafView=null;heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();
+    heatmapLeafView=null;heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapBarPath=[];
     renderActiveHeatmapPanels();
 }
 function setHeatmapMetric(val){heatmapMetric=val==='count'?'count':'kg';renderActiveHeatmapPanels()}
 function setHeatmapTopN(val){heatmapTopN=parseInt(val,10)||30;renderActiveHeatmapPanels()}
-function zoomHeatmapGroup(name){heatmapZoomGroup=name;heatmapLeafView=null;renderHeatmapPanel()}
-function clearHeatmapZoom(){heatmapZoomGroup=null;heatmapLeafView=null;renderHeatmapPanel()}
 function showHeatmapLeafCards(title,cards){heatmapLeafView={title,cards};heatmapLeafSelection=new Set();heatmapLeafSearch='';heatmapLeafSort={col:null,dir:1};renderActiveHeatmapPanels()}
 function clearHeatmapLeafView(){heatmapLeafView=null;heatmapLeafSelection=new Set();heatmapLeafSearch='';heatmapLeafSort={col:null,dir:1};renderActiveHeatmapPanels()}
 function heatmapLeafMatchesSearch(k,q){
@@ -3232,14 +3231,35 @@ function heatmapBarRows(map,metric,topN){
     rows.sort((a,b)=>b.value-a.value);
     return topN?rows.slice(0,topN):rows;
 }
-function computeHeatmapTopBars(){
-    const all=typeof getAllCards==='function'?getAllCards():[];
-    return heatmapBarRows(heatmapGroupCards(all,heatmapTopGroup),heatmapMetric,heatmapTopN);
+function heatmapBarLevelCards(){
+    let cards=typeof getAllCards==='function'?getAllCards():[];
+    const levels=heatmapMindLevelKeys();
+    heatmapBarPath.forEach((name,i)=>{
+        const dim=HEATMAP_DIMENSIONS[levels[i]]||HEATMAP_DIMENSIONS.asama;
+        cards=cards.filter(k=>dim.get(k)===name);
+    });
+    return cards;
 }
-function computeHeatmapSubBars(topName){
-    const all=typeof getAllCards==='function'?getAllCards():[],topDim=HEATMAP_DIMENSIONS[heatmapTopGroup]||HEATMAP_DIMENSIONS.asama;
-    const filtered=all.filter(k=>topDim.get(k)===topName);
-    return heatmapBarRows(heatmapGroupCards(filtered,heatmapSubGroup),heatmapMetric,heatmapTopN);
+function heatmapBarIsLastLevel(){
+    return heatmapBarPath.length>=heatmapMindLevelKeys().length-1;
+}
+function heatmapBarCurrentRows(){
+    const levels=heatmapMindLevelKeys(),levelIndex=Math.min(heatmapBarPath.length,levels.length-1);
+    return heatmapBarRows(heatmapGroupCards(heatmapBarLevelCards(),levels[levelIndex]),heatmapMetric,heatmapTopN);
+}
+function heatmapBarGoTo(depth){
+    heatmapBarPath=heatmapBarPath.slice(0,depth);
+    heatmapLeafView=null;
+    renderHeatmapPanel();
+}
+function heatmapBarBreadcrumbHtml(){
+    let h='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0">';
+    h+='<button type="button" class="flow-tab" onclick="heatmapBarGoTo(0)">🏠 Tümü</button>';
+    heatmapBarPath.forEach((name,i)=>{
+        h+='<span style="color:#90A4AE">›</span><button type="button" class="flow-tab" onclick="heatmapBarGoTo('+(i+1)+')">'+esc(name)+'</button>';
+    });
+    h+='</div>';
+    return h;
 }
 function heatmapColorScale(metric,maxValue){
     if(typeof d3==='undefined')return()=>'#4CAF50';
@@ -3250,8 +3270,13 @@ function heatmapColorScale(metric,maxValue){
 function heatmapBarClick(i){
     const r=heatmapBarRowsCache[i];
     if(!r)return;
-    if(heatmapZoomGroup)showHeatmapLeafCards(heatmapZoomGroup+' — '+r.name,r.cards);
-    else zoomHeatmapGroup(r.name);
+    if(heatmapBarIsLastLevel()){
+        showHeatmapLeafCards(heatmapBarPath.concat(r.name).join(' — '),r.cards);
+    }else{
+        heatmapBarPath=heatmapBarPath.concat(r.name);
+        heatmapLeafView=null;
+        renderHeatmapPanel();
+    }
 }
 function heatmapLegendHtml(metric){
     return '<div class="kkheat-legend"><span>'+(metric==='count'?'Düşük adet':'Düşük oran')+'</span><div class="kkheat-legend-bar"></div><span>'+(metric==='count'?'Yüksek adet':'Yüksek oran')+'</span></div>';
@@ -3282,17 +3307,20 @@ function heatmapDimSelectHtml(id,which,current){
 function renderHeatmapPanel(){
     const p=document.getElementById('heatmapTreemapPanel'),ttl='Isı Haritası (Çubuk Grafik)';
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapTreemapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🌡️ '+ttl+'</h2>';
-    h+='<div class="panel-summary">Çubuk uzunluğu ve rengi seçilen metriğin (kg/adet) değerine göre değişir (yeşil=düşük, kırmızı=yüksek). Bir çubuğa tıklayınca o gruba ait kırılım yine çubuk grafik olarak açılır; kırılımdaki bir çubuğa tıklayınca partilerin listesi görünür.</div>';
+    h+='<div class="panel-summary">Çubuk uzunluğu ve rengi seçilen metriğin (kg/adet) değerine göre değişir (yeşil=düşük, kırmızı=yüksek). Bir çubuğa tıklayınca bir sonraki seviyeye inilir; en son seviyedeki çubuğa tıklayınca partilerin listesi görünür. 3., 4. ve 5. seviyelerle kırılımı istediğin kadar derinleştirebilirsin.</div>';
+    h+='<button type="button" class="btn-fire-export" style="background:#6A1B9A;color:#fff;margin-bottom:8px" onclick="toggleHeatmapMindmapPanel()">🧠 Mindmap Görünümüne Geç</button>';
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
-    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Üst Grup</label>'+heatmapDimSelectHtml('heatmapTopGroupSel','top',heatmapTopGroup)+'</div>';
-    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Alt Grup</label>'+heatmapDimSelectHtml('heatmapSubGroupSel','sub',heatmapSubGroup)+'</div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">1. Seviye</label>'+heatmapDimSelectHtml('heatmapTopGroupSel','top',heatmapTopGroup)+'</div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">2. Seviye</label>'+heatmapDimSelectHtml('heatmapSubGroupSel','sub',heatmapSubGroup)+'</div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">3. Seviye</label>'+heatmapMindLevelSelectHtml(3,heatmapMindLevel3)+'</div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">4. Seviye</label>'+heatmapMindLevelSelectHtml(4,heatmapMindLevel4)+'</div>';
+    h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">5. Seviye</label>'+heatmapMindLevelSelectHtml(5,heatmapMindLevel5)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Metrik</label><select class="filter-select" onchange="setHeatmapMetric(this.value)"><option value="kg" '+(heatmapMetric==='kg'?'selected':'')+'>Kg</option><option value="count" '+(heatmapMetric==='count'?'selected':'')+'>Adet</option></select></div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Top N (Çubuk)</label><select class="filter-select" onchange="setHeatmapTopN(this.value)">'+[10,20,30,40,60].map(n=>'<option value="'+n+'" '+(heatmapTopN===n?'selected':'')+'>'+n+'</option>').join('')+'</select></div>';
-    if(heatmapZoomGroup)h+='<button type="button" class="flow-tab" onclick="clearHeatmapZoom()">← Tüm Gruplara Dön</button>';
     h+='<button type="button" class="btn-fire-export" onclick="renderHeatmapPanel()">🔄 Yenile</button>';
     h+='</div>';
-    if(heatmapZoomGroup)h+='<div class="flow-section-title">'+esc(heatmapZoomGroup)+'</div>';
-    const rows=heatmapZoomGroup?computeHeatmapSubBars(heatmapZoomGroup):computeHeatmapTopBars();
+    if(heatmapBarPath.length)h+=heatmapBarBreadcrumbHtml();
+    const rows=heatmapBarCurrentRows();
     h+=heatmapBarChartHtml(rows,heatmapMetric);
     h+=heatmapLeafViewSectionHtml();
     p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapTreemapPanel');ensureElementFullscreenToolbar('heatmapTreemapPanel',ttl);
@@ -3334,7 +3362,7 @@ function heatmapMindLevelKeys(){
 }
 function setHeatmapMindLevel(which,val){
     if(which===3)heatmapMindLevel3=val;else if(which===4)heatmapMindLevel4=val;else heatmapMindLevel5=val;
-    heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();
+    heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapBarPath=[];heatmapLeafView=null;
     renderActiveHeatmapPanels();
 }
 function heatmapMindLevelSelectHtml(which,current){
@@ -3421,6 +3449,7 @@ function renderHeatmapMindmapPanel(){
     const p=document.getElementById('heatmapMindmapPanel'),ttl='Isı Haritası Mindmap';
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapMindmapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🧠 '+ttl+'</h2>';
     h+='<div class="panel-summary">Bir düğüme tıklayınca dalları açılır/kapanır; en uçtaki bir dala tıklayınca partilerin listesi altta görünür. 3., 4. ve 5. seviyeler ile kırılımı istediğin kadar derinleştirebilirsin — 5. seviyeyi "Parti No" seçersen en altta parti no ve kilo tek tek görünür.</div>';
+    h+='<button type="button" class="btn-fire-export" style="background:#D84315;color:#fff;margin-bottom:8px" onclick="toggleHeatmapTreemapPanel()">📊 Çubuk Görünümüne Geç</button>';
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">1. Seviye</label>'+heatmapDimSelectHtml('heatmapMindTopSel','top',heatmapTopGroup)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">2. Seviye</label>'+heatmapDimSelectHtml('heatmapMindSubSel','sub',heatmapSubGroup)+'</div>';
@@ -3517,6 +3546,210 @@ function drawHeatmapMindConnectors(panelId){
         +'.kkmind-leaf .cnt{font-size:9px}'
         +'.kkmind-chk-cell .kkheat-chk,.kkmind-leaf-row .kkheat-chk{width:14px;height:14px;font-size:9px;border-radius:3px}'
         +'}';
+    document.head.appendChild(style);
+})();
+
+/* ════════ 📡 CANLI İZLEME EKRANI ════════ */
+const LIVE_SARIM_TARGETS=['LAMİNASYON','BRONZİNG','DİJİTAL BASKI','RAM','EMBOSS'];
+function liveArrivalCompare(a,b){
+    const ad=fifoAgeDays(a),bd=fifoAgeDays(b);
+    if(ad===null&&bd!==null)return 1;
+    if(ad!==null&&bd===null)return-1;
+    if(ad!==null&&bd!==null&&Math.abs(ad-bd)>0.0001)return ad-bd;
+    const at=latestUpdateDate(a),bt=latestUpdateDate(b);
+    if(at&&bt&&at.getTime()!==bt.getTime())return bt.getTime()-at.getTime();
+    if(at&&!bt)return-1;
+    if(!at&&bt)return 1;
+    return String(a.parti||'').localeCompare(String(b.parti||''),'tr');
+}
+function liveKkCards(){return getAllCards().filter(k=>isCurrentlyStage(k,'KK')).sort(liveArrivalCompare)}
+function liveSarimGroups(){
+    const all=getAllCards().filter(k=>isCurrentlyStage(k,'SARIM1'));
+    const groups=LIVE_SARIM_TARGETS.map(name=>({name,cards:[]})),other=[];
+    all.forEach(k=>{
+        const next=cardNextStage(k),g=groups.find(g=>stageEquals(next,g.name));
+        if(g)g.cards.push(k);else other.push(k);
+    });
+    if(other.length)groups.push({name:'Diğer',cards:other});
+    groups.forEach(g=>g.cards.sort(liveArrivalCompare));
+    return groups.filter(g=>g.cards.length);
+}
+function liveWatchCards(){
+    const all=getAllCards(),seen=new Set(),out=[];
+    kkSarimWatchList.forEach(pn=>{
+        const k=all.find(c=>String(c.parti).trim()===String(pn).trim());
+        if(k&&!seen.has(k.id)){seen.add(k.id);out.push(k)}
+    });
+    return out.sort(liveArrivalCompare);
+}
+function liveTodayInWindow(k){
+    const{start,end}=todayShiftWindow(),d=latestUpdateDate(k);
+    return d&&d>=start&&d<=end;
+}
+function liveProdLogKey(){
+    const{start}=todayShiftWindow();
+    return start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
+}
+function liveProdLogLoad(){
+    const key=liveProdLogKey();
+    try{
+        const raw=JSON.parse(localStorage.getItem('liveprod9')||'{}');
+        if(raw&&raw.date===key)return raw;
+    }catch(e){}
+    return{date:key,kkArrived:{},kkPassed:{},sarimArrived:{},sarimPassed:{}};
+}
+function liveProdLogSave(log){try{localStorage.setItem('liveprod9',JSON.stringify(log))}catch(e){}}
+function liveProdLogCapture(){
+    const{start,end}=todayShiftWindow(),log=liveProdLogLoad();
+    if(end<start)return log;
+    let changed=false;
+    getAllCards().forEach(k=>{
+        const pn=String(k.parti||'').trim();if(!pn||!liveTodayInWindow(k))return;
+        const info={kg:num(k.kilo),ts:Date.now(),line1:k.line1||k.firma||''};
+        if(isCurrentlyStage(k,'KK')&&!log.kkArrived[pn]){log.kkArrived[pn]=info;changed=true}
+        if(isAfterStage(k,'KK')&&!log.kkPassed[pn]){log.kkPassed[pn]=info;changed=true}
+        if(isCurrentlyStage(k,'SARIM1')&&!log.sarimArrived[pn]){log.sarimArrived[pn]=info;changed=true}
+        if(isAfterStage(k,'SARIM1')&&!log.sarimPassed[pn]){log.sarimPassed[pn]=info;changed=true}
+    });
+    if(changed)liveProdLogSave(log);
+    return log;
+}
+function liveGhostEntries(logObj,liveCards){
+    const liveSet=new Set(liveCards.map(k=>String(k.parti).trim()));
+    return Object.keys(logObj).filter(pn=>!liveSet.has(pn)).map(pn=>({parti:pn,...logObj[pn]})).sort((a,b)=>b.ts-a.ts);
+}
+function liveAfterKkCards(){
+    return getAllCards().filter(k=>isAfterStage(k,'KK')&&liveTodayInWindow(k)).sort(liveArrivalCompare);
+}
+function liveAfterSarimCards(){
+    return getAllCards().filter(k=>isAfterStage(k,'SARIM1')&&liveTodayInWindow(k)).sort(liveArrivalCompare);
+}
+function liveGhostItemHtml(g){
+    const pn=g.parti,watched=kkSarimWatchList.includes(pn);
+    return '<div class="live-item" style="opacity:.65">'
+        +heatmapChkHtml(watched,'event.stopPropagation();toggleLiveWatch(&quot;'+esc(pn)+'&quot;)')
+        +'<div class="live-item-body" style="cursor:default">'
+        +'<b>'+esc(pn)+'</b><span class="live-item-meta">'+esc(g.line1||'-')+' • '+Math.round(num(g.kg)).toLocaleString('tr-TR')+' kg</span>'
+        +'<span class="live-item-time">🚚 takip dışı</span></div></div>';
+}
+function liveBoxWithGhostsHtml(liveCards,ghosts){
+    let h=liveCardListHtml(liveCards);
+    if(ghosts.length){
+        h+='<div class="live-sub-title">🚚 Takip dışı kalan (bugün geçmiş, veride yok — '+ghosts.length+')</div>';
+        ghosts.forEach(g=>{h+=liveGhostItemHtml(g)});
+    }
+    if(!liveCards.length&&!ghosts.length)h='<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>';
+    return h;
+}
+function liveTotalsHtml(count,kg){
+    return count+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg';
+}
+function liveProdStats(){
+    const log=liveProdLogCapture();
+    const sum=obj=>Object.values(obj).reduce((s,x)=>s+num(x.kg),0),cnt=obj=>Object.keys(obj).length;
+    return{
+        kk:{gelenCount:cnt(log.kkArrived),gelenKg:sum(log.kkArrived),tamamCount:cnt(log.kkPassed),tamamKg:sum(log.kkPassed)},
+        sarim:{gelenCount:cnt(log.sarimArrived),gelenKg:sum(log.sarimArrived),tamamCount:cnt(log.sarimPassed),tamamKg:sum(log.sarimPassed)},
+        log
+    };
+}
+function liveProductionSummaryHtml(stats){
+    const row=(label,color,s)=>'<div class="live-prod-row"><b style="color:'+color+'">'+label+'</b>'
+        +'<span>Gelen: <b>'+s.gelenCount+'</b> parti • '+Math.round(s.gelenKg).toLocaleString('tr-TR')+' kg</span>'
+        +'<span>Üretim (geçen): <b>'+s.tamamCount+'</b> parti • '+Math.round(s.tamamKg).toLocaleString('tr-TR')+' kg</span>'
+        +'<span style="color:'+(s.gelenCount>s.tamamCount?'#E74C3C':'#2E7D32')+'">Fark: '+(s.gelenCount-s.tamamCount)+' parti</span></div>';
+    return '<div class="live-box" style="grid-column:1/-1"><div class="live-box-title"><span>📊 Bugünkü Üretim Karşılaştırması (08:00\'den itibaren — sistemden çıksa da sayılır)</span></div>'
+        +row('🔵 Kalite Kontrol','#2196F3',stats.kk)+row('🟣 Sarım1','#9C27B0',stats.sarim)+'</div>';
+}
+function liveTamirRecent(){
+    const parsed=TAMIR_LIST.map(t=>({t,d:parseTamirTarih(t.tarih)}));
+    parsed.sort((a,b)=>{if(a.d&&b.d)return b.d-a.d;if(a.d)return-1;if(b.d)return 1;return 0});
+    return parsed.map(x=>x.t);
+}
+function toggleLiveWatch(pn){
+    pn=String(pn||'').trim();if(!pn)return;
+    if(kkSarimWatchList.includes(pn)){
+        kkSarimWatchList=kkSarimWatchList.filter(x=>x!==pn);
+        delete kkSarimWatchState[pn];delete kkSarimWatchNotes[pn];
+        saveKkSarimWatchList();saveKkSarimWatchState();saveKkSarimWatchNotes();
+        showToast('İzlemeden çıkarıldı: '+pn);
+    }else{
+        kkSarimWatchList.push(pn);
+        const k=getAllCards().find(x=>String(x.parti).trim()===pn);
+        kkSarimWatchState[pn]=k?stageKey(k._asama||k.asama||''):'__yok__';
+        saveKkSarimWatchList();saveKkSarimWatchState();
+        showToast('👁️ İzlemeye alındı: '+pn);
+    }
+    renderLiveScreenPanel();
+}
+function liveItemHtml(id,parti,meta,time){
+    const pn=String(parti||'').trim(),watched=kkSarimWatchList.includes(pn);
+    return '<div class="live-item">'
+        +heatmapChkHtml(watched,'event.stopPropagation();toggleLiveWatch(&quot;'+esc(pn)+'&quot;)')
+        +'<div class="live-item-body"'+(id?' onclick="openDetailModal(&quot;'+esc(id)+'&quot;)"':'')+'>'
+        +'<b>'+esc(parti)+'</b><span class="live-item-meta">'+esc(meta)+'</span><span class="live-item-time">'+esc(time)+'</span>'
+        +'</div></div>';
+}
+function liveCardListHtml(cards){
+    if(!cards.length)return'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>';
+    let h='';
+    cards.forEach(k=>{h+=liveItemHtml(k.id,k.parti,(k.line1||k.firma||'-')+' • '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg',waitHoursText(k))});
+    return h;
+}
+function liveBoxHtml(id,title,color,bodyHtml){
+    return '<div class="live-box" id="'+id+'"><div class="live-box-title" style="color:'+color+'"><span>'+title+'</span><button type="button" class="live-box-full" title="Tam ekran" onclick="toggleElementFullscreen(&quot;'+id+'&quot;,&quot;'+esc(title.replace(/<[^>]*>/g,''))+'&quot;)">⛶</button></div><div class="live-box-body">'+bodyHtml+'</div></div>';
+}
+function toggleLiveScreenPanel(){safePanelOpen('liveScreenPanel','📡 Canlı İzleme Ekranı',renderLiveScreenPanel)}
+function renderLiveScreenPanel(){
+    const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;liveScreenPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📡 '+ttl+'</h2>';
+    h+='<div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim kutuları bugün 08:00\'den beri gördüğü her partiyi bu tarayıcıda kaydeder — parti daha sonra veri setinden tamamen çıksa bile (sevk edilse de) o günkü sayıya dahil kalır.</div>';
+    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button>';
+    h+='<div class="live-grid">';
+    const stats=liveProdStats();
+    h+=liveProductionSummaryHtml(stats);
+    const kk=liveKkCards();
+    h+=liveBoxHtml('liveBoxKk','🔵 Kalite Kontrole Gelenler ('+kk.length+')','#2196F3',liveCardListHtml(kk));
+    const watch=liveWatchCards();
+    h+=liveBoxHtml('liveBoxWatch','🔔 Acil Listesi — İzlenenler ('+watch.length+')','#E53935',liveCardListHtml(watch));
+    const tamir=liveTamirRecent();
+    let tamirBody=!tamir.length?'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>':'';
+    tamir.forEach(t=>{tamirBody+=liveItemHtml(t.id,t.parti,(t.neden||t.tip||'-')+' • '+esc(t.line1||'-'),waitHoursText(t))});
+    h+=liveBoxHtml('liveBoxTamir','🛠️ Tamir ('+tamir.length+')','#D35400',tamirBody);
+    const sarimGroups=liveSarimGroups(),sarimTotal=sarimGroups.reduce((s,g)=>s+g.cards.length,0);
+    let sarimBody=!sarimGroups.length?'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>':'';
+    sarimGroups.forEach(g=>{sarimBody+='<div class="live-sub-title">→ '+esc(g.name)+' ('+g.cards.length+')</div>'+liveCardListHtml(g.cards)});
+    h+=liveBoxHtml('liveBoxSarim','🟣 Sarım1\'e Gelenler ('+sarimTotal+')','#9C27B0',sarimBody);
+    const afterKk=liveAfterKkCards(),kkGhosts=liveGhostEntries(stats.log.kkPassed,afterKk);
+    const kkTotalCount=afterKk.length+kkGhosts.length,kkTotalKg=afterKk.reduce((s,k)=>s+num(k.kilo),0)+kkGhosts.reduce((s,g)=>s+num(g.kg),0);
+    h+=liveBoxHtml('liveBoxAfterKk','✅ KK Sonrası — Üretim (bugün 08:00\'den) — '+liveTotalsHtml(kkTotalCount,kkTotalKg),'#00A8CC',liveBoxWithGhostsHtml(afterKk,kkGhosts));
+    const afterSarim=liveAfterSarimCards(),sarimGhosts=liveGhostEntries(stats.log.sarimPassed,afterSarim);
+    const srTotalCount=afterSarim.length+sarimGhosts.length,srTotalKg=afterSarim.reduce((s,k)=>s+num(k.kilo),0)+sarimGhosts.reduce((s,g)=>s+num(g.kg),0);
+    h+=liveBoxHtml('liveBoxAfterSarim','✅ Sarım1 Sonrası — Üretim (bugün 08:00\'den) — '+liveTotalsHtml(srTotalCount,srTotalKg),'#00A8CC',liveBoxWithGhostsHtml(afterSarim,sarimGhosts));
+    h+='</div>';
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('liveScreenPanel');ensureElementFullscreenToolbar('liveScreenPanel',ttl);
+}
+(function injectLiveScreenStyles(){
+    const style=document.createElement('style');
+    style.textContent='.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px}'
+        +'.live-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;min-height:60px}'
+        +'.live-box.view-fullscreen{padding:16px;display:flex;flex-direction:column}'
+        +'.live-box-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:13px;margin-bottom:8px}'
+        +'.live-box-full{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;flex:0 0 auto}'
+        +'.live-box-full:hover{background:rgba(255,255,255,.22)}'
+        +'.live-box-body{max-height:230px;overflow-y:auto}'
+        +'.live-box.view-fullscreen .live-box-body{max-height:none;flex:1 1 auto}'
+        +'.live-sub-title{font-weight:700;font-size:11px;color:#FFD700;margin:8px 0 4px}'
+        +'.live-item{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-radius:6px;font-size:12px;color:#ECEFF1;border-bottom:1px solid rgba(255,255,255,.06)}'
+        +'.live-item .kkheat-chk{flex:0 0 auto;margin-top:2px}'
+        +'.live-item-body{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;flex:1;min-width:0;cursor:pointer;border-radius:4px}'
+        +'.live-item-body:hover{background:rgba(255,255,255,.08)}'
+        +'.live-item b{color:#FFD700;font-size:12px}'
+        +'.live-item-meta{color:#B0BEC5;font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.live-item-time{color:#90A4AE;font-size:10px;white-space:nowrap}'
+        +'.live-prod-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;color:#ECEFF1}'
+        +'.live-prod-row:last-child{border-bottom:none}'
+        +'@media(max-width:600px){.live-grid{grid-template-columns:1fr}.live-box{padding:8px}.live-box[style*="grid-column"]{grid-column:auto!important}.live-prod-row{flex-direction:column;align-items:flex-start;gap:4px}}';
     document.head.appendChild(style);
 })();
 

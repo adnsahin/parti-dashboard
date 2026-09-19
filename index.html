@@ -3562,7 +3562,25 @@ function liveArrivalCompare(a,b){
     if(!at&&bt)return 1;
     return String(a.parti||'').localeCompare(String(b.parti||''),'tr');
 }
-function liveKkCards(){return getAllCards().filter(k=>isCurrentlyStage(k,'KK')).sort(liveArrivalCompare)}
+function liveIsFzkStage(v){const s=stageKey(v);return s.startsWith('FZK')||s.startsWith('FİZİKSEL')||s.startsWith('FIZIKSEL')}
+function liveIsSevkStage(v){return stageKey(v).startsWith('SEVK')}
+function liveIsFinalKk(k){
+    if(!isCurrentlyStage(k,'KK'))return false;
+    const n=cardNextStage(k);
+    return !n||liveIsFzkStage(n)||liveIsSevkStage(n);
+}
+function liveIsAfterFinalKk(k){
+    if(isAfterStage(k,'KK'))return true;
+    const cur=cardCurrentStage(k);
+    if(!liveIsFzkStage(cur)&&!liveIsSevkStage(cur))return false;
+    const parts=flowParts(k);
+    return !parts.length||flowLastIndex(parts,'KK')>=0;
+}
+function liveFirmaShort(k){
+    const f=upShortCompany(String(k.firma||'').split('|')[0]);
+    return f||String(k.line1||'').split(' / ')[0]||'-';
+}
+function liveKkCards(){return getAllCards().filter(liveIsFinalKk).sort(liveArrivalCompare)}
 function liveSarimGroups(){
     const all=getAllCards().filter(k=>isCurrentlyStage(k,'SARIM1'));
     const groups=LIVE_SARIM_TARGETS.map(name=>({name,cards:[]})),other=[];
@@ -3594,9 +3612,12 @@ function liveProdLogLoad(){
     const key=liveProdLogKey();
     try{
         const raw=JSON.parse(localStorage.getItem('liveprod9')||'{}');
-        if(raw&&raw.date===key)return raw;
+        if(raw&&raw.date===key){
+            if(raw.v!==2){raw.v=2;raw.kkArrived={...(raw.kkPassed||{})}}
+            return raw;
+        }
     }catch(e){}
-    return{date:key,kkArrived:{},kkPassed:{},sarimArrived:{},sarimPassed:{}};
+    return{v:2,date:key,kkArrived:{},kkPassed:{},sarimArrived:{},sarimPassed:{}};
 }
 function liveProdLogSave(log){try{localStorage.setItem('liveprod9',JSON.stringify(log))}catch(e){}}
 function liveProdLogCapture(){
@@ -3606,10 +3627,11 @@ function liveProdLogCapture(){
     getAllCards().forEach(k=>{
         const pn=String(k.parti||'').trim();if(!pn||!liveTodayInWindow(k))return;
         const info={kg:num(k.kilo),ts:Date.now(),line1:k.line1||k.firma||''};
-        if(isCurrentlyStage(k,'KK')&&!log.kkArrived[pn]){log.kkArrived[pn]=info;changed=true}
-        if(isAfterStage(k,'KK')&&!log.kkPassed[pn]){log.kkPassed[pn]=info;changed=true}
-        if(isCurrentlyStage(k,'SARIM1')&&!log.sarimArrived[pn]){log.sarimArrived[pn]=info;changed=true}
-        if(isAfterStage(k,'SARIM1')&&!log.sarimPassed[pn]){log.sarimPassed[pn]=info;changed=true}
+        const kkNow=liveIsFinalKk(k),kkDone=liveIsAfterFinalKk(k),srNow=isCurrentlyStage(k,'SARIM1'),srDone=isAfterStage(k,'SARIM1');
+        if((kkNow||kkDone)&&!log.kkArrived[pn]){log.kkArrived[pn]=info;changed=true}
+        if(kkDone&&!log.kkPassed[pn]){log.kkPassed[pn]=info;changed=true}
+        if((srNow||srDone)&&!log.sarimArrived[pn]){log.sarimArrived[pn]=info;changed=true}
+        if(srDone&&!log.sarimPassed[pn]){log.sarimPassed[pn]=info;changed=true}
     });
     if(changed)liveProdLogSave(log);
     return log;
@@ -3619,7 +3641,7 @@ function liveGhostEntries(logObj,liveCards){
     return Object.keys(logObj).filter(pn=>!liveSet.has(pn)).map(pn=>({parti:pn,...logObj[pn]})).sort((a,b)=>b.ts-a.ts);
 }
 function liveAfterKkCards(){
-    return getAllCards().filter(k=>isAfterStage(k,'KK')&&liveTodayInWindow(k)).sort(liveArrivalCompare);
+    return getAllCards().filter(k=>liveIsAfterFinalKk(k)&&liveTodayInWindow(k)).sort(liveArrivalCompare);
 }
 function liveAfterSarimCards(){
     return getAllCards().filter(k=>isAfterStage(k,'SARIM1')&&liveTodayInWindow(k)).sort(liveArrivalCompare);
@@ -3629,7 +3651,8 @@ function liveGhostItemHtml(g){
     return '<div class="live-item" style="opacity:.65">'
         +heatmapChkHtml(watched,'event.stopPropagation();toggleLiveWatch(&quot;'+esc(pn)+'&quot;)')
         +'<div class="live-item-body" style="cursor:default">'
-        +'<b>'+esc(pn)+'</b><span class="live-item-meta">'+esc(g.line1||'-')+' • '+Math.round(num(g.kg)).toLocaleString('tr-TR')+' kg</span>'
+        +'<b>'+esc(pn)+'</b><span class="live-item-meta">'+esc(String(g.line1||'').split(' / ')[0]||'-')+'</span>'
+        +'<span class="live-item-extra">'+Math.round(num(g.kg)).toLocaleString('tr-TR')+' kg</span>'
         +'<span class="live-item-time">🚚 takip dışı</span></div></div>';
 }
 function liveBoxWithGhostsHtml(liveCards,ghosts){
@@ -3654,12 +3677,15 @@ function liveProdStats(){
     };
 }
 function liveProductionSummaryHtml(stats){
-    const row=(label,color,s)=>'<div class="live-prod-row"><b style="color:'+color+'">'+label+'</b>'
-        +'<span>Gelen: <b>'+s.gelenCount+'</b> parti • '+Math.round(s.gelenKg).toLocaleString('tr-TR')+' kg</span>'
-        +'<span>Üretim (geçen): <b>'+s.tamamCount+'</b> parti • '+Math.round(s.tamamKg).toLocaleString('tr-TR')+' kg</span>'
-        +'<span style="color:'+(s.gelenCount>s.tamamCount?'#E74C3C':'#2E7D32')+'">Fark: '+(s.gelenCount-s.tamamCount)+' parti</span></div>';
-    return '<div class="live-box" style="grid-column:1/-1"><div class="live-box-title"><span>📊 Bugünkü Üretim Karşılaştırması (08:00\'den itibaren — sistemden çıksa da sayılır)</span></div>'
-        +row('🔵 Kalite Kontrol','#2196F3',stats.kk)+row('🟣 Sarım1','#9C27B0',stats.sarim)+'</div>';
+    const cell=(c,kg)=>'<div class="live-prod-cell"><b>'+c+'</b> parti<small>'+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>';
+    const row=(label,color,s)=>{
+        const d=s.gelenCount-s.tamamCount;
+        return '<div class="live-prod-name" style="color:'+color+'">'+label+'</div>'+cell(s.gelenCount,s.gelenKg)+cell(s.tamamCount,s.tamamKg)
+            +'<div class="live-prod-cell" style="color:'+(d>0?'#E74C3C':'#66BB6A')+'"><b>'+(d>0?'+':'')+d+'</b> parti</div>';
+    };
+    return '<div class="live-box" style="grid-column:1/-1"><div class="live-box-title"><span>📊 Bugünkü Üretim Karşılaştırması <small style="font-weight:600;color:#90A4AE">(08:00\'den itibaren)</small></span></div>'
+        +'<div class="live-prod-grid"><div></div><div class="live-prod-head">Gelen</div><div class="live-prod-head">Üretim (geçen)</div><div class="live-prod-head">Fark</div>'
+        +row('🔵 KK','#2196F3',stats.kk)+row('🟣 Sarım1','#B39DDB',stats.sarim)+'</div></div>';
 }
 function liveTamirRecent(){
     const parsed=TAMIR_LIST.map(t=>({t,d:parseTamirTarih(t.tarih)}));
@@ -3682,18 +3708,18 @@ function toggleLiveWatch(pn){
     }
     renderLiveScreenPanel();
 }
-function liveItemHtml(id,parti,meta,time){
+function liveItemHtml(id,parti,firma,kgText,time){
     const pn=String(parti||'').trim(),watched=kkSarimWatchList.includes(pn);
     return '<div class="live-item">'
         +heatmapChkHtml(watched,'event.stopPropagation();toggleLiveWatch(&quot;'+esc(pn)+'&quot;)')
         +'<div class="live-item-body"'+(id?' onclick="openDetailModal(&quot;'+esc(id)+'&quot;)"':'')+'>'
-        +'<b>'+esc(parti)+'</b><span class="live-item-meta">'+esc(meta)+'</span><span class="live-item-time">'+esc(time)+'</span>'
+        +'<b>'+esc(parti)+'</b><span class="live-item-meta">'+esc(firma)+'</span>'+(kgText?'<span class="live-item-extra">'+esc(kgText)+'</span>':'')+'<span class="live-item-time">'+esc(time)+'</span>'
         +'</div></div>';
 }
 function liveCardListHtml(cards){
     if(!cards.length)return'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>';
     let h='';
-    cards.forEach(k=>{h+=liveItemHtml(k.id,k.parti,(k.line1||k.firma||'-')+' • '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg',waitHoursText(k))});
+    cards.forEach(k=>{h+=liveItemHtml(k.id,k.parti,liveFirmaShort(k),Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg',waitHoursText(k))});
     return h;
 }
 function liveBoxHtml(id,title,color,bodyHtml){
@@ -3703,7 +3729,7 @@ function toggleLiveScreenPanel(){safePanelOpen('liveScreenPanel','📡 Canlı İ
 function renderLiveScreenPanel(){
     const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı';
     let h='<button class="panel-close" onclick="document.getElementById(&quot;liveScreenPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📡 '+ttl+'</h2>';
-    h+='<div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim kutuları bugün 08:00\'den beri gördüğü her partiyi bu tarayıcıda kaydeder — parti daha sonra veri setinden tamamen çıksa bile (sevk edilse de) o günkü sayıya dahil kalır.</div>';
+    h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kalite Kontrol kutusunda yalnızca son KK aşamasına (sonrası FZK.KNT veya SEVK olan) gelen partiler listelenir. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim kutuları bugün 08:00\'den beri gördüğü her partiyi bu tarayıcıda kaydeder — parti daha sonra veri setinden tamamen çıksa bile (sevk edilse de) o günkü sayıya dahil kalır.</div></details>';
     h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button>';
     h+='<div class="live-grid">';
     const stats=liveProdStats();
@@ -3714,7 +3740,7 @@ function renderLiveScreenPanel(){
     h+=liveBoxHtml('liveBoxWatch','🔔 Acil Listesi — İzlenenler ('+watch.length+')','#E53935',liveCardListHtml(watch));
     const tamir=liveTamirRecent();
     let tamirBody=!tamir.length?'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>':'';
-    tamir.forEach(t=>{tamirBody+=liveItemHtml(t.id,t.parti,(t.neden||t.tip||'-')+' • '+esc(t.line1||'-'),waitHoursText(t))});
+    tamir.forEach(t=>{tamirBody+=liveItemHtml(t.id,t.parti,String(t.line1||'').split(' / ')[0]||'-',t.neden||t.tip||'',waitHoursText(t))});
     h+=liveBoxHtml('liveBoxTamir','🛠️ Tamir ('+tamir.length+')','#D35400',tamirBody);
     const sarimGroups=liveSarimGroups(),sarimTotal=sarimGroups.reduce((s,g)=>s+g.cards.length,0);
     let sarimBody=!sarimGroups.length?'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>':'';
@@ -3742,15 +3768,22 @@ function renderLiveScreenPanel(){
         +'.live-sub-title{font-weight:700;font-size:11px;color:#FFD700;margin:8px 0 4px}'
         +'.live-item{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-radius:6px;font-size:12px;color:#ECEFF1;border-bottom:1px solid rgba(255,255,255,.06);min-width:0}'
         +'.live-item .kkheat-chk{flex:0 0 auto;margin-top:2px}'
-        +'.live-item-body{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;flex:1;min-width:0;cursor:pointer;border-radius:4px}'
+        +'.live-item-body{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;flex:1;min-width:0;cursor:pointer;border-radius:4px}'
         +'.live-item-body:hover{background:rgba(255,255,255,.08)}'
-        +'.live-item b{color:#FFD700;font-size:12px}'
-        +'.live-item-meta{color:#B0BEC5;font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.live-item b{color:#FFD700;font-size:12px;white-space:nowrap}'
+        +'.live-item-meta{color:#CFD8DC;font-size:11px;flex:1 1 60px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.live-item-extra{color:#B0BEC5;font-size:11px;white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis}'
         +'.live-item-time{color:#90A4AE;font-size:10px;white-space:nowrap}'
-        +'.live-prod-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;color:#ECEFF1}'
-        +'.live-prod-row:last-child{border-bottom:none}'
-        +'@media(max-width:600px){.live-grid{grid-template-columns:1fr}.live-box{padding:8px}.live-box[style*="grid-column"]{grid-column:auto!important}.live-prod-row{flex-direction:column;align-items:flex-start;gap:4px}'
-        +'.live-item{font-size:11px}.live-item-body{gap:4px}.live-item-time{flex-basis:100%;margin-top:1px}.live-item-meta{max-width:100%}.live-box-title{font-size:12px}.live-box-title span{overflow-wrap:break-word}}';
+        +'.live-prod-grid{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:6px 14px;align-items:center}'
+        +'.live-prod-head{font-size:11px;font-weight:700;color:#90A4AE}'
+        +'.live-prod-name{font-weight:800;font-size:13px}'
+        +'.live-prod-cell{font-size:13px;line-height:1.25;color:#ECEFF1}'
+        +'.live-prod-cell small{display:block;color:#B0BEC5;font-size:11px}'
+        +'.live-help{margin:6px 0}.live-help summary{cursor:pointer;color:#90CAF9;font-size:12px;font-weight:700}'
+        +'@media(max-width:600px){.live-grid{grid-template-columns:1fr}.live-box{padding:8px}.live-box[style*="grid-column"]{grid-column:auto!important}.live-prod-grid{gap:6px 8px}'
+        +'.live-item{font-size:13px;padding:7px 2px;align-items:center}.live-item b{font-size:14px}.live-item-body{flex-wrap:nowrap;align-items:baseline;gap:8px}'
+        +'.live-item-meta{flex:1 1 0;font-size:13px}.live-item-extra{display:none}.live-item-time{font-size:11px;flex:0 0 auto}'
+        +'.live-box-title{font-size:14px}.live-box-title span{overflow-wrap:break-word}.live-box-body{max-height:320px}}';
     document.head.appendChild(style);
 })();
 

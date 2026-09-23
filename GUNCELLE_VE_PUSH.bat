@@ -56,6 +56,20 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo.
+if exist "..\zaman.xlsx" (
+  where python >nul 2>nul
+  if errorlevel 1 (
+    echo UYARI: Python bulunamadi, zaman raporu atlandi.
+  ) else (
+    echo Zaman raporu isleniyor...
+    python "update_zaman_json.py" "..\zaman.xlsx" "data\zaman_ozet.json" "data\partiler.json"
+    if errorlevel 1 echo UYARI: Zaman raporu islenemedi, devam ediliyor.
+  )
+) else (
+  echo Zaman raporu atlandi: ..\zaman.xlsx bulunamadi.
+)
+
 git status --short > "%TEMP%\parti_dashboard_git_status.txt"
 for %%A in ("%TEMP%\parti_dashboard_git_status.txt") do if %%~zA==0 (
   echo.
@@ -68,7 +82,7 @@ del "%TEMP%\parti_dashboard_git_status.txt" >nul 2>nul
 
 echo.
 echo Degisiklikler commit ediliyor...
-git add data/partiler.json data/tamirler.json README.md convert_excel.js index.html update_data.ps1
+git add data/partiler.json data/tamirler.json data/zaman_ozet.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py
 git commit -m "Update dashboard data"
 if errorlevel 1 (
   echo.

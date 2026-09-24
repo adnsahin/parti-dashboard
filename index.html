@@ -691,7 +691,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -720,6 +720,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="heatmapMindmapPanel" style="width:min(1200px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="liveScreenPanel" style="width:min(1300px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="recentArrivalPanel" style="width:min(700px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
@@ -1667,7 +1668,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -4471,6 +4472,136 @@ function setWetWaitQuick(hours){wetWaitThresholdHours=hours;wetWaitMode='hours';
 function toggleWetDryPanel(){
   safePanelOpen('wetDryPanel','💧 Islak Bekleyenler',renderWetDryPanel);
 }
+/* ════════ 🔔 SON GELENLER — yapılandırılabilir aşama + süre, otomatik güncellenen popup liste ════════ */
+let recentArrivalCfg=safeParse('reag9','{"stages":["KALİTE KONTROL","SARIM 1","SEVK TESLİM"],"minutes":30,"active":true}');
+function saveRecentArrivalCfg(){try{localStorage.setItem('reag9',JSON.stringify(recentArrivalCfg))}catch(e){}}
+let recentArrivalSeenIds=new Set();
+let recentArrivalPopupDismissed=false;
+let recentArrivalLastMatches=[];
+function recentArrivalStageOptions(){
+    if(typeof ASAMA_ORDER!=='undefined'&&ASAMA_ORDER&&ASAMA_ORDER.length)return ASAMA_ORDER.slice();
+    const seen=[];
+    getAllCards().forEach(k=>{const s=cardCurrentStage(k);if(s&&!seen.includes(s))seen.push(s)});
+    return seen;
+}
+function toggleRecentArrivalStage(name){
+    const i=recentArrivalCfg.stages.indexOf(name);
+    if(i>=0)recentArrivalCfg.stages.splice(i,1);else recentArrivalCfg.stages.push(name);
+    saveRecentArrivalCfg();
+    recentArrivalPoll(true);
+}
+function setRecentArrivalMinutes(v){
+    const n=parseInt(v,10);
+    recentArrivalCfg.minutes=Number.isFinite(n)&&n>0?n:30;
+    saveRecentArrivalCfg();
+    recentArrivalPoll(true);
+}
+function setRecentArrivalActive(on){
+    recentArrivalCfg.active=!!on;
+    saveRecentArrivalCfg();
+    if(!on)hideRecentArrivalToast();else recentArrivalPoll(true);
+    renderRecentArrivalPanel();
+}
+function recentArrivalAgeText(ts){
+    const min=Math.max(0,Math.round((Date.now()-ts)/60000));
+    return min<60?min+' dk önce':Math.floor(min/60)+' sa '+(min%60)+' dk önce';
+}
+function recentArrivalItemHtml(m){
+    const card=getAllCards().find(k=>String(k.parti).trim()===m.parti);
+    const id=card?card.id:'';
+    return '<div class="rarr-item"'+(id?' onclick="openDetailModal(&quot;'+esc(id)+'&quot;)"':'')+'>'
+        +'<div class="rarr-main"><b>'+esc(m.parti)+'</b><span class="rarr-stage">'+esc(m.stage)+'</span></div>'
+        +'<div class="rarr-sub">'+esc(String(m.firma||'').split('|')[0].trim()||'-')+' • '+Math.round(m.kg).toLocaleString('tr-TR')+' kg</div>'
+        +'<div class="rarr-time">'+esc(recentArrivalAgeText(m.ts))+'</div>'
+        +'</div>';
+}
+function recentArrivalListHtml(){
+    if(!recentArrivalLastMatches.length)return'<div class="list-empty" style="padding:10px">Son '+recentArrivalCfg.minutes+' dakikada eşleşen parti yok.</div>';
+    return recentArrivalLastMatches.map(recentArrivalItemHtml).join('');
+}
+function renderRecentArrivalToast(){
+    let el=document.getElementById('recentArrivalToast');
+    if(!el){el=document.createElement('div');el.id='recentArrivalToast';document.body.appendChild(el)}
+    if(!recentArrivalCfg.active||recentArrivalPopupDismissed||!recentArrivalLastMatches.length){el.style.display='none';return}
+    el.style.display='flex';
+    el.innerHTML='<div class="rarr-toast-head"><b>🔔 Son '+recentArrivalCfg.minutes+' dk — '+recentArrivalLastMatches.length+' parti</b>'
+        +'<div style="display:flex;gap:6px"><button type="button" onclick="toggleRecentArrivalPanel()" title="Ayarlar">⚙️</button><button type="button" onclick="dismissRecentArrivalToast()" title="Kapat">×</button></div></div>'
+        +'<div class="rarr-toast-body">'+recentArrivalListHtml()+'</div>';
+}
+function dismissRecentArrivalToast(){recentArrivalPopupDismissed=true;hideRecentArrivalToast()}
+function hideRecentArrivalToast(){const el=document.getElementById('recentArrivalToast');if(el)el.style.display='none'}
+async function recentArrivalPoll(force){
+    if(!recentArrivalCfg.active&&!force)return;
+    if(!recentArrivalCfg.stages.length){recentArrivalLastMatches=[];renderRecentArrivalToast();return}
+    try{
+        const res=await fetch('data/partiler.json?ts='+Date.now(),{cache:'no-store'});
+        if(!res.ok)return;
+        const pdata=await res.json();
+        const cards=pdata.cards||[];
+        const stageSet=new Set(recentArrivalCfg.stages.map(stageKey));
+        const cutoff=Date.now()-recentArrivalCfg.minutes*60000;
+        const matches=cards.map(c=>{
+            const st=String(c.stage||'').trim();
+            if(!stageSet.has(stageKey(st)))return null;
+            const d=gecisZamanParse(String(c.hareket||'').split(' | ')[0]);
+            if(!d||d.getTime()<cutoff)return null;
+            return{parti:String(c.parti||'').trim(),stage:st,firma:c.firma||'',kg:num(c.kg),ts:d.getTime()};
+        }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
+        recentArrivalLastMatches=matches;
+        recentArrivalSeenIds.forEach(k=>{const ts=+k.split('|')[1];if(ts<cutoff)recentArrivalSeenIds.delete(k)});
+        const hasNew=matches.some(m=>!recentArrivalSeenIds.has(m.parti+'|'+m.ts));
+        matches.forEach(m=>recentArrivalSeenIds.add(m.parti+'|'+m.ts));
+        if(hasNew&&recentArrivalCfg.active)recentArrivalPopupDismissed=false;
+        renderRecentArrivalToast();
+        const panel=document.getElementById('recentArrivalPanel');
+        if(panel&&panel.style.display==='block')renderRecentArrivalPanel();
+    }catch(e){}
+}
+setInterval(()=>recentArrivalPoll(false),60000);
+recentArrivalPoll(true);
+function recentArrivalStageChecklistHtml(){
+    const opts=recentArrivalStageOptions();
+    if(!opts.length)return'<div class="list-empty">Aşama listesi için önce veri yüklenmeli.</div>';
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px">'+opts.map(s=>{
+        const on=recentArrivalCfg.stages.includes(s);
+        return '<button type="button" class="flow-tab'+(on?' active':'')+'" onclick="toggleRecentArrivalStage(&quot;'+esc(s)+'&quot;)">'+(on?'✓ ':'')+esc(s)+'</button>';
+    }).join('')+'</div>';
+}
+function toggleRecentArrivalPanel(){safePanelOpen('recentArrivalPanel','🔔 Son Gelenler — Ayarlar',renderRecentArrivalPanel)}
+function renderRecentArrivalPanel(){
+    const p=document.getElementById('recentArrivalPanel');
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;recentArrivalPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#FFD700">🔔 Son Gelenler — Ayarlar</h2>';
+    h+='<div class="panel-summary">Seçtiğin aşama(lar)a, seçtiğin süre içinde gelen partiler burada listelenir. Her veri kontrolünde (60 saniyede bir) otomatik kontrol edilir; yeni bir parti gelirse ekranın altında/köşesinde bildirim açılır. Bildirimi kapatırsan, yeni parti gelene kadar tekrar açılmaz.</div>';
+    h+='<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0">';
+    h+='<label style="display:flex;align-items:center;gap:6px;color:#FFD700;font-weight:800;cursor:pointer"><input type="checkbox" '+(recentArrivalCfg.active?'checked':'')+' onchange="setRecentArrivalActive(this.checked)"> Aktif</label>';
+    h+='<label style="color:#90CAF9;font-weight:800">Süre (dakika): <input type="number" min="1" step="5" value="'+recentArrivalCfg.minutes+'" style="width:80px;padding:6px;border-radius:6px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.25);color:#fff;margin-left:6px" onchange="setRecentArrivalMinutes(this.value)"></label>';
+    h+='<button type="button" class="btn-fire-export" onclick="recentArrivalPoll(true)">🔄 Şimdi Kontrol Et</button>';
+    h+='</div>';
+    h+='<div class="flow-section-title">Aşamalar</div>';
+    h+=recentArrivalStageChecklistHtml();
+    h+='<div class="flow-section-title">Şu an eşleşen partiler ('+recentArrivalLastMatches.length+')</div>';
+    h+='<div class="rarr-list">'+recentArrivalListHtml()+'</div>';
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('recentArrivalPanel');ensureElementFullscreenToolbar('recentArrivalPanel','Son Gelenler');
+}
+(function injectRecentArrivalStyles(){
+    const style=document.createElement('style');
+    style.textContent='#recentArrivalToast{position:fixed;right:16px;bottom:16px;width:360px;max-width:calc(100vw - 24px);max-height:70vh;background:#1a1a2e;border:1px solid rgba(255,215,0,.4);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);z-index:99990;display:none;flex-direction:column;overflow:hidden}'
+        +'.rarr-toast-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:rgba(255,215,0,.12);border-bottom:1px solid rgba(255,215,0,.3);color:#FFD700;font-size:13px;flex:0 0 auto}'
+        +'.rarr-toast-head button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;flex:0 0 auto}'
+        +'.rarr-toast-head button:hover{background:rgba(255,255,255,.22)}'
+        +'.rarr-toast-body{overflow-y:auto;padding:6px}'
+        +'.rarr-list{max-height:50vh;overflow-y:auto}'
+        +'.rarr-item{padding:8px 10px;border-radius:8px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)}'
+        +'.rarr-item:hover{background:rgba(255,255,255,.07)}'
+        +'.rarr-main{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}'
+        +'.rarr-main b{color:#FFD700;font-size:13px;white-space:nowrap}'
+        +'.rarr-stage{color:#4FC3F7;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+        +'.rarr-sub{color:#B0BEC5;font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.rarr-time{color:#90A4AE;font-size:10px;margin-top:2px}'
+        +'@media(max-width:600px){#recentArrivalToast{left:8px;right:8px;bottom:8px;width:auto;max-width:none;max-height:55vh;border-radius:12px}'
+        +'.rarr-main b{font-size:12px}.rarr-stage{font-size:10px}.rarr-sub{font-size:10px}.rarr-time{font-size:9px}.rarr-item{padding:7px 8px}}';
+    document.head.appendChild(style);
+})();
 function renderWetDryPanel(){
   const p=document.getElementById('wetDryPanel'),rows=getWetWaitingCards(),kg=Math.round(rows.reduce((sum,k)=>sum+num(k.kilo),0));
   let h='<button class="panel-close" onclick="document.getElementById(&quot;wetDryPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4FC3F7">💧 Islak Bekleyenler</h2><div class="panel-summary">BOYA veya BOYAMA sonrasındaki ve ilk RAM/RAM ile başlayan aşama öncesindeki Y.AÇMA, YAŞ AÇMA ve FIRÇA beklemeleri. Bekliyor ve Bir Sonraki alanları akış sırasına göre çapraz kontrol edilir; RAM ve sonrası kuru aşamadır, ıslak beklemeye dahil değildir; eşik üzerindeki partiler gösterilir.</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0"><b style="color:#80DEEA">Eşik:</b><input type="number" id="wetWaitThresholdInput" min="0" step="0.25" value="'+wetWaitThresholdHours+'" style="width:95px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white"><span>saat</span><button style="background:#00897B;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="applyWetWaitThreshold()">Uygula</button><button style="background:#6A1B9A;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(1)">1 saat</button><button style="background:#EF6C00;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(2)">2 saat</button><button style="background:#455A64;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(4)">4 saat</button>'+(wetHasReal()?'<button style="background:'+(wetWaitMode==='p75'?'#F9A825':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p75&quot;)">🟠 Norm üstü (%75)</button><button style="background:'+(wetWaitMode==='p90'?'#C62828':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p90&quot;)">🔴 Anormal (%90)</button>':'')+'</div>'+wetHistorySummaryHtml()+'<div class="panel-summary">'+rows.length+' parti • '+kg.toLocaleString('tr-TR')+' kg • FIFO: en uzun bekleyen üstte</div>';

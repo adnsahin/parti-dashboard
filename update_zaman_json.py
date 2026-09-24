@@ -31,6 +31,7 @@ SHIFT_START_HOUR = 8
 KEEP_SHIFTS = 14
 KK = "KALİTE KONTROL"
 SARIM = "SARIM 1"
+SARIM2 = "SARIM 2"
 FZK = "FİZİKSEL KONTROL"
 SEVK = "SEVK TESLİM"
 MIN_NORM_N = 10
@@ -150,6 +151,11 @@ def build(rows, waiting):
                     add("srGelen", arrive, parti, r["kg"])
                 if nxt is None or nxt["stage"] != SARIM:
                     add("srUretim", r["cik"], parti, r["kg"])
+            elif st == SARIM2:
+                if prev is None or prev["stage"] != SARIM2:
+                    add("sr2Gelen", arrive, parti, r["kg"])
+                if nxt is None or nxt["stage"] != SARIM2:
+                    add("sr2Uretim", r["cik"], parti, r["kg"])
             elif st == FZK:
                 add("fzk", r["cik"], parti, r["kg"])
             elif st == SEVK:
@@ -169,8 +175,10 @@ def build(rows, waiting):
                 add("kkGelen", arrive, parti, lst[-1]["kg"])
         elif stage == SARIM:
             add("srGelen", arrive, parti, lst[-1]["kg"])
+        elif stage == SARIM2:
+            add("sr2Gelen", arrive, parti, lst[-1]["kg"])
 
-    metrics = ("kkGelen", "kkUretim", "srGelen", "srUretim", "fzk", "sevk")
+    metrics = ("kkGelen", "kkUretim", "srGelen", "srUretim", "sr2Gelen", "sr2Uretim", "fzk", "sevk")
     days = sorted(events)[-KEEP_SHIFTS:]
     shifts = {}
     for d in days:

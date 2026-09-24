@@ -3745,11 +3745,13 @@ function liveShiftHistoryHtml(stats){
     const cell=(a,b,kg)=>'<div class="live-prod-cell"><b>'+a+'</b> → <b style="color:'+(b>=a?'#66BB6A':'#EF5350')+'">'+b+'</b><small>'+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>';
     const single=(n,kg)=>'<div class="live-prod-cell"><b>'+n+'</b><small>'+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>';
     const dayLabel=d=>{const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleDateString('tr-TR',{weekday:'short'})};
-    let h='<div class="live-shift-grid"><div></div><div class="live-prod-head">🔵 KK</div><div class="live-prod-head">🟣 Sarım1</div><div class="live-prod-head">FZK</div><div class="live-prod-head">Sevk</div>';
-    h+='<div class="live-prod-name" style="color:#FFD700">Bugün</div>'+cell(stats.kk.gelenCount,stats.kk.tamamCount,stats.kk.tamamKg)+cell(stats.sarim.gelenCount,stats.sarim.tamamCount,stats.sarim.tamamKg)+'<div class="live-prod-cell">–</div><div class="live-prod-cell">–</div>';
-    days.forEach(d=>{const s=z.shifts[d];h+='<div class="live-prod-name" style="font-weight:600;color:#CFD8DC">'+dayLabel(d)+'</div>'+cell(s.kkGelen.n,s.kkUretim.n,s.kkUretim.kg)+cell(s.srGelen.n,s.srUretim.n,s.srUretim.kg)+single(s.fzk.n,s.fzk.kg)+single(s.sevk.n,s.sevk.kg)});
+    const naCell='<div class="live-prod-cell">–</div>';
+    const hasSr2=days.every(d=>z.shifts[d].sr2Gelen);
+    let h='<div class="live-shift-grid"><div></div><div class="live-prod-head">🔵 KK</div><div class="live-prod-head">🟣 Sarım1</div><div class="live-prod-head">🟢 Sarım2</div><div class="live-prod-head">FZK</div><div class="live-prod-head">Sevk</div>';
+    h+='<div class="live-prod-name" style="color:#FFD700">Bugün</div>'+cell(stats.kk.gelenCount,stats.kk.tamamCount,stats.kk.tamamKg)+cell(stats.sarim.gelenCount,stats.sarim.tamamCount,stats.sarim.tamamKg)+cell(stats.sarim2.gelenCount,stats.sarim2.tamamCount,stats.sarim2.tamamKg)+naCell+naCell;
+    days.forEach(d=>{const s=z.shifts[d];h+='<div class="live-prod-name" style="font-weight:600;color:#CFD8DC">'+dayLabel(d)+'</div>'+cell(s.kkGelen.n,s.kkUretim.n,s.kkUretim.kg)+cell(s.srGelen.n,s.srUretim.n,s.srUretim.kg)+(s.sr2Gelen?cell(s.sr2Gelen.n,s.sr2Uretim.n,s.sr2Uretim.kg):naCell)+single(s.fzk.n,s.fzk.kg)+single(s.sevk.n,s.sevk.kg)});
     const avg=m=>Math.round(days.reduce((a,d)=>a+z.shifts[d][m].n,0)/days.length),avgKg=m=>days.reduce((a,d)=>a+z.shifts[d][m].kg,0)/days.length;
-    h+='<div class="live-prod-name" style="color:#90CAF9">Ort.</div>'+cell(avg('kkGelen'),avg('kkUretim'),avgKg('kkUretim'))+cell(avg('srGelen'),avg('srUretim'),avgKg('srUretim'))+single(avg('fzk'),avgKg('fzk'))+single(avg('sevk'),avgKg('sevk'))+'</div>';
+    h+='<div class="live-prod-name" style="color:#90CAF9">Ort.</div>'+cell(avg('kkGelen'),avg('kkUretim'),avgKg('kkUretim'))+cell(avg('srGelen'),avg('srUretim'),avgKg('srUretim'))+(hasSr2?cell(avg('sr2Gelen'),avg('sr2Uretim'),avgKg('sr2Uretim')):naCell)+single(avg('fzk'),avgKg('fzk'))+single(avg('sevk'),avgKg('sevk'))+'</div>';
     const to=z.to?String(z.to).replace(/^(\d{4})-(\d\d)-(\d\d)T(\d\d:\d\d)$/,'$3.$2 $4'):'';
     return '<div class="live-box" style="grid-column:1/-1"><div class="live-box-title"><span>📈 Vardiya Üretimi: gelen → üretim <small style="font-weight:600;color:#90A4AE">(bugün canlı • geçmiş ERP zaman raporundan'+(to?', '+to+"'e kadar":'')+'; ort. son '+days.length+' vardiya)</small></span></div>'+h+'</div>';
 }
@@ -3820,10 +3822,12 @@ function liveProdLogLoad(){
         const raw=JSON.parse(localStorage.getItem('liveprod9')||'{}');
         if(raw&&raw.date===key){
             if(raw.v!==2){raw.v=2;raw.kkArrived={...(raw.kkPassed||{})}}
+            if(!raw.sarim2Arrived)raw.sarim2Arrived={};
+            if(!raw.sarim2Passed)raw.sarim2Passed={};
             return raw;
         }
     }catch(e){}
-    return{v:2,date:key,kkArrived:{},kkPassed:{},sarimArrived:{},sarimPassed:{}};
+    return{v:2,date:key,kkArrived:{},kkPassed:{},sarimArrived:{},sarimPassed:{},sarim2Arrived:{},sarim2Passed:{}};
 }
 function liveProdLogSave(log){try{localStorage.setItem('liveprod9',JSON.stringify(log))}catch(e){}}
 function liveProdLogCapture(){
@@ -3834,10 +3838,13 @@ function liveProdLogCapture(){
         const pn=String(k.parti||'').trim();if(!pn||!liveTodayInWindow(k))return;
         const info={kg:num(k.kilo),ts:Date.now(),line1:k.line1||k.firma||''};
         const kkNow=liveIsFinalKk(k),kkDone=liveIsAfterFinalKk(k),srNow=isCurrentlyStage(k,'SARIM1'),srDone=isAfterStage(k,'SARIM1');
+        const sr2Now=isCurrentlyStage(k,'SARIM2'),sr2Done=isAfterStage(k,'SARIM2');
         if((kkNow||kkDone)&&!log.kkArrived[pn]){log.kkArrived[pn]=info;changed=true}
         if(kkDone&&!log.kkPassed[pn]){log.kkPassed[pn]=info;changed=true}
         if((srNow||srDone)&&!log.sarimArrived[pn]){log.sarimArrived[pn]=info;changed=true}
         if(srDone&&!log.sarimPassed[pn]){log.sarimPassed[pn]=info;changed=true}
+        if((sr2Now||sr2Done)&&!log.sarim2Arrived[pn]){log.sarim2Arrived[pn]=info;changed=true}
+        if(sr2Done&&!log.sarim2Passed[pn]){log.sarim2Passed[pn]=info;changed=true}
     });
     if(changed)liveProdLogSave(log);
     return log;
@@ -3879,6 +3886,7 @@ function liveProdStats(){
     return{
         kk:{gelenCount:cnt(log.kkArrived),gelenKg:sum(log.kkArrived),tamamCount:cnt(log.kkPassed),tamamKg:sum(log.kkPassed)},
         sarim:{gelenCount:cnt(log.sarimArrived),gelenKg:sum(log.sarimArrived),tamamCount:cnt(log.sarimPassed),tamamKg:sum(log.sarimPassed)},
+        sarim2:{gelenCount:cnt(log.sarim2Arrived),gelenKg:sum(log.sarim2Arrived),tamamCount:cnt(log.sarim2Passed),tamamKg:sum(log.sarim2Passed)},
         log
     };
 }
@@ -3891,7 +3899,7 @@ function liveProductionSummaryHtml(stats){
     };
     return '<div class="live-box" style="grid-column:1/-1"><div class="live-box-title"><span>📊 Bugünkü Üretim Karşılaştırması <small style="font-weight:600;color:#90A4AE">(08:00\'den itibaren)</small></span></div>'
         +'<div class="live-prod-grid"><div></div><div class="live-prod-head">Gelen</div><div class="live-prod-head">Üretim (geçen)</div><div class="live-prod-head">Fark</div>'
-        +row('🔵 KK','#2196F3',stats.kk)+row('🟣 Sarım1','#B39DDB',stats.sarim)+'</div></div>';
+        +row('🔵 KK','#2196F3',stats.kk)+row('🟣 Sarım1','#B39DDB',stats.sarim)+row('🟢 Sarım2','#4DB6AC',stats.sarim2)+'</div></div>';
 }
 function liveTamirRecent(){
     const parsed=TAMIR_LIST.map(t=>({t,d:parseTamirTarih(t.tarih)}));
@@ -3988,7 +3996,7 @@ function renderLiveScreenPanel(){
         +'.live-prod-name{font-weight:800;font-size:13px}'
         +'.live-prod-cell{font-size:13px;line-height:1.25;color:#ECEFF1}'
         +'.live-prod-cell small{display:block;color:#B0BEC5;font-size:11px}'
-        +'.live-shift-grid{display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:6px 12px;align-items:center}'
+        +'.live-shift-grid{display:grid;grid-template-columns:auto 1fr 1fr 1fr auto auto;gap:6px 12px;align-items:center}'
         +'.live-item-time.lvl1{color:#FFB74D}.live-item-time.lvl2{color:#EF5350;font-weight:700}'
         +'.live-norm{font-size:11px;color:#90A4AE;padding:2px 2px 6px}.live-norm b{color:#CFD8DC}'
         +'.live-help{margin:6px 0}.live-help summary{cursor:pointer;color:#90CAF9;font-size:12px;font-weight:700}'

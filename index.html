@@ -1744,7 +1744,7 @@ async function shareCurrentViewWhatsApp(){
     showToast('WhatsApp görseli hazırlanıyor...','warning');ensureViewFullscreenToolbar();
     const tb=el.querySelector('.view-fullscreen-toolbar');const oldDisplay=tb?tb.style.display:'';if(tb)tb.style.display='none';
     try{
-        const canvas=await html2canvas(el,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0});
+        const canvas=await html2canvas(el,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0,onclone:sanitizeOklchColors});
         if(tb)tb.style.display=oldDisplay;
         canvas.toBlob(async blob=>{
             const file=new File([blob],'parti_takip_'+currentViewMode+'.png',{type:'image/png'});
@@ -1798,7 +1798,7 @@ async function shareElementWhatsApp(id,title,filename){
     const hide=Array.from(el.querySelectorAll('.view-fullscreen-toolbar,.panel-full-btn,.panel-close'));hide.forEach(x=>x.dataset.oldDisplay=x.style.display||'');
     hide.forEach(x=>x.style.display='none');
     try{
-        const canvas=await html2canvas(el,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0});
+        const canvas=await html2canvas(el,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0,onclone:sanitizeOklchColors});
         hide.forEach(x=>x.style.display=x.dataset.oldDisplay||'');
         canvas.toBlob(async blob=>{
             const file=new File([blob],filename||'gorunum.png',{type:'image/png'}),text=elementShareText(title||'Görünüm',id);
@@ -1827,7 +1827,7 @@ function exportElementPNG(id,title,filename){
     clone.style.cssText='position:absolute;left:-20000px;top:0;width:1180px;max-width:none;max-height:none;height:auto;overflow:visible;display:block;background:#1a1a2e;color:white;padding:16px;border-radius:0';
     clone.querySelectorAll('.panel,.flow-detail-list,.flow-fifo-list,.flow-summary-grid,.flow-chart-grid,.validation-list,.post-item').forEach(x=>{x.style.maxHeight='none';x.style.overflow='visible'});
     document.body.appendChild(clone);showToast('🖼️ PNG hazırlanıyor...','warning');
-    html2canvas(clone,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0}).then(canvas=>canvas.toBlob(blob=>{if(clone.parentNode)clone.remove();if(blob){fallbackDownload(blob,filename||id+'.png');showToast('✅ PNG indirildi')}else alert('PNG oluşturulamadı')})).catch(err=>{if(clone.parentNode)clone.remove();alert('PNG hatası: '+err)});
+    html2canvas(clone,{backgroundColor:'#1a1a2e',scale:2,useCORS:true,scrollY:0,onclone:sanitizeOklchColors}).then(canvas=>canvas.toBlob(blob=>{if(clone.parentNode)clone.remove();if(blob){fallbackDownload(blob,filename||id+'.png');showToast('✅ PNG indirildi')}else alert('PNG oluşturulamadı')})).catch(err=>{if(clone.parentNode)clone.remove();alert('PNG hatası: '+err)});
 }
 
 function buildPipeline(k){const ua=k.uretim_asamalari||'';if(!ua)return'';const steps=ua.split(',').map(s=>s.trim()).filter(s=>s);if(steps.length<2)return'';const curStage=k._asama||k.asama||'',nxtStage=k.bir_sonraki||'';let ci=-1;for(let i=steps.length-1;i>=0;i--)if(stageEquals(steps[i].trim(),curStage)){ci=i;break}let h='<div class="pipeline">';steps.forEach((s,i)=>{let c='future';if(ci>=0){if(i<ci)c='done';else if(i===ci)c='current';else if(nxtStage&&stageEquals(s.trim(),nxtStage))c='next'}if(i>0)h+='<span class="pipeline-arrow\">›</span>';h+='<span class="pipeline-step '+c+'">'+esc(s)+'</span>'});return h+'</div>'}
@@ -3167,11 +3167,13 @@ function heatmapLeafTableHtml(cards){
     });
     return h+'</tbody></table></div>';
 }
-function heatmapLeafExportRows(onlySelected){
+function heatmapLeafExportCards(onlySelected){
     if(!heatmapLeafView)return[];
     const base=onlySelected?heatmapLeafView.cards.filter(k=>heatmapLeafSelection.has(k.id)):heatmapLeafFilteredCards();
-    const cards=heatmapLeafSortCards(base);
-    return cards.map(k=>({'Parti':k.parti,'Mevcut Aşama':cardCurrentStage(k)||'-','Kilo':num(k.kilo),'Bekleme':fifoAgeLabel(k),'Firma':k.line1||'-'}));
+    return heatmapLeafSortCards(base);
+}
+function heatmapLeafExportRows(onlySelected){
+    return heatmapLeafExportCards(onlySelected).map(k=>({'Parti':k.parti,'Mevcut Aşama':cardCurrentStage(k)||'-','Kilo':num(k.kilo),'Bekleme':fifoAgeLabel(k),'Firma':k.line1||'-'}));
 }
 function exportHeatmapLeafExcel(onlySelected){
     const rows=heatmapLeafExportRows(onlySelected);
@@ -3183,13 +3185,47 @@ function heatmapLeafExportTableHtml(rows){
     rows.forEach(r=>{h+='<tr><td>'+esc(r['Parti'])+'</td><td>'+esc(r['Mevcut Aşama'])+'</td><td style="text-align:right">'+Math.round(r['Kilo']).toLocaleString('tr-TR')+' kg</td><td>'+esc(r['Bekleme'])+'</td><td>'+esc(r['Firma'])+'</td></tr>'});
     return h+'</tbody></table>';
 }
+function heatmapExportBarRowHtml(k,maxValue,colorScale){
+    const v=fifoAgeDays(k)??0,pct=Math.max(3,Math.round(v/maxValue*100)),pn=chartPartiShort(k.parti),kumas=HEATMAP_DIMENSIONS.kumas.get(k);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:#ECEFF1;border-bottom:1px solid rgba(255,255,255,.06)">'
+        +'<div style="width:76px;flex:0 0 auto;font-weight:800;color:#FFD700;overflow-wrap:break-word">'+esc(pn)+'</div>'
+        +'<div style="flex:1;min-width:0;height:14px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;align-self:center"><div style="width:'+pct+'%;height:100%;background:'+colorScale(v)+'"></div></div>'
+        +'<div style="width:80px;flex:0 0 auto;text-align:right;font-weight:700">'+heatmapLeafBarValueLabel(v)+'</div>'
+        +'<div style="width:76px;flex:0 0 auto;text-align:right;color:#90A4AE">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</div>'
+        +'<div style="width:190px;flex:0 0 auto;color:#90A4AE;overflow-wrap:break-word;line-height:1.3">'+esc(kumas)+'</div>'
+        +'</div>';
+}
+function heatmapExportChartHtml(cards){
+    if(!cards||cards.length<2)return'';
+    const groups=new Map();
+    cards.forEach(k=>{const f=HEATMAP_DIMENSIONS.firma.get(k);if(!groups.has(f))groups.set(f,[]);groups.get(f).push(k)});
+    let body='';
+    if(groups.size>=2){
+        const entries=Array.from(groups.entries()).map(([name,list])=>{
+            list=list.slice().sort(fifoCompare);
+            return{name,list,kg:list.reduce((s,k)=>s+num(k.kilo),0),worst:fifoAgeDays(list[0])??0};
+        }).sort((a,b)=>b.worst-a.worst);
+        entries.forEach(g=>{
+            const maxValue=Math.max.apply(null,g.list.map(k=>fifoAgeDays(k)??0))||1,colorScale=heatmapColorScale('kg',maxValue);
+            body+='<div style="margin-top:12px"><div style="font-weight:800;color:#4FC3F7;margin-bottom:4px">'+esc(g.name)+' <span style="font-weight:600;font-size:11px;color:#90A4AE">('+g.list.length+' parti • '+Math.round(g.kg).toLocaleString('tr-TR')+' kg)</span></div>'
+                +g.list.map(k=>heatmapExportBarRowHtml(k,maxValue,colorScale)).join('')+'</div>';
+        });
+    }else{
+        const sorted=cards.slice().sort(fifoCompare),maxValue=Math.max.apply(null,sorted.map(k=>fifoAgeDays(k)??0))||1,colorScale=heatmapColorScale('kg',maxValue);
+        body=sorted.map(k=>heatmapExportBarRowHtml(k,maxValue,colorScale)).join('');
+    }
+    return '<div style="margin:6px 0"><div style="font-weight:800;color:#FFD700;margin-bottom:4px">📶 Bekleme Süresi — Azalan Sıralı</div>'+body+'</div>';
+}
 function buildHeatmapLeafExportEl(rows,onlySelected){
     const wrap=document.createElement('div');
     wrap.style.cssText='width:900px;background:#1a1a2e;color:#fff;padding:16px';
     const title=(heatmapLeafView?heatmapLeafView.title:'Parti Listesi')+(onlySelected?' (Seçili)':'');
-    wrap.innerHTML='<h2 style="color:#FFD700;margin:0 0 10px">'+esc(title)+'</h2>'+heatmapLeafExportTableHtml(rows);
+    const cards=heatmapLeafExportCards(onlySelected);
+    const chartHtml=heatmapExportChartHtml(cards);
+    wrap.innerHTML='<h2 style="color:#FFD700;margin:0 0 10px">'+esc(title)+'</h2>'+chartHtml+heatmapLeafExportTableHtml(rows);
+    wrap.querySelectorAll('button').forEach(b=>b.remove());
     const outer=document.createElement('div');
-    outer.style.cssText='position:fixed;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
     outer.appendChild(wrap);
     document.body.appendChild(outer);
     wrap._exportOuter=outer;
@@ -3198,14 +3234,41 @@ function buildHeatmapLeafExportEl(rows,onlySelected){
 function removeHeatmapExportEl(el){
     if(el._exportOuter)el._exportOuter.remove();else el.remove();
 }
+function sanitizeOklchColors(clonedDoc){
+    try{
+        const scratch=document.createElement('canvas');
+        scratch.width=1;scratch.height=1;
+        const sctx=scratch.getContext('2d');
+        const props=['color','backgroundColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','outlineColor','textDecorationColor'];
+        const toRgb=v=>{
+            try{
+                sctx.clearRect(0,0,1,1);
+                sctx.fillStyle=v;
+                sctx.fillRect(0,0,1,1);
+                const d=sctx.getImageData(0,0,1,1).data;
+                return d[3]===0?'rgba(0,0,0,0)':'rgba('+d[0]+','+d[1]+','+d[2]+','+(d[3]/255)+')';
+            }catch(e){return null}
+        };
+        clonedDoc.querySelectorAll('*').forEach(el=>{
+            const cs=(clonedDoc.defaultView||window).getComputedStyle(el);
+            props.forEach(p=>{
+                const v=cs[p];
+                if(v&&v.indexOf('oklch')>=0){
+                    const rgb=toRgb(v);
+                    if(rgb)el.style[p]=rgb;
+                }
+            });
+        });
+    }catch(e){}
+}
 function exportHeatmapLeafPNG(onlySelected){
     const rows=heatmapLeafExportRows(onlySelected);
     if(!rows.length){alert('Aktarılacak kayıt yok');return}
     const el=buildHeatmapLeafExportEl(rows,onlySelected);
     showToast('🖼️ PNG hazırlanıyor...','warning');
-    html2pdf().set({html2canvas:{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0}}).from(el).toCanvas().get('canvas').then(canvas=>{
+    html2canvas(el,{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0,onclone:sanitizeOklchColors}).then(canvas=>{
+        removeHeatmapExportEl(el);
         canvas.toBlob(blob=>{
-            removeHeatmapExportEl(el);
             if(blob){fallbackDownload(blob,'isi_haritasi_'+(onlySelected?'secili_':'')+'liste.png');showToast('✅ PNG indirildi')}else alert('PNG oluşturulamadı');
         });
     }).catch(err=>{removeHeatmapExportEl(el);alert('PNG hatası: '+err)});
@@ -3215,7 +3278,11 @@ function exportHeatmapLeafPDF(onlySelected){
     if(!rows.length){alert('Aktarılacak kayıt yok');return}
     const el=buildHeatmapLeafExportEl(rows,onlySelected);
     showToast('📄 PDF hazırlanıyor...','warning');
-    html2pdf().set({margin:.3,filename:'isi_haritasi_'+(onlySelected?'secili_':'')+'liste.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(el).save().then(()=>{removeHeatmapExportEl(el);showToast('✅ PDF indirildi')}).catch(err=>{removeHeatmapExportEl(el);alert('Hata: '+err)});
+    html2canvas(el,{scale:2,backgroundColor:'#1a1a2e',useCORS:true,scrollY:0,onclone:sanitizeOklchColors}).then(canvas=>{
+        removeHeatmapExportEl(el);
+        const img=canvas.toDataURL('image/jpeg',.98);
+        return html2pdf().set({margin:.3,filename:'isi_haritasi_'+(onlySelected?'secili_':'')+'liste.pdf',jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(img,'img').save();
+    }).then(()=>{showToast('✅ PDF indirildi')}).catch(err=>{removeHeatmapExportEl(el);alert('Hata: '+err)});
 }
 function heatmapGroupCards(cards,dimKey){
     const dim=HEATMAP_DIMENSIONS[dimKey]||HEATMAP_DIMENSIONS.asama,map=new Map();

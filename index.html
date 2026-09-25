@@ -3057,6 +3057,7 @@ function renderKkSarimPanel(){
 }
 
 /* ════════ 🌡️ ISI HARİTASI (ÇUBUK GRAFİK) ════════ */
+function heatmapShortParti(k){return String(k.parti||'Bilinmeyen').replace(/^\s*\(\d{4}\)\s*/,'')||'Bilinmeyen'}
 const HEATMAP_DIMENSIONS={
     asama:{label:'Aşama',get:k=>{
         if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))return'Kalite Kontrol\'e Gelecek';
@@ -3077,7 +3078,8 @@ const HEATMAP_DIMENSIONS={
         const defs=flowWaitBucketDefs(),def=defs.find(x=>days>=x.min&&days<x.max)||defs[defs.length-1];
         return def.name;
     }},
-    parti:{label:'Parti No',get:k=>String(k.parti||'Bilinmeyen')}
+    parti:{label:'Parti No',get:k=>heatmapShortParti(k)},
+    partiRecete:{label:'Parti No + Reçete',get:k=>{const p=heatmapShortParti(k),r=String(k.recete_adi||'').trim();return r?p+' · '+(r.length>14?r.slice(0,13).trim()+'…':r):p}}
 };
 let heatmapTopGroup='asama',heatmapSubGroup='firma',heatmapMetric='kg',heatmapTopN=30,heatmapLeafView=null,heatmapBarRowsCache=[],heatmapLeafSelection=new Set(),heatmapLeafSearch='',heatmapLeafSort={col:null,dir:1},heatmapBarPath=[];
 function renderActiveHeatmapPanels(){
@@ -3088,7 +3090,7 @@ function renderActiveHeatmapPanels(){
 }
 function setHeatmapDim(which,val){
     if(which==='top')heatmapTopGroup=val;else heatmapSubGroup=val;
-    heatmapLeafView=null;heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapBarPath=[];
+    heatmapLeafView=null;heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapMindHidden=new Set();heatmapBarPath=[];
     renderActiveHeatmapPanels();
 }
 function setHeatmapMetric(val){heatmapMetric=val==='count'?'count':'kg';renderActiveHeatmapPanels()}
@@ -3478,7 +3480,7 @@ function heatmapLeafViewSectionHtml(){
     h+=heatmapLeafTableHtml(visible);
     return h;
 }
-let heatmapMindExpandedPaths=new Set(),heatmapMindCheckedPaths=new Set();
+let heatmapMindExpandedPaths=new Set(),heatmapMindCheckedPaths=new Set(),heatmapMindHidden=new Set();
 let heatmapMindLevel3='',heatmapMindLevel4='',heatmapMindLevel5='',heatmapMindNodeCache=new Map();
 function toggleHeatmapMindmapPanel(){safePanelOpen('heatmapMindmapPanel','🧠 Isı Haritası Mindmap',renderHeatmapMindmapPanel)}
 function heatmapMindLevelKeys(){
@@ -3490,7 +3492,7 @@ function heatmapMindLevelKeys(){
 }
 function setHeatmapMindLevel(which,val){
     if(which===3)heatmapMindLevel3=val;else if(which===4)heatmapMindLevel4=val;else heatmapMindLevel5=val;
-    heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapBarPath=[];heatmapLeafView=null;
+    heatmapMindExpandedPaths=new Set();heatmapMindCheckedPaths=new Set();heatmapMindHidden=new Set();heatmapBarPath=[];heatmapLeafView=null;
     renderActiveHeatmapPanels();
 }
 function heatmapMindLevelSelectHtml(which,current){
@@ -3539,36 +3541,53 @@ function heatmapMindToggleCheck(path){
     }
     renderActiveHeatmapPanels();
 }
-function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels){
+function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels,namePrefix){
+    namePrefix=namePrefix||'';
     const dimKey=levels[levelIndex],isLast=levelIndex===levels.length-1;
     const rows=heatmapBarRows(heatmapGroupCards(cards,dimKey),heatmapMetric,heatmapTopN);
     heatmapMindNodeCache.set(pathPrefix,rows);
     if(!rows.length)return'<div class="kkmind-children"><div class="kkmind-child" style="color:#90A4AE;font-size:12px">Kayıt yok</div></div>';
     const maxValue=Math.max.apply(null,rows.map(r=>r.value))||1,colorScale=heatmapColorScale(heatmapMetric,maxValue);
-    let h='<div class="kkmind-branches">';
+    let h='<div class="kkmind-branches'+(isLast?' kkmind-leafgrid':'')+'">';
+    if(isLast&&pathPrefix)h+='<div class="kkmind-leafgrid-head"><span>'+rows.length+' kayıt</span><button type="button" title="Bu alt dalı kapat" onclick="toggleHeatmapMindExpandPath(&quot;'+pathPrefix+'&quot;)">▴ Kapat</button></div>';
     rows.forEach((r,i)=>{
-        const path=pathPrefix?pathPrefix+'-'+i:String(i);
+        const path=pathPrefix?pathPrefix+'-'+i:String(i),nameKey=namePrefix+'›'+r.name;
+        if(heatmapMindHidden.has(nameKey))return;
         const mainText=heatmapMetric==='count'?r.count.toLocaleString('tr-TR')+' adet':Math.round(r.kg).toLocaleString('tr-TR')+' kg';
         h+='<div class="kkmind-branch">';
         if(isLast){
             const checked=heatmapMindCheckedPaths.has(path);
-            h+='<div class="kkmind-leaf-row">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'<div class="kkmind-leaf" onclick="heatmapMindLeafClickPath(&quot;'+path+'&quot;)">'+esc(r.name)+' <span class="cnt">('+mainText+')</span></div></div>';
+            h+='<div class="kkmind-leaf-row">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'<div class="kkmind-leaf" title="'+esc(r.name+' ('+mainText+')')+'" onclick="heatmapMindLeafClickPath(&quot;'+path+'&quot;)"><span class="nm">'+esc(r.name)+'</span><span class="cnt">('+mainText+')</span></div><span class="kkmind-hide" title="Gizle" onclick="heatmapMindHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span></div>';
         }else{
             const expanded=heatmapMindExpandedPaths.has(path);
-            h+='<div class="kkmind-node" style="background:'+colorScale(r.value)+'" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'+(expanded?'▾':'▸')+' '+esc(r.name)+'<span class="cnt">('+mainText+')</span></div>';
-            if(expanded)h+=heatmapMindRenderBranches(r.cards,levelIndex+1,path,levels);
+            h+='<div class="kkmind-node" style="background:'+colorScale(r.value)+'" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'+(expanded?'▾':'▸')+' '+esc(r.name)+'<span class="cnt">('+mainText+')</span><span class="kkmind-hide" title="Bu dalı gizle" onclick="event.stopPropagation();heatmapMindHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span></div>';
+            if(expanded)h+=heatmapMindRenderBranches(r.cards,levelIndex+1,path,levels,nameKey);
         }
         h+='</div>';
     });
     h+='</div>';
     return h;
 }
+let heatmapMindHideKeys=[];
+function heatmapMindHideIdx(i){const k=heatmapMindHideKeys[i];if(k!=null)heatmapMindHidden.add(k);renderHeatmapMindmapPanel()}
+function heatmapMindUnhide(i){const k=[...heatmapMindHidden][i];if(k!=null)heatmapMindHidden.delete(k);renderHeatmapMindmapPanel()}
+function heatmapMindUnhideAll(){heatmapMindHidden=new Set();renderHeatmapMindmapPanel()}
+function heatmapMindCollapseAll(){heatmapMindExpandedPaths=new Set();renderHeatmapMindmapPanel()}
+function heatmapMindExpandTop(){const rows=heatmapMindNodeCache.get('')||[];rows.forEach((r,i)=>heatmapMindExpandedPaths.add(String(i)));renderHeatmapMindmapPanel()}
+function heatmapMindTreeToolbarHtml(){
+    let h='<div class="kkmind-toolbar"><button type="button" onclick="heatmapMindCollapseAll()">⊟ Tümünü Kapat</button><button type="button" onclick="heatmapMindExpandTop()">⊞ 1. Seviyeyi Aç</button>';
+    if(heatmapMindHidden.size){
+        h+='<span class="lbl">Gizli:</span>'+[...heatmapMindHidden].map((k,i)=>'<span class="chip" title="Geri getir" onclick="heatmapMindUnhide('+i+')">'+esc(k.split('›').filter(Boolean).join(' › '))+' ↺</span>').join('');
+        h+='<button type="button" onclick="heatmapMindUnhideAll()">Hepsini Göster</button>';
+    }
+    return h+'</div>';
+}
 function heatmapMindmapDiagramHtml(){
     const all=typeof getAllCards==='function'?getAllCards():[];
-    heatmapMindNodeCache=new Map();
+    heatmapMindNodeCache=new Map();heatmapMindHideKeys=[];
     const levels=heatmapMindLevelKeys();
     const rootLabel=(HEATMAP_DIMENSIONS[levels[0]]||HEATMAP_DIMENSIONS.asama).label;
-    let h='<div class="kkmind-wrap"><div class="kkmind-trunk"><div class="kkmind-root">🌡️ '+esc(rootLabel)+'</div>';
+    let h=heatmapMindTreeToolbarHtml()+'<div class="kkmind-wrap"><div class="kkmind-trunk"><div class="kkmind-root">🌡️ '+esc(rootLabel)+'</div>';
     h+=heatmapMindRenderBranches(all,0,'',levels);
     h+='</div></div>';
     return h;
@@ -3578,6 +3597,7 @@ function renderHeatmapMindmapPanel(){
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapMindmapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🧠 '+ttl+'</h2>';
     h+='<div class="panel-summary">Bir düğüme tıklayınca dalları açılır/kapanır; en uçtaki bir dala tıklayınca partilerin listesi altta görünür. 3., 4. ve 5. seviyeler ile kırılımı istediğin kadar derinleştirebilirsin — 5. seviyeyi "Parti No" seçersen en altta parti no ve kilo tek tek görünür.</div>';
     h+='<button type="button" class="btn-fire-export" style="background:#D84315;color:#fff;margin-bottom:8px" onclick="toggleHeatmapTreemapPanel()">📊 Çubuk Görünümüne Geç</button>';
+    h+=heatmapMindViewSwitchHtml();
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">1. Seviye</label>'+heatmapDimSelectHtml('heatmapMindTopSel','top',heatmapTopGroup)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">2. Seviye</label>'+heatmapDimSelectHtml('heatmapMindSubSel','sub',heatmapSubGroup)+'</div>';
@@ -3588,10 +3608,10 @@ function renderHeatmapMindmapPanel(){
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Top N (Dal)</label><select class="filter-select" onchange="setHeatmapTopN(this.value)">'+[10,20,30,40,60].map(n=>'<option value="'+n+'" '+(heatmapTopN===n?'selected':'')+'>'+n+'</option>').join('')+'</select></div>';
     h+='<button type="button" class="btn-fire-export" onclick="renderHeatmapMindmapPanel()">🔄 Yenile</button>';
     h+='</div>';
-    h+=heatmapMindmapDiagramHtml();
+    h+=heatmapMindView==='tree'?heatmapMindmapDiagramHtml():heatmapMindAltViewHtml();
     h+=heatmapLeafViewSectionHtml();
     p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapMindmapPanel');ensureElementFullscreenToolbar('heatmapMindmapPanel',ttl);
-    setTimeout(()=>drawHeatmapMindConnectors('heatmapMindmapPanel'),0);
+    if(heatmapMindView==='tree')setTimeout(()=>drawHeatmapMindConnectors('heatmapMindmapPanel'),0);
 }
 function drawHeatmapMindConnectors(panelId){
     const wrap=document.querySelector('#'+panelId+' .kkmind-wrap');
@@ -3617,7 +3637,7 @@ function drawHeatmapMindConnectors(panelId){
         const p1=centerOf(fromEl,'right'),p2=centerOf(toEl,'left'),midX=(p1.x+p2.x)/2;
         const path=document.createElementNS('http://www.w3.org/2000/svg','path');
         path.setAttribute('d','M'+p1.x+','+p1.y+' C'+midX+','+p1.y+' '+midX+','+p2.y+' '+p2.x+','+p2.y);
-        path.setAttribute('stroke','rgba(255,215,0,.5)');path.setAttribute('stroke-width','2');path.setAttribute('fill','none');
+        path.setAttribute('stroke','rgba(255,215,0,.38)');path.setAttribute('stroke-width','1.3');path.setAttribute('fill','none');
         svg.appendChild(path);
     };
     wrap.querySelectorAll('.kkmind-branches').forEach(branchesDiv=>{
@@ -3626,12 +3646,212 @@ function drawHeatmapMindConnectors(panelId){
         if(parent.classList.contains('kkmind-trunk'))source=parent.querySelector(':scope > .kkmind-root');
         else if(parent.classList.contains('kkmind-branch'))source=parent.querySelector(':scope > .kkmind-node');
         if(!source)return;
+        if(branchesDiv.classList.contains('kkmind-leafgrid')){connect(source,branchesDiv);return}
         [...branchesDiv.children].forEach(branchDiv=>{
             const node=branchDiv.querySelector(':scope > .kkmind-node, :scope > .kkmind-leaf-row > .kkmind-leaf');
             if(node)connect(source,node);
         });
     });
 }
+/* ════════ 🧠 ISI HARİTASI MINDMAP — ALTERNATİF GÖRÜNÜMLER (deneme) ════════ */
+let heatmapMindView='tree',heatmapMindViewNodes=[];
+const HEATMAP_MIND_VIEWS=[['tree','🌳 Ağaç'],['grid','▦ Izgara'],['treemap','▭ Treemap'],['sunburst','◎ Sunburst'],['compact','☰ Kompakt Ağaç']];
+function setHeatmapMindView(v){heatmapMindView=v;renderHeatmapMindmapPanel()}
+function heatmapMindViewSwitchHtml(){
+    return '<div class="kkview-switch">'+HEATMAP_MIND_VIEWS.map(([k,l])=>'<button type="button" class="'+(heatmapMindView===k?'on':'')+'" onclick="setHeatmapMindView(&quot;'+k+'&quot;)">'+l+'</button>').join('')+'</div>';
+}
+function heatmapMindFmt(v){return heatmapMetric==='count'?Math.round(v).toLocaleString('tr-TR')+' adet':Math.round(v).toLocaleString('tr-TR')+' kg'}
+function heatmapMindShortFmt(v){
+    if(heatmapMetric==='count')return Math.round(v).toLocaleString('tr-TR');
+    return v>=1000?(v/1000).toLocaleString('tr-TR',{maximumFractionDigits:1})+'t':Math.round(v).toLocaleString('tr-TR');
+}
+function heatmapInk(c){
+    try{const x=d3.rgb(c);return (0.299*x.r+0.587*x.g+0.114*x.b)>150?'#0b1324':'#fff'}catch(e){return'#fff'}
+}
+function heatmapMindRegister(title,cards){heatmapMindViewNodes.push({title,cards});return heatmapMindViewNodes.length-1}
+function heatmapMindViewClick(i){const n=heatmapMindViewNodes[i];if(n)showHeatmapLeafCards(n.title,n.cards)}
+function heatmapMindBuildTree(cards,levels,depth,topN){
+    if(depth>=levels.length)return[];
+    return heatmapBarRows(heatmapGroupCards(cards,levels[depth]),heatmapMetric,topN).map(r=>({
+        name:r.name,value:r.value,cards:r.cards,
+        children:depth+1<levels.length?heatmapMindBuildTree(r.cards,levels,depth+1,topN):[]
+    }));
+}
+function heatmapMindLegendHtml(maxValue){
+    const sc=heatmapColorScale(heatmapMetric,maxValue),stops=[0,.25,.5,.75,1].map(t=>sc(t*maxValue)).join(',');
+    return '<div class="kkview-legend">0<div style="background:linear-gradient(90deg,'+stops+')"></div>'+heatmapMindFmt(maxValue)+'</div>';
+}
+/* A — Izgara: 1. seviye satır, 2. seviye sütun */
+function heatmapMindGridHtml(all,levels){
+    const rowDim=HEATMAP_DIMENSIONS[levels[0]],colDim=HEATMAP_DIMENSIONS[levels[1]||levels[0]];
+    const rows=heatmapBarRows(heatmapGroupCards(all,levels[0]),heatmapMetric,heatmapTopN);
+    const cols=heatmapBarRows(heatmapGroupCards(all,levels[1]||levels[0]),heatmapMetric,Math.min(heatmapTopN,16));
+    const colNames=cols.map(c=>c.name);
+    let max=1;
+    const matrix=rows.map(r=>{
+        const m=heatmapGroupCards(r.cards,levels[1]||levels[0]);
+        return colNames.map(cn=>{const c=m.get(cn);const v=c?(heatmapMetric==='count'?c.count:c.kg):0;if(v>max)max=v;return{v,cards:c?c.cards:[]}});
+    });
+    const sc=heatmapColorScale(heatmapMetric,max);
+    let h='<div class="kkview-grid-wrap"><table class="kkview-grid"><thead><tr><th class="corner">'+esc(rowDim.label)+' \\ '+esc(colDim.label)+'</th>';
+    h+=colNames.map(c=>'<th class="col" title="'+esc(c)+'"><span>'+esc(c)+'</span></th>').join('')+'<th class="tot">Toplam</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+        h+='<tr><th class="row" title="'+esc(r.name)+'" onclick="heatmapMindViewClick('+heatmapMindRegister(r.name,r.cards)+')">'+esc(r.name)+'</th>';
+        matrix[i].forEach((cell,j)=>{
+            if(!cell.v){h+='<td class="empty"></td>';return}
+            const bg=sc(cell.v),idx=heatmapMindRegister(r.name+' — '+colNames[j],cell.cards);
+            h+='<td style="background:'+bg+';color:'+heatmapInk(bg)+'" title="'+esc(r.name+' — '+colNames[j]+': '+heatmapMindFmt(cell.v))+'" onclick="heatmapMindViewClick('+idx+')">'+heatmapMindShortFmt(cell.v)+'</td>';
+        });
+        h+='<td class="tot"><div class="kkview-totbar"><i style="width:'+Math.max(2,r.value/rows[0].value*100)+'%"></i><span>'+heatmapMindShortFmt(r.value)+'</span></div></td></tr>';
+    });
+    h+='</tbody></table></div>'+heatmapMindLegendHtml(max);
+    return h;
+}
+/* B — Treemap: alan = hacim, renk = yoğunluk */
+function heatmapMindTreemapHtml(all,levels){
+    if(typeof d3==='undefined')return'<div>d3 yüklenemedi</div>';
+    const lv=levels.slice(0,2),W=1000,H=560;
+    const data={name:'root',children:heatmapMindBuildTree(all,lv,0,heatmapTopN)};
+    const root=d3.hierarchy(data).sum(d=>d.children&&d.children.length?0:d.value).sort((a,b)=>b.value-a.value);
+    d3.treemap().size([W,H]).paddingOuter(2).paddingTop(d=>d.depth===1&&lv.length>1?18:2).paddingInner(2).round(true)(root);
+    const leaves=root.leaves(),max=d3.max(leaves,d=>d.value)||1,sc=heatmapColorScale(heatmapMetric,max);
+    const pct=(v,t)=>(v/t*100).toFixed(3)+'%';
+    let h='<div class="kkview-treemap">';
+    if(lv.length>1)root.children.forEach(g=>{
+        const idx=heatmapMindRegister(g.data.name,g.data.cards);
+        h+='<div class="grp" style="left:'+pct(g.x0,W)+';top:'+pct(g.y0,H)+';width:'+pct(g.x1-g.x0,W)+';height:'+pct(g.y1-g.y0,H)+'" onclick="heatmapMindViewClick('+idx+')" title="'+esc(g.data.name+': '+heatmapMindFmt(g.value))+'"><b>'+esc(g.data.name)+' · '+heatmapMindShortFmt(g.value)+'</b></div>';
+    });
+    leaves.forEach(d=>{
+        const w=d.x1-d.x0,hh=d.y1-d.y0;if(w<1||hh<1)return;
+        const bg=sc(d.value),path=d.ancestors().reverse().slice(1).map(a=>a.data.name).join(' — ');
+        const idx=heatmapMindRegister(path,d.data.cards),show=w>46&&hh>22;
+        h+='<div class="leaf" style="left:'+pct(d.x0,W)+';top:'+pct(d.y0,H)+';width:'+pct(w,W)+';height:'+pct(hh,H)+';background:'+bg+';color:'+heatmapInk(bg)+'" title="'+esc(path+': '+heatmapMindFmt(d.value))+'" onclick="heatmapMindViewClick('+idx+')">'+(show?'<b>'+esc(d.data.name)+'</b>'+(hh>36?'<span>'+heatmapMindShortFmt(d.value)+'</span>':''):'')+'</div>';
+    });
+    h+='</div>'+heatmapMindLegendHtml(max);
+    return h;
+}
+/* C — Sunburst: halkalar = seviyeler (en fazla 3), renk = ısı (seviye içinde) */
+function heatmapMindSunburstHtml(all,levels){
+    if(typeof d3==='undefined')return'<div>d3 yüklenemedi</div>';
+    const lv=levels.slice(0,3),topN=Math.min(heatmapTopN,lv.length>2?10:16);
+    const total=all.reduce((s,k)=>s+(heatmapMetric==='count'?1:num(k.kilo)),0);
+    const data={name:(HEATMAP_DIMENSIONS[lv[0]]||{}).label||'Tümü',cards:all,children:heatmapMindBuildTree(all,lv,0,topN)};
+    const root=d3.hierarchy(data).sum(d=>d.children&&d.children.length?0:d.value).sort((a,b)=>b.value-a.value);
+    const R=300;d3.partition().size([2*Math.PI,R])(root);
+    const ringW=R/(lv.length+1);
+    const maxByDepth={};root.descendants().forEach(d=>{if(d.depth)maxByDepth[d.depth]=Math.max(maxByDepth[d.depth]||0,d.value)});
+    const arc=d3.arc().startAngle(d=>d.x0).endAngle(d=>d.x1).padAngle(0.004).padRadius(R/2).innerRadius(d=>d.y0+1).outerRadius(d=>d.y1-1).cornerRadius(3);
+    let s='<svg viewBox="'+(-R-10)+' '+(-R-10)+' '+(2*R+20)+' '+(2*R+20)+'" class="kkview-sunburst">';
+    root.descendants().forEach(d=>{
+        if(!d.depth)return;
+        const sc=heatmapColorScale(heatmapMetric,maxByDepth[d.depth]),bg=sc(d.value);
+        const path=d.ancestors().reverse().slice(1).map(a=>a.data.name).join(' — ');
+        const idx=heatmapMindRegister(path,d.data.cards);
+        s+='<path d="'+arc(d)+'" fill="'+bg+'" onclick="heatmapMindViewClick('+idx+')"><title>'+esc(path+': '+heatmapMindFmt(d.value))+'</title></path>';
+        const ang=d.x1-d.x0,mid=(d.y0+d.y1)/2;
+        if(ang*mid>26){
+            const a=(d.x0+d.x1)/2*180/Math.PI,rot=a-90,flip=a>180;
+            const maxCh=Math.max(3,Math.floor((d.y1-d.y0-8)/6.2)),nm=d.data.name.length>maxCh?d.data.name.slice(0,maxCh-1)+'…':d.data.name;
+            s+='<text transform="rotate('+rot+') translate('+mid+',0)'+(flip?' rotate(180)':'')+'" text-anchor="middle" dy="0.35em" fill="'+heatmapInk(bg)+'">'+esc(nm)+'</text>';
+        }
+    });
+    s+='<circle r="'+(ringW-3)+'" fill="#211944" stroke="#FFD700" stroke-width="2"/>';
+    s+='<text text-anchor="middle" dy="-0.2em" class="c1">'+esc(data.name)+'</text><text text-anchor="middle" dy="1.3em" class="c2">'+esc(heatmapMindFmt(total))+'</text></svg>';
+    return '<div class="kkview-sun-wrap">'+s+'</div><div class="kkview-hint">Halkalar içten dışa: '+lv.map(k=>HEATMAP_DIMENSIONS[k].label).join(' → ')+'. Renk her halkanın kendi içindeki en yüksek değere göre. Dilime tıkla → partiler altta.</div>';
+}
+/* D — Kompakt ağaç: girintili satırlar + ısı çubuğu */
+function heatmapMindCompactHtml(all,levels){
+    const rowsHtml=(cards,depth,prefix)=>{
+        const rows=heatmapBarRows(heatmapGroupCards(cards,levels[depth]),heatmapMetric,heatmapTopN);
+        if(!rows.length)return'';
+        const max=rows[0].value||1,sc=heatmapColorScale(heatmapMetric,max),isLast=depth===levels.length-1;
+        let h='';
+        rows.forEach((r,i)=>{
+            const path=prefix?prefix+'-'+i:String(i),bg=sc(r.value),exp=heatmapMindExpandedPaths.has(path);
+            const title=(prefix?heatmapMindCompactLabels(prefix)+' — ':'')+r.name;
+            const idx=heatmapMindRegister(title,r.cards);
+            h+='<div class="kkview-crow" style="padding-left:'+(depth*18+6)+'px">';
+            h+=isLast?'<span class="tw"></span>':'<span class="tw" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'+(exp?'▾':'▸')+'</span>';
+            h+='<span class="dot" style="background:'+bg+'"></span><span class="nm" title="'+esc(r.name)+'" onclick="'+(isLast?'heatmapMindViewClick('+idx+')':'toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)')+'">'+esc(r.name)+'</span>';
+            h+='<span class="bar" onclick="heatmapMindViewClick('+idx+')"><i style="width:'+Math.max(2,r.value/max*100)+'%;background:'+bg+'"></i></span><span class="val">'+heatmapMindFmt(r.value)+'</span><span class="n">'+r.cards.length+' parti</span></div>';
+            heatmapMindCompactNames.set(path,r.name);
+            if(!isLast&&exp)h+=rowsHtml(r.cards,depth+1,path);
+        });
+        return h;
+    };
+    heatmapMindCompactNames=new Map();
+    return '<div class="kkview-compact">'+rowsHtml(all,0,'')+'</div><div class="kkview-hint">▸ ile dalı aç; çubuğa tıklayınca o dalın partileri altta listelenir.</div>';
+}
+let heatmapMindCompactNames=new Map();
+function heatmapMindCompactLabels(prefix){
+    const parts=prefix.split('-'),out=[];
+    for(let i=1;i<=parts.length;i++){const n=heatmapMindCompactNames.get(parts.slice(0,i).join('-'));if(n)out.push(n)}
+    return out.join(' — ');
+}
+function heatmapMindAltViewHtml(){
+    const all=typeof getAllCards==='function'?getAllCards():[],levels=heatmapMindLevelKeys();
+    heatmapMindViewNodes=[];
+    if(!all.length)return'<div class="kkview-hint">Kayıt yok</div>';
+    if(heatmapMindView==='grid')return heatmapMindGridHtml(all,levels);
+    if(heatmapMindView==='treemap')return heatmapMindTreemapHtml(all,levels);
+    if(heatmapMindView==='sunburst')return heatmapMindSunburstHtml(all,levels);
+    return heatmapMindCompactHtml(all,levels);
+}
+(function injectHeatmapMindViewStyles(){
+    const style=document.createElement('style');
+    style.textContent='.kkview-switch{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;margin:0 0 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.14);border-radius:10px}'
+        +'.kkview-switch button{border:0;background:transparent;color:#CFD8DC;padding:6px 12px;border-radius:7px;cursor:pointer;font-weight:700;font-size:12px}'
+        +'.kkview-switch button:hover{background:rgba(255,255,255,.08)}'
+        +'.kkview-switch button.on{background:#FFD700;color:#1a1a2e}'
+        +'#heatmapMindmapPanel .kkmind-wrap{padding:4px 2px 8px}'+'#heatmapMindmapPanel .kkmind-root{padding:4px 9px;font-size:11px;border-width:1px;border-radius:6px;margin-right:12px;box-shadow:none}'+'#heatmapMindmapPanel .kkmind-branches{gap:2px}'+'#heatmapMindmapPanel .kkmind-branch{gap:12px;align-items:flex-start}'+'#heatmapMindmapPanel .kkmind-node{padding:1px 6px;font-size:11px;border-radius:4px;box-shadow:none;gap:3px;line-height:1.3}'+'#heatmapMindmapPanel .kkmind-node:hover{filter:brightness(1.12)}'+'#heatmapMindmapPanel .kkmind-node .cnt{font-size:9.5px}'+'#heatmapMindmapPanel .kkmind-branches.kkmind-leafgrid{display:flex;flex-direction:row;flex-wrap:wrap;align-content:flex-start;gap:1px 3px;min-width:170px;max-width:760px;padding:2px 4px;border-left:2px solid rgba(255,215,0,.35);border-radius:0 6px 6px 0;background:rgba(255,255,255,.03)}'+'#heatmapMindmapPanel .kkmind-leafgrid .kkmind-branch{gap:0;min-width:0;max-width:230px}'+'#heatmapMindmapPanel .kkmind-leaf-row{gap:2px;min-width:0}'+'#heatmapMindmapPanel .kkmind-leaf{padding:0 4px;border:0;border-radius:3px;background:rgba(255,255,255,.07);font-size:10.5px;font-weight:500;line-height:1.45;min-width:0;display:flex;gap:3px}'+'#heatmapMindmapPanel .kkmind-leaf .nm{min-width:0;overflow:hidden;text-overflow:ellipsis}'+'#heatmapMindmapPanel .kkmind-leaf .cnt{flex:0 0 auto}'+'#heatmapMindmapPanel .kkmind-leaf:hover{background:rgba(255,255,255,.1)}'+'#heatmapMindmapPanel .kkmind-leaf .cnt{font-size:9.5px}'+'#heatmapMindmapPanel .kkmind-leaf-row .kkheat-chk{width:11px;height:11px;font-size:8px;border-width:1.5px;border-radius:3px;flex:0 0 auto}'
+        +'#heatmapMindmapPanel .kkmind-leafgrid-head{flex:0 0 100%;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#90A4AE;padding:0 0 2px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:2px}'+'#heatmapMindmapPanel .kkmind-leafgrid-head button{border:0;background:rgba(255,255,255,.08);color:#FFD700;border-radius:3px;padding:0 6px;font-size:10px;font-weight:700;cursor:pointer;line-height:15px}'+'#heatmapMindmapPanel .kkmind-leafgrid-head button:hover{background:rgba(255,215,0,.2)}'+'#heatmapMindmapPanel .kkmind-leaf-row{position:relative}'+'#heatmapMindmapPanel .kkmind-leaf-row .kkmind-hide{position:absolute;right:0;top:1px;margin:0;opacity:0;background:#E74C3C;color:#fff}'+'#heatmapMindmapPanel .kkmind-leaf-row:hover .kkmind-hide{opacity:.9}'
+        +'.kkmind-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0 0 6px}'+'.kkmind-toolbar button{border:1px solid rgba(255,255,255,.2);background:#2d2359;color:#fff;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer}'+'.kkmind-toolbar button:hover{background:#533b88}'+'.kkmind-toolbar .lbl{font-size:11px;color:#90A4AE;margin-left:6px}'+'.kkmind-toolbar .chip{font-size:10.5px;color:#ECEFF1;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.3);border-radius:4px;padding:1px 6px;cursor:pointer}'+'.kkmind-toolbar .chip:hover{border-color:#FFD700;color:#FFD700}'+'#heatmapMindmapPanel .kkmind-hide{margin-left:3px;width:13px;height:13px;line-height:12px;text-align:center;border-radius:3px;font-size:11px;font-weight:900;opacity:.45;background:rgba(0,0,0,.15)}'+'#heatmapMindmapPanel .kkmind-hide:hover{opacity:1;background:#E74C3C;color:#fff}'
+        +'.kkview-legend{display:flex;align-items:center;gap:8px;margin:8px 0 4px;font-size:11px;color:#90A4AE}'
+        +'.kkview-legend div{flex:1;max-width:260px;height:8px;border-radius:4px}'
+        +'.kkview-hint{font-size:11px;color:#90A4AE;margin:6px 0}'
+        +'.kkview-grid-wrap{overflow:auto;max-height:62vh;border-radius:8px}'
+        +'.kkview-grid{border-collapse:separate;border-spacing:2px;font-size:11px}'
+        +'.kkview-grid th{font-weight:600;color:#B0BEC5;white-space:nowrap}'
+        +'.kkview-grid thead th{position:sticky;top:0;background:#1d1640;z-index:2}'
+        +'.kkview-grid th.corner{text-align:left;color:#FFD700;font-size:10px;left:0;z-index:3;vertical-align:bottom}'
+        +'.kkview-grid th.col{height:90px;vertical-align:bottom;padding:0 0 4px}'
+        +'.kkview-grid th.col span{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg);max-height:86px;overflow:hidden;text-overflow:ellipsis}'
+        +'.kkview-grid th.row{position:sticky;left:0;background:#1d1640;text-align:right;padding-right:6px;max-width:170px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:1}'
+        +'.kkview-grid th.row:hover{color:#FFD700}'
+        +'.kkview-grid td{min-width:40px;height:26px;text-align:center;border-radius:4px;cursor:pointer;font-weight:700;font-variant-numeric:tabular-nums;transition:transform .1s}'
+        +'.kkview-grid td:hover{outline:2px solid #FFD700;outline-offset:-1px}'
+        +'.kkview-grid td.empty{background:rgba(255,255,255,.04);cursor:default}'
+        +'.kkview-grid td.empty:hover{outline:0}'
+        +'.kkview-grid .tot{min-width:110px;cursor:default;color:#FFD700}'
+        +'.kkview-totbar{position:relative;height:18px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}'
+        +'.kkview-totbar i{position:absolute;left:0;top:0;bottom:0;background:rgba(255,215,0,.35)}'
+        +'.kkview-totbar span{position:relative;font-size:10px;line-height:18px}'
+        +'.kkview-treemap{position:relative;width:100%;aspect-ratio:1000/560;min-height:320px;background:rgba(0,0,0,.2);border-radius:8px;overflow:hidden}'
+        +'.kkview-treemap .grp{position:absolute;box-sizing:border-box;cursor:pointer}'
+        +'.kkview-treemap .grp b{display:block;padding:2px 6px;font-size:11px;color:#FFD700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+        +'.kkview-treemap .leaf{position:absolute;box-sizing:border-box;border-radius:3px;padding:3px 5px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between}'
+        +'.kkview-treemap .leaf:hover{outline:2px solid #FFD700;outline-offset:-2px;z-index:2}'
+        +'.kkview-treemap .leaf b{font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+        +'.kkview-treemap .leaf span{font-size:10px;font-variant-numeric:tabular-nums;opacity:.85}'
+        +'.kkview-sun-wrap{display:flex;justify-content:center}'
+        +'.kkview-sunburst{width:min(100%,620px);height:auto}'
+        +'.kkview-sunburst path{cursor:pointer;transition:opacity .12s}'
+        +'.kkview-sunburst:hover path{opacity:.55}.kkview-sunburst path:hover{opacity:1}'
+        +'.kkview-sunburst text{font-size:10px;font-weight:700;pointer-events:none}'
+        +'.kkview-sunburst .c1{fill:#FFD700;font-size:15px;font-weight:900}.kkview-sunburst .c2{fill:#E1BEE7;font-size:12px}'
+        +'.kkview-compact{display:flex;flex-direction:column;gap:1px;max-height:62vh;overflow:auto;border-radius:8px;background:rgba(0,0,0,.15);padding:4px}'
+        +'.kkview-crow{display:grid;grid-template-columns:16px 10px minmax(120px,240px) 1fr 100px 64px;align-items:center;gap:8px;min-height:26px;padding-right:8px;border-radius:5px;font-size:12px}'
+        +'.kkview-crow:hover{background:rgba(255,255,255,.06)}'
+        +'.kkview-crow .tw{color:#FFD700;cursor:pointer;text-align:center;user-select:none}'
+        +'.kkview-crow .dot{width:10px;height:10px;border-radius:3px}'
+        +'.kkview-crow .nm{color:#ECEFF1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}'
+        +'.kkview-crow .bar{height:10px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;cursor:pointer}'
+        +'.kkview-crow .bar i{display:block;height:100%;border-radius:5px}'
+        +'.kkview-crow .val{text-align:right;color:#FFD700;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px}'
+        +'.kkview-crow .n{text-align:right;color:#90A4AE;font-size:10px}'
+        +'@media(max-width:600px){.kkview-switch button{padding:5px 8px;font-size:11px}.kkview-crow{grid-template-columns:14px 8px minmax(80px,1fr) 60px 74px;font-size:11px;gap:5px}.kkview-crow .n{display:none}.kkview-grid td{min-width:32px;height:22px;font-size:10px}.kkview-grid th.row{max-width:100px}}';
+    document.head.appendChild(style);
+})();
 (function injectHeatmapBarStyles(){
     const style=document.createElement('style');
     style.textContent='.filter-select{padding:8px 10px;border-radius:6px;background:#211944;color:#fff;border:1px solid rgba(255,255,255,.25);font-size:12px}'

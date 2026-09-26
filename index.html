@@ -691,7 +691,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -721,6 +721,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="liveScreenPanel" style="width:min(1300px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="recentArrivalPanel" style="width:min(700px,calc(100vw - 32px));max-height:85vh"></div>
+<div class="panel" id="uretimLogPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
@@ -1670,7 +1671,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -2462,7 +2463,7 @@ let kkSarimViewMode='cards';
 let kkSarimFilterUnit='gun'; // 'gun' | 'saat' | 'dakika'
 let kkSarimFilterValue=null; // null = Tümü (filtresiz)
 let kkSarimShiftMode=false; // true = bugün işbaşından (08:00) itibaren
-function todayShiftWindow(){const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,0,0);return{start,end:now}}
+function todayShiftWindow(){const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,0,0);if(now<start)start.setDate(start.getDate()-1);return{start,end:now}}
 function isCurrentlyStage(k,stage){const cur=normalizeStageName(k._asama||k.asama);return stageEquals(cur,stage)}
 function isCurrentlyQualityOrSarim(k){return isCurrentlyStage(k,'KK')||isCurrentlyStage(k,'SARIM1')}
 function isAfterStage(k,stage){
@@ -4060,39 +4061,57 @@ function liveProdLogCapture(){
     if(changed)liveProdLogSave(log);
     return log;
 }
-function liveGhostEntries(logObj,liveCards){
-    const liveSet=new Set(liveCards.map(k=>String(k.parti).trim()));
-    return Object.keys(logObj).filter(pn=>!liveSet.has(pn)).map(pn=>({parti:pn,...logObj[pn]})).sort((a,b)=>b.ts-a.ts);
-}
-function liveAfterKkCards(){
-    return getAllCards().filter(k=>liveIsAfterFinalKk(k)&&liveTodayInWindow(k)).sort(newestFirstCompare);
-}
-function liveAfterSarimCards(){
-    return getAllCards().filter(k=>isAfterStage(k,'SARIM1')&&liveTodayInWindow(k)).sort(newestFirstCompare);
-}
-function liveGhostItemHtml(g){
-    const pn=g.parti,watched=kkSarimWatchList.includes(pn);
-    return '<div class="live-item" style="opacity:.65">'
+function liveLogItemHtml(pn,e){
+    const k=getAllCards().find(c=>String(c.parti).trim()===pn),watched=kkSarimWatchList.includes(pn);
+    const firma=k?liveFirmaShort(k):upShortCompany(String(e.line1||'').split('|')[0])||'-';
+    const time=e.ts?(e.est?'~':'')+new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';
+    return '<div class="live-item"'+(k?'':' style="opacity:.7"')+'>'
         +heatmapChkHtml(watched,'event.stopPropagation();toggleLiveWatch(&quot;'+esc(pn)+'&quot;)')
-        +'<div class="live-item-body" style="cursor:default">'
-        +'<b>'+esc(pn)+'</b><span class="live-item-meta">'+esc(String(g.line1||'').split(' / ')[0]||'-')+'</span>'
-        +'<span class="live-item-extra">'+Math.round(num(g.kg)).toLocaleString('tr-TR')+' kg</span>'
-        +'<span class="live-item-time">🚚 takip dışı</span></div></div>';
+        +'<div class="live-item-body"'+(k?' onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"':' style="cursor:default"')+'>'
+        +'<b>'+esc(pn)+'</b><span class="live-item-meta">'+esc(firma)+'</span>'
+        +'<span class="live-item-extra">'+Math.round(num(e.kg)).toLocaleString('tr-TR')+' kg'+(e.a?' → '+esc(e.a):'')+'</span>'
+        +'<span class="live-item-time">'+(k?'':'🚚 ')+esc(time)+'</span></div></div>';
 }
-function liveBoxWithGhostsHtml(liveCards,ghosts){
-    let h=liveCardListHtml(liveCards);
-    if(ghosts.length){
-        h+='<div class="live-sub-title">🚚 Takip dışı kalan (bugün geçmiş, veride yok — '+ghosts.length+')</div>';
-        ghosts.forEach(g=>{h+=liveGhostItemHtml(g)});
-    }
-    if(!liveCards.length&&!ghosts.length)h='<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>';
-    return h;
+function liveLogListHtml(entries){
+    const keys=Object.keys(entries).sort((a,b)=>(entries[b].ts||0)-(entries[a].ts||0));
+    if(!keys.length)return'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>';
+    return keys.map(pn=>liveLogItemHtml(pn,entries[pn])).join('');
 }
-function liveTotalsHtml(count,kg){
-    return count+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg';
+function liveLogTotalsText(entries){
+    const vals=Object.values(entries);
+    return vals.length+' parti • '+Math.round(vals.reduce((s,x)=>s+num(x.kg),0)).toLocaleString('tr-TR')+' kg';
+}
+/* ── Sunucu üretim kaydı (data/uretim_log.json — işyeri PC her güncellemede yazar) ── */
+let URETIM_LOG=null,uretimLogFetchedAt=0;
+const URETIM_CATS=[
+    {key:'kkGelen',label:'KK\'ya Gelen',icon:'🔵',color:'#2196F3',local:'kkArrived'},
+    {key:'kkGecen',label:'KK Üretimi (geçen)',icon:'✅',color:'#42A5F5',local:'kkPassed'},
+    {key:'sr1Gelen',label:'Sarım1\'e Gelen',icon:'🟣',color:'#B39DDB',local:'sarimArrived'},
+    {key:'sr1Gecen',label:'Sarım1 Üretimi',icon:'✅',color:'#9575CD',local:'sarimPassed'},
+    {key:'sr2Gelen',label:'Sarım2\'ye Gelen',icon:'🟢',color:'#4DB6AC',local:'sarim2Arrived'},
+    {key:'sr2Gecen',label:'Sarım2 Üretimi',icon:'✅',color:'#26A69A',local:'sarim2Passed'}
+];
+function uretimLogRefresh(onChange){
+    if(Date.now()-uretimLogFetchedAt<120000)return;
+    uretimLogFetchedAt=Date.now();
+    fetch('data/uretim_log.json?ts='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+        if(!j||!j.days||(URETIM_LOG&&URETIM_LOG.snapshotAt===j.snapshotAt))return;
+        URETIM_LOG=j;if(onChange)onChange();
+    }).catch(()=>{});
+}
+function uretimLogParseTs(t){const m=String(t||'').match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/);return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime():0}
+function uretimLogEntries(day,catKey){
+    const b=(URETIM_LOG&&URETIM_LOG.days&&URETIM_LOG.days[day]&&URETIM_LOG.days[day][catKey])||{},info=(URETIM_LOG&&URETIM_LOG.partiler)||{},out={};
+    Object.keys(b).forEach(pn=>{const r=b[pn],i=info[pn]||{};out[pn]={kg:num(r.kg),ts:uretimLogParseTs(r.t),est:!!r.e,a:r.a||'',line1:i.firma||'',kumas:i.kumas||'',recete:i.recete||'',siparis:i.siparis||''}});
+    return out;
 }
 function liveProdStats(){
-    const log=liveProdLogCapture();
+    let log=liveProdLogCapture();
+    if(URETIM_LOG){
+        const day=liveProdLogKey(),srv={v:2,date:day,server:true};
+        URETIM_CATS.forEach(c=>{srv[c.local]=uretimLogEntries(day,c.key)});
+        log=srv;
+    }
     const sum=obj=>Object.values(obj).reduce((s,x)=>s+num(x.kg),0),cnt=obj=>Object.keys(obj).length;
     return{
         kk:{gelenCount:cnt(log.kkArrived),gelenKg:sum(log.kkArrived),tamamCount:cnt(log.kkPassed),tamamKg:sum(log.kkPassed)},
@@ -4149,12 +4168,11 @@ function liveBoxHtml(id,title,color,bodyHtml){
 }
 function toggleLiveScreenPanel(){safePanelOpen('liveScreenPanel','📡 Canlı İzleme Ekranı',renderLiveScreenPanel)}
 function renderLiveScreenPanel(){
-    const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı';
+    const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı',stats=liveProdStats();
     let h='<button class="panel-close" onclick="document.getElementById(&quot;liveScreenPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📡 '+ttl+'</h2>';
-    h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kalite Kontrol kutusunda yalnızca son KK aşamasına (sonrası FZK.KNT veya SEVK olan) gelen partiler listelenir. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim kutuları bugün 08:00\'den beri gördüğü her partiyi bu tarayıcıda kaydeder — parti daha sonra veri setinden tamamen çıksa bile (sevk edilse de) o günkü sayıya dahil kalır.</div></details>';
-    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button>';
+    h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kalite Kontrol kutusunda yalnızca son KK aşamasına (sonrası FZK.KNT veya SEVK olan) gelen partiler listelenir. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim sayıları işyeri PC\'deki her veri güncellemesinde (~12 dk) kaydedilir: KK/Sarım1/Sarım2\'ye gelen ve geçen partiler vardiya (08:00–08:00) bazında tutulur; parti sonradan listeden çıksa (sevk edilse) bile sayıda kalır. Geçiş saati o güncellemenin saatidir (~ işareti: tahmini). Tüm kayıtlar ve parti bilgileri 📒 Üretim Kayıtları\'nda.</div></details>';
+    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button> <button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'+(stats.log.server?'':' <small style="color:#FFB74D">Sunucu kaydı henüz yok — bu tarayıcının kendi kaydı gösteriliyor</small>');
     h+='<div class="live-grid">';
-    const stats=liveProdStats();
     liveLoadZaman();
     h+=liveShiftHistoryHtml(stats)||liveProductionSummaryHtml(stats);
     const kk=liveKkCards(),kkNorm=liveNorm('KK_SON'),srNorm=liveNorm('SARIM 1');
@@ -4170,13 +4188,11 @@ function renderLiveScreenPanel(){
     sarimGroups.forEach(g=>{sarimBody+='<div class="live-sub-title">→ '+esc(g.name)+' ('+g.cards.length+')</div>'+liveCardListHtml(g.cards,srNorm)});
     const sarimAll=sarimGroups.reduce((a,g)=>a.concat(g.cards),[]);
     h+=liveBoxHtml('liveBoxSarim','🟣 Sarım1\'e Gelenler ('+sarimTotal+')'+liveAbnormalBadge(sarimAll,srNorm),'#9C27B0',liveNormLineHtml(srNorm)+sarimBody);
-    const afterKk=liveAfterKkCards(),kkGhosts=liveGhostEntries(stats.log.kkPassed,afterKk);
-    const kkTotalCount=afterKk.length+kkGhosts.length,kkTotalKg=afterKk.reduce((s,k)=>s+num(k.kilo),0)+kkGhosts.reduce((s,g)=>s+num(g.kg),0);
-    h+=liveBoxHtml('liveBoxAfterKk','✅ KK Sonrası — Üretim (bugün 08:00\'den) — '+liveTotalsHtml(kkTotalCount,kkTotalKg),'#00A8CC',liveBoxWithGhostsHtml(afterKk,kkGhosts));
-    const afterSarim=liveAfterSarimCards(),sarimGhosts=liveGhostEntries(stats.log.sarimPassed,afterSarim);
-    const srTotalCount=afterSarim.length+sarimGhosts.length,srTotalKg=afterSarim.reduce((s,k)=>s+num(k.kilo),0)+sarimGhosts.reduce((s,g)=>s+num(g.kg),0);
-    h+=liveBoxHtml('liveBoxAfterSarim','✅ Sarım1 Sonrası — Üretim (bugün 08:00\'den) — '+liveTotalsHtml(srTotalCount,srTotalKg),'#00A8CC',liveBoxWithGhostsHtml(afterSarim,sarimGhosts));
+    [['liveBoxAfterKk','KK Üretimi',stats.log.kkPassed],['liveBoxAfterSarim','Sarım1 Üretimi',stats.log.sarimPassed],['liveBoxAfterSarim2','Sarım2 Üretimi',stats.log.sarim2Passed]].forEach(([id,label,entries])=>{
+        h+=liveBoxHtml(id,'✅ '+label+' (bugün 08:00\'den) — '+liveLogTotalsText(entries),'#00A8CC',liveLogListHtml(entries));
+    });
     h+='</div>';
+    uretimLogRefresh(()=>{const lp=document.getElementById('liveScreenPanel');if(lp&&lp.style.display==='block')renderLiveScreenPanel()});
     p.innerHTML=h;p.style.display='block';addPanelFullButton('liveScreenPanel');ensureElementFullscreenToolbar('liveScreenPanel',ttl);
 }
 (function injectLiveScreenStyles(){
@@ -4214,6 +4230,79 @@ function renderLiveScreenPanel(){
     document.head.appendChild(style);
 })();
 liveLoadZaman();
+
+/* ════════ 📒 ÜRETİM KAYITLARI (data/uretim_log.json) ════════ */
+let uretimLogDay=null,uretimLogCat='kkGecen';
+function toggleUretimLogPanel(){uretimLogFetchedAt=0;safePanelOpen('uretimLogPanel','📒 Üretim Kayıtları',renderUretimLogPanel)}
+function setUretimLogDay(d){uretimLogDay=d;renderUretimLogPanel()}
+function setUretimLogCat(c){uretimLogCat=c;renderUretimLogPanel()}
+function uretimLogDayLabel(d){const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toLocaleDateString('tr-TR',{weekday:'short'})}
+function uretimLogFmtTs(ts){return ts?new Date(ts).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-'}
+function uretimLogRows(day,catKey){const e=uretimLogEntries(day,catKey);return Object.keys(e).map(pn=>({parti:pn,...e[pn]})).sort((a,b)=>b.ts-a.ts)}
+function uretimLogTotals(day,catKey){const r=uretimLogRows(day,catKey);return{count:r.length,kg:r.reduce((s,x)=>s+x.kg,0)}}
+function uretimLogItemHtml(r,i,isGelen){
+    const k=getAllCards().find(c=>String(c.parti).trim()===r.parti);
+    const kg=Math.round(r.kg).toLocaleString('tr-TR')+' kg',flow=r.a?(isGelen?'← '+r.a:'→ '+r.a):'';
+    return '<div class="ulog-item"'+(k?' onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"':'')+'>'
+        +'<div class="ulog-top"><b>'+(i+1)+'. '+esc(r.parti)+'</b><span class="ulog-kg">'+kg+'</span><span class="ulog-time">'+(r.est?'~':'')+esc(uretimLogFmtTs(r.ts))+'</span></div>'
+        +'<div class="ulog-firma">'+esc(r.line1||'-')+'</div>'
+        +'<div class="ulog-meta">'+[r.kumas?'Kumaş: '+esc(r.kumas):'',r.recete?'Reçete: '+esc(r.recete):'',r.siparis?'Sipariş: '+esc(r.siparis):'',flow?esc(flow):'',k?'<span style="color:#4DD0E1">▶ şu an: '+esc(k._asama||'-')+'</span>':'<span style="color:#90A4AE">🚚 veride yok</span>'].filter(Boolean).join(' • ')+'</div></div>';
+}
+function renderUretimLogPanel(){
+    const p=document.getElementById('uretimLogPanel');
+    uretimLogRefresh(()=>{if(p.style.display==='block')renderUretimLogPanel()});
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;uretimLogPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4DD0E1">📒 Üretim Kayıtları</h2>';
+    if(!URETIM_LOG){
+        h+='<div class="list-empty">Kayıtlar yükleniyor… Sunucu kaydı henüz yoksa işyeri PC\'deki bir sonraki veri güncellemesinde (~12 dk) başlar.</div>';
+        p.innerHTML=h;p.style.display='block';return;
+    }
+    const days=Object.keys(URETIM_LOG.days||{}).sort().reverse(),today=liveProdLogKey();
+    if(!uretimLogDay||!days.includes(uretimLogDay))uretimLogDay=days.includes(today)?today:(days[0]||today);
+    const day=uretimLogDay,cat=URETIM_CATS.find(c=>c.key===uretimLogCat)||URETIM_CATS[1],rows=uretimLogRows(day,cat.key);
+    const snap=uretimLogParseTs(URETIM_LOG.snapshotAt);
+    h+='<div class="panel-summary">Vardiya 08:00–08:00. İşyeri PC her veri güncellemesinde (~12 dk) KK / Sarım1 / Sarım2\'ye gelen ve geçen partileri kaydeder; parti sonradan listeden çıksa da kayıt kalır. Son kayıt: <b>'+esc(uretimLogFmtTs(snap))+'</b> • ~ = tahmini saat.</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><select onchange="setUretimLogDay(this.value)" style="padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white;max-width:100%">'
+        +(days.length?days:[today]).map(d=>'<option value="'+d+'"'+(d===day?' selected':'')+'>'+esc(uretimLogDayLabel(d))+(d===today?' (bugün)':'')+'</option>').join('')+'</select>'
+        +'<button class="btn-fire-export" onclick="exportUretimLogWorkbook()">📊 Excel</button><button class="btn-all-export" onclick="showUretimLogCards()">🃏 Kartları göster</button>'
+        +'<button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;uretimLogPanel&quot;,&quot;Üretim Kayıtları&quot;)">⛶ Tam Ekran</button></div>';
+    h+='<div class="ulog-cats">'+URETIM_CATS.map(c=>{const t=uretimLogTotals(day,c.key);return'<button type="button" class="ulog-cat'+(c.key===cat.key?' active':'')+'" style="--c:'+c.color+'" onclick="setUretimLogCat(&quot;'+c.key+'&quot;)"><span>'+c.icon+' '+esc(c.label)+'</span><b>'+t.count+' parti</b><small>'+Math.round(t.kg).toLocaleString('tr-TR')+' kg</small></button>'}).join('')+'</div>';
+    h+='<h3 style="color:'+cat.color+';margin:12px 0 6px;font-size:15px">'+cat.icon+' '+esc(cat.label)+' — '+esc(uretimLogDayLabel(day))+' • '+rows.length+' parti • '+Math.round(rows.reduce((s,r)=>s+r.kg,0)).toLocaleString('tr-TR')+' kg</h3>';
+    h+=rows.length?'<div class="ulog-list">'+rows.map((r,i)=>uretimLogItemHtml(r,i,cat.key.endsWith('Gelen'))).join('')+'</div>':'<div class="list-empty">Bu gün için kayıt yok</div>';
+    h+='<details class="ulog-days"><summary>📅 Gün gün özet ('+days.length+' vardiya)</summary><div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>Vardiya</th>'+URETIM_CATS.map(c=>'<th>'+c.icon+' '+esc(c.label)+'</th>').join('')+'</tr></thead><tbody>'
+        +days.map(d=>'<tr style="cursor:pointer" onclick="setUretimLogDay(&quot;'+d+'&quot;)"><td><b>'+esc(uretimLogDayLabel(d))+'</b></td>'+URETIM_CATS.map(c=>{const t=uretimLogTotals(d,c.key);return'<td>'+t.count+' <small>/ '+Math.round(t.kg).toLocaleString('tr-TR')+' kg</small></td>'}).join('')+'</tr>').join('')
+        +'</tbody></table></div></details>';
+    p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('uretimLogPanel','Üretim Kayıtları');
+}
+function showUretimLogCards(){
+    const set=new Set(uretimLogRows(uretimLogDay,uretimLogCat).map(r=>r.parti)),cards=getAllCards().filter(k=>set.has(String(k.parti).trim()));
+    if(!cards.length){showToast('Bu listedeki partilerin hiçbiri şu an veride yok','warning');return}
+    filterCardsDirect(cards);
+}
+function exportUretimLogWorkbook(){
+    if(!URETIM_LOG){showToast('Kayıt yok','warning');return}
+    const day=uretimLogDay,names={kkGelen:'KK_Gelen',kkGecen:'KK_Uretim',sr1Gelen:'Sarim1_Gelen',sr1Gecen:'Sarim1_Uretim',sr2Gelen:'Sarim2_Gelen',sr2Gecen:'Sarim2_Uretim'};
+    const sheets=URETIM_CATS.map(c=>({name:names[c.key],rows:uretimLogRows(day,c.key).map(r=>({'Parti':r.parti,'Saat':uretimLogFmtTs(r.ts),'Tahmini':r.est?'Evet':'','Kg':Math.round(r.kg*100)/100,'Firma':r.line1,'Kumaş':r.kumas,'Reçete':r.recete,'Sipariş':r.siparis,[c.key.endsWith('Gelen')?'Önceki Aşama':'Sonraki Aşama']:r.a}))}));
+    const days=Object.keys(URETIM_LOG.days||{}).sort().reverse();
+    sheets.unshift({name:'Ozet',rows:days.map(d=>{const row={'Vardiya':d};URETIM_CATS.forEach(c=>{const t=uretimLogTotals(d,c.key);row[c.label+' Parti']=t.count;row[c.label+' Kg']=Math.round(t.kg)});return row})});
+    downloadWorkbook('uretim_kayitlari_'+day+'.xls',sheets);
+}
+(function injectUretimLogStyles(){
+    const style=document.createElement('style');
+    style.textContent='.ulog-cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}'
+        +'.ulog-cat{min-width:0;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--c);border-radius:10px;padding:8px 10px;color:#ECEFF1;cursor:pointer;display:flex;flex-direction:column;gap:2px}'
+        +'.ulog-cat span{font-size:12px;font-weight:700;color:var(--c)}.ulog-cat b{font-size:18px}.ulog-cat small{color:#B0BEC5}'
+        +'.ulog-cat.active{background:rgba(255,255,255,.14);box-shadow:0 0 0 2px var(--c) inset}'
+        +'.ulog-list{display:flex;flex-direction:column;gap:6px}'
+        +'.ulog-item{min-width:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;cursor:pointer}'
+        +'.ulog-item:hover{background:rgba(255,255,255,.1)}'
+        +'.ulog-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.ulog-top b{color:#FFD700;font-size:14px}'
+        +'.ulog-kg{font-weight:800;color:#ECEFF1}.ulog-time{margin-left:auto;color:#90A4AE;font-size:12px}'
+        +'.ulog-firma{color:#CFD8DC;font-size:12px;margin-top:2px;overflow-wrap:anywhere}'
+        +'.ulog-meta{color:#B0BEC5;font-size:11px;margin-top:2px;overflow-wrap:anywhere}'
+        +'.ulog-days{margin-top:12px}.ulog-days summary{cursor:pointer;color:#90CAF9;font-weight:700}'
+        +'@media(max-width:600px){.ulog-cats{grid-template-columns:1fr 1fr}.ulog-cat b{font-size:16px}}';
+    document.head.appendChild(style);
+})();
 
 /* ════════ 📜 KK / SARIM GEÇİŞ KARŞILAŞTIRMA RAPORU ════════ */
 let gecisSkip=1;

@@ -4094,7 +4094,9 @@ const URETIM_CATS=[
 function uretimLogRefresh(onChange){
     if(Date.now()-uretimLogFetchedAt<120000)return;
     uretimLogFetchedAt=Date.now();
-    fetch('data/uretim_log.json?ts='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+    // Kaydı GitHub Actions [skip ci] ile yazar (Pages yeniden derlenmez), bu yüzden yayında raw'dan okunur.
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/uretim_log.json'+ts,{cache:'no-store'});
+    (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/uretim_log.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel)).then(r=>r&&r.ok?r.json():null).then(j=>{
         if(!j||!j.days||(URETIM_LOG&&URETIM_LOG.snapshotAt===j.snapshotAt))return;
         URETIM_LOG=j;if(onChange)onChange();
     }).catch(()=>{});
@@ -4105,9 +4107,10 @@ function uretimLogEntries(day,catKey){
     Object.keys(b).forEach(pn=>{const r=b[pn],i=info[pn]||{};out[pn]={kg:num(r.kg),ts:uretimLogParseTs(r.t),est:!!r.e,a:r.a||'',line1:i.firma||'',kumas:i.kumas||'',recete:i.recete||'',siparis:i.siparis||''}});
     return out;
 }
+function uretimLogFresh(){const t=URETIM_LOG&&uretimLogParseTs(URETIM_LOG.snapshotAt);return!!t&&Date.now()-t<45*60000}
 function liveProdStats(){
     let log=liveProdLogCapture();
-    if(URETIM_LOG){
+    if(uretimLogFresh()){
         const day=liveProdLogKey(),srv={v:2,date:day,server:true};
         URETIM_CATS.forEach(c=>{srv[c.local]=uretimLogEntries(day,c.key)});
         log=srv;
@@ -4171,7 +4174,7 @@ function renderLiveScreenPanel(){
     const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı',stats=liveProdStats();
     let h='<button class="panel-close" onclick="document.getElementById(&quot;liveScreenPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📡 '+ttl+'</h2>';
     h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kalite Kontrol kutusunda yalnızca son KK aşamasına (sonrası FZK.KNT veya SEVK olan) gelen partiler listelenir. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim sayıları işyeri PC\'deki her veri güncellemesinde (~12 dk) kaydedilir: KK/Sarım1/Sarım2\'ye gelen ve geçen partiler vardiya (08:00–08:00) bazında tutulur; parti sonradan listeden çıksa (sevk edilse) bile sayıda kalır. Geçiş saati o güncellemenin saatidir (~ işareti: tahmini). Tüm kayıtlar ve parti bilgileri 📒 Üretim Kayıtları\'nda.</div></details>';
-    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button> <button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'+(stats.log.server?'':' <small style="color:#FFB74D">Sunucu kaydı henüz yok — bu tarayıcının kendi kaydı gösteriliyor</small>');
+    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button> <button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'+(stats.log.server?'':' <small style="color:#FFB74D">'+(URETIM_LOG?'Sunucu kaydı güncel değil (son: '+esc(uretimLogFmtTs(uretimLogParseTs(URETIM_LOG.snapshotAt)))+')':'Sunucu kaydı henüz yok')+' — bu tarayıcının kendi kaydı gösteriliyor</small>');
     h+='<div class="live-grid">';
     liveLoadZaman();
     h+=liveShiftHistoryHtml(stats)||liveProductionSummaryHtml(stats);
@@ -4260,7 +4263,7 @@ function renderUretimLogPanel(){
     if(!uretimLogDay||!days.includes(uretimLogDay))uretimLogDay=days.includes(today)?today:(days[0]||today);
     const day=uretimLogDay,cat=URETIM_CATS.find(c=>c.key===uretimLogCat)||URETIM_CATS[1],rows=uretimLogRows(day,cat.key);
     const snap=uretimLogParseTs(URETIM_LOG.snapshotAt);
-    h+='<div class="panel-summary">Vardiya 08:00–08:00. İşyeri PC her veri güncellemesinde (~12 dk) KK / Sarım1 / Sarım2\'ye gelen ve geçen partileri kaydeder; parti sonradan listeden çıksa da kayıt kalır. Son kayıt: <b>'+esc(uretimLogFmtTs(snap))+'</b> • ~ = tahmini saat.</div>';
+    h+='<div class="panel-summary">Vardiya 08:00–08:00. İşyeri PC her veri güncellemesinde (~12 dk) KK / Sarım1 / Sarım2\'ye gelen ve geçen partileri kaydeder; parti sonradan listeden çıksa da kayıt kalır. Son kayıt: <b>'+esc(uretimLogFmtTs(snap))+'</b> • ~ = tahmini saat.'+(uretimLogFresh()?'':' <b style="color:#FFB74D">⚠️ Kayıt 45 dakikadan eski — işyeri PC\'de kayıt adımı çalışmıyor olabilir.</b>')+'</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><select onchange="setUretimLogDay(this.value)" style="padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white;max-width:100%">'
         +(days.length?days:[today]).map(d=>'<option value="'+d+'"'+(d===day?' selected':'')+'>'+esc(uretimLogDayLabel(d))+(d===today?' (bugün)':'')+'</option>').join('')+'</select>'
         +'<button class="btn-fire-export" onclick="exportUretimLogWorkbook()">📊 Excel</button><button class="btn-all-export" onclick="showUretimLogCards()">🃏 Kartları göster</button>'

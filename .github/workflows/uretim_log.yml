@@ -1,0 +1,42 @@
+name: Uretim kaydi
+
+# Isyeri PC data/partiler.json'u her gonderdiginde KK / Sarim1 / Sarim2 gelen-gecen kaydini
+# (data/uretim_log.json) gunceller. Cakisma olmamasi icin bu dosyayi yalnizca bu is yazar.
+on:
+  push:
+    branches: [main]
+    paths: [data/partiler.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: uretim-log
+  cancel-in-progress: false
+
+jobs:
+  kayit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Kaydi guncelle ve gonder
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            python3 update_uretim_log.py data/partiler.json data/uretim_log.json
+            git add data/uretim_log.json
+            if git diff --cached --quiet; then echo "Degisiklik yok"; exit 0; fi
+            # [skip ci]: bu commit icin Pages/Netlify yeniden derlenmez; pano kaydi raw.githubusercontent'ten okur.
+            git commit -q -m "Uretim kaydi guncellendi [skip ci]"
+            if git push -q origin HEAD:main; then exit 0; fi
+            echo "main ilerlemis, en son veriyle yeniden deneniyor ($i)"
+            git fetch -q --depth=1 origin main
+            git reset -q --hard FETCH_HEAD
+            sleep 3
+          done
+          exit 1

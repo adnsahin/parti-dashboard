@@ -1011,17 +1011,19 @@ function fifoAgeDays(k){
     const raw=k&&k.bekleme_gun;
     return raw===null||raw===undefined||String(raw).trim()===''?null:Math.max(0,num(raw));
 }
-function fifoCompare(a,b){
+function waitAgeCompare(a,b,dir){
     const ad=fifoAgeDays(a),bd=fifoAgeDays(b);
     if(ad===null&&bd!==null)return 1;
     if(ad!==null&&bd===null)return-1;
-    if(ad!==null&&bd!==null&&Math.abs(ad-bd)>0.0001)return bd-ad;
+    if(ad!==null&&bd!==null&&Math.abs(ad-bd)>0.0001)return(ad-bd)*dir;
     const at=latestUpdateDate(a),bt=latestUpdateDate(b);
-    if(at&&bt&&at.getTime()!==bt.getTime())return at.getTime()-bt.getTime();
+    if(at&&bt&&at.getTime()!==bt.getTime())return(bt.getTime()-at.getTime())*dir;
     if(at&&!bt)return-1;
     if(!at&&bt)return 1;
     return num(b.kilo)-num(a.kilo)||String(a.parti||'').localeCompare(String(b.parti||''),'tr');
 }
+function newestFirstCompare(a,b){return waitAgeCompare(a,b,1)}
+function oldestFirstCompare(a,b){return waitAgeCompare(a,b,-1)}
 function fifoAgeLabel(k){
     const age=fifoAgeDays(k);
     if(age===null)return'Bekleme tarihi yok';
@@ -1714,7 +1716,7 @@ function renderCurrentView(){
     else renderCardsView(currentDisplayedCards);
     ensureViewFullscreenToolbar();
 }
-function renderCards(k){currentDisplayedCards=k;renderCurrentView();recalc()}
+function renderCards(k){currentDisplayedCards=[...k].sort(newestFirstCompare);renderCurrentView();recalc()}
 function groupByKey(kartlar){const order=getGroupOrder();const map={};kartlar.forEach(k=>{const gk=getGroupKey(k);if(!map[gk])map[gk]=[];map[gk].push(k)});const r=[];order.forEach(a=>{if(map[a]&&map[a].length)r.push({key:a,cards:map[a]})});Object.keys(map).forEach(a=>{if(!order.includes(a)&&map[a].length)r.push({key:a,cards:map[a]})});return r}
 
 function getCurrentViewContainer(){
@@ -1918,7 +1920,7 @@ function renderListView(kartlar){
     const c=document.getElementById('listViewContainer');if(!kartlar.length){c.innerHTML='<div class="no-results">Sonuç bulunamadı</div>';return}
     const groups=groupByKey(kartlar);const isN=currentGroupMode==='next';
     const cols=[{key:'_chk',label:'✓',s:false},{key:'_star',label:'⭐',s:false},{key:'seviye',label:'',s:true},{key:'parti',label:'Parti',s:true},{key:'_asama',label:'Bekliyor',s:true},{key:'bir_sonraki',label:'Sonraki',s:true},{key:'line1',label:'Firma',s:true},{key:'kilo',label:'Kilo',s:true},{key:'bekleme_gun',label:'Bekleme',s:true},{key:'_status',label:'Durum',s:false}];
-    let sorted=[...kartlar];if(listSortCol)sorted.sort((a,b)=>{let va=a[listSortCol]??'',vb=b[listSortCol]??'';if(typeof va==='number'&&typeof vb==='number')return listSortAsc?va-vb:vb-va;return listSortAsc?String(va).toLowerCase().localeCompare(String(vb).toLowerCase(),'tr'):String(vb).toLowerCase().localeCompare(String(va).toLowerCase(),'tr')});
+    let sorted=[...kartlar];if(listSortCol)sorted.sort((a,b)=>{let va=a[listSortCol]??'',vb=b[listSortCol]??'';if(listSortCol==='bekleme_gun'){va=fifoAgeDays(a)??-1;vb=fifoAgeDays(b)??-1}if(typeof va==='number'&&typeof vb==='number')return listSortAsc?va-vb:vb-va;return listSortAsc?String(va).toLowerCase().localeCompare(String(vb).toLowerCase(),'tr'):String(vb).toLowerCase().localeCompare(String(va).toLowerCase(),'tr')});
     let h='<table class="list-view-table"><thead><tr>';cols.forEach(cl=>{const ar=listSortCol===cl.key?(listSortAsc?' ▲':' ▼'):'';h+='<th '+(cl.s?'onclick="sortListBy(\''+cl.key+'\')"':'')+'>'+cl.label+ar+'</th>'});h+='</tr></thead><tbody>';
     const renderRow=k=>{
         const ic=checkedCards.has(k.id);
@@ -2008,7 +2010,7 @@ function getFilteredCards(){
     if(currentSeviye)kk=kk.filter(k=>k.seviye===currentSeviye);
     const q=document.getElementById('searchBox').value.toLowerCase().trim();
     if(q)kk=kk.filter(k=>String(k.parti).toLowerCase().includes(q)||(k.line1&&k.line1.toLowerCase().includes(q))||(k.line2&&k.line2.toLowerCase().includes(q))||(k.ham_adi&&k.ham_adi.toLowerCase().includes(q))||(k.recete_adi&&k.recete_adi.toLowerCase().includes(q))||(tamirShort(k)&&tamirShort(k).toLowerCase().includes(q))||(k._asama&&k._asama.toLowerCase().includes(q))||(k.bir_sonraki&&k.bir_sonraki.toLowerCase().includes(q))||(k.uretim_asamalari&&k.uretim_asamalari.toLowerCase().includes(q)));
-    return kk.sort(fifoCompare);
+    return kk.sort(newestFirstCompare);
 }
 function applyLatestUpdateFilter(){
     const minEl=document.getElementById('latestUpdateMinInput'),maxEl=document.getElementById('latestUpdateMaxInput');
@@ -2058,7 +2060,7 @@ function stageAgeMatches(hours,field,stages){
     if(h===null)return[];
     return stageAgeAgedCards().filter(r=>r.age<=h)
         .filter(r=>!picked.length||picked.some(s=>stageEquals(stageAgeCardValue(r.k,field),s)))
-        .sort((a,b)=>a.age-b.age||fifoCompare(a.k,b.k))
+        .sort((a,b)=>a.age-b.age||newestFirstCompare(a.k,b.k))
         .map(r=>Object.assign({},r.k,{stageAgeHours:r.age,stageAgeStage:stageAgeCardValue(r.k,field)}));
 }
 function stageAgeClearStageSelection(){stageAgeCaptureInputs();stageAgeStageSelection=[];renderStageAgePanel()}
@@ -2118,7 +2120,7 @@ function renderStageAgePanel(){
         h+='</div>';
     }
     else{
-        h+='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Aşamadaki değer</th><th>Şu an beklediği / Sonraki</th><th>Son hareket</th><th>Geçen süre</th><th>Kilo</th><th>Firma / Reçete</th></tr></thead><tbody>';
+        h+='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th># / Parti</th><th>Aşamadaki değer</th><th>Şu an beklediği / Sonraki</th><th>Son hareket</th><th>Geçen süre</th><th>Kilo</th><th>Firma / Reçete</th></tr></thead><tbody>';
         stageAgeRows.forEach((k,i)=>{
             const movement=latestUpdateDate(k),movementText=movement?movement.toLocaleString('tr-TR'):(k.son_asama_tarihi||k.hareket||'-');
             h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b><br><small>'+esc(k.line1||'')+'</small></td><td><b>'+esc(k.stageAgeStage||'-')+'</b><br><small>'+esc(stageAgeFieldLabel(stageAgeField))+'</small></td><td>'+esc(k._asama||'-')+' → '+esc(k.bir_sonraki||'Son/Yok')+'</td><td>'+esc(movementText)+'</td><td style="font-weight:800;color:#FFB74D">'+esc(stageAgeDurationText(k.stageAgeHours))+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td><small>'+esc(k.line2||'')+'</small></td></tr>';
@@ -2152,7 +2154,7 @@ function daysUntilDate(v){const d=upDate(v);if(!d)return null;const t=new Date()
 function isOverdue(k){const d=daysUntilDate(k.termin_tarihi||k.termin_siparis);return d!==null&&d<0}
 function isDueSoon(k){const d=daysUntilDate(k.termin_tarihi||k.termin_siparis);return d!==null&&d>=0&&d<=3}
 function getScoreParts(k){const noteRisk=/ACIL|ACİL|SEVK ETME|ONAY|BEKLE/i.test([k.parti_notu,k.siparis_notu,k.planlama_notu,k.termin_notu].join(' '));const parts=[];if(k.seviye==='kritik')parts.push(['Kritik bekleme',100]);else if(k.seviye==='uyari')parts.push(['Uyarı bekleme',45]);const waitDays=fifoAgeDays(k)??num(k.bekleme_gun),waitPts=Math.min(waitDays*8,160);if(waitPts)parts.push(['FIFO bekleme yaşı',Math.round(waitPts)]);const kgPts=Math.min(num(k.kilo)/80,30);if(kgPts)parts.push(['Kilo yükü',Math.round(kgPts)]);if(k.tamirler&&k.tamirler.length)parts.push(['Tamir kaydı',k.tamirler.length*25]);if(k.ic_tamir)parts.push(['İç tamir',55]);if(k.bekleme_asama)parts.push(['Beklemeye alınmış',45]);if(noteRisk)parts.push(['Not riski',25]);return{parts,due:daysUntilDate(k.termin_tarihi||k.termin_siparis),noteRisk,score:parts.reduce((s,p)=>s+p[1],0)}}
-function getPriorityCards(){return getAllCards().map(k=>{const sp=getScoreParts(k);return{...k,score:sp.score,due:sp.due,noteRisk:sp.noteRisk,scoreParts:sp.parts}}).sort((a,b)=>fifoCompare(a,b)||b.score-a.score)}
+function getPriorityCards(){return getAllCards().map(k=>{const sp=getScoreParts(k);return{...k,score:sp.score,due:sp.due,noteRisk:sp.noteRisk,scoreParts:sp.parts}}).sort((a,b)=>oldestFirstCompare(a,b)||b.score-a.score)}
 function getBottlenecks(){const map={};getAllCards().forEach(k=>{const a=k._asama||k.asama||'Bilinmeyen';if(!map[a])map[a]={asama:a,count:0,kg:0,kritik:0,tamir:0,overdue:0,dueSoon:0,waitSum:0,maxWait:0,priority:0,machines:{},cards:[]};map[a].cards.push(k);map[a].count++;map[a].kg+=num(k.kilo);const wait=fifoAgeDays(k)??num(k.bekleme_gun);map[a].waitSum+=wait;map[a].maxWait=Math.max(map[a].maxWait,wait);if(k.seviye==='kritik')map[a].kritik++;if(k.tamirler&&k.tamirler.length)map[a].tamir++;if(isOverdue(k))map[a].overdue++;if(isDueSoon(k))map[a].dueSoon++;if(num(k.oncelik_no)&&num(k.oncelik_no)<1000)map[a].priority++;const m=k.plan_makina||k.son_makina||'';if(m)map[a].machines[m]=(map[a].machines[m]||0)+1});return Object.values(map).map(r=>{const top=Object.entries(r.machines).sort((a,b)=>b[1]-a[1])[0];r.avgWait=r.count?r.waitSum/r.count:0;r.topMachine=top?top[0]+' ('+top[1]+')':'-';r.loadScore=r.count*2+r.kg/1000+r.avgWait*4+r.maxWait*2+r.kritik*3+r.tamir*2;return r}).sort((a,b)=>b.loadScore-a.loadScore||b.maxWait-a.maxWait||b.count-a.count||b.kg-a.kg)}
 function updateInsightStrip(){const cards=getAllCards();const today=getPriorityCards().filter(k=>k.score>=90).length;const bott=getBottlenecks()[0];const repairParties=new Set(TAMIR_LIST.map(t=>String(t.parti).trim()).filter(Boolean));const problems=(uploadValidation.emptyParti||0)+(uploadValidation.emptyStage||0)+(uploadValidation.unmatchedRepair||0)+(uploadValidation.overdueTermin||0)+(uploadValidation.waitBlocked||0)+(uploadValidation.missingColumns||[]).length;const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('qiToday',today);set('qiBottleneck',bott?bott.count:'-');set('qiValidation',cards.length?problems:'-');set('qiRepair',repairParties.size);set('qiPost',getPostProcessCards().length);set('qiWetDry',typeof getWetWaitingCards==='function'?getWetWaitingCards().length:0)}
 function toggleTodayPanel(){safePanelOpen('todayPanel','Bugün Çöz',renderTodayPanel)}
@@ -2217,10 +2219,10 @@ function flowLastIndex(parts,stage){
 function targetTitle(target){return target==='kk'?'Kalite Kontrol':'Sarım1'}
 function targetStage(target){return target==='kk'?'KK':'SARIM1'}
 function isAfterQualityOrSarım(k){const parts=flowParts(k);const cur=normalizeStageName(k._asama||k.asama);if(!cur)return false;const ci=flowLastIndex(parts,cur);if(ci<0)return false;const refs=[flowLastIndex(parts,'KK'),flowLastIndex(parts,'SARIM1')].filter(i=>i>=0);return refs.some(i=>ci>i)}
-function getPostProcessCards(){return getPriorityCards().filter(k=>isAfterQualityOrSarım(k)).map(k=>{const extra=[];if(k.tamirler&&k.tamirler.length)extra.push(['Son aşamalarda tamir etkisi',k.tamirler.length*30]);const score=Math.round(k.score+extra.reduce((s,p)=>s+p[1],0));return{...k,postScore:score,postParts:[...(k.scoreParts||[]),...extra]}}).sort((a,b)=>fifoCompare(a,b)||b.postScore-a.postScore)}
+function getPostProcessCards(){return getPriorityCards().filter(k=>isAfterQualityOrSarım(k)).map(k=>{const extra=[];if(k.tamirler&&k.tamirler.length)extra.push(['Son aşamalarda tamir etkisi',k.tamirler.length*30]);const score=Math.round(k.score+extra.reduce((s,p)=>s+p[1],0));return{...k,postScore:score,postParts:[...(k.scoreParts||[]),...extra]}}).sort((a,b)=>newestFirstCompare(a,b)||b.postScore-a.postScore)}
 function togglePostProcessPanel(){safePanelOpen('postProcessPanel','KK / Sarım 1 Sonrası Öncelik',renderPostProcessPanel)}
 function flowRiskScore(k){return fifoAgeDays(k)??0}
-function sortFlowCards(list){return list.sort(fifoCompare)}
+function sortFlowCards(list){return list.sort(newestFirstCompare)}
 function makeFlowBuckets(target){
     const t=targetStage(target),b={incoming:{},currentFrom:{},currentTo:{},after:{}};
     const add=(name,key,k)=>{key=key||'Bilinmeyen';if(!b[name][key])b[name][key]={name:key,count:0,kg:0,cards:[]};b[name][key].count++;b[name][key].kg+=num(k.kilo);b[name][key].cards.push(k)};
@@ -2232,7 +2234,7 @@ function makeFlowBuckets(target){
         const prev=idx>0?parts[idx-1]:'Önceki yok',next=idx<parts.length-1?parts[idx+1]:'Sonraki yok';
         if(curIdx===idx-1)add('incoming',prev,k);else if(curIdx===idx+1)add('after',next,k);
     });
-    Object.keys(b).forEach(kind=>{b[kind]=Object.values(b[kind]).sort((a,z)=>fifoCompare(a.cards[0],z.cards[0])||z.kg-a.kg);b[kind].forEach(group=>group.cards.sort(fifoCompare))});
+    Object.keys(b).forEach(kind=>{b[kind]=Object.values(b[kind]).sort((a,z)=>newestFirstCompare(a.cards[0],z.cards[0])||z.kg-a.kg);b[kind].forEach(group=>group.cards.sort(newestFirstCompare))});
     return b;
 }
 function getFlowQueueCards(target){
@@ -2240,23 +2242,23 @@ function getFlowQueueCards(target){
     ['incoming','currentFrom'].forEach(kind=>(b[kind]||[]).forEach(group=>(group.cards||[]).forEach(k=>{
         if(!seen.has(k.id)){seen.add(k.id);out.push(k)}
     })));
-    return out.sort(fifoCompare);
+    return out.sort(newestFirstCompare);
 }
-function filterFlowFifoCards(target){showFlowPanelCards(targetTitle(target)+' FIFO kuyruğu',getFlowQueueCards(target),'renderFlowTargetPanel(&quot;'+target+'&quot;)')}
+function filterFlowFifoCards(target){showFlowPanelCards(targetTitle(target)+' kuyruğu',getFlowQueueCards(target),'renderFlowTargetPanel(&quot;'+target+'&quot;)')}
 function flowFifoQueueHtml(target,cards){
-    const ordered=[...(cards||[])].sort(fifoCompare),title=targetTitle(target),kg=ordered.reduce((s,k)=>s+num(k.kilo),0);
-    let h='<div class="flow-fifo-card"><div class="flow-fifo-head"><span>⏱️ '+title+' FIFO kuyruğu — en eski üstte</span><span class="flow-fifo-meta">'+ordered.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</span><button class="btn-all-export" onclick="filterFlowFifoCards(&quot;'+target+'&quot;)">FIFO kuyruğunu listele</button><button class="btn-all-export" onclick="sendNtfyList(&quot;'+title+' FIFO kuyruğu&quot;,getFlowQueueCards(&quot;'+target+'&quot;),event)">📨 ntfy Liste</button></div>';
-    if(!ordered.length)return h+'<div class="flow-fifo-empty">FIFO kuyruğunda kayıt yok</div></div>';
+    const ordered=[...(cards||[])].sort(newestFirstCompare),title=targetTitle(target),kg=ordered.reduce((s,k)=>s+num(k.kilo),0);
+    let h='<div class="flow-fifo-card"><div class="flow-fifo-head"><span>⏱️ '+title+' kuyruğu — en son gelen üstte</span><span class="flow-fifo-meta">'+ordered.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</span><button class="btn-all-export" onclick="filterFlowFifoCards(&quot;'+target+'&quot;)">Kuyruğu listele</button><button class="btn-all-export" onclick="sendNtfyList(&quot;'+title+' kuyruğu&quot;,getFlowQueueCards(&quot;'+target+'&quot;),event)">📨 ntfy Liste</button></div>';
+    if(!ordered.length)return h+'<div class="flow-fifo-empty">Kuyrukta kayıt yok</div></div>';
     h+='<div class="flow-fifo-list">';
     ordered.slice(0,8).forEach((k,i)=>{h+='<div class="flow-fifo-item" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><span class="flow-fifo-rank">#'+(i+1)+'</span><b>'+esc(k.parti)+'</b><span>'+esc(k._asama||k.asama||'-')+' → '+esc(k.bir_sonraki||'-')+'</span><span class="flow-fifo-age">'+esc(fifoAgeLabel(k))+' • '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div>'});
-    return h+'</div>'+(ordered.length>8?'<div class="flow-fifo-empty">İlk 8 gösteriliyor; düğme tüm FIFO kuyruğunu listeler.</div>':'')+'</div>';
+    return h+'</div>'+(ordered.length>8?'<div class="flow-fifo-empty">İlk 8 gösteriliyor; düğme tüm kuyruğu listeler.</div>':'')+'</div>';
 }
 function flowSummaryHtml(title,items,target,kind){let h='<div class="flow-section-title">'+title+'</div>';if(!items.length)return h+'<div class="list-empty">Kayıt yok</div>';h+='<div class="flow-summary-grid">';items.forEach(x=>{const top=(x.cards||[]).map(k=>k.recete_adi).filter(Boolean).reduce((m,r)=>{m[r]=(m[r]||0)+1;return m},{});const tr=Object.entries(top).sort((a,b)=>b[1]-a[1])[0];h+='<div class="flow-summary-card" onclick="showFlowDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.name)+'&quot;))"><b>'+x.count+' parti</b>'+Math.round(x.kg).toLocaleString('tr-TR')+' kg<small>'+esc(x.name)+'</small>'+(tr?'<small style="color:#FFD54F">🎨 '+esc(tr[0])+' • '+tr[1]+'p</small>':'')+'</div>'});return h+'</div>'}
-function flowDetailCards(cards){const ordered=[...(cards||[])].sort(fifoCompare);if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';let h='<div class="flow-detail-list">';ordered.slice(0,180).forEach((k,i)=>{const due=daysUntilDate(k.termin_tarihi||k.termin_siparis);const dt=due===null?'-':(due<0?Math.abs(due)+' gün geçti':due+' gün kaldı');h+='<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="flow-card-top"><span class="flow-parti">FIFO #'+(i+1)+' • '+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k._asama||k.asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">FIFO yaşı: '+esc(fifoAgeLabel(k))+' • '+esc(waitHoursText(k))+' • Termin bilgisi: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(dt)+') • Tamir: '+((k.tamirler||[]).length)+'</div></div>'});return h+'</div>'}
+function flowDetailCards(cards){const ordered=[...(cards||[])].sort(newestFirstCompare);if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';let h='<div class="flow-detail-list">';ordered.slice(0,180).forEach((k,i)=>{const due=daysUntilDate(k.termin_tarihi||k.termin_siparis);const dt=due===null?'-':(due<0?Math.abs(due)+' gün geçti':due+' gün kaldı');h+='<div class="flow-detail-card '+esc(k.seviye||'normal')+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><div class="flow-card-top"><span class="flow-parti">#'+(i+1)+' • '+esc(k.parti)+'</span><span class="flow-kg">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div><div class="flow-line">'+esc(k._asama||k.asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div class="flow-line">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="flow-recipe">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'flow-tamir')+'<div class="flow-muted">FIFO yaşı: '+esc(fifoAgeLabel(k))+' • '+esc(waitHoursText(k))+' • Termin bilgisi: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(dt)+') • Tamir: '+((k.tamirler||[]).length)+'</div></div>'});return h+'</div>'}
 function flowListHtml(cards){
-    const ordered=[...(cards||[])].sort(fifoCompare);
+    const ordered=[...(cards||[])].sort(newestFirstCompare);
     if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';
-    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Mevcut aşama</th><th>Sonraki aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
+    let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th># / Parti</th><th>Mevcut aşama</th><th>Sonraki aşama</th><th>Kilo</th><th>Bekleme</th><th>Firma</th></tr></thead><tbody>';
     ordered.slice(0,180).forEach((k,i)=>{h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td>'+esc(k.bir_sonraki||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>'});
     return h+'</tbody></table></div>';
 }
@@ -2285,8 +2287,8 @@ function flowWaitStageGroups(target,kind){
         waitGroup.count++;waitGroup.kg+=num(k.kilo);waitGroup.cards.push(k);stage.count++;stage.kg+=num(k.kilo);stage.cards.push(k);
     }));
     return buckets.filter(x=>x.count).sort((a,b)=>a.min-b.min).map(x=>{
-        x.cards.sort(fifoCompare);x.stages.forEach(s=>s.cards.sort(fifoCompare));
-        x.stages.sort((a,b)=>fifoCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return x;
+        x.cards.sort(newestFirstCompare);x.stages.forEach(s=>s.cards.sort(newestFirstCompare));
+        x.stages.sort((a,b)=>newestFirstCompare(a.cards[0],b.cards[0])||b.kg-a.kg);return x;
     });
 }
 function flowWaitFirstTitle(target,kind){
@@ -2305,19 +2307,19 @@ function showFlowWaitStageGroup(target,kind,key){
     const group=flowWaitStageGroups(target,kind).find(x=>x.key===key),title=flowWaitFirstTitle(target,kind),p=document.getElementById('postProcessPanel');
     if(!group){renderFlowTargetPanel(target);return}
     let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+' — '+esc(group.name)+'</h2><div class="panel-summary">'+esc(group.name)+' • '+group.count+' parti • '+Math.round(group.kg).toLocaleString('tr-TR')+' kg</div><div class="flow-tabs"><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;'+target+'&quot;)">← Akış özetine dön</button><button class="flow-tab" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;)">Bekleme grubunu yenile</button></div><div class="flow-section-title">'+esc(group.name)+' — önceki aşama kategorileri</div><div class="flow-summary-grid">';
-    group.stages.forEach(stage=>{h+='<div class="flow-summary-card" onclick="showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))"><b>'+stage.count+' parti</b>'+Math.round(stage.kg).toLocaleString('tr-TR')+' kg<small>'+esc(stage.name)+'</small><small style="color:#90CAF9">FIFO kartlarını aç</small></div>'});
+    group.stages.forEach(stage=>{h+='<div class="flow-summary-card" onclick="showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(stage.name)+'&quot;))"><b>'+stage.count+' parti</b>'+Math.round(stage.kg).toLocaleString('tr-TR')+' kg<small>'+esc(stage.name)+'</small><small style="color:#90CAF9">Kartları aç</small></div>'});
     h+='</div>';p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' - '+group.name);
 }
 function showFlowWaitStageDetail(target,kind,key,stageName){
     const group=flowWaitStageGroups(target,kind).find(x=>x.key===key),stage=group&&group.stages.find(x=>x.name===stageName),title=flowWaitFirstTitle(target,kind),p=document.getElementById('postProcessPanel');
     if(!group||!stage){showFlowWaitStageGroup(target,kind,key);return}
     const encStage=encodeURIComponent(stage.name);
-    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+' — '+esc(group.name)+' — '+esc(stage.name)+'</h2><div class="panel-summary">'+esc(group.name)+' • '+esc(stage.name)+' • '+stage.count+' parti • '+Math.round(stage.kg).toLocaleString('tr-TR')+' kg • FIFO sıralı</div><div class="flow-tabs"><button class="flow-tab" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;)">← Aşama kategorilerine dön</button><button class="flow-tab '+(flowSublistMode==='cards'?'active':'')+'" onclick="setFlowSublistMode(&quot;cards&quot;);showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;))">🃏 Mini Kart</button><button class="flow-tab '+(flowSublistMode==='list'?'active':'')+'" onclick="setFlowSublistMode(&quot;list&quot;);showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;))">📋 Liste</button><button class="btn-all-export" onclick="sendNtfyFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;),event)">📨 ntfy Liste</button></div>';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+' — '+esc(group.name)+' — '+esc(stage.name)+'</h2><div class="panel-summary">'+esc(group.name)+' • '+esc(stage.name)+' • '+stage.count+' parti • '+Math.round(stage.kg).toLocaleString('tr-TR')+' kg • en son gelen üstte</div><div class="flow-tabs"><button class="flow-tab" onclick="showFlowWaitStageGroup(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;)">← Aşama kategorilerine dön</button><button class="flow-tab '+(flowSublistMode==='cards'?'active':'')+'" onclick="setFlowSublistMode(&quot;cards&quot;);showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;))">🃏 Mini Kart</button><button class="flow-tab '+(flowSublistMode==='list'?'active':'')+'" onclick="setFlowSublistMode(&quot;list&quot;);showFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;))">📋 Liste</button><button class="btn-all-export" onclick="sendNtfyFlowWaitStageDetail(&quot;'+target+'&quot;,&quot;'+kind+'&quot;,&quot;'+key+'&quot;,decodeURIComponent(&quot;'+encStage+'&quot;),event)">📨 ntfy Liste</button></div>';
     h+=flowDetailDisplay(stage.cards);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title+' - '+group.name+' - '+stage.name);
 }
 function renderFlowTargetPanel(target){
     const p=document.getElementById('postProcessPanel'),bucket=makeFlowBuckets(target),title=targetTitle(target),cards=getFlowTargetCards(target);
-    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+title+' Akış Özeti</h2><div class="panel-summary">Bu görünüm yalnızca panel içinde açılır. Her kategori önce bekleme süresine, sonra aşamaya göre daraltılır; son adım FIFO numaralı parti kartlarıdır.</div><div class="flow-tabs"><button class="flow-tab" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab '+(target==='kk'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK</button><button class="flow-tab '+(target==='sarim1'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1</button><button class="btn-all-export" onclick="sendNtfyList(&quot;'+title+' Akış Özeti&quot;,getFlowTargetCards(&quot;'+target+'&quot;),event)">📨 ntfy Liste</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;,&quot;'+target+'_akis.png&quot;)">📱 WhatsApp</button></div>';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+title+' Akış Özeti</h2><div class="panel-summary">Bu görünüm yalnızca panel içinde açılır. Her kategori önce bekleme süresine, sonra aşamaya göre daraltılır; son adım sıra numaralı parti kartlarıdır.</div><div class="flow-tabs"><button class="flow-tab" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab '+(target==='kk'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK</button><button class="flow-tab '+(target==='sarim1'?'active':'')+'" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1</button><button class="btn-all-export" onclick="sendNtfyList(&quot;'+title+' Akış Özeti&quot;,getFlowTargetCards(&quot;'+target+'&quot;),event)">📨 ntfy Liste</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;'+title+' Akış Özeti&quot;,&quot;'+target+'_akis.png&quot;)">📱 WhatsApp</button></div>';
     h+='<div class="flow-chart-grid">';
     h+=pieChartHtml(title+' kategorileri — kg',flowCategoryPieGroups(bucket),'kg',x=>'showFlowCategoryDetail(&quot;'+target+'&quot;,&quot;'+x.flowKind+'&quot;,decodeURIComponent(&quot;'+encodeURIComponent(x.flowName)+'&quot;))');
     h+=flowWaitPieHtml(title+' bekleme süreleri — kg',cards,x=>'showFlowTargetWaitDetail(&quot;'+target+'&quot;,&quot;'+x.key+'&quot;)');
@@ -2377,11 +2379,11 @@ function getFlowTargetCards(target){
     Object.values(makeFlowBuckets(target)).forEach(groups=>Object.values(groups).forEach(group=>(group.cards||[]).forEach(k=>{
         if(!seen.has(k.id)){seen.add(k.id);out.push(k)}
     })));
-    return out.sort(fifoCompare);
+    return out.sort(newestFirstCompare);
 }
 function showFlowPanelCards(title,cards,backAction){
-    const p=document.getElementById('postProcessPanel'),ordered=[...(cards||[])].sort(fifoCompare);
-    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+'</h2><div class="panel-summary">'+ordered.length+' parti • '+Math.round(ordered.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR')+' kg • FIFO sıralı</div><div class="flow-tabs"><button class="flow-tab" onclick="'+backAction+'">← Akış özetine dön</button></div>';
+    const p=document.getElementById('postProcessPanel'),ordered=[...(cards||[])].sort(newestFirstCompare);
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+esc(title)+'</h2><div class="panel-summary">'+ordered.length+' parti • '+Math.round(ordered.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR')+' kg • en son gelen üstte</div><div class="flow-tabs"><button class="flow-tab" onclick="'+backAction+'">← Akış özetine dön</button></div>';
     h+=flowDetailCards(ordered);p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',title);
 }
 function showFlowCategoryDetail(target,kind,name){showFlowDetail(target,kind,name)}
@@ -2434,18 +2436,18 @@ function filterFlowWaitDetailCards(target,kind,parentName,key){
 }
 function postProcessItemHtml(k,i){
     const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı'),parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),note=postProcessNotes[k.id]||'';
-    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(fifoAgeLabel(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • '+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="ppnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="savePostProcessNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearPostProcessNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
+    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>#'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(fifoAgeLabel(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • '+esc(k.bekleme||'-')+' • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="ppnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="savePostProcessNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearPostProcessNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
 }
 let postProcessViewMode='cards';
 function setPostProcessViewMode(mode){postProcessViewMode=mode==='list'?'list':'cards';renderPostProcessPanel()}
 function postProcessListHtml(rows){
-  let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Son aşama → Sonraki</th><th>Kilo</th><th>Bekleme</th><th>Termin</th><th>Puan</th><th>Firma</th></tr></thead><tbody>';
+  let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th># / Parti</th><th>Son aşama → Sonraki</th><th>Kilo</th><th>Bekleme</th><th>Termin</th><th>Puan</th><th>Firma</th></tr></thead><tbody>';
   rows.slice(0,120).forEach((k,i)=>{const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı');h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(k._asama||'-')+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+')</td><td style="font-weight:800;color:#FFB74D">'+Math.round(k.postScore)+'</td><td>'+esc(k.line1||'-')+'</td></tr>'});
   return h+'</tbody></table></div>';
 }
 function renderPostProcessPanel(){
     const p=document.getElementById('postProcessPanel'),rows=getPostProcessCards(),ttl='KK / Sarım 1 Sonrası Öncelik';
-    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">KK ve Sarım1 sonrası partiler <b>FIFO sırasıyla</b> gösterilir: en uzun bekleyen parti üsttedir. Puan, FIFO sıralamasını değiştirmeyen ikincil bilgidir.</div><div class="flow-tabs"><button class="flow-tab active" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK Akışı</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1 Akışı</button><button class="btn-all-export" onclick="filterPostProcessCards()">Listeyi Göster</button><button class="btn-all-export" onclick="sendNtfyList(&quot;KK / Sarım 1 Sonrası Öncelik&quot;,getPostProcessCards(),event)">📨 ntfy Liste</button><button class="btn-fire-export" onclick="exportPostProcessWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;,&quot;kk_sarim_sonrasi.png&quot;)">📱 WhatsApp</button></div>';
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;postProcessPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#00A8CC">🧭 '+ttl+'</h2><div class="panel-summary">KK ve Sarım1 sonrası partiler <b>geliş sırasıyla</b> gösterilir: en son gelen parti üsttedir. Puan, sıralamayı değiştirmeyen ikincil bilgidir.</div><div class="flow-tabs"><button class="flow-tab active" onclick="renderPostProcessPanel()">Genel</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;kk&quot;)">KK Akışı</button><button class="flow-tab" onclick="renderFlowTargetPanel(&quot;sarim1&quot;)">Sarım1 Akışı</button><button class="btn-all-export" onclick="filterPostProcessCards()">Listeyi Göster</button><button class="btn-all-export" onclick="sendNtfyList(&quot;KK / Sarım 1 Sonrası Öncelik&quot;,getPostProcessCards(),event)">📨 ntfy Liste</button><button class="btn-fire-export" onclick="exportPostProcessWorkbook()">Excel</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">⛶ Tam Ekran</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;postProcessPanel&quot;,&quot;KK / Sarım 1 Sonrası Öncelik&quot;,&quot;kk_sarim_sonrasi.png&quot;)">📱 WhatsApp</button></div>';
     h+='<div class="view-mode-bar" style="margin:8px 0;justify-content:flex-start"><button class="view-mode-btn '+(postProcessViewMode==='cards'?'active':'')+'" onclick="setPostProcessViewMode(&quot;cards&quot;)">🃏 Kartlar</button><button class="view-mode-btn '+(postProcessViewMode==='list'?'active':'')+'" onclick="setPostProcessViewMode(&quot;list&quot;)">📋 Liste</button></div>';
     if(!rows.length)h+='<div class="list-empty">KK/Sarım sonrası kayıt yok</div>';else h+=postProcessViewMode==='list'?postProcessListHtml(rows):rows.slice(0,120).map((k,i)=>postProcessItemHtml(k,i)).join('');
     p.innerHTML=h;p.style.display='block';addPanelFullButton('postProcessPanel');ensureElementFullscreenToolbar('postProcessPanel',ttl);
@@ -2470,7 +2472,7 @@ function isAfterStage(k,stage){
     if(ci<0||si<0)return false;
     return ci>si;
 }
-function getKkSarimCurrentCards(){return getPriorityCards().filter(isCurrentlyQualityOrSarim).sort(fifoCompare)}
+function getKkSarimCurrentCards(){return getPriorityCards().filter(isCurrentlyQualityOrSarim).sort(newestFirstCompare)}
 function getKkSarimAfterCards(){return getPostProcessCards()}
 function kkSarimGroups(rows){return[{key:'kk',label:'Kalite Kontrol',icon:'🔵',cards:rows.filter(k=>isCurrentlyStage(k,'KK'))},{key:'sarim1',label:'Sarım 1',icon:'🟣',cards:rows.filter(k=>isCurrentlyStage(k,'SARIM1'))}]}
 function kkSarimAfterGroups(rows){return[{key:'kk',label:'Kalite Kontrol\'den Geçmiş',icon:'✅',cards:rows.filter(k=>isAfterStage(k,'KK'))},{key:'sarim1',label:'Sarım 1\'den Geçmiş',icon:'✅',cards:rows.filter(k=>isAfterStage(k,'SARIM1'))}]}
@@ -3002,7 +3004,7 @@ function kkSarimCardHtml(k,i){
 }
 function kkSarimAfterItemHtml(k,i){
     const due=k.due===null?'-':(k.due<0?Math.abs(k.due)+' gün geçti':k.due+' gün kaldı'),parts=(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),note=postProcessNotes[k.id]||'';
-    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(waitHoursText(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="kkspnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="saveKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
+    return '<div class="post-item"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>#'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">Bekleme: '+esc(waitHoursText(k))+' • '+k.postScore+' puan</span></div><div>'+esc(k._asama)+' '+(k.bir_sonraki?'→ '+esc(k.bir_sonraki):'')+'</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Termin: '+esc(k.termin_tarihi||k.termin_siparis||'-')+' ('+esc(due)+') • '+((k.tamirler||[]).length)+' tamir</div><small>'+esc(k.line1||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+(tamirShort(k)?'<br><small style="color:#FFB37A;font-weight:800">🛠️ '+esc(tamirShort(k))+'</small>':'')+'<br><small style="color:#90CAF9">Puan: '+esc(parts)+'</small><textarea class="post-note" id="kkspnote_'+esc(k.id)+'" placeholder="Bu öncelik için açıklama yaz...">'+esc(note)+'</textarea><div class="post-actions"><button style="background:#2F75B5;color:white" onclick="saveKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Kaydet</button><button style="background:#455A64;color:white" onclick="clearKkSarimNote(&quot;'+esc(k.id)+'&quot;)">Temizle</button><button style="background:#E74C3C;color:white" onclick="openAlarmModal(&quot;'+esc(k.id)+'&quot;)">Alarm</button></div></div>';
 }
 function saveKkSarimNote(id){const el=document.getElementById('kkspnote_'+id);if(!el)return;postProcessNotes[id]=el.value.trim();savePostProcessNotes();showToast('✅ Açıklama kaydedildi')}
 function clearKkSarimNote(id){delete postProcessNotes[id];savePostProcessNotes();renderKkSarimPanel()}
@@ -3145,7 +3147,7 @@ function setHeatmapLeafSort(col){
 }
 function heatmapLeafSortCards(cards){
     const arr=[...(cards||[])];
-    if(!heatmapLeafSort.col)return arr.sort(fifoCompare);
+    if(!heatmapLeafSort.col)return arr.sort(newestFirstCompare);
     const col=heatmapLeafSort.col,dir=heatmapLeafSort.dir;
     arr.sort((a,b)=>{
         const va=heatmapLeafSortValue(a,col),vb=heatmapLeafSortValue(b,col);
@@ -3163,7 +3165,7 @@ function heatmapLeafTableHtml(cards){
     if(!ordered.length)return'<div class="list-empty">Kayıt yok</div>';
     const allChecked=ordered.every(k=>heatmapLeafSelection.has(k.id));
     let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th style="width:24px">'+heatmapChkHtml(allChecked,'toggleHeatmapLeafSelectAll()')+'</th>'
-        +heatmapLeafSortTh('FIFO / Parti','parti')+heatmapLeafSortTh('Mevcut aşama','asama')+heatmapLeafSortTh('Kilo','kilo')+heatmapLeafSortTh('Bekleme','bekleme')+heatmapLeafSortTh('Firma','firma')
+        +heatmapLeafSortTh('# / Parti','parti')+heatmapLeafSortTh('Mevcut aşama','asama')+heatmapLeafSortTh('Kilo','kilo')+heatmapLeafSortTh('Bekleme','bekleme')+heatmapLeafSortTh('Firma','firma')
         +'</tr></thead><tbody>';
     ordered.slice(0,180).forEach((k,i)=>{
         h+='<tr><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
@@ -3205,7 +3207,7 @@ function heatmapExportChartHtml(cards){
     let body='';
     if(groups.size>=2){
         const entries=Array.from(groups.entries()).map(([name,list])=>{
-            list=list.slice().sort(fifoCompare);
+            list=list.slice().sort(newestFirstCompare);
             return{name,list,kg:list.reduce((s,k)=>s+num(k.kilo),0),worst:fifoAgeDays(list[0])??0};
         }).sort((a,b)=>b.worst-a.worst);
         entries.forEach(g=>{
@@ -3214,7 +3216,7 @@ function heatmapExportChartHtml(cards){
                 +g.list.map(k=>heatmapExportBarRowHtml(k,maxValue,colorScale)).join('')+'</div>';
         });
     }else{
-        const sorted=cards.slice().sort(fifoCompare),maxValue=Math.max.apply(null,sorted.map(k=>fifoAgeDays(k)??0))||1,colorScale=heatmapColorScale('kg',maxValue);
+        const sorted=cards.slice().sort(newestFirstCompare),maxValue=Math.max.apply(null,sorted.map(k=>fifoAgeDays(k)??0))||1,colorScale=heatmapColorScale('kg',maxValue);
         body=sorted.map(k=>heatmapExportBarRowHtml(k,maxValue,colorScale)).join('');
     }
     return '<div style="margin:6px 0"><div style="font-weight:800;color:#FFD700;margin-bottom:4px">📶 Bekleme Süresi — Azalan Sıralı</div>'+body+'</div>';
@@ -3400,7 +3402,7 @@ function heatmapLeafBarValueLabel(days){return days<1?Math.round(days*24)+' sa':
 function chartPartiShort(parti){return String(parti||'').replace(/^\(\d{4}\)\s*/,'').trim()||String(parti||'')}
 function heatmapLeafBarChartHtml(cards){
     if(!cards||cards.length<2)return'';
-    const sorted=cards.slice().sort(fifoCompare);
+    const sorted=cards.slice().sort(newestFirstCompare);
     const values=sorted.map(k=>fifoAgeDays(k)??0),maxValue=Math.max.apply(null,values)||1,colorScale=heatmapColorScale('kg',maxValue);
     let h='<div class="flow-section-title">📶 Bekleme Süresi — Azalan Sıralı ('+sorted.length+' parti)</div><div class="kkleafbar-chart">';
     sorted.forEach(k=>{
@@ -3436,7 +3438,7 @@ function heatmapLeafFirmaGridHtml(cards){
     });
     if(groups.size<2)return'';
     const entries=Array.from(groups.entries()).map(([name,list])=>{
-        list=list.slice().sort(fifoCompare);
+        list=list.slice().sort(newestFirstCompare);
         return{name,list,kg:list.reduce((s,k)=>s+num(k.kilo),0),worst:fifoAgeDays(list[0])??0};
     }).sort((a,b)=>b.worst-a.worst);
     let h='<div class="flow-section-title">📶 Bekleme Süresi — Firma Bazında ('+entries.length+' firma, azalan sıralı, tüm partiler)</div><div class="kkfirma-grid">';
@@ -3918,17 +3920,6 @@ function heatmapMindAltViewHtml(){
 
 /* ════════ 📡 CANLI İZLEME EKRANI ════════ */
 const LIVE_SARIM_TARGETS=['LAMİNASYON','BRONZİNG','DİJİTAL BASKI','RAM','EMBOSS'];
-function liveArrivalCompare(a,b){
-    const ad=fifoAgeDays(a),bd=fifoAgeDays(b);
-    if(ad===null&&bd!==null)return 1;
-    if(ad!==null&&bd===null)return-1;
-    if(ad!==null&&bd!==null&&Math.abs(ad-bd)>0.0001)return ad-bd;
-    const at=latestUpdateDate(a),bt=latestUpdateDate(b);
-    if(at&&bt&&at.getTime()!==bt.getTime())return bt.getTime()-at.getTime();
-    if(at&&!bt)return-1;
-    if(!at&&bt)return 1;
-    return String(a.parti||'').localeCompare(String(b.parti||''),'tr');
-}
 /* ── ERP zaman raporu özeti (data/zaman_ozet.json) ── */
 let ZAMAN_OZET=null;
 function liveLoadZaman(){
@@ -4008,7 +3999,7 @@ function liveFirmaShort(k){
     const f=upShortCompany(String(k.firma||'').split('|')[0]);
     return f||String(k.line1||'').split(' / ')[0]||'-';
 }
-function liveKkCards(){return getAllCards().filter(liveIsFinalKk).sort(liveArrivalCompare)}
+function liveKkCards(){return getAllCards().filter(liveIsFinalKk).sort(newestFirstCompare)}
 function liveSarimGroups(){
     const all=getAllCards().filter(k=>isCurrentlyStage(k,'SARIM1'));
     const groups=LIVE_SARIM_TARGETS.map(name=>({name,cards:[]})),other=[];
@@ -4017,7 +4008,7 @@ function liveSarimGroups(){
         if(g)g.cards.push(k);else other.push(k);
     });
     if(other.length)groups.push({name:'Diğer',cards:other});
-    groups.forEach(g=>g.cards.sort(liveArrivalCompare));
+    groups.forEach(g=>g.cards.sort(newestFirstCompare));
     return groups.filter(g=>g.cards.length);
 }
 function liveWatchCards(){
@@ -4026,7 +4017,7 @@ function liveWatchCards(){
         const k=all.find(c=>String(c.parti).trim()===String(pn).trim());
         if(k&&!seen.has(k.id)){seen.add(k.id);out.push(k)}
     });
-    return out.sort(liveArrivalCompare);
+    return out.sort(newestFirstCompare);
 }
 function liveTodayInWindow(k){
     const{start,end}=todayShiftWindow(),d=latestUpdateDate(k);
@@ -4074,10 +4065,10 @@ function liveGhostEntries(logObj,liveCards){
     return Object.keys(logObj).filter(pn=>!liveSet.has(pn)).map(pn=>({parti:pn,...logObj[pn]})).sort((a,b)=>b.ts-a.ts);
 }
 function liveAfterKkCards(){
-    return getAllCards().filter(k=>liveIsAfterFinalKk(k)&&liveTodayInWindow(k)).sort(liveArrivalCompare);
+    return getAllCards().filter(k=>liveIsAfterFinalKk(k)&&liveTodayInWindow(k)).sort(newestFirstCompare);
 }
 function liveAfterSarimCards(){
-    return getAllCards().filter(k=>isAfterStage(k,'SARIM1')&&liveTodayInWindow(k)).sort(liveArrivalCompare);
+    return getAllCards().filter(k=>isAfterStage(k,'SARIM1')&&liveTodayInWindow(k)).sort(newestFirstCompare);
 }
 function liveGhostItemHtml(g){
     const pn=g.parti,watched=kkSarimWatchList.includes(pn);
@@ -4121,11 +4112,7 @@ function liveProductionSummaryHtml(stats){
         +'<div class="live-prod-grid"><div></div><div class="live-prod-head">Gelen</div><div class="live-prod-head">Üretim (geçen)</div><div class="live-prod-head">Fark</div>'
         +row('🔵 KK','#2196F3',stats.kk)+row('🟣 Sarım1','#B39DDB',stats.sarim)+row('🟢 Sarım2','#4DB6AC',stats.sarim2)+'</div></div>';
 }
-function liveTamirRecent(){
-    const parsed=TAMIR_LIST.map(t=>({t,d:parseTamirTarih(t.tarih)}));
-    parsed.sort((a,b)=>{if(a.d&&b.d)return b.d-a.d;if(a.d)return-1;if(b.d)return 1;return 0});
-    return parsed.map(x=>x.t);
-}
+function liveTamirCards(){return[...TAMIR_LIST].sort(newestFirstCompare)}
 function toggleLiveWatch(pn){
     pn=String(pn||'').trim();if(!pn)return;
     if(kkSarimWatchList.includes(pn)){
@@ -4174,7 +4161,7 @@ function renderLiveScreenPanel(){
     h+=liveBoxHtml('liveBoxKk','🔵 Kalite Kontrole Gelenler ('+kk.length+')'+liveAbnormalBadge(kk,kkNorm),'#2196F3',liveNormLineHtml(kkNorm)+liveCardListHtml(kk,kkNorm));
     const watch=liveWatchCards();
     h+=liveBoxHtml('liveBoxWatch','🔔 Acil Listesi — İzlenenler ('+watch.length+')','#E53935',liveCardListHtml(watch));
-    const tamir=liveTamirRecent();
+    const tamir=liveTamirCards();
     let tamirBody=!tamir.length?'<div class="list-empty" style="padding:6px;font-size:12px">Kayıt yok</div>':'';
     tamir.forEach(t=>{tamirBody+=liveItemHtml(t.id,t.parti,String(t.line1||'').split(' / ')[0]||'-',t.neden||t.tip||'',waitHoursText(t))});
     h+=liveBoxHtml('liveBoxTamir','🛠️ Tamir ('+tamir.length+')','#D35400',tamirBody);
@@ -4391,7 +4378,7 @@ function uretimGunlukFilter(list,applyCategory=true){
         if(!/\d{1,2}:\d{2}/.test(hv))return false;
         const t=gecisZamanParse(hv),category=String(x.from||'Bilinmeyen');
         return t&&t>=baslangic&&(bugun?t<=upper:t<upper)&&(!applyCategory||!uretimCategory||category===uretimCategory);
-    }).sort((a,b)=>fifoCompare(a.k,b.k));
+    }).sort((a,b)=>newestFirstCompare(a.k,b.k));
 }
 function uretimCategoryGroups(list){
     const map={};
@@ -4421,7 +4408,7 @@ function renderUretimPanel(){
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn-all-export" onclick="exportUretimExcel()">📥 Excel</button><button class="view-action-btn pdf" onclick="exportElementPDF(&quot;uretimPanel&quot;,&quot;Günlük Üretim&quot;)">📄 PDF</button><button class="view-action-btn whatsapp" onclick="shareElementWhatsApp(&quot;uretimPanel&quot;,&quot;Günlük Üretim&quot;,&quot;uretim_raporu.png&quot;)">📱 WhatsApp</button><button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;uretimPanel&quot;,&quot;Günlük Üretim&quot;)">⛶ Tam Ekran</button>'+(uretimCategory?'<button class="view-action-btn" onclick="setUretimCategoryFilter(&quot;&quot;)">✖ Kategori filtresini temizle</button>':'')+'</div>';
     h+='<div class="view-mode-bar" style="margin:8px 0;justify-content:flex-start"><button class="view-mode-btn '+(uretimViewMode==='cards'?'active':'')+'" onclick="setUretimViewMode(&quot;cards&quot;)">🃏 Kartlar</button><button class="view-mode-btn '+(uretimViewMode==='list'?'active':'')+'" onclick="setUretimViewMode(&quot;list&quot;)">📋 Liste</button></div>';
     h+='<div class="flow-section-title">📊 '+esc(tabLabel)+' — kategori bazında miktar ('+esc(uretimDateLabel())+')</div><div class="flow-chart-grid">'+uretimDailyPieHtml(gunlukTum)+'</div>';
-    h+='<div class="flow-section-title">📋 '+esc(tabLabel)+' — 08:00–08:00 ('+gunluk.length+' parti, '+Math.round(toplamKg).toLocaleString('tr-TR')+' kg) • FIFO: en eski hareket üstte'+(uretimCategory?' • Filtre: '+esc(uretimCategory):'')+'</div>';
+    h+='<div class="flow-section-title">📋 '+esc(tabLabel)+' — 08:00–08:00 ('+gunluk.length+' parti, '+Math.round(toplamKg).toLocaleString('tr-TR')+' kg) • en son hareket üstte'+(uretimCategory?' • Filtre: '+esc(uretimCategory):'')+'</div>';
     if(gunluk.length){
         if(uretimViewMode==='list')h+=flowReportListHtml(gunluk);else{h+='<div class="flow-detail-list">';gunluk.forEach(x=>{const k=x.k;k.from=x.from;h+=uretimItemHtml(k)});h+='</div>'}
     }else{
@@ -4635,7 +4622,7 @@ function wetRealRowsHtml(){
 }
 function setWetWaitViewMode(mode){wetWaitViewMode=mode==='list'?'list':'cards';renderWetDryPanel()}
 function wetWaitListHtml(rows){
-  let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>FIFO / Parti</th><th>Bekliyor</th><th>Bir Sonraki</th><th>Islak eşleşme</th><th>Bekleme</th><th>Boyadan çıkalı</th><th>Son hareket</th><th>Kilo</th><th>Firma</th></tr></thead><tbody>';
+  let h='<div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th># / Parti</th><th>Bekliyor</th><th>Bir Sonraki</th><th>Islak eşleşme</th><th>Bekleme</th><th>Boyadan çıkalı</th><th>Son hareket</th><th>Kilo</th><th>Firma</th></tr></thead><tbody>';
   rows.forEach((k,i)=>{const movement=latestUpdateDate(k),movementText=movement?movement.toLocaleString('tr-TR'):(k.son_asama_tarihi||k.hareket||'-');h+='<tr><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(k.wetCurrent||'-')+'</td><td>'+esc(k.wetNext||'-')+'</td><td>'+esc(k.wetMatchStage||'-')+' <small>('+esc(k.wetMatchField||'-')+')</small></td><td style="font-weight:800;color:#FFB74D">'+(k.wetLevel===2?'🔴 ':k.wetLevel===1?'🟠 ':'')+esc(wetWaitDuration(k.wetAgeHours))+'</td><td>'+(k.wetZone?esc(wetWaitDuration((Date.now()-k.wetZone.paintOut.getTime())/3600000)):'-')+'</td><td>'+esc(movementText)+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(k.line1||k.firma||'-')+'</td></tr>'});
   return h+'</tbody></table></div>';
 }
@@ -4681,7 +4668,7 @@ function wetWaitMatch(k){
 }
 function getWetWaitingCards(){
   const mode=wetHasReal()?wetWaitMode:'hours';
-  return getAllCards().map(k=>{const age=latestUpdateAgeHours(k),waiting=String(k._asama||k.asama||'').trim(),next=String(k.bir_sonraki||'').trim(),match=wetWaitMatch(k);const o={...k,wetCurrent:waiting,wetNext:next,wetMatchStage:match&&match.stage||'',wetMatchField:match&&match.field||'',wetAgeHours:age};o.wetLevel=wetLevel(o);o.wetNorm=wetHopNorm(o);o.wetZone=o.wetMatchStage?wetRealZone(o):null;return o}).filter(k=>k.wetMatchStage&&k.wetAgeHours!==null&&(mode==='hours'?k.wetAgeHours>wetWaitThresholdHours:k.wetLevel>=(mode==='p90'?2:1))).sort((a,b)=>b.wetAgeHours-a.wetAgeHours||fifoCompare(a,b));
+  return getAllCards().map(k=>{const age=latestUpdateAgeHours(k),waiting=String(k._asama||k.asama||'').trim(),next=String(k.bir_sonraki||'').trim(),match=wetWaitMatch(k);const o={...k,wetCurrent:waiting,wetNext:next,wetMatchStage:match&&match.stage||'',wetMatchField:match&&match.field||'',wetAgeHours:age};o.wetLevel=wetLevel(o);o.wetNorm=wetHopNorm(o);o.wetZone=o.wetMatchStage?wetRealZone(o):null;return o}).filter(k=>k.wetMatchStage&&k.wetAgeHours!==null&&(mode==='hours'?k.wetAgeHours>wetWaitThresholdHours:k.wetLevel>=(mode==='p90'?2:1))).sort((a,b)=>b.wetAgeHours-a.wetAgeHours||newestFirstCompare(a,b));
 }
 function wetWaitDuration(hours){
   const total=Math.max(0,Math.floor(hours*60)),days=Math.floor(total/1440),rest=total%1440;
@@ -4689,7 +4676,7 @@ function wetWaitDuration(hours){
 }
 function wetWaitItemHtml(k,i){
   const movement=latestUpdateDate(k),movementText=movement?movement.toLocaleString('tr-TR'):(k.son_asama_tarihi||k.hareket||'-');
-  return '<div class="post-item '+esc(k.seviye||'normal')+'"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>FIFO #'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">'+(k.wetLevel===2?'🔴 ':k.wetLevel===1?'🟠 ':'')+'Islak bekleme: '+esc(wetWaitDuration(k.wetAgeHours))+'</span></div><div><b>Bekliyor:</b> '+esc(k.wetCurrent||'-')+' • <b>Bir Sonraki:</b> '+esc(k.wetNext||'-')+'</div><div><b>Islak eşleşme:</b> '+esc(k.wetMatchStage||'-')+' ('+esc(k.wetMatchField||'-')+')</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Son hareket: '+esc(movementText)+' • '+(wetHasReal()&&wetWaitMode!=='hours'?'Eşik: norm %'+(wetWaitMode==='p90'?'90':'75'):'Eşik: '+wetWaitThresholdHours+' saat')+'</div>'+wetRealHtml(k)+'<small>'+esc(k.line1||k.firma||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+'</div>';
+  return '<div class="post-item '+esc(k.seviye||'normal')+'"><div class="post-head"><span class="post-parti" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"><b>#'+(i+1)+'</b> • '+esc(k.parti)+'</span><span class="post-score">'+(k.wetLevel===2?'🔴 ':k.wetLevel===1?'🟠 ':'')+'Islak bekleme: '+esc(wetWaitDuration(k.wetAgeHours))+'</span></div><div><b>Bekliyor:</b> '+esc(k.wetCurrent||'-')+' • <b>Bir Sonraki:</b> '+esc(k.wetNext||'-')+'</div><div><b>Islak eşleşme:</b> '+esc(k.wetMatchStage||'-')+' ('+esc(k.wetMatchField||'-')+')</div><div><b>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</b> • Son hareket: '+esc(movementText)+' • '+(wetHasReal()&&wetWaitMode!=='hours'?'Eşik: norm %'+(wetWaitMode==='p90'?'90':'75'):'Eşik: '+wetWaitThresholdHours+' saat')+'</div>'+wetRealHtml(k)+'<small>'+esc(k.line1||k.firma||'')+'</small>'+(k.recete_adi?'<br><small style="color:#FFD54F;font-weight:800">🎨 Reçete: '+esc(k.recete_adi)+'</small>':'')+'</div>';
 }
 function applyWetWaitThreshold(){
   const input=document.getElementById('wetWaitThresholdInput'),value=input?Number(input.value):NaN;
@@ -4832,7 +4819,7 @@ function renderRecentArrivalPanel(){
 })();
 function renderWetDryPanel(){
   const p=document.getElementById('wetDryPanel'),rows=getWetWaitingCards(),kg=Math.round(rows.reduce((sum,k)=>sum+num(k.kilo),0));
-  let h='<button class="panel-close" onclick="document.getElementById(&quot;wetDryPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4FC3F7">💧 Islak Bekleyenler</h2><div class="panel-summary">BOYA veya BOYAMA sonrasındaki ve ilk RAM/RAM ile başlayan aşama öncesindeki Y.AÇMA, YAŞ AÇMA ve FIRÇA beklemeleri. Bekliyor ve Bir Sonraki alanları akış sırasına göre çapraz kontrol edilir; RAM ve sonrası kuru aşamadır, ıslak beklemeye dahil değildir; eşik üzerindeki partiler gösterilir.</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0"><b style="color:#80DEEA">Eşik:</b><input type="number" id="wetWaitThresholdInput" min="0" step="0.25" value="'+wetWaitThresholdHours+'" style="width:95px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white"><span>saat</span><button style="background:#00897B;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="applyWetWaitThreshold()">Uygula</button><button style="background:#6A1B9A;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(1)">1 saat</button><button style="background:#EF6C00;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(2)">2 saat</button><button style="background:#455A64;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(4)">4 saat</button>'+(wetHasReal()?'<button style="background:'+(wetWaitMode==='p75'?'#F9A825':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p75&quot;)">🟠 Norm üstü (%75)</button><button style="background:'+(wetWaitMode==='p90'?'#C62828':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p90&quot;)">🔴 Anormal (%90)</button>':'')+'</div>'+wetHistorySummaryHtml()+'<div class="panel-summary">'+rows.length+' parti • '+kg.toLocaleString('tr-TR')+' kg • FIFO: en uzun bekleyen üstte</div>';
+  let h='<button class="panel-close" onclick="document.getElementById(&quot;wetDryPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4FC3F7">💧 Islak Bekleyenler</h2><div class="panel-summary">BOYA veya BOYAMA sonrasındaki ve ilk RAM/RAM ile başlayan aşama öncesindeki Y.AÇMA, YAŞ AÇMA ve FIRÇA beklemeleri. Bekliyor ve Bir Sonraki alanları akış sırasına göre çapraz kontrol edilir; RAM ve sonrası kuru aşamadır, ıslak beklemeye dahil değildir; eşik üzerindeki partiler gösterilir.</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0"><b style="color:#80DEEA">Eşik:</b><input type="number" id="wetWaitThresholdInput" min="0" step="0.25" value="'+wetWaitThresholdHours+'" style="width:95px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white"><span>saat</span><button style="background:#00897B;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="applyWetWaitThreshold()">Uygula</button><button style="background:#6A1B9A;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(1)">1 saat</button><button style="background:#EF6C00;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(2)">2 saat</button><button style="background:#455A64;color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitQuick(4)">4 saat</button>'+(wetHasReal()?'<button style="background:'+(wetWaitMode==='p75'?'#F9A825':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p75&quot;)">🟠 Norm üstü (%75)</button><button style="background:'+(wetWaitMode==='p90'?'#C62828':'#546E7A')+';color:white;border:0;padding:7px 10px;border-radius:7px;cursor:pointer" onclick="setWetWaitMode(&quot;p90&quot;)">🔴 Anormal (%90)</button>':'')+'</div>'+wetHistorySummaryHtml()+'<div class="panel-summary">'+rows.length+' parti • '+kg.toLocaleString('tr-TR')+' kg • en son gelen üstte</div>';
   h+='<div class="view-mode-bar" style="margin:8px 0;justify-content:flex-start"><button class="view-mode-btn '+(wetWaitViewMode==='cards'?'active':'')+'" onclick="setWetWaitViewMode(&quot;cards&quot;)">🃏 Kartlar</button><button class="view-mode-btn '+(wetWaitViewMode==='list'?'active':'')+'" onclick="setWetWaitViewMode(&quot;list&quot;)">📋 Liste</button></div>';
   if(!rows.length)h+='<div class="list-empty">Bu eşik üzerinde anlık ıslak bekleyen parti yok.</div>';else h+=wetWaitViewMode==='list'?wetWaitListHtml(rows):rows.map((k,i)=>wetWaitItemHtml(k,i)).join('');
   h+=wetRealRowsHtml();

@@ -691,7 +691,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -722,6 +722,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="panel" id="wetDryPanel" style="width:min(1100px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="recentArrivalPanel" style="width:min(700px,calc(100vw - 32px));max-height:85vh"></div>
 <div class="panel" id="uretimLogPanel" style="width:min(1100px,calc(100vw - 32px));max-height:90vh"></div>
+<div class="panel" id="takipMapPanel" data-own-export="1" style="width:min(1200px,calc(100vw - 32px));max-height:90vh"></div>
 <div class="panel" id="stageAgePanel" style="width:min(1000px,calc(100vw - 32px));max-height:88vh"></div>
 
 <div class="cards-container" id="cardsContainer"></div>
@@ -1309,6 +1310,7 @@ function renderTamirPanel(){
 function startTamirVoiceNote(uid) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('Tarayıcınız sesli komutu desteklemiyor.'); return; }
+    if (!voiceSecureCheck()) return;
     const r = new SR(); r.lang = 'tr-TR'; r.interimResults = false;
     showToast('🎤 Dinleniyor, notunuzu söyleyin...');
     r.start();
@@ -1498,6 +1500,7 @@ function baslatKesintisizYildizSesli() {
         alert("Tarayıcınız ses tanıma özelliğini desteklemiyor.");
         return;
     }
+    if (!voiceSecureCheck()) return;
 
     const btn = document.getElementById('btnYildizSesli');
 
@@ -1544,6 +1547,7 @@ function baslatKesintisizYildizSesli() {
             btn.innerHTML = '🎙️ Kesintisiz Sesli Ekle';
             btn.classList.remove('dinliyor');
         }
+        if (event && (event.error === 'not-allowed' || event.error === 'service-not-allowed')) voiceDeniedMsg();
     };
 
     yildizliSesTanima.start();
@@ -1553,6 +1557,7 @@ function baslatKesintisizYildizSesli() {
 function startVoiceNote(id) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('Tarayıcınız sesli komutu desteklemiyor.'); return; }
+    if (!voiceSecureCheck()) return;
     const r = new SR(); r.lang = 'tr-TR'; r.interimResults = false;
     const btn = document.getElementById('btn_mic_' + id);
     if(btn) btn.innerHTML = '🔴';
@@ -1567,7 +1572,7 @@ function startVoiceNote(id) {
         if(btn) btn.innerHTML = '🎤';
         showToast('📝 Sesli not eklendi!');
     };
-    r.onerror = function() { if(btn) btn.innerHTML = '🎤'; showToast('Not anlaşılamadı', 'error');};
+    r.onerror = function(e) { if(btn) btn.innerHTML = '🎤'; if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) voiceDeniedMsg(); else showToast('Not anlaşılamadı', 'error');};
     r.onend = function() { if(btn) btn.innerHTML = '🎤'; };
 }
 
@@ -1671,7 +1676,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel','takipMapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
@@ -1765,7 +1770,7 @@ function ensureElementFullscreenToolbar(id,title){
     const el=document.getElementById(id);if(!el||!el.classList.contains('view-fullscreen')||el.querySelector('.view-fullscreen-toolbar'))return;
     const safeTitle=esc(title||'Görünüm');
     const tb=document.createElement('div');tb.className='view-fullscreen-toolbar';
-    tb.innerHTML='<button class="pdf" onclick="exportElementPDF(\''+id+'\',\''+safeTitle+'\')">📄 PDF</button><button class="whatsapp" onclick="shareElementWhatsApp(\''+id+'\',\''+safeTitle+'\',\''+id+'.png\')">📱 WhatsApp</button><button class="close" onclick="toggleElementFullscreen(\''+id+'\',\''+safeTitle+'\')">↙ Kapat</button>';
+    tb.innerHTML=(el.dataset.ownExport?'':'<button class="pdf" onclick="exportElementPDF(\''+id+'\',\''+safeTitle+'\')">📄 PDF</button><button class="whatsapp" onclick="shareElementWhatsApp(\''+id+'\',\''+safeTitle+'\',\''+id+'.png\')">📱 WhatsApp</button>')+'<button class="close" onclick="toggleElementFullscreen(\''+id+'\',\''+safeTitle+'\')">↙ Kapat</button>';
     el.prepend(tb);
 }
 function toggleElementFullscreen(id,title){
@@ -1815,7 +1820,7 @@ async function shareElementWhatsApp(id,title,filename){
 }
 function addPanelExportTools(id,title,filename){
     const p=document.getElementById(id),h2=p&&p.querySelector('h2');
-    if(!p||!h2||p.querySelector('.panel-export-tools'))return;
+    if(!p||!h2||p.dataset.ownExport||p.querySelector('.panel-export-tools'))return;
     const buttons=Array.from(p.querySelectorAll('button')),hasPng=buttons.some(b=>String(b.getAttribute('onclick')||'').includes('exportElementPNG')),hasPdf=buttons.some(b=>/PDF/.test(b.textContent)||String(b.getAttribute('onclick')||'').includes('exportElementPDF')),hasWhatsApp=buttons.some(b=>/WhatsApp/.test(b.textContent));
     const bar=document.createElement('div');bar.className='panel-export-tools';bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin:8px 0';
     const add=(label,color,fn)=>{const b=document.createElement('button');b.type='button';b.className='view-action-btn';b.style.background=color;b.textContent=label;b.onclick=fn;bar.appendChild(b)};
@@ -1973,6 +1978,7 @@ function openDetailModal(id){
     let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px">'+starH+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\');openDetailModal(\''+k.id+'\')"><span style="font-size:22px;font-weight:bold;color:#FFD700">'+esc(k.parti)+'</span></div><span style="font-size:18px;font-weight:bold">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <small style="opacity:.7\">kg</small></span></div><div class="det-row"><span class="det-label">Bekliyor:</span><span style="color:#64B5F6;font-weight:bold">'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+esc(k.bir_sonraki||'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div>'+(pipe?'<div style="margin:6px 0">'+pipe+'</div>':'')+'<div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span class="lv-bekleme '+k.seviye+'">'+esc(bt)+'</span></div>';
     h += tamirMl;
     h += zamanHistoryHtml(k);
+    h += tmapModalHtml(k);
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div style="margin-top:8px"><label style="color:#64B5F6;font-size:12px;font-weight:bold">Hedef bekleme süresi (dakika)</label><input type="number" id="mAlarmDuration_'+k.id+'" min="0" step="15" value="0" placeholder="0 = sadece tarih/saat" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"><small style="color:#aaa">Seçilen aşamada bu süre dolmadan bildirim gönderilmez.</small></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
     h+='<div class="fire-form" style="margin-top:8px"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="mfirekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="mfiremt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="mfiresebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="mfirenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFireM(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFireM(event,\''+k.id+'\')">Hepsini Sil</button></div></div>';
@@ -4304,6 +4310,654 @@ function exportUretimLogWorkbook(){
         +'.ulog-meta{color:#B0BEC5;font-size:11px;margin-top:2px;overflow-wrap:anywhere}'
         +'.ulog-days{margin-top:12px}.ulog-days summary{cursor:pointer;color:#90CAF9;font-weight:700}'
         +'@media(max-width:600px){.ulog-cats{grid-template-columns:1fr 1fr}.ulog-cat b{font-size:16px}}';
+    document.head.appendChild(style);
+})();
+
+/* ════════ 🧭 TAKİP HARİTASI (kullanıcı tanımlı ana dal / alt dal) ════════ */
+const TMAP_KEY='takipHarita9';
+const TMAP_RULES=[
+    {v:'manual',label:'Yalnızca seçtiğim kartlar'},
+    {v:'waiting',label:'İş yükü — aşamada şu an bekleyenler'},
+    {v:'arrived',label:'Bugün gelenler (08:00\'den, üretim kaydı)'},
+    {v:'passed',label:'Üretim — bugün geçenler (08:00\'den, üretim kaydı)'},
+    {v:'urgent',label:'Acil Listesi\'ndekiler'},
+    {v:'repair',label:'Tamir kaydı olanlar'}
+];
+const TMAP_LOG_STAGES=[{name:'KK',a:'kkArrived',p:'kkPassed'},{name:'SARIM 1',a:'sarimArrived',p:'sarimPassed'},{name:'SARIM 2',a:'sarim2Arrived',p:'sarim2Passed'}];
+function tmapId(){return'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function tmapNode(name,def,children,color){return{id:tmapId(),name,color:color||'',def:Object.assign({rule:'manual',stages:[],minHours:null,withinHours:null,partiler:[]},def||{}),children:children||[]}}
+function tmapDefault(){
+    return{v:1,name:'TAKİP',branches:[
+        tmapNode('K.KONTROL',{},[tmapNode('İş yükü',{rule:'waiting',stages:['KALİTE KONTROL']}),tmapNode('Üretim',{rule:'passed',stages:['KK']})],'#2196F3'),
+        tmapNode('TAMİR',{},[tmapNode('Tamir kaydı olanlar',{rule:'repair'}),tmapNode('Son 24 saatte tamir',{rule:'repair',withinHours:24})],'#E67E22'),
+        tmapNode('SARIM 1/2',{},[tmapNode('İş yükü',{rule:'waiting',stages:['SARIM 1','SARIM 2']}),tmapNode('Üretim',{rule:'passed',stages:['SARIM 1','SARIM 2']})],'#9C27B0'),
+        tmapNode('ACİL',{},['LAMİNASYON','SEVK','SÜBLİME','BRONZİNG'].map(s=>tmapNode(s,{})),'#E53935')
+    ]};
+}
+// Eski tek-not alanlarını (note / n) ayrı notlar listesine (notes) taşır.
+function tmapMigrate(map){
+    const conv=(o,tk,ak)=>{if(o[tk])o.notes=(o.notes||[]).concat([{id:tmapId(),t:o[tk],at:o[ak]||new Date().toISOString()}]);delete o[tk];delete o[ak]};
+    const walk=list=>(list||[]).forEach(n=>{conv(n,'note','noteAt');if(n.notes)n.notes=n.notes.filter(x=>x&&String(x.t||'').trim());((n.def&&n.def.partiler)||[]).forEach(m=>conv(m,'n','nt'));walk(n.children)});
+    walk(map.branches);return map;
+}
+function tmapLoad(){try{const j=JSON.parse(localStorage.getItem(TMAP_KEY)||'null');if(j&&j.v===1&&Array.isArray(j.branches))return tmapMigrate(j)}catch(e){}return tmapDefault()}
+let takipMap=tmapLoad(),tmapSel=null,tmapEdit=false,tmapEditing=null,tmapAddTarget=null,tmapPickQ='',tmapPickSel=new Set(),tmapAddShown=[],tmapNoteEdit=null;
+function tmapSave(){try{localStorage.setItem(TMAP_KEY,JSON.stringify(takipMap))}catch(e){showToast('Tanımlar kaydedilemedi (tarayıcı depolaması kapalı olabilir)','warning')}}
+function tmapFind(id,list,parent){list=list||takipMap.branches;for(const n of list){if(n.id===id)return{node:n,parent:parent||null,list};const r=tmapFind(id,n.children||[],n);if(r)return r}return null}
+const TMAP_MAX_DEPTH=6;
+// Tüm dallar (her derinlikte) tam yol etiketiyle: "ACİL › LAMİNASYON › 2. HAT"
+function tmapAllNodes(){const out=[];const walk=(list,prefix,depth)=>(list||[]).forEach(n=>{const label=prefix?prefix+' › '+n.name:n.name;out.push({node:n,label,depth});walk(n.children,label,depth+1)});walk(takipMap.branches,'',1);return out}
+function tmapPath(id){const x=tmapAllNodes().find(n=>n.node.id===id);return x?x.label:''}
+function tmapDepth(id){const x=tmapAllNodes().find(n=>n.node.id===id);return x?x.depth:0}
+function tmapStageOptions(){const s=recentArrivalStageOptions();tmapAllNodes().forEach(x=>(x.node.def.stages||[]).forEach(st=>{if(!s.includes(st)&&!TMAP_LOG_STAGES.some(l=>l.name===st))s.push(st)}));return s}
+function tmapCtx(){const cards=getAllCards(),byParti=new Map();cards.forEach(k=>{const p=String(k.parti).trim();if(!byParti.has(p))byParti.set(p,k)});return{cards,byParti,log:liveProdStats().log,memo:{}}}
+function tmapCardTs(k){const d=k&&latestUpdateDate(k);return d?d.getTime():0}
+function tmapOwnItems(node,ctx){
+    const d=node.def,out=new Map(),keys=(d.stages||[]).map(stageKey);
+    const stageOk=k=>!keys.length||keys.includes(stageKey(k._asama||k.asama||''));
+    const hoursOk=k=>d.minHours==null||(latestUpdateAgeHours(k)??0)>=d.minHours;
+    const addCard=(k,note)=>{const p=String(k.parti).trim();if(!out.has(p))out.set(p,{parti:p,k,kg:num(k.kilo),ts:tmapCardTs(k),note:note||''})};
+    if(d.rule==='waiting')ctx.cards.forEach(k=>{if(keys.length&&stageOk(k)&&hoursOk(k))addCard(k)});
+    else if(d.rule==='urgent')ctx.cards.forEach(k=>{if(kkSarimWatchList.includes(String(k.parti).trim())&&stageOk(k)&&hoursOk(k))addCard(k,'🔔 acil')});
+    else if(d.rule==='arrived'||d.rule==='passed')TMAP_LOG_STAGES.filter(s=>(d.stages||[]).includes(s.name)).forEach(s=>{
+        const e=ctx.log[d.rule==='arrived'?s.a:s.p]||{};
+        Object.keys(e).forEach(p=>{if(out.has(p))return;const r=e[p],t=r.ts?new Date(r.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';out.set(p,{parti:p,k:ctx.byParti.get(p),kg:num(r.kg),ts:r.ts||0,firma:r.line1||'',note:s.name+(d.rule==='arrived'?' geldi ':' geçti ')+(r.est?'~':'')+t})});
+    });
+    else if(d.rule==='repair'){
+        const lim=d.withinHours?Date.now()-d.withinHours*3600000:null;
+        TAMIR_LIST.forEach(t=>{const p=String(t.parti||'').trim();if(!p||out.has(p))return;const dt=parseTamirTarih(t.tarih);if(lim&&(!dt||dt.getTime()<lim))return;const k=ctx.byParti.get(p);out.set(p,{parti:p,k,kg:k?num(k.kilo):num(t.kilo),ts:dt?dt.getTime():0,firma:t.line1||'',note:'🛠️ '+(t.neden||t.tip||'tamir')})});
+    }
+    (d.partiler||[]).forEach(m=>{const cur=out.get(m.p);if(cur){cur.manual=true;return}const k=ctx.byParti.get(m.p);out.set(m.p,{parti:m.p,k,kg:k?num(k.kilo):num(m.kg),ts:k?tmapCardTs(k):0,firma:m.f||'',manual:true})});
+    return out;
+}
+function tmapItems(node,ctx){
+    if(ctx.memo[node.id])return ctx.memo[node.id];
+    const m=tmapOwnItems(node,ctx);
+    (node.children||[]).forEach(c=>tmapItems(c,ctx).forEach((v,p)=>{if(!m.has(p))m.set(p,v)}));
+    return ctx.memo[node.id]=m;
+}
+function tmapRootItems(ctx){const m=new Map();takipMap.branches.forEach(b=>tmapItems(b,ctx).forEach((v,p)=>{if(!m.has(p))m.set(p,v)}));return m}
+function tmapTotalsText(items){let kg=0;items.forEach(v=>kg+=v.kg);return items.size+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg'}
+function tmapRuleText(d){
+    const r=TMAP_RULES.find(x=>x.v===d.rule),bits=[];
+    if(d.rule!=='manual'&&(d.stages||[]).length)bits.push(d.stages.join(', '));
+    if(d.minHours!=null&&(d.rule==='waiting'||d.rule==='urgent'))bits.push('≥ '+d.minHours+' sa bekleyen');
+    if(d.withinHours&&d.rule==='repair')bits.push('son '+d.withinHours+' sa');
+    if((d.partiler||[]).length)bits.push('+'+d.partiler.length+' seçili kart');
+    return(r?r.label:'')+(bits.length?' • '+bits.join(' • '):'');
+}
+// Seçili dalın yanında (düzenleme modu gerekmeden) araçlar: ✏️ yerinde ad, ➕ alt dal, 📝 not dalı, ⚙️ kural, 🗑️ sil.
+function tmapNodeHtml(n,ctx,level,color){
+    const items=tmapItems(n,ctx),c=n.color||color||'#90CAF9',sel=tmapSel===n.id,iq=n.id;
+    let h='<div class="tmap-node lvl'+level+(sel?' sel':'')+'" style="--c:'+esc(c)+'" onclick="tmapSelect(&quot;'+iq+'&quot;)" title="'+esc(tmapRuleText(n.def))+'">';
+    if(tmapRenaming===n.id){
+        return h+'<span class="tmap-rename-wrap" onclick="event.stopPropagation()"><input id="tmapRN_'+iq+'" class="tmap-rename" value="'+esc(n.name)+'" onkeydown="tmapRenameKey(event,&quot;'+iq+'&quot;)" onchange="tmapRenameSave(&quot;'+iq+'&quot;,true)">'
+            +'<button type="button" title="Kaydet" onclick="tmapRenameSave(&quot;'+iq+'&quot;)">💾</button><button type="button" title="Vazgeç" onpointerdown="tmapRenameSkip=true" onclick="tmapRenameCancel()">✕</button></span></div>';
+    }
+    h+='<span class="tmap-name">'+esc(n.name)+'</span><span class="tmap-count">'+tmapTotalsText(items)+'</span>';
+    if(tmapEdit||sel)h+='<span class="tmap-tools" onclick="event.stopPropagation()">'
+        +'<button type="button" onclick="tmapRenameStart(&quot;'+iq+'&quot;)" title="Adını değiştir">✏️</button>'
+        +(level<TMAP_MAX_DEPTH?'<button type="button" onclick="tmapAddChild(&quot;'+iq+'&quot;)" title="Alt dal ekle">➕</button>':'')
+        +'<button type="button" onclick="tmapQuickNote(&quot;'+iq+'&quot;)" title="Not dalı ekle">📝</button>'
+        +'<button type="button" onclick="tmapOpenEditor(&quot;'+iq+'&quot;)" title="Tanımla (kural, aşama, renk)">⚙️</button>'
+        +tmapDelBtnHtml('b',n.id,'tmapDelete(&quot;'+iq+'&quot;)','')+'</span>';
+    return h+'</div>';
+}
+function tmapRenameStart(id){
+    tmapMapNoteCommit();tmapRenaming=id;tmapRenameSkip=false;tmapSel=id;tmapAddTarget=id;renderTakipMapPanel();
+    const i=document.getElementById('tmapRN_'+id);if(i){i.scrollIntoView({block:'nearest',inline:'nearest'});i.focus({preventScroll:true});i.select()}
+}
+// quiet: kutudan çıkınca otomatik kayıt; "✕ Vazgeç"e basılırken kaydetme
+function tmapRenameSave(id,quiet){
+    if(quiet&&tmapRenameSkip)return;
+    const f=tmapFind(id),i=document.getElementById('tmapRN_'+id);if(!f||!i)return;
+    const v=i.value.trim();if(v&&v!==f.node.name){f.node.name=v;tmapSave()}
+    if(quiet)return;
+    tmapRenaming=null;renderTakipMapPanel();
+}
+function tmapRenameKey(e,id){if(e.key==='Enter'){e.preventDefault();tmapRenameSave(id)}else if(e.key==='Escape'){tmapRenameSkip=true;tmapRenameCancel()}}
+function tmapRenameCancel(){tmapRenameSkip=false;tmapRenaming=null;renderTakipMapPanel()}
+// Haritada dala doğrudan not dalı: boş not açılır, yazılmadan kapatılırsa kaydedilmez.
+function tmapQuickNote(id){
+    tmapMapNoteCommit();const f=tmapFind(id);if(!f)return;
+    const x={id:tmapId(),t:'',at:new Date().toISOString()};(f.node.notes=f.node.notes||[]).push(x);
+    tmapSel=id;tmapAddTarget=id;tmapRenaming=null;tmapMapNoteStart(x.id);
+}
+function tmapDropEmptyNote(id){for(const x of tmapAllNodes()){const ns=x.node.notes||[],i=ns.findIndex(n=>n.id===id);if(i>=0){if(!String(ns[i].t||'').trim())ns.splice(i,1);return}}}
+// Dal notları haritada dalın altında ayrı "not dalı" olarak (eskiden yeniye) çizilir.
+function tmapNoteNodesHtml(owner,color){
+    const c=owner.color||color||'#90CAF9',kq=esc('n|'+owner.id);
+    return(owner.notes||[]).filter(x=>String(x.t||'').trim()||tmapMapNoteEdit===x.id).sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))).map(x=>{
+        const xq=esc(x.id);
+        if(tmapMapNoteEdit===x.id){
+            // Haritada yerinde düzenleme
+            const d=tmapNoteDrafts['m|'+x.id],rec=tmapRec&&tmapRec._input==='tmapNM_'+x.id;
+            return '<div class="tmap-leaf"><div class="tmap-node note editing" style="--c:'+esc(c)+'" onclick="event.stopPropagation()">'
+                +'<textarea id="tmapNM_'+xq+'" rows="2" oninput="tmapNoteDrafts[&quot;m|'+xq+'&quot;]=this.value" onchange="tmapMapNoteSave(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;,true)">'+esc(d!=null?d:x.t)+'</textarea>'
+                +'<div class="tmap-note-actions"><button type="button" class="btn-all-export" onclick="tmapMapNoteSave(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;)">💾 Kaydet</button>'
+                +(tmapVoiceOk()?'<button type="button" id="tmapMicM_'+xq+'" class="tmap-mic'+(rec?' rec':'')+'" title="Sesle ekle" onclick="tmapVoice(&quot;'+kq+'&quot;,&quot;tmapNM_'+xq+'&quot;,&quot;tmapMicM_'+xq+'&quot;)">'+(rec?'🔴':'🎤')+'</button>':'')
+                +'<button type="button" class="btn-fire-export" onclick="tmapMapNoteClose(&quot;'+xq+'&quot;)">Kapat</button>'+tmapDelBtnHtml('n',x.id,'tmapNoteDelete(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;)','btn-fire-export')+'</div></div></div>';
+        }
+        return '<div class="tmap-leaf"><div class="tmap-node note" style="--c:'+esc(c)+'" title="'+esc(tmapNoteDate(x.at)+' — tıkla: düzenle')+'" onclick="tmapMapNoteStart(&quot;'+xq+'&quot;)">'
+            +'<span class="tmap-name">📝 '+esc(x.t)+'</span><span class="tmap-count">'+esc(tmapNoteDate(x.at).split(' ')[0])+'</span>'
+            +(tmapEdit?'<span class="tmap-tools" onclick="event.stopPropagation()"><button type="button" title="Düzenle" onclick="tmapMapNoteStart(&quot;'+xq+'&quot;)">✏️</button>'+tmapDelBtnHtml('n',x.id,'tmapNoteDelete(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;)','')+'</span>':'')+'</div></div>';
+    }).join('');
+}
+// Haritadaki açık not düzenleyicisini kapatır; kaydedilmemiş taslak varsa önce kaydeder.
+function tmapMapNoteCommit(){
+    const id=tmapMapNoteEdit;if(!id)return;
+    const d=tmapNoteDrafts['m|'+id],t=d!=null?String(d).trim():'';
+    if(t){for(const x of tmapAllNodes()){const n=(x.node.notes||[]).find(n=>n.id===id);if(n){if(n.t!==t){n.t=t;n.ed=new Date().toISOString();tmapSave()}break}}}
+    tmapDropEmptyNote(id);delete tmapNoteDrafts['m|'+id];tmapMapNoteEdit=null;
+}
+function tmapMapNoteStart(id){
+    if(tmapMapNoteEdit!==id)tmapMapNoteCommit();
+    tmapMapNoteEdit=id;tmapNoteEditing=null;renderTakipMapPanel();
+    const t=document.getElementById('tmapNM_'+id);if(t){t.scrollIntoView({block:matchMedia('(pointer:coarse)').matches?'center':'nearest'});t.focus({preventScroll:true});t.setSelectionRange(t.value.length,t.value.length)}
+}
+function tmapMapNoteClose(id){tmapDropEmptyNote(id);delete tmapNoteDrafts['m|'+id];tmapMapNoteEdit=null;renderTakipMapPanel()}
+// Haritadaki düzenleme kutusunu panelin kalan genişliğine sığdırır (telefonda derin dallarda taşmasın).
+function tmapFitEditors(){
+    const p=document.getElementById('takipMapPanel');if(!p)return;
+    const pr=p.getBoundingClientRect(),right=pr.left+p.clientLeft+p.clientWidth-(parseFloat(getComputedStyle(p).paddingRight)||0);
+    p.querySelectorAll('.tmap-node.note.editing').forEach(b=>{b.style.width='';const br=b.getBoundingClientRect();if(br.right>right-2)b.style.width=Math.max(160,Math.floor(right-br.left-6))+'px'});
+}
+// quiet: kutudan çıkınca otomatik kayıt (yeniden çizmez; aynı anda tıklanan buton kaybolmasın)
+function tmapMapNoteSave(key,id,quiet){
+    const x=tmapNoteFind(key,id),el=document.getElementById('tmapNM_'+id);if(!x||!el)return;
+    const t=el.value.trim(),isNew=!x.t;
+    if(!t){if(quiet)return;if(isNew){tmapMapNoteClose(id);return}showToast('Boş not kaydedilmez — silmek için 🗑️ kullan','warning');return}
+    if(t!==x.t){x.t=t;x.ed=isNew?undefined:new Date().toISOString();if(isNew)x.at=new Date().toISOString();tmapSave()}
+    if(quiet)return;
+    delete tmapNoteDrafts['m|'+id];tmapMapNoteEdit=null;showToast(isNew?'📝 Not dalı eklendi':'📝 Not dalı güncellendi');renderTakipMapPanel();
+}
+function tmapNotesSorted(notes){return(notes||[]).slice().sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')))}
+function tmapNotesMapHtml(notes){
+    const list=tmapNotesSorted(notes);if(!list.length)return'';
+    return list.slice(0,3).map(x=>'<span class="tmap-note">📝 '+esc(x.t)+'</span>').join('')+(list.length>3?'<span class="tmap-note more">+'+(list.length-3)+' not daha</span>':'');
+}
+function tmapNoteDate(iso){const d=iso?new Date(iso):null;return d&&!isNaN(d)?d.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
+function tmapAgeShort(k){const h=latestUpdateAgeHours(k);if(h==null)return'';if(h<1)return Math.round(h*60)+'dk';if(h<24)return Math.floor(h)+'sa '+Math.round((h%1)*60)+'dk';return Math.floor(h/24)+'g '+Math.floor(h%24)+'sa'}
+function tmapCardNodeHtml(owner,m,ctx,color){
+    const k=ctx.byParti.get(m.p),c=owner.color||color||'#90CAF9';
+    const firma=k?liveFirmaShort(k):upShortCompany(String(m.f||'').split('|')[0])||'-',kg=Math.round(k?num(k.kilo):num(m.kg)).toLocaleString('tr-TR')+' kg';
+    const info=[firma,kg,k?'▶ '+(k._asama||'-')+' '+tmapAgeShort(k):'🚚 veride yok'].join(' · ');
+    const tip=k?[m.p,k.line1||'',kg,'Şu an: '+(k._asama||'-')+' ('+waitHoursText(k)+')',k.bir_sonraki?'Sonraki: '+k.bir_sonraki:'',k.ham_adi?'Kumaş: '+k.ham_adi:'',k.recete_adi?'Reçete: '+k.recete_adi:''].filter(Boolean).join('\n'):m.p+' — veride yok';
+    return '<div class="tmap-leaf"><div class="tmap-node card'+(k?'':' gone')+'" style="--c:'+esc(c)+'" title="'+esc(tip)+'"'+(k?' onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"':'')+'>'
+        +'<span class="tmap-name">'+esc(m.p)+'</span><span class="tmap-card-info">'+esc(info)+'</span>'
+        +(tmapEdit||tmapSel===owner.id?'<span class="tmap-tools" onclick="event.stopPropagation()"><button type="button" title="Bu daldan çıkar" onclick="tmapToggleManual(&quot;'+owner.id+'&quot;,&quot;'+esc(m.p)+'&quot;)">✕</button></span>':'')
+        +tmapNotesMapHtml(m.notes)+'</div></div>';
+}
+function tmapCardsHtml(owner,ctx,color){return(owner.def.partiler||[]).map(m=>tmapCardNodeHtml(owner,m,ctx,color)).join('')}
+// Bir dal ve altındakiler: önce alt dallar (her derinlikte), sonra seçili kartlar, en son not dalları.
+function tmapSubtreeHtml(n,ctx,level,color){
+    const c=n.color||color;
+    const kids=(n.children||[]).map(ch=>tmapSubtreeHtml(ch,ctx,level+1,c)).join('')+tmapCardsHtml(n,ctx,c)+tmapNoteNodesHtml(n,c);
+    return '<div class="'+(level===1?'tmap-branch':'tmap-leaf')+'">'+tmapNodeHtml(n,ctx,level,c)+(kids?'<div class="tmap-children">'+kids+'</div>':'')+'</div>';
+}
+function tmapTreeHtml(ctx){
+    let h='<div class="tmap'+(tmapVertical?' vertical':'')+'"><div class="tmap-root">'+(tmapRootEdit
+        ?'<div class="tmap-node lvl0 root-edit" onclick="event.stopPropagation()"><input id="tmapRootName" value="'+esc(takipMap.name)+'" onkeydown="if(event.key===&quot;Enter&quot;)tmapRootSave();if(event.key===&quot;Escape&quot;){tmapRootEdit=false;renderTakipMapPanel()}"><button type="button" onclick="tmapRootSave()">💾</button><button type="button" onclick="tmapRootEdit=false;renderTakipMapPanel()">✕</button></div>'
+        :'<div class="tmap-node lvl0'+(tmapSel==='root'?' sel':'')+'" onclick="tmapSelect(&quot;root&quot;)"><span class="tmap-name">'+esc(takipMap.name)+'</span><span class="tmap-count">'+tmapTotalsText(tmapRootItems(ctx))+'</span>'
+        +(tmapEdit||tmapSel==='root'?'<span class="tmap-tools" onclick="event.stopPropagation()"><button type="button" onclick="tmapRenameRoot()" title="Adını değiştir">✏️</button><button type="button" onclick="tmapAddBranch()" title="Ana dal ekle">➕</button></span>':'')+'</div>')+'</div><div class="tmap-branches">';
+    takipMap.branches.forEach(b=>{h+=tmapSubtreeHtml(b,ctx,1,b.color)});
+    if(tmapEdit)h+='<div class="tmap-branch"><button type="button" class="tmap-add" onclick="tmapAddBranch()">➕ Ana dal ekle</button></div>';
+    return h+'</div></div>';
+}
+function tmapItemHtml(it,m){
+    const k=it.k,firma=k?liveFirmaShort(k):upShortCompany(String(it.firma||'').split('|')[0])||'-',pq=esc(it.parti);
+    const where=k?'▶ '+(k._asama||'-')+' • '+tmapAgeShort(k):'🚚 veride yok';
+    let h='<div class="tmap-item"><div class="live-item"'+(k?'':' style="opacity:.7"')+'><div class="live-item-body"'+(k?' onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)"':' style="cursor:default"')+'>'
+        +'<b>'+esc(it.parti)+'</b><span class="live-item-meta">'+esc(firma)+'</span><span class="live-item-extra">'+Math.round(it.kg).toLocaleString('tr-TR')+' kg'+(it.note?' • '+esc(it.note):'')+'</span><span class="live-item-time">'+esc(where)+'</span></div>'
+        +(m?'<button type="button" class="tmap-x'+(tmapNoteEdit===it.parti?' on':'')+'" title="Notlar" onclick="tmapTogglePartiNotes(&quot;'+pq+'&quot;)">📝'+((m.notes||[]).length?' '+m.notes.length:'')+'</button><button type="button" class="tmap-x" title="Bu daldan çıkar" onclick="tmapToggleManual(&quot;'+tmapSel+'&quot;,&quot;'+pq+'&quot;)">✕</button>':'')+'</div>';
+    if(m&&tmapNoteEdit===it.parti)h+=tmapNotesBlockHtml('p|'+tmapSel+'|'+it.parti,'');
+    else if(m&&(m.notes||[]).length){const last=tmapNotesSorted(m.notes)[0];h+='<div class="tmap-item-note" onclick="tmapTogglePartiNotes(&quot;'+pq+'&quot;)">📝 '+esc(last.t)+' <small>'+esc(tmapNoteDate(last.at))+(m.notes.length>1?' • +'+(m.notes.length-1)+' not':'')+'</small></div>'}
+    return h+'</div>';
+}
+function tmapListHtml(ctx){
+    if(!tmapSel)return'<div class="panel-summary">Bir dala tıkla; o daldaki partiler burada listelenir.</div>';
+    let name,items,node=null;
+    if(tmapSel==='root'){name=takipMap.name;items=tmapRootItems(ctx)}
+    else{const f=tmapFind(tmapSel);if(!f){tmapSel=null;return''}node=f.node;items=tmapItems(node,ctx);name=tmapPath(node.id)}
+    const own=new Map(node?(node.def.partiler||[]).map(m=>[m.p,m]):[]),arr=[...items.values()].sort((a,b)=>(b.ts||0)-(a.ts||0));
+    let h='<div class="tmap-list-head"><button type="button" class="tmap-sel-close" title="Seçimi kapat" onclick="tmapCloseSel()">✕</button><b>'+esc(name)+'</b> — '+tmapTotalsText(items)+(node?'<div class="tmap-rule">'+esc(tmapRuleText(node.def))+'</div>':'')+'</div>';
+    if(node)h+=tmapNotesBlockHtml('n|'+node.id,'📝 '+node.name+' — not dalları');
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0">'+(node?'<button type="button" class="btn-all-export" onclick="tmapFocusAdd(&quot;'+node.id+'&quot;)">➕ Bu dala parti ekle</button>'+(tmapDepth(node.id)<TMAP_MAX_DEPTH?'<button type="button" class="btn-all-export" onclick="tmapAddChild(&quot;'+node.id+'&quot;)">🌿 Alt dal ekle</button>':'')+'<button type="button" class="btn-fire-export" onclick="tmapOpenEditor(&quot;'+node.id+'&quot;)">✏️ Tanımla</button>'+tmapDelBtnHtml('b',node.id,'tmapDelete(&quot;'+node.id+'&quot;)','btn-fire-export','🗑️ Dalı sil','🗑️ Emin misin? Tekrar bas'):'')+'<button type="button" class="btn-all-export" onclick="tmapShowCards()">🃏 Kartları göster</button></div>';
+    if(own.size)h+='<div class="tmap-rule">Seçtiğin partilere 📝 ile ayrı ayrı not (yazarak ya da 🎤 sesle) ekleyebilirsin; son notlar haritada kartın altında görünür.</div>';
+    h+=arr.length?'<div class="tmap-items">'+arr.map(it=>tmapItemHtml(it,own.get(it.parti))).join('')+'</div>':'<div class="list-empty">Bu dalda parti yok'+(node?' — aşağıdaki kutudan arayıp ekleyebilirsin':'')+'</div>';
+    return h;
+}
+/* ── Notlar: dal ve seçili parti başına ayrı ayrı (tarihli) notlar; yazarak ya da 🎤 sesle ──
+   anahtar: "n|<dalId>" (dal) veya "p|<dalId>|<parti>" (o daldaki seçili parti) */
+let tmapNoteDrafts={},tmapNoteEditing=null,tmapRec=null,tmapMapNoteEdit=null;
+function tmapKeyId(key){return key.replace(/[^a-zA-Z0-9]/g,'_')}
+function tmapNoteOwner(key){
+    const parts=key.split('|'),f=tmapFind(parts[1]);if(!f)return null;
+    return parts[0]==='n'?f.node:(f.node.def.partiler||[]).find(m=>m.p===parts[2])||null;
+}
+function tmapVoiceOk(){return!!(window.SpeechRecognition||window.webkitSpeechRecognition)}
+function tmapNotesBlockHtml(key,title){
+    const o=tmapNoteOwner(key);if(!o)return'';
+    const list=tmapNotesSorted((o.notes||[]).filter(x=>String(x.t||'').trim())),kid=tmapKeyId(key),kq=esc(key),rec=tmapRec&&tmapRec._input==='tmapNA_'+kid;
+    let h='<div class="tmap-notes">'+(title?'<div class="tmap-notes-title">'+esc(title)+' ('+list.length+')</div>':'');
+    list.forEach(x=>{
+        const xq=esc(x.id);
+        if(tmapNoteEditing===x.id){const d=tmapNoteDrafts['e|'+x.id];h+='<div class="tmap-note-row editing"><textarea id="tmapNE_'+xq+'" rows="2" oninput="tmapNoteDrafts[&quot;e|'+xq+'&quot;]=this.value" onchange="tmapNoteUpdate(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;,true)">'+esc(d!=null?d:x.t)+'</textarea><div class="tmap-note-actions"><button type="button" class="btn-all-export" onclick="tmapNoteUpdate(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;)">💾 Kaydet</button><button type="button" class="btn-fire-export" onclick="delete tmapNoteDrafts[&quot;e|'+xq+'&quot;];tmapNoteEditing=null;renderTakipMapPanel()">Kapat</button></div></div>'}
+        else h+='<div class="tmap-note-row"><span class="tmap-note-text">'+esc(x.t)+'</span><small>'+esc(tmapNoteDate(x.at))+(x.ed?' • düzenlendi':'')+'</small><span class="tmap-note-btns"><button type="button" title="Düzenle" onclick="tmapNoteStartEdit(&quot;'+xq+'&quot;)">✏️</button>'+tmapDelBtnHtml('n',x.id,'tmapNoteDelete(&quot;'+kq+'&quot;,&quot;'+xq+'&quot;)','')+'</span></div>';
+    });
+    const isBranch=key.charAt(0)==='n';
+    if(!list.length)h+='<div class="tmap-note-empty">'+(isBranch?'Henüz not dalı yok. Eklediğin her not haritada bu dalın altında ayrı bir dal olur.':'Henüz not yok.')+'</div>';
+    h+='<div class="tmap-note-add"><textarea id="tmapNA_'+kid+'" rows="2" placeholder="'+(isBranch?'Yeni not dalı yaz':'Yeni not yaz')+(tmapVoiceOk()?' ya da 🎤 ile söyle':'')+'…" oninput="tmapNoteDrafts[&quot;'+kq+'&quot;]=this.value">'+esc(tmapNoteDrafts[key]||'')+'</textarea>'
+        +'<div class="tmap-note-actions">'+(tmapVoiceOk()?'<button type="button" id="tmapMic_'+kid+'" class="tmap-mic'+(rec?' rec':'')+'" onclick="tmapVoice(&quot;'+kq+'&quot;)">'+(rec?'🔴 Dinliyor… (durdur)':'🎤 Sesle yaz')+'</button>':'')
+        +'<button type="button" class="btn-all-export" onclick="tmapNoteAdd(&quot;'+kq+'&quot;)">'+(isBranch?'➕ Not dalı ekle':'➕ Not ekle')+'</button></div></div></div>';
+    return h;
+}
+function tmapNoteAdd(key){
+    const o=tmapNoteOwner(key),el=document.getElementById('tmapNA_'+tmapKeyId(key));if(!o)return;
+    const t=String(el?el.value:(tmapNoteDrafts[key]||'')).trim();
+    if(!t){showToast('Önce not yaz'+(tmapVoiceOk()?' ya da 🎤 ile söyle':''),'warning');return}
+    (o.notes=o.notes||[]).push({id:tmapId(),t,at:new Date().toISOString()});
+    delete tmapNoteDrafts[key];tmapSave();showToast(key.charAt(0)==='n'?'📝 Not dalı eklendi':'📝 Not eklendi');renderTakipMapPanel();
+}
+function tmapNoteFind(key,id){const o=tmapNoteOwner(key);return o&&(o.notes||[]).find(x=>x.id===id)}
+function tmapNoteStartEdit(id){tmapNoteEditing=id;renderTakipMapPanel();const t=document.getElementById('tmapNE_'+id);if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}
+// quiet: kutudan çıkınca otomatik kayıt (yeniden çizmez; aynı anda tıklanan buton kaybolmasın)
+function tmapNoteUpdate(key,id,quiet){
+    const x=tmapNoteFind(key,id),el=document.getElementById('tmapNE_'+id);if(!x||!el)return;
+    const t=el.value.trim();
+    if(!t){if(!quiet)showToast('Boş not kaydedilmez — silmek için 🗑️ kullan','warning');return}
+    if(t!==x.t){x.t=t;x.ed=new Date().toISOString();tmapSave()}
+    if(quiet)return;
+    delete tmapNoteDrafts['e|'+id];tmapNoteEditing=null;showToast('📝 Not güncellendi');renderTakipMapPanel();
+}
+function tmapNoteDelete(key,id){
+    const o=tmapNoteOwner(key);if(!o||!tmapArm('n',id,'Bu not silinecek — silmek için 🗑️ tekrar bas'))return;
+    o.notes=(o.notes||[]).filter(x=>x.id!==id);if(tmapNoteEditing===id)tmapNoteEditing=null;if(tmapMapNoteEdit===id)tmapMapNoteEdit=null;
+    delete tmapNoteDrafts['e|'+id];delete tmapNoteDrafts['m|'+id];
+    tmapSave();showToast('Not silindi');renderTakipMapPanel();
+}
+function tmapTogglePartiNotes(p){
+    tmapNoteEdit=tmapNoteEdit===p?null:p;tmapNoteEditing=null;renderTakipMapPanel();
+    if(tmapNoteEdit){const t=document.getElementById('tmapNA_'+tmapKeyId('p|'+tmapSel+'|'+p));if(t)t.scrollIntoView({block:'nearest'})}
+}
+// inputId/micId verilmezse dalın "yeni not" kutusuna yazar; haritadaki yerinde düzenleme kutusu için de kullanılır.
+function tmapVoice(key,inputId,micId){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){showToast('Bu tarayıcı sesle yazmayı desteklemiyor — Chrome veya Edge kullan','warning');return}
+    if(!voiceSecureCheck())return;
+    const kid=tmapKeyId(key),isAdd=!inputId;inputId=inputId||'tmapNA_'+kid;micId=micId||'tmapMic_'+kid;
+    const draftKey=isAdd?key:'m|'+inputId.replace(/^tmapNM_/,'');
+    if(tmapRec){const same=tmapRec._input===inputId;try{tmapRec.abort()}catch(e){}tmapRec=null;if(same){renderTakipMapPanel();return}}
+    const r=new SR();r.lang='tr-TR';r.interimResults=false;r.continuous=false;r._key=key;r._input=inputId;tmapRec=r;
+    const setBtn=on=>{const b=document.getElementById(micId);if(b){b.classList.toggle('rec',on);b.textContent=isAdd?(on?'🔴 Dinliyor… (durdur)':'🎤 Sesle yaz'):(on?'🔴':'🎤')}};
+    r.onresult=e=>{
+        let t='';for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript;
+        t=t.trim();if(!t)return;
+        const el=document.getElementById(inputId),v=((el?el.value:(tmapNoteDrafts[draftKey]||''))+' '+t).trim();
+        tmapNoteDrafts[draftKey]=v;if(el)el.value=v;
+        showToast(isAdd?'🎤 Metne çevrildi — kontrol edip "➕ Not ekle"ye bas':'🎤 Metne çevrildi — kontrol edip "💾 Kaydet"e bas');
+    };
+    r.onerror=e=>{const er=e&&e.error;if(er==='aborted')return;if(er==='not-allowed'||er==='service-not-allowed'){voiceDeniedMsg();return}showToast(er==='no-speech'?'Ses algılanamadı, tekrar dene':er==='network'?'Ses tanıma için internet bağlantısı gerekiyor':'Ses anlaşılamadı','warning')};
+    r.onend=()=>{if(tmapRec===r)tmapRec=null;setBtn(false)};
+    try{r.start();setBtn(true)}catch(err){tmapRec=null;setBtn(false);showToast('Mikrofon başlatılamadı','warning')}
+}
+function tmapEditorHtml(){
+    const f=tmapEditing&&tmapFind(tmapEditing);if(!f)return'';
+    const n=f.node,d=n.def,isLog=d.rule==='arrived'||d.rule==='passed',opts=isLog?TMAP_LOG_STAGES.map(s=>s.name):tmapStageOptions();
+    let h='<div class="tmap-editor"><div class="tmap-ed-title">✏️ '+esc(tmapPath(n.id))+' — tanımla</div>';
+    h+='<label>Dal adı <input id="tmapEdName" value="'+esc(n.name)+'"></label>';
+    if(!f.parent)h+='<label>Renk <input id="tmapEdColor" type="color" value="'+esc(n.color||'#90CAF9')+'"></label>';
+    h+='<label>Ne göstersin? <select id="tmapEdRule" onchange="tmapEditorRuleChange()">'+TMAP_RULES.map(r=>'<option value="'+r.v+'"'+(r.v===d.rule?' selected':'')+'>'+esc(r.label)+'</option>').join('')+'</select></label>';
+    if(d.rule!=='manual'&&d.rule!=='repair'){
+        h+='<div class="tmap-ed-sub">Aşamalar'+(d.rule==='urgent'?' <small>(boş = tüm aşamalar)</small>':'')+(isLog?' <small>(üretim kaydı yalnızca KK / Sarım1 / Sarım2 için tutuluyor)</small>':'')+'</div><div class="tmap-ed-stages">'
+            +opts.map(s=>'<label class="tmap-chk"><input type="checkbox" class="tmap-ed-stage" value="'+esc(s)+'"'+((d.stages||[]).includes(s)?' checked':'')+'> '+esc(s)+'</label>').join('')+'</div>';
+    }
+    if(d.rule==='waiting'||d.rule==='urgent')h+='<label>En az bekleme (saat, boş = hepsi) <input id="tmapEdMin" type="number" min="0" step="0.5" value="'+(d.minHours==null?'':d.minHours)+'"></label>';
+    if(d.rule==='repair')h+='<label>Son kaç saatteki tamirler (boş = hepsi) <input id="tmapEdWithin" type="number" min="1" step="1" value="'+(d.withinHours||'')+'"></label>';
+    h+='<div class="tmap-ed-sub">Elle seçilen kartlar: '+(d.partiler||[]).length+' <small>(kurala ek olarak her zaman bu dalda görünür)</small> <button type="button" class="btn-all-export" onclick="tmapFocusAdd(&quot;'+n.id+'&quot;)">➕ Parti ekle</button></div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn-all-export" onclick="tmapSaveEditor()">💾 Kaydet</button><button type="button" class="btn-fire-export" onclick="tmapEditing=null;renderTakipMapPanel()">Kapat</button></div></div>';
+    return h;
+}
+/* ── Dallara parti ekleme kutusu: hedef dal + arama + çoklu seçim ── */
+const TMAP_ADD_LIMIT=150;
+function tmapTargetId(){
+    const all=tmapAllNodes(),ok=id=>id&&all.some(x=>x.node.id===id);
+    if(ok(tmapAddTarget))return tmapAddTarget;
+    if(ok(tmapSel))return tmapSel;
+    const leaves=all.filter(x=>!(x.node.children||[]).length),pick=leaves.find(x=>x.node.def.rule==='manual')||leaves[0]||all[0];
+    return pick?pick.node.id:null;
+}
+function tmapMembership(){const m=new Map();tmapAllNodes().forEach(x=>(x.node.def.partiler||[]).forEach(e=>{if(!m.has(e.p))m.set(e.p,[]);m.get(e.p).push(x)}));return m}
+function tmapSearchCards(){
+    const toks=tmapPickQ.trim().toLocaleLowerCase('tr-TR').split(/\s+/).filter(Boolean),seen=new Set();
+    return getAllCards().filter(k=>{
+        if(!toks.length)return true;
+        const hay=[k.parti,k.line1,k._asama,k.bir_sonraki,k.ham_adi,k.recete_adi].map(v=>String(v||'')).join(' ').toLocaleLowerCase('tr-TR');
+        return toks.every(t=>hay.includes(t));
+    }).sort(newestFirstCompare).filter(k=>{const p=String(k.parti).trim();if(seen.has(p))return false;seen.add(p);return true});
+}
+function tmapAddListHtml(){
+    const target=tmapTargetId(),mem=tmapMembership(),rows=tmapSearchCards(),shown=rows.slice(0,TMAP_ADD_LIMIT);
+    tmapAddShown=shown.map(k=>String(k.parti).trim());
+    if(!rows.length)return'<div class="list-empty">Aramaya uyan parti yok</div>';
+    return shown.map(k=>{
+        const p=String(k.parti).trim(),inn=mem.get(p)||[],on=tmapPickSel.has(p);
+        return '<label class="tmap-add-row'+(on?' on':'')+'"><input type="checkbox" data-p="'+esc(p)+'"'+(on?' checked':'')+' onchange="tmapPickToggle(this)">'
+            +'<span class="tmap-add-main"><b>'+esc(p)+'</b> <span>'+esc(liveFirmaShort(k))+' · '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></span>'
+            +'<span class="tmap-add-sub">▶ '+esc(k._asama||'-')+' '+esc(tmapAgeShort(k))+(k.bir_sonraki?' → '+esc(k.bir_sonraki):'')+(k.recete_adi?' · '+esc(k.recete_adi):'')+'</span>'
+            +(inn.length?'<span class="tmap-add-tags">'+inn.map(x=>'<span class="tmap-tag'+(x.node.id===target?' hit':'')+'">'+(x.node.id===target?'✓ ':'')+esc(x.label)+'</span>').join('')+'</span>':'')+'</label>';
+    }).join('')+(rows.length>shown.length?'<div class="panel-summary">İlk '+shown.length+' / '+rows.length+' parti gösteriliyor — aramayı daralt.</div>':'');
+}
+function tmapAddBoxHtml(){
+    const nodes=tmapAllNodes(),target=tmapTargetId();
+    if(!nodes.length)return'<div class="tmap-addbox"><div class="list-empty">Önce "✏️ Dalları düzenle" ile bir dal ekle.</div></div>';
+    return '<div class="tmap-addbox" id="tmapAddBox"><div class="tmap-addbox-title">➕ Dallara parti ekle / çıkar</div>'
+        +'<div class="tmap-add-controls"><label>Hedef dal<select id="tmapAddTargetSel" onchange="tmapAddTarget=this.value;tmapRefreshAddList()">'+nodes.map(x=>'<option value="'+x.node.id+'"'+(x.node.id===target?' selected':'')+'>'+esc(x.label)+'</option>').join('')+'</select></label>'
+        +'<label class="tmap-search">🔎 Ara (parti no, firma, aşama, kumaş, reçete)<input id="tmapPickInput" type="search" autocomplete="off" placeholder="ör. 8073 ya da fayteks lamin" value="'+esc(tmapPickQ)+'" oninput="tmapPickQ=this.value;tmapRefreshAddList()"></label></div>'
+        +'<div class="tmap-add-actions"><span id="tmapPickCount" class="tmap-pick-count"></span><button type="button" class="btn-all-export" onclick="tmapPickAdd()">➕ Seçilenleri ekle</button><button type="button" class="btn-fire-export" onclick="tmapPickRemove()">➖ Seçilenleri hedeften çıkar</button><button type="button" class="btn-fire-export" onclick="tmapPickAllShown()">☑️ Listelenenleri seç</button><button type="button" class="btn-fire-export" onclick="tmapPickClear()">Seçimi temizle</button></div>'
+        +'<div id="tmapAddList" class="tmap-add-list">'+tmapAddListHtml()+'</div></div>';
+}
+function tmapUpdatePickCount(){const el=document.getElementById('tmapPickCount');if(el)el.textContent=tmapPickSel.size?tmapPickSel.size+' parti seçili':'Seçim yok'}
+function tmapRefreshAddList(){const el=document.getElementById('tmapAddList');if(!el)return;el.innerHTML=tmapAddListHtml();el.scrollTop=0;tmapUpdatePickCount()}
+function tmapPickToggle(cb){const p=cb.dataset.p;if(cb.checked)tmapPickSel.add(p);else tmapPickSel.delete(p);cb.closest('.tmap-add-row').classList.toggle('on',cb.checked);tmapUpdatePickCount()}
+function tmapPickAllShown(){tmapAddShown.forEach(p=>tmapPickSel.add(p));const el=document.getElementById('tmapAddList'),st=el?el.scrollTop:0;tmapRefreshAddList();if(el)el.scrollTop=st}
+function tmapPickClear(){tmapPickSel.clear();const el=document.getElementById('tmapAddList'),st=el?el.scrollTop:0;tmapRefreshAddList();if(el)el.scrollTop=st}
+function tmapTargetLabel(id){const x=tmapAllNodes().find(n=>n.node.id===id);return x?x.label:''}
+function tmapPickAdd(){
+    const id=tmapTargetId(),f=id&&tmapFind(id);if(!f)return;
+    if(!tmapPickSel.size){showToast('Önce listeden parti seç','warning');return}
+    const list=f.node.def.partiler=f.node.def.partiler||[],have=new Set(list.map(m=>m.p)),cards=getAllCards();let added=0,dup=0;
+    tmapPickSel.forEach(p=>{if(have.has(p)){dup++;return}const k=cards.find(c=>String(c.parti).trim()===p);list.push({p,kg:k?Math.round(num(k.kilo)*100)/100:0,f:k?(k.line1||''):''});added++});
+    tmapSave();tmapPickSel.clear();
+    if(added)showToast('🧭 '+added+' parti "'+tmapTargetLabel(id)+'" dalına eklendi'+(dup?' ('+dup+' zaten vardı)':''));
+    else showToast('Seçilen partilerin hepsi zaten "'+tmapTargetLabel(id)+'" dalında','warning');
+    renderTakipMapPanel();
+}
+function tmapPickRemove(){
+    const id=tmapTargetId(),f=id&&tmapFind(id);if(!f)return;
+    if(!tmapPickSel.size){showToast('Önce listeden parti seç','warning');return}
+    const before=(f.node.def.partiler||[]).length;f.node.def.partiler=(f.node.def.partiler||[]).filter(m=>!tmapPickSel.has(m.p));
+    const removed=before-f.node.def.partiler.length;tmapSave();tmapPickSel.clear();
+    showToast(removed?'🧭 '+removed+' parti "'+tmapTargetLabel(id)+'" dalından çıkarıldı':'Seçilenlerin hiçbiri bu dalda değildi',removed?'success':'warning');
+    renderTakipMapPanel();
+}
+function tmapFocusAdd(id){
+    tmapAddTarget=id;renderTakipMapPanel();
+    const box=document.getElementById('tmapAddBox'),pi=document.getElementById('tmapPickInput');
+    if(box)box.scrollIntoView({block:'start',behavior:'smooth'});
+    if(pi&&matchMedia('(pointer:fine)').matches)pi.focus({preventScroll:true});
+}
+function toggleTakipMapPanel(){safePanelOpen('takipMapPanel','🧭 Takip Haritası',renderTakipMapPanel)}
+function renderTakipMapPanel(){
+    const p=document.getElementById('takipMapPanel');
+    uretimLogRefresh(()=>{if(p.style.display==='block')renderTakipMapPanel()});
+    const ctx=tmapCtx(),scroll=p.scrollTop;
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;takipMapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#FFD700">🧭 Takip Haritası</h2>';
+    h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Ana dal ve alt dalları sen tanımlarsın: her dal bir kurala (aşamada bekleyenler, bugün gelen/geçenler, acil listesi, tamir) ve/veya elle seçtiğin kartlara göre dolar; seçtiğin kartlar dalın altında kendi dalları olarak görünür. Haritada bir dala tıklayınca yanında araçlar çıkar: ✏️ adını orada değiştir, ➕ alt dal, 📝 not dalı, ⚙️ kural/aşama, 🗑️ sil (iki kez bas). Not dalına tıklayınca yerinde düzenlenir; 🎤 sesle yazma güvenli adreste (https ya da localhost) çalışır. Üst dal, alt dallarının toplamını gösterir. Alt dallara da "🌿 Alt dal ekle" ile alt dal açabilirsin ('+TMAP_MAX_DEPTH+' seviyeye kadar). Bir dala tıklayınca partiler altta listelenir. Tanımlar bu cihazda saklanır; dışa aktarıp başka cihaza yükleyebilirsin.</div></details>';
+    h+='<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
+        +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="tmapExportImage(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="tmapExportImage(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="tmapExportImage(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="tmapExportImage(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button><small class="tmap-out-view">'+(tmapVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn-all-export" onclick="tmapEdit=!tmapEdit;renderTakipMapPanel()">'+(tmapEdit?'✅ Düzenlemeyi bitir':'✏️ Dalları düzenle')+'</button>'
+        +'<button type="button" class="btn-all-export tmap-view-toggle" onclick="tmapSetVertical(!tmapVertical)" title="Derin dallarda harita panele sığmazsa dikey görünüm hepsini gösterir">'+(tmapVertical?'↔ Yatay görünüm':'↕ Dikey görünüm')+'</button>'
+        +'<button type="button" class="btn-fire-export" onclick="tmapExport()" title="Dal tanımlarını dosyaya kaydet">⬇️ Tanımları dışa aktar</button><button type="button" class="btn-fire-export" onclick="document.getElementById(&quot;tmapImportFile&quot;).click()" title="Kaydedilmiş dal tanımlarını yükle">⬆️ Tanımları içe aktar</button><input type="file" id="tmapImportFile" accept=".json,application/json" style="display:none" onchange="tmapImport(this)">'
+        +(tmapEdit?'<button type="button" class="btn-fire-export'+(tmapIsArmed('reset','all')?' armed':'')+'" onclick="tmapReset()">'+(tmapIsArmed('reset','all')?'↺ Emin misin? Tekrar bas':'↺ Çizimdeki yapıya dön')+'</button>':'')
+        +'<button type="button" class="view-action-btn full" onclick="toggleElementFullscreen(&quot;takipMapPanel&quot;,&quot;Takip Haritası&quot;)">⛶ Tam Ekran</button></div>';
+    const oldList=document.getElementById('tmapAddList'),listScroll=oldList?oldList.scrollTop:0;
+    const oldMap=p.querySelector('.tmap'),mapScrollX=oldMap?oldMap.scrollLeft:0;
+    h+='<div id="tmapFitHint" class="tmap-fit-hint" style="display:none">↔ Harita panele sığmıyor — sağdaki dallar için haritayı yana kaydır ya da <button type="button" onclick="tmapSetVertical(true)">↕ Dikey görünüme geç</button></div>';
+    h+=tmapTreeHtml(ctx)+tmapEditorHtml()+(tmapSel?'<div class="tmap-list">'+tmapListHtml(ctx)+'</div>':'')+tmapAddBoxHtml();
+    p.innerHTML=h;p.style.display='block';p.scrollTop=scroll;ensureElementFullscreenToolbar('takipMapPanel','Takip Haritası');
+    const newList=document.getElementById('tmapAddList');if(newList)newList.scrollTop=listScroll;
+    const tm=p.querySelector('.tmap');if(tm){tm.scrollLeft=mapScrollX;const hint=document.getElementById('tmapFitHint');if(hint)hint.style.display=!tmapVertical&&tm.scrollWidth>tm.clientWidth+2?'':'none'}
+    tmapFitEditors();p.scrollLeft=0;
+    tmapUpdatePickCount();
+}
+// Tıklanan dal hep seçilir (ikinci tıklama seçimi kaldırmaz; kapatmak için listedeki ✕). Harita yana taşıyorsa seçili dal görünür yapılır.
+function tmapSelect(id){
+    tmapMapNoteCommit();if(tmapRenaming&&tmapRenaming!==id)tmapRenaming=null;tmapSel=id;tmapNoteEdit=null;if(tmapSel!=='root')tmapAddTarget=tmapSel;renderTakipMapPanel();
+    const el=document.querySelector('#takipMapPanel .tmap-node.sel'),tm=el&&el.closest('.tmap');
+    if(tm){const er=el.getBoundingClientRect(),tr=tm.getBoundingClientRect();if(er.right>tr.right-4)tm.scrollLeft+=er.right-tr.right+40;else if(er.left<tr.left)tm.scrollLeft-=tr.left-er.left+40}
+}
+function tmapCloseSel(){tmapSel=null;tmapNoteEdit=null;renderTakipMapPanel()}
+let tmapVertical=(()=>{try{return localStorage.getItem('tmapVert9')==='1'}catch(e){return false}})();
+function tmapSetVertical(on){tmapVertical=!!on;try{localStorage.setItem('tmapVert9',tmapVertical?'1':'0')}catch(e){}renderTakipMapPanel()}
+function tmapOpenEditor(id){
+    tmapMapNoteCommit();tmapEditing=id;tmapSel=id;tmapAddTarget=id;renderTakipMapPanel();
+    // Düzenleyici haritanın altında açılır; görünür yap ki "tıkladım, bir şey olmadı" gibi durmasın.
+    const ed=document.querySelector('#takipMapPanel .tmap-editor'),nm=document.getElementById('tmapEdName');
+    if(ed)ed.scrollIntoView({block:'start',behavior:'smooth'});if(nm)nm.focus({preventScroll:true});
+}
+function tmapEditorRuleChange(){const f=tmapFind(tmapEditing);if(!f)return;tmapCaptureEditor(f.node,false);f.node.def.rule=document.getElementById('tmapEdRule').value;if(f.node.def.rule==='arrived'||f.node.def.rule==='passed')f.node.def.stages=(f.node.def.stages||[]).filter(s=>TMAP_LOG_STAGES.some(l=>l.name===s));renderTakipMapPanel()}
+function tmapCaptureEditor(n,commit){
+    const g=id=>document.getElementById(id),name=g('tmapEdName'),color=g('tmapEdColor'),min=g('tmapEdMin'),within=g('tmapEdWithin'),stageEls=[...document.querySelectorAll('.tmap-ed-stage')];
+    if(name&&name.value.trim())n.name=name.value.trim();
+    if(color)n.color=color.value;
+    if(stageEls.length)n.def.stages=stageEls.filter(x=>x.checked).map(x=>x.value);
+    if(min)n.def.minHours=min.value===''?null:Math.max(0,num(min.value));
+    if(within)n.def.withinHours=within.value===''?null:Math.max(1,num(within.value));
+    if(commit)tmapSave();
+}
+function tmapSaveEditor(){const f=tmapFind(tmapEditing);if(!f)return;tmapCaptureEditor(f.node,true);if((f.node.def.rule==='waiting'||f.node.def.rule==='arrived'||f.node.def.rule==='passed')&&!(f.node.def.stages||[]).length)showToast('Aşama seçilmedi — bu kural için en az bir aşama seç','warning');tmapEditing=null;showToast('✅ Dal kaydedildi');renderTakipMapPanel()}
+function tmapAddBranch(){const n=tmapNode('Yeni dal',{},[],'#26A69A');takipMap.branches.push(n);tmapSave();tmapEditing=null;tmapRenameStart(n.id)}
+function tmapAddChild(id){
+    const f=tmapFind(id);if(!f)return;
+    if(tmapDepth(id)>=TMAP_MAX_DEPTH){showToast('En fazla '+TMAP_MAX_DEPTH+' seviye dal eklenebilir','warning');return}
+    const c=tmapNode('Yeni alt dal',{});(f.node.children=f.node.children||[]).push(c);tmapSave();tmapEditing=null;tmapRenameStart(c.id);
+}
+/* Silme onayı tarayıcı penceresi (confirm) olmadan: ilk basış 🗑️'yi "Sil?" yapar, 8 sn içinde ikinci basış siler.
+   (Uygulama içi tarayıcıda confirm/prompt hiç açılmıyor, sessizce iptal ediyordu.) */
+let tmapArmed=null,tmapRootEdit=false,tmapRenaming=null,tmapRenameSkip=false;
+const TMAP_ARM_MS=8000;
+function tmapIsArmed(k,id){return!!(tmapArmed&&tmapArmed.k===k&&tmapArmed.id===id&&Date.now()-tmapArmed.t<TMAP_ARM_MS)}
+function tmapArm(k,id,msg){
+    if(tmapIsArmed(k,id)){tmapArmed=null;return true}
+    const t=Date.now();tmapArmed={k,id,t};tmapTopToast(msg||'Silmek için 🗑️ tekrar bas');renderTakipMapPanel();
+    setTimeout(()=>{if(tmapArmed&&tmapArmed.t===t){tmapArmed=null;document.querySelectorAll('#takipMapPanel button.armed').forEach(b=>{b.classList.remove('armed');if(b.dataset.idle)b.textContent=b.dataset.idle})}},TMAP_ARM_MS);
+    return false;
+}
+// Uyarıyı ekranın üstünde gösterir (alttaki toast, telefonda basılacak butonun üstüne gelebiliyordu).
+function tmapTopToast(msg,ms){const d=document.createElement('div');d.className='toast warning';d.style.cssText='top:16px;bottom:auto;max-width:92vw;text-align:center;line-height:1.35';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),ms||3000)}
+// Tarayıcılar mikrofonu yalnızca güvenli adreste (https veya localhost) açar; http://192.168.x.x gibi adreste sessizce reddeder.
+function voiceSecureCheck(){
+    if(window.isSecureContext)return true;
+    tmapTopToast('🎤 Sesle yazma bu adreste çalışmaz: tarayıcı mikrofonu yalnızca güvenli adreste açar. Bu bilgisayarda http://localhost:8790 adresini kullan; yayındaki (https) sitede telefonda da çalışır.',9000);
+    return false;
+}
+function voiceDeniedMsg(){tmapTopToast(window.isSecureContext?'🎤 Mikrofon izni kapalı — adres çubuğundaki 🔒 / 🎤 simgesinden bu site için mikrofona izin ver.':'🎤 Bu adreste mikrofon kullanılamaz — http://localhost:8790 ya da yayındaki (https) siteyi kullan.',8000)}
+function tmapDelBtnHtml(k,id,call,cls,idle,armedLabel){
+    const a=tmapIsArmed(k,id);idle=idle||'🗑️';
+    return '<button type="button" class="'+(cls||'')+(a?' armed':'')+'" data-idle="'+esc(idle)+'" title="'+(a?'Silmek için tekrar bas':'Sil')+'" onclick="'+call+'">'+esc(a?(armedLabel||'🗑️ Sil?'):idle)+'</button>';
+}
+function tmapDelete(id){
+    const f=tmapFind(id);if(!f)return;
+    if(!tmapArm('b',id,'"'+f.node.name+'"'+((f.node.children||[]).length?' ve alt dalları':'')+' silinecek — silmek için 🗑️ tekrar bas'))return;
+    f.list.splice(f.list.indexOf(f.node),1);if(tmapSel===id)tmapSel=null;if(tmapEditing===id)tmapEditing=null;if(tmapAddTarget===id)tmapAddTarget=null;
+    tmapSave();showToast('"'+f.node.name+'" silindi');renderTakipMapPanel();
+}
+function tmapRenameRoot(){tmapRootEdit=true;renderTakipMapPanel();const i=document.getElementById('tmapRootName');if(i){i.focus();i.select()}}
+function tmapRootSave(){const i=document.getElementById('tmapRootName'),v=i?i.value.trim():'';if(v){takipMap.name=v;tmapSave()}tmapRootEdit=false;renderTakipMapPanel()}
+function tmapReset(){
+    if(!tmapArm('reset','all','Tüm dallar silinip çizimdeki yapıya dönülecek — emin isen tekrar bas'))return;
+    takipMap=tmapDefault();tmapSel=tmapEditing=tmapAddTarget=null;tmapSave();showToast('Çizimdeki başlangıç yapısına dönüldü');renderTakipMapPanel();
+}
+function tmapToggleManual(id,parti){
+    const f=tmapFind(id);if(!f)return;const d=f.node.def,list=d.partiler=d.partiler||[],i=list.findIndex(m=>m.p===parti);
+    if(i>=0)list.splice(i,1);
+    else{const k=getAllCards().find(c=>String(c.parti).trim()===parti);list.push({p:parti,kg:k?Math.round(num(k.kilo)*100)/100:0,f:k?(k.line1||''):''})}
+    tmapSave();
+    const panel=document.getElementById('takipMapPanel');
+    if(panel&&panel.style.display==='block')renderTakipMapPanel();
+}
+function tmapShowCards(){
+    const ctx=tmapCtx(),items=tmapSel==='root'?tmapRootItems(ctx):tmapSel?tmapItems(tmapFind(tmapSel).node,ctx):new Map();
+    const cards=[...items.values()].map(it=>it.k).filter(Boolean);
+    if(!cards.length){showToast('Bu daldaki partilerin hiçbiri şu an veride yok','warning');return}
+    filterCardsDirect(cards);
+}
+/* ── PNG / PDF / WhatsApp / Yazdır: yalnızca harita (butonlar, liste, ekleme kutusu olmadan) ── */
+let tmapWhite=(()=>{try{return localStorage.getItem('tmapWhite9')==='1'}catch(e){return false}})();
+function tmapSetWhite(on){tmapWhite=!!on;try{localStorage.setItem('tmapWhite9',tmapWhite?'1':'0')}catch(e){}}
+function tmapBuildExportEl(white){
+    // Çıktı ekranda seçili görünümü izler (dikey seçiliyse dikey basılır).
+    const ctx=tmapCtx(),e=tmapEdit,s=tmapSel,mn=tmapMapNoteEdit,re=tmapRootEdit,rn=tmapRenaming;tmapEdit=false;tmapSel=null;tmapMapNoteEdit=null;tmapRootEdit=false;tmapRenaming=null;
+    const tree=tmapTreeHtml(ctx);tmapEdit=e;tmapSel=s;tmapMapNoteEdit=mn;tmapRootEdit=re;tmapRenaming=rn;
+    const wrap=document.createElement('div');wrap.className='tmap-export'+(white?' white':'');
+    wrap.innerHTML='<div class="tmap-export-title">'+esc(takipMap.name)+' — Takip Haritası</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div>'+tree;
+    const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;
+    return wrap;
+}
+async function tmapExportImage(mode){
+    const white=mode==='print'||tmapWhite,name='takip_haritasi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+    // Telefonda gizli çerçeveden yazdırma tüm sayfayı basabiliyor; yazdırma penceresi tıklama anında açılır (açılır pencere engeline takılmasın).
+    const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
+    if(printWin)printWin.document.write('<p style="font-family:sans-serif">Harita hazırlanıyor…</p>');
+    const el=tmapBuildExportEl(white);
+    showToast(mode==='pdf'?'📄 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ Harita görseli hazırlanıyor...','warning');
+    let canvas;
+    try{canvas=await html2canvas(el,{scale:2,backgroundColor:white?'#ffffff':'#1a1a2e',useCORS:true,scrollY:0,onclone:sanitizeOklchColors})}
+    catch(err){removeHeatmapExportEl(el);if(printWin)printWin.close();showToast('Harita görseli oluşturulamadı: '+err,'error');return}
+    removeHeatmapExportEl(el);
+    if(mode==='print'){tmapPrintCanvas(canvas,printWin);return}
+    if(mode==='pdf'){
+        // Harita tek sayfaya sığsın: sayfaya göre uzunsa genişliği küçültüp ortala (html2pdf genişliğe göre ölçekleyip sayfalara böler).
+        const land=canvas.width>=canvas.height,pw=land?297:210,ph=land?210:297,m=6,ratio=canvas.height/canvas.width;
+        const fitW=Math.min(pw-2*m,(ph-2*m)/ratio*0.995),side=(pw-fitW)/2;
+        html2pdf().set({margin:[m,side,m,side],filename:name+'.pdf',image:{type:'jpeg',quality:.95},jsPDF:{unit:'mm',format:'a4',orientation:land?'landscape':'portrait'}})
+            .from(canvas,'canvas').save().then(()=>showToast('✅ PDF indirildi')).catch(err=>showToast('PDF hatası: '+err,'error'));
+        return;
+    }
+    canvas.toBlob(async blob=>{
+        if(!blob){showToast('PNG oluşturulamadı','error');return}
+        if(mode==='wa'){
+            const file=new File([blob],name+'.png',{type:'image/png'}),text='Parti Takip - '+takipMap.name+' Takip Haritası';
+            if(navigator.canShare&&navigator.canShare({files:[file]})){
+                try{await navigator.share({files:[file],title:'Takip Haritası',text});showToast('✅ Paylaşıldı!');return}
+                catch(e){if(e&&e.name==='AbortError')return}
+            }
+            window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+        }
+        fallbackDownload(blob,name+'.png');showToast('✅ PNG indirildi');
+    });
+}
+function tmapPrintHtml(canvas){
+    const land=canvas.width>=canvas.height,iw=land?281:194,ih=land?194:281,w=Math.min(iw,ih*canvas.width/canvas.height)*0.99;
+    return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(takipMap.name)+' — Takip Haritası</title><style>@page{size:A4 '+(land?'landscape':'portrait')+';margin:8mm}html,body{margin:0;background:#fff}img{display:block;margin:0 auto;width:'+w.toFixed(1)+'mm;height:auto}</style></head><body><img src="'+canvas.toDataURL('image/png')+'"></body></html>';
+}
+function tmapPrintCanvas(canvas,win){
+    let target=win,frame=null;
+    if(!target||target.closed){
+        frame=document.getElementById('tmapPrintFrame');
+        if(!frame){frame=document.createElement('iframe');frame.id='tmapPrintFrame';frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(frame)}
+        target=frame.contentWindow;
+    }
+    const doc=target.document;doc.open();doc.write(tmapPrintHtml(canvas));doc.close();
+    const img=doc.querySelector('img'),go=()=>{target.focus();target.print()};
+    if(img.complete)setTimeout(go,150);else img.onload=()=>setTimeout(go,150);
+    showToast('🖨️ Yazdırma ekranı açıldı');
+}
+function tmapExport(){const blob=new Blob([JSON.stringify(takipMap,null,2)],{type:'application/json'});fallbackDownload(blob,'takip_haritasi.json');showToast('⬇️ Tanımlar dışa aktarıldı')}
+function tmapImport(input){
+    const file=input.files&&input.files[0];if(!file)return;
+    file.text().then(t=>{const j=JSON.parse(t);if(!j||j.v!==1||!Array.isArray(j.branches))throw new Error('Geçersiz dosya');takipMap=tmapMigrate(j);tmapSel=tmapEditing=tmapAddTarget=null;tmapSave();renderTakipMapPanel();showToast('⬆️ Tanımlar yüklendi')}).catch(e=>showToast('İçe aktarılamadı: '+e.message,'error')).finally(()=>{input.value=''});
+}
+function tmapModalHtml(k){
+    const p=String(k.parti).trim(),nodes=tmapAllNodes(),inNodes=nodes.filter(x=>(x.node.def.partiler||[]).some(m=>m.p===p));
+    if(!nodes.length)return'';
+    return '<div class="tmap-modal"><b>🧭 Takip Haritası</b> <select id="tmapModalSel_'+esc(k.id)+'">'+nodes.map(x=>'<option value="'+x.node.id+'">'+esc(x.label)+'</option>').join('')+'</select> <button type="button" class="btn-all-export" onclick="tmapModalAdd(&quot;'+esc(k.id)+'&quot;)">Dala ekle</button>'
+        +(inNodes.length?'<div class="tmap-chips">'+inNodes.map(x=>{
+            const m=x.node.def.partiler.find(e=>e.p===p);
+            const last=m&&tmapNotesSorted(m.notes)[0];
+            return '<span class="tmap-chip">'+esc(x.label)+(last?' <i class="tmap-chip-note">📝 '+esc(last.t)+(m.notes.length>1?' (+'+(m.notes.length-1)+')':'')+'</i>':'')
+                +' <button type="button" title="Çıkar" onclick="tmapToggleManual(&quot;'+x.node.id+'&quot;,&quot;'+esc(p)+'&quot;);openDetailModal(&quot;'+esc(k.id)+'&quot;)">✕</button></span>';
+        }).join('')+'</div>':'')+'</div>';
+}
+function tmapModalAdd(cardId){
+    const k=getCardById(cardId),sel=document.getElementById('tmapModalSel_'+cardId);if(!k||!sel)return;
+    const f=tmapFind(sel.value),p=String(k.parti).trim();if(!f)return;
+    if((f.node.def.partiler||[]).some(m=>m.p===p)){showToast('Parti zaten bu dalda','warning');return}
+    tmapToggleManual(sel.value,p);showToast('🧭 '+p+' eklendi');openDetailModal(cardId);
+}
+(function injectTakipMapStyles(){
+    const style=document.createElement('style');
+    style.textContent='.tmap{--line:#607D8B;display:flex;align-items:center;overflow-x:auto;padding:6px 2px}'
+        +'.tmap-root{flex:0 0 auto;position:relative;padding-right:18px}.tmap-root::after{content:"";position:absolute;right:0;top:50%;width:18px;border-top:1.5px solid var(--line)}'
+        +'.tmap-branches{display:flex;flex-direction:column}'
+        +'.tmap-branch{position:relative;display:flex;align-items:center;padding:5px 0 5px 18px}.tmap-leaf{position:relative;display:flex;align-items:center;padding:1px 0 1px 18px}'
+        +'.tmap-branch::before,.tmap-leaf::before{content:"";position:absolute;left:0;top:0;bottom:0;border-left:1.5px solid var(--line)}'
+        +'.tmap-branch:first-child::before,.tmap-leaf:first-child::before{top:50%}.tmap-branch:last-child::before,.tmap-leaf:last-child::before{bottom:50%}'
+        +'.tmap-branch:only-child::before,.tmap-leaf:only-child::before{display:none}'
+        +'.tmap-branch::after,.tmap-leaf::after{content:"";position:absolute;left:0;top:50%;width:18px;border-top:1.5px solid var(--line)}'
+        +'.tmap-children{position:relative;display:flex;flex-direction:column;margin-left:18px}.tmap-children::before{content:"";position:absolute;left:-18px;top:50%;width:18px;border-top:1.5px solid var(--line)}'
+        +'.tmap-node{position:relative;display:inline-block;padding:1px 5px;border-radius:5px;cursor:pointer;color:#ECEFF1;white-space:nowrap}.tmap-node .tmap-count,.tmap-node .tmap-card-info{margin-left:6px}'
+        +'.tmap-node:hover{background:rgba(255,255,255,.07)}.tmap-node.sel{background:rgba(255,255,255,.13)}.tmap-node.sel .tmap-name{text-decoration:underline;text-underline-offset:3px}'
+        +'.tmap-name{font-weight:800;color:var(--c,#90CAF9);font-size:13px}.tmap-node.lvl0{--c:#FFD700}.tmap-node.lvl0 .tmap-name{font-size:19px}.tmap-node.lvl1 .tmap-name{font-size:15px}'
+        +'.tmap-count{font-size:11px;color:#90A4AE}'
+        +'.tmap-node.card .tmap-name{color:#FFD700;font-size:12px;font-weight:700}.tmap-card-info{font-size:11px;color:#B0BEC5}.tmap-node.card.gone{opacity:.6;cursor:default}'
+        +'.tmap-tools{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}.tmap-tools button,.tmap-x,.tmap-chip button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:5px;cursor:pointer;font-size:11px;padding:0 4px;line-height:1.5}'
+        +'.tmap-add{background:none;border:none;border-bottom:1px dashed #26A69A;color:#80CBC4;padding:1px 4px;cursor:pointer;font-weight:700;font-size:13px}'
+        +'.tmap-list{margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px}.tmap-list-head{font-size:14px}.tmap-rule{font-size:11px;color:#90A4AE;margin-top:2px}'
+        +'.tmap-items .live-item{align-items:center}.tmap-x{flex:0 0 auto}'
+        +'.tmap-editor{margin-top:10px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.35);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}'
+        +'.tmap-editor label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#CFD8DC}.tmap-editor input:not([type=checkbox]),.tmap-editor select,.tmap-picker input{padding:7px;border-radius:8px;background:rgba(0,0,0,.3);color:#fff;border:1px solid rgba(255,255,255,.2);max-width:100%}'
+        +'.tmap-ed-title{font-weight:800;color:#FFD700}.tmap-ed-sub{font-size:12px;color:#CFD8DC}.tmap-ed-stages{display:flex;flex-wrap:wrap;gap:4px 12px;max-height:160px;overflow:auto}'
+        +'.tmap-editor label.tmap-chk{flex-direction:row;align-items:center;gap:4px;font-size:12px;color:#ECEFF1}'
+        +'.tmap-items{max-height:240px;overflow:auto}'
+        +'.tmap-addbox{margin-top:12px;background:rgba(0,168,204,.07);border:1px solid rgba(0,168,204,.35);border-radius:10px;padding:10px;scroll-margin-top:10px}.tmap-addbox-title{font-weight:800;color:#4DD0E1;margin-bottom:6px}'
+        +'.tmap-add-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.tmap-add-controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#CFD8DC;flex:1 1 220px;min-width:0}.tmap-add-controls .tmap-search{flex:2 1 280px}'
+        +'.tmap-add-controls select,.tmap-add-controls input{padding:9px;border-radius:8px;background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.25);width:100%;font-size:14px;box-sizing:border-box}'
+        +'.tmap-add-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.tmap-pick-count{font-weight:800;color:#FFD700;font-size:13px;margin-right:4px}'
+        +'.tmap-add-list{max-height:380px;overflow:auto;display:flex;flex-direction:column;gap:4px}'
+        +'.tmap-add-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:1px;align-items:center;padding:7px 8px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid transparent;cursor:pointer}'
+        +'.tmap-add-row:hover{background:rgba(255,255,255,.08)}.tmap-add-row.on{background:rgba(38,166,154,.2);border-color:rgba(38,166,154,.6)}'
+        +'.tmap-add-row input{grid-row:span 3;width:20px;height:20px;accent-color:#26A69A;margin:0}'
+        +'.tmap-add-main{font-size:13px;overflow-wrap:anywhere}.tmap-add-main b{color:#FFD700}.tmap-add-main span{color:#CFD8DC;font-size:12px}'
+        +'.tmap-add-sub{font-size:11px;color:#90A4AE;overflow-wrap:anywhere}.tmap-add-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}'
+        +'.tmap-tag{font-size:10px;background:rgba(255,255,255,.1);border-radius:8px;padding:1px 6px;color:#CFD8DC}.tmap-tag.hit{background:rgba(38,166,154,.4);color:#E0F2F1;font-weight:700}'
+        +'.tmap-modal{margin-top:12px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:8px;font-size:12px}.tmap-modal select{max-width:100%;padding:5px;border-radius:6px;background:rgba(0,0,0,.3);color:#fff;margin:4px 0}'
+        +'.tmap-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.tmap-chip{background:rgba(255,255,255,.1);border-radius:12px;padding:2px 4px 2px 8px}'
+        +'.tmap-export{width:max-content;background:#1a1a2e;color:#fff;padding:18px 24px 22px;font-family:Segoe UI,Arial,sans-serif}.tmap-export-title{color:#FFD700;font-weight:800;font-size:18px}.tmap-export-sub{color:#90A4AE;font-size:12px;margin:2px 0 10px}'
+        +'.tmap-export .tmap{flex-direction:row;align-items:center;overflow:visible}.tmap-export .tmap-root{padding:0 18px 0 0}.tmap-export .tmap-root::after{display:block}.tmap-export .tmap-branches{align-self:auto}'
+        +'.tmap-export .tmap-branch{flex-direction:row;align-items:center;padding:5px 0 5px 18px}.tmap-export .tmap-leaf{flex-direction:row;align-items:center;padding:1px 0 1px 18px}'
+        +'.tmap-export .tmap-branch::before,.tmap-export .tmap-leaf::before{top:0;bottom:0;height:auto;display:block}.tmap-export .tmap-branch:first-child::before,.tmap-export .tmap-leaf:first-child::before{top:50%}'
+        +'.tmap-export .tmap-branch:last-child::before,.tmap-export .tmap-leaf:last-child::before{bottom:50%;height:auto}.tmap-export .tmap-branch:only-child::before,.tmap-export .tmap-leaf:only-child::before{display:none}'
+        +'.tmap-export .tmap-branch::after,.tmap-export .tmap-leaf::after{top:50%;width:18px}.tmap-export .tmap-children{margin:0 0 0 18px}.tmap-export .tmap-children::before{display:block}.tmap-export .tmap-node{white-space:nowrap;cursor:default}'
+        +'.tmap-export.white{background:#fff;color:#000}.tmap-export.white .tmap{--line:#444}.tmap-export.white .tmap-export-title,.tmap-export.white .tmap-node .tmap-name{color:#000}'
+        +'.tmap-export.white .tmap-export-sub,.tmap-export.white .tmap-count,.tmap-export.white .tmap-card-info,.tmap-export.white .tmap-note{color:#333}'
+        +'.tmap-note{display:block;max-width:320px;margin-top:1px;white-space:normal;font-size:11px;font-style:italic;line-height:1.3;color:#FFE082;overflow-wrap:anywhere}'
+        +'.tmap-note.more{color:#B0BEC5}'
+        +'.tmap-node.note{white-space:normal;max-width:340px}.tmap-node.note .tmap-name{color:#FFE082;font-weight:600;font-style:italic;font-size:12px;overflow-wrap:anywhere}.tmap-node.note .tmap-count{font-size:10px}'
+        +'.tmap-export .tmap-node.note{white-space:normal;max-width:340px}.tmap-export.white .tmap-node.note .tmap-name{color:#222}'
+        +'.tmap-node.note.editing{display:block;cursor:default;width:320px;max-width:100%;padding:6px;background:rgba(255,224,130,.08);outline:1px solid rgba(255,224,130,.45)}'
+        +'.tmap-node.note.editing textarea{display:block;width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,224,130,.4);font-size:13px;font-family:inherit;resize:vertical;margin-bottom:5px}'
+        +'.tmap-node.note.editing .tmap-note-actions button{padding:5px 9px;font-size:12px}.tmap-node.note.editing .tmap-mic{padding:5px 10px}'
+        +'#takipMapPanel button.armed{background:#C62828!important;border-color:#FF8A80!important;color:#fff!important;font-weight:800}'
+        +'@media(pointer:coarse){.tmap-tools{gap:6px;margin-left:8px}.tmap-tools button,.tmap-note-btns button,.tmap-x{font-size:15px;padding:5px 9px;min-width:34px;min-height:32px}}'
+        +'.tmap-node.root-edit{display:inline-flex;gap:4px;align-items:center}.tmap-node.root-edit input{font-size:17px;font-weight:800;color:#FFD700;background:rgba(0,0,0,.35);border:1px solid rgba(255,215,0,.5);border-radius:6px;padding:4px 6px;width:160px}.tmap-node.root-edit button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;padding:3px 7px}'
+        +'.tmap-notes{margin:6px 0 8px;padding:8px;border-radius:8px;background:rgba(255,224,130,.06);border:1px solid rgba(255,224,130,.25);display:flex;flex-direction:column;gap:5px}.tmap-notes-title{font-size:12px;font-weight:800;color:#FFE082}'
+        +'.tmap-note-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:4px 6px;border-radius:6px;background:rgba(0,0,0,.18)}.tmap-note-text{flex:1 1 200px;font-size:13px;color:#FFF3C4;overflow-wrap:anywhere}.tmap-note-row small{color:#90A4AE;font-size:11px}'
+        +'.tmap-note-btns{display:inline-flex;gap:3px;margin-left:auto}.tmap-note-btns button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:5px;cursor:pointer;font-size:12px;padding:1px 5px}'
+        +'.tmap-note-row.editing{flex-direction:column;align-items:stretch}.tmap-note-empty{font-size:12px;color:#90A4AE}.tmap-note-add{display:flex;flex-direction:column;gap:4px}'
+        +'.tmap-notes textarea,.tmap-editor textarea{width:100%;box-sizing:border-box;padding:7px;border-radius:8px;background:rgba(0,0,0,.3);color:#fff;border:1px solid rgba(255,224,130,.35);font-size:13px;resize:vertical;font-family:inherit}'
+        +'.tmap-note-actions{display:flex;gap:6px;flex-wrap:wrap}.tmap-mic{background:#7B1FA2;color:#fff;border:none;border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:700}.tmap-mic.rec{background:#E53935;animation:tmapPulse 1s infinite}'
+        +'@keyframes tmapPulse{50%{opacity:.6}}.tmap-item-note{font-size:12px;font-style:italic;color:#FFE082;padding:0 6px 5px 10px;cursor:pointer;overflow-wrap:anywhere}.tmap-item-note small{color:#90A4AE;font-style:normal}'
+        +'.tmap-item .tmap-notes{margin:2px 0 8px 10px}.tmap-x.on{background:rgba(255,224,130,.3)}.tmap-chip-note{color:#FFE082;font-size:11px}'
+        +'.tmap-item .live-item-body{flex-wrap:wrap}.tmap-item .live-item-time{white-space:normal}.tmap-item .tmap-x{align-self:center}'
+        +'.tmap-out-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:8px}.tmap-out-row b{font-size:12px;color:#CFD8DC}'
+        +'.tmap-white{display:flex;align-items:center;gap:5px;font-size:13px;color:#ECEFF1;cursor:pointer;padding:4px 8px;background:#fff1;border-radius:6px}.tmap-white input{width:17px;height:17px;accent-color:#26A69A;margin:0}'
+        +'.tmap-fit-hint{margin:4px 0 6px;padding:6px 10px;border-radius:8px;background:rgba(255,183,77,.14);border:1px solid rgba(255,183,77,.45);color:#FFE0B2;font-size:12px}.tmap-fit-hint button{margin-left:4px;background:#455A64;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:700}'
+        +'.tmap-sel-close{float:right;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;padding:2px 9px;margin-left:8px}'
+        +'.tmap.vertical{flex-direction:column;align-items:flex-start;overflow-x:visible}.tmap.vertical .tmap-root{padding:0 0 2px 0}.tmap.vertical .tmap-root::after{display:none}.tmap.vertical .tmap-branches{align-self:stretch}'
+        +'.tmap.vertical .tmap-branch{flex-direction:column;align-items:flex-start;padding:3px 0 3px 18px}.tmap.vertical .tmap-leaf{flex-direction:column;align-items:flex-start;padding:1px 0 1px 18px}'
+        +'.tmap.vertical .tmap-branch::before,.tmap.vertical .tmap-leaf::before{top:0;bottom:0}.tmap.vertical .tmap-branch:first-child::before,.tmap.vertical .tmap-leaf:first-child::before{top:0}.tmap.vertical .tmap-branch:last-child::before{bottom:auto;height:14px}.tmap.vertical .tmap-leaf:last-child::before{bottom:auto;height:11px}.tmap.vertical .tmap-branch:only-child::before,.tmap.vertical .tmap-leaf:only-child::before{display:block}'
+        +'.tmap.vertical .tmap-branch::after{top:14px;width:16px}.tmap.vertical .tmap-leaf::after{top:11px;width:16px}.tmap.vertical .tmap-children{margin:1px 0 0 12px}.tmap.vertical .tmap-children::before{display:none}'
+        +'.tmap-out-view{color:#90A4AE;font-size:11px}'
+        +'.tmap-rename-wrap{display:inline-flex;gap:4px;align-items:center}.tmap-rename{font-size:14px;font-weight:800;color:var(--c,#fff);background:rgba(0,0,0,.4);border:1px solid var(--c,#90CAF9);border-radius:6px;padding:4px 7px;width:170px;max-width:60vw}'
+        +'.tmap-rename-wrap button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;padding:3px 8px}'
+        +'@media(max-width:700px){.tmap-view-toggle,.tmap-fit-hint,.tmap-out-view{display:none!important}}'
+        +'@media(max-width:700px){.tmap{flex-direction:column;align-items:flex-start;overflow-x:visible}.tmap-root{padding:0 0 2px 0}.tmap-root::after{display:none}.tmap-branches{align-self:stretch}'
+        +'.tmap-branch{flex-direction:column;align-items:flex-start;padding:3px 0 3px 16px}.tmap-leaf{flex-direction:column;align-items:flex-start;padding:1px 0 1px 16px}'
+        +'.tmap-branch::before,.tmap-leaf::before{top:0;bottom:0}.tmap-branch:first-child::before,.tmap-leaf:first-child::before{top:0}.tmap-branch:last-child::before{bottom:auto;height:14px}.tmap-leaf:last-child::before{bottom:auto;height:11px}.tmap-branch:only-child::before,.tmap-leaf:only-child::before{display:block}'
+        +'.tmap-branch::after{top:14px;width:14px}.tmap-leaf::after{top:11px;width:14px}.tmap-children{margin:1px 0 0 10px}.tmap-children::before{display:none}.tmap-node{white-space:normal}}';
     document.head.appendChild(style);
 })();
 

@@ -94,7 +94,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .view-action-btn.pdf{background:#E74C3C}
 .view-action-btn.whatsapp{background:#25D366;color:#09210f}
 .view-fullscreen{position:fixed!important;inset:10px!important;z-index:10015!important;display:flex!important;align-content:flex-start;background:#110e2e!important;overflow:auto!important;border-radius:14px;border:1px solid rgba(255,255,255,.18);box-shadow:0 20px 80px rgba(0,0,0,.75);max-width:none!important;margin:0!important;padding-top:58px!important}
-.panel.view-fullscreen{display:block!important;width:auto!important;max-height:none!important}
+/* Telefonda .panel{top:auto!important} tam ekranı ekranın üstüne taşıyordu; tam ekran her zaman ekranı kaplasın. */
+.panel.view-fullscreen{display:block!important;width:auto!important;max-height:none!important;top:10px!important;bottom:10px!important;left:10px!important;right:10px!important;height:auto!important}
 .summary.view-fullscreen{flex-wrap:wrap!important;justify-content:center!important}
 .view-fullscreen-toolbar{position:fixed;left:10px;right:10px;top:10px;z-index:10016;display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:8px 12px;background:rgba(17,14,46,.96);border-bottom:1px solid rgba(255,255,255,.12);border-radius:14px 14px 0 0}
 .view-fullscreen-toolbar button{padding:7px 12px;border:none;border-radius:18px;font-weight:800;cursor:pointer;color:white}
@@ -1677,7 +1678,9 @@ function exportPDF(){
 
 /* ── GROUP / VIEW / FILTER ── */
 function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel','takipMapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
-function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗'};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
+function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';if(p.classList.contains('fullscreen-panel'))panelScrollToMap(p)};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
+// Tam ekrana geçince haritalı panellerde doğrudan haritaya kaydır (telefonda üstteki ayarlar ekranı dolduruyor, harita görünmüyordu).
+function panelScrollToMap(p){const a=p&&p.querySelector('[data-fs-anchor]');if(!a)return;p.scrollTop=Math.max(0,a.getBoundingClientRect().top-p.getBoundingClientRect().top+p.scrollTop-(p.classList.contains('view-fullscreen')?62:8))}
 function safePanelOpen(id,title,renderFn){const p=document.getElementById(id);if(!p){alert('Panel bulunamadı: '+id);return}closeAllPanels();p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="panel-summary">Açılıyor...</div>';p.style.display='block';try{renderFn();addPanelFullButton(id)}catch(e){console.error(e);p.innerHTML='<button class="panel-close" onclick="this.parentElement.style.display=\'none\'">×</button><h2>'+title+'</h2><div class="list-item" style="border-left:4px solid #E74C3C"><b>Bu panel açılırken hata oluştu.</b><br><small>'+esc(e&&e.message?e.message:e)+'</small></div>';addPanelFullButton(id)}}
 function setGroupMode(m){currentGroupMode=m;activeStages=[];if(m==='latest'&&latestUpdateMinHours===null&&latestUpdateMaxHours===null){latestUpdateMaxHours=1;const maxEl=document.getElementById('latestUpdateMaxInput');if(maxEl)maxEl.value='1'}document.querySelectorAll('.group-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));renderSummaries();renderCards(getFilteredCards())}
 function getLatestGroupKey(k){
@@ -1776,7 +1779,7 @@ function ensureElementFullscreenToolbar(id,title){
 function toggleElementFullscreen(id,title){
     const el=document.getElementById(id);if(!el)return;
     el.classList.toggle('view-fullscreen');
-    if(el.classList.contains('view-fullscreen'))ensureElementFullscreenToolbar(id,title||'Görünüm');
+    if(el.classList.contains('view-fullscreen')){ensureElementFullscreenToolbar(id,title||'Görünüm');panelScrollToMap(el)}
     else{const tb=el.querySelector('.view-fullscreen-toolbar');if(tb)tb.remove()}
 }
 function elementShareText(title,id){
@@ -3067,12 +3070,20 @@ function renderKkSarimPanel(){
 
 /* ════════ 🌡️ ISI HARİTASI (ÇUBUK GRAFİK) ════════ */
 function heatmapShortParti(k){return String(k.parti||'Bilinmeyen').replace(/^\s*\(\d{4}\)\s*/,'')||'Bilinmeyen'}
+// Aşama değeri pahalı (tr-TR büyük harf + akış çözümü, kart başına ~0,4 ms; her dal açışta tüm kartlar için yeniden hesaplanıyordu).
+// Kartın aşama alanları değişmedikçe hesaplanan değer yeniden kullanılır.
+const heatmapAsamaMemo=new WeakMap();
+function heatmapAsamaOf(k){
+    const s=[k._asama,k.asama,k.son_asama,k.sonraki_asama,k.bir_sonraki,k.uretim_asamalari].join('|'),m=heatmapAsamaMemo.get(k);
+    if(m&&m.s===s)return m.v;
+    let v;
+    if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))v='Kalite Kontrol\'e Gelecek';
+    else if(!isCurrentlyStage(k,'SARIM1')&&stageEquals(cardNextStage(k),'SARIM1'))v='Sarım1\'e Gelecek';
+    else v=cardCurrentStage(k)||'Bilinmeyen';
+    heatmapAsamaMemo.set(k,{s,v});return v;
+}
 const HEATMAP_DIMENSIONS={
-    asama:{label:'Aşama',get:k=>{
-        if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))return'Kalite Kontrol\'e Gelecek';
-        if(!isCurrentlyStage(k,'SARIM1')&&stageEquals(cardNextStage(k),'SARIM1'))return'Sarım1\'e Gelecek';
-        return cardCurrentStage(k)||'Bilinmeyen';
-    }},
+    asama:{label:'Aşama',get:heatmapAsamaOf},
     firma:{label:'Firma',get:k=>{
         const line1=String(k.line1||k.firma||'').trim();
         const idx=line1.indexOf('/');
@@ -3510,8 +3521,10 @@ function heatmapMindLevelSelectHtml(which,current){
     return '<select class="filter-select" onchange="setHeatmapMindLevel('+which+',this.value)">'+opts+'</select>';
 }
 function toggleHeatmapMindExpandPath(path){
-    if(heatmapMindExpandedPaths.has(path))heatmapMindExpandedPaths.delete(path);else heatmapMindExpandedPaths.add(path);
+    const open=!heatmapMindExpandedPaths.has(path);
+    if(open)heatmapMindExpandedPaths.add(path);else heatmapMindExpandedPaths.delete(path);
     renderHeatmapMindmapPanel();
+    if(open&&heatmapMindView==='tree')heatmapMindReveal(path);
 }
 function heatmapMindPathLabels(path){
     const idx=path.split('-').map(Number),labels=[];
@@ -3550,31 +3563,44 @@ function heatmapMindToggleCheck(path){
     }
     renderActiveHeatmapPanels();
 }
-function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels,namePrefix){
+// Isı Haritası ağacı Takip Haritası ile aynı yazı-tabanlı yapıda (.tmap): çerçevesiz düğümler, çizgi bağlantılar, yatay/dikey görünüm.
+// Isı rengi düğümün başındaki noktada ve adın renginde; beyaz zeminli çıktıda ad siyah olur, nokta renkli kalır.
+function heatmapMindTextColor(c){try{const x=d3.hsl(c);if(!(x.l>=0.62))x.l=0.62;return String(x)}catch(e){return c}}
+function heatmapMindTotalsText(count,kg){return count.toLocaleString('tr-TR')+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg'}
+// exp: çıktı için (onay kutusu, ok, gizle düğmesi olmadan; gizle anahtarları da değişmez)
+function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels,namePrefix,exp){
     namePrefix=namePrefix||'';
-    const dimKey=levels[levelIndex],isLast=levelIndex===levels.length-1;
+    const dimKey=levels[levelIndex],isLast=levelIndex===levels.length-1,level=levelIndex+1,wrapCls=level===1?'tmap-branch':'tmap-leaf';
     const rows=heatmapBarRows(heatmapGroupCards(cards,dimKey),heatmapMetric,heatmapTopN);
     heatmapMindNodeCache.set(pathPrefix,rows);
-    if(!rows.length)return'<div class="kkmind-children"><div class="kkmind-child" style="color:#90A4AE;font-size:12px">Kayıt yok</div></div>';
+    if(!rows.length)return '<div class="'+wrapCls+'"><div class="tmap-node"><span class="tmap-count">Kayıt yok</span></div></div>';
     const maxValue=Math.max.apply(null,rows.map(r=>r.value))||1,colorScale=heatmapColorScale(heatmapMetric,maxValue);
-    let h='<div class="kkmind-branches'+(isLast?' kkmind-leafgrid':'')+'">';
-    if(isLast&&pathPrefix)h+='<div class="kkmind-leafgrid-head"><span>'+rows.length+' kayıt</span><button type="button" title="Bu alt dalı kapat" onclick="toggleHeatmapMindExpandPath(&quot;'+pathPrefix+'&quot;)">▴ Kapat</button></div>';
+    let h='';
     rows.forEach((r,i)=>{
         const path=pathPrefix?pathPrefix+'-'+i:String(i),nameKey=namePrefix+'›'+r.name;
         if(heatmapMindHidden.has(nameKey))return;
-        const mainText=heatmapMetric==='count'?r.count.toLocaleString('tr-TR')+' adet':Math.round(r.kg).toLocaleString('tr-TR')+' kg';
-        h+='<div class="kkmind-branch">';
+        const heat=colorScale(r.value),body='<i class="hm-dot" style="background:'+heat+'"></i><span class="tmap-name">'+esc(r.name)+'</span><span class="tmap-count">'+heatmapMindTotalsText(r.count,r.kg)+'</span>';
+        // 1. seviyede × kalıcı seçimden çıkarır (🎯 listesinden geri açılır); daha derinde bu oturum için gizler.
+        const hide=exp?'':levelIndex===0
+            ?'<span class="hm-x" title="Gizle (🎯 seçim listesinden geri açabilirsin)" onclick="event.stopPropagation();heatmapMindStageHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span>'
+            :'<span class="hm-x" title="Bu dalı gizle" onclick="event.stopPropagation();heatmapMindHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span>';
         if(isLast){
             const checked=heatmapMindCheckedPaths.has(path);
-            h+='<div class="kkmind-leaf-row">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'<div class="kkmind-leaf" title="'+esc(r.name+' ('+mainText+')')+'" onclick="heatmapMindLeafClickPath(&quot;'+path+'&quot;)"><span class="nm">'+esc(r.name)+'</span><span class="cnt">('+mainText+')</span></div><span class="kkmind-hide" title="Gizle" onclick="heatmapMindHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span></div>';
+            h+='<div class="'+wrapCls+'"><div class="tmap-node lvl'+level+' hm-leaf'+(checked&&!exp?' on':'')+'" style="--c:'+heatmapMindTextColor(heat)+'" title="Tıkla: partileri listele" onclick="heatmapMindLeafClickPath(&quot;'+path+'&quot;)">'
+                +(exp?'':'<span class="hm-chk" onclick="event.stopPropagation()">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'</span>')+body+hide+'</div></div>';
         }else{
             const expanded=heatmapMindExpandedPaths.has(path);
-            h+='<div class="kkmind-node" style="background:'+colorScale(r.value)+'" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'+(expanded?'▾':'▸')+' '+esc(r.name)+'<span class="cnt">('+mainText+')</span><span class="kkmind-hide" title="Bu dalı gizle" onclick="event.stopPropagation();heatmapMindHideIdx('+(heatmapMindHideKeys.push(nameKey)-1)+')">×</span></div>';
-            if(expanded)h+=heatmapMindRenderBranches(r.cards,levelIndex+1,path,levels,nameKey);
+            // Altında en az iki seviye varsa: ⊞ altındakilerin hepsini aç, ⊟ (açık alt dal varsa) alt dalları topluca kapat
+            let bulk='';
+            if(!exp&&levelIndex<levels.length-2){
+                bulk='<span class="hm-bulk" title="Altındaki tüm dalları aç" onclick="event.stopPropagation();heatmapMindBulkOpen(&quot;'+path+'&quot;)">⊞</span>';
+                if(expanded&&heatmapMindHasOpenBelow(path))bulk+='<span class="hm-bulk" title="Alt dallarını topluca kapat (bu dal açık kalır)" onclick="event.stopPropagation();heatmapMindBulkClose(&quot;'+path+'&quot;)">⊟</span>';
+            }
+            h+='<div class="'+wrapCls+'"><div class="tmap-node lvl'+level+' hm-node" data-p="'+path+'" style="--c:'+heatmapMindTextColor(heat)+'" title="Tıkla: alt dalları '+(expanded?'kapat':'aç')+'" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'
+                +(exp?'':'<span class="hm-caret">'+(expanded?'▾':'▸')+'</span>')+body+bulk+hide+'</div>'
+                +(expanded?'<div class="tmap-children">'+heatmapMindRenderBranches(r.cards,levelIndex+1,path,levels,nameKey,exp)+'</div>':'')+'</div>';
         }
-        h+='</div>';
     });
-    h+='</div>';
     return h;
 }
 let heatmapMindHideKeys=[];
@@ -3582,33 +3608,149 @@ function heatmapMindHideIdx(i){const k=heatmapMindHideKeys[i];if(k!=null)heatmap
 function heatmapMindUnhide(i){const k=[...heatmapMindHidden][i];if(k!=null)heatmapMindHidden.delete(k);renderHeatmapMindmapPanel()}
 function heatmapMindUnhideAll(){heatmapMindHidden=new Set();renderHeatmapMindmapPanel()}
 function heatmapMindCollapseAll(){heatmapMindExpandedPaths=new Set();renderHeatmapMindmapPanel()}
-function heatmapMindExpandTop(){const rows=heatmapMindNodeCache.get('')||[];rows.forEach((r,i)=>heatmapMindExpandedPaths.add(String(i)));renderHeatmapMindmapPanel()}
+// ── Toplu aç / kapat ──
+// Ekrana düşecek dal sayısı sınırı: 5 seviye × Top N'de hepsi açılırsa on binlerce dal çıkar, sayfa kilitlenir.
+const HM_MIND_MAX_NODES=1500;
+function heatmapMindRowsOf(cards,li){return heatmapBarRows(heatmapGroupCards(cards,heatmapMindLevelKeys()[li]),heatmapMetric,heatmapTopN)}
+// rootPath ('' = tüm harita) altında, seviye indeksi toLevel'dan küçük dalları seviye seviye açılacak yollar olarak toplar.
+function heatmapMindCollectPaths(rootPath,toLevel){
+    const levels=heatmapMindLevelKeys(),out=[];let queue,budget=0,stopped=false;
+    if(!rootPath)queue=[{cards:heatmapMindCards(),li:0,prefix:'',nk:''}];
+    else{
+        let cards=heatmapMindCards(),nk='';const idx=rootPath.split('-').map(Number);
+        for(let d=0;d<idx.length;d++){const r=heatmapMindRowsOf(cards,d)[idx[d]];if(!r)return{paths:out,stopped};cards=r.cards;nk+='›'+r.name}
+        out.push(rootPath);queue=[{cards,li:idx.length,prefix:rootPath,nk}];
+    }
+    while(queue.length&&!stopped){
+        const next=[];
+        for(const q of queue){
+            heatmapMindRowsOf(q.cards,q.li).forEach((r,i)=>{
+                if(stopped)return;
+                const path=q.prefix?q.prefix+'-'+i:String(i),nk=q.nk+'›'+r.name;
+                if(heatmapMindHidden.has(nk)||q.li>=toLevel||q.li>=levels.length-1)return;
+                const n=heatmapMindRowsOf(r.cards,q.li+1).length;
+                if(budget+n>HM_MIND_MAX_NODES){stopped=true;return}
+                budget+=n;out.push(path);next.push({cards:r.cards,li:q.li+1,prefix:path,nk});
+            });
+        }
+        queue=next;
+    }
+    return{paths:out,stopped};
+}
+function heatmapMindLimitToast(){showToast('Çok fazla dal çıkıyordu; ilk '+HM_MIND_MAX_NODES+' dal kadarı açıldı. Hepsi için Top N\'i düşür ya da tek dalda ⊞ kullan.','warning')}
+// Tüm haritayı 'toLevel' seviyesine kadar açar; daha derindeki açık dallar kapanır.
+function heatmapMindExpandTo(toLevel){
+    const r=heatmapMindCollectPaths('',toLevel);heatmapMindExpandedPaths=new Set(r.paths);renderHeatmapMindmapPanel();if(r.stopped)heatmapMindLimitToast();
+}
+function heatmapMindExpandTop(){heatmapMindExpandTo(1)}
+function heatmapMindBulkOpen(path){
+    const r=heatmapMindCollectPaths(path,99);r.paths.forEach(p=>heatmapMindExpandedPaths.add(p));renderHeatmapMindmapPanel();
+    if(r.stopped)heatmapMindLimitToast();else heatmapMindReveal(path);
+}
+function heatmapMindHasOpenBelow(path){const pre=path+'-';for(const p of heatmapMindExpandedPaths)if(p.startsWith(pre))return true;return false}
+function heatmapMindBulkClose(path){const pre=path+'-';[...heatmapMindExpandedPaths].forEach(p=>{if(p.startsWith(pre))heatmapMindExpandedPaths.delete(p)});renderHeatmapMindmapPanel()}
+// Seçim yapılmadıysa telefonda dikey, geniş ekranda yatay başlar.
+let heatmapMindVertical=(()=>{let v=null;try{v=localStorage.getItem('hmMindVert9')}catch(e){}return v===null?!!(window.matchMedia&&matchMedia('(max-width:700px)').matches):v==='1'})();
+function setHeatmapMindVertical(on){heatmapMindVertical=!!on;try{localStorage.setItem('hmMindVert9',heatmapMindVertical?'1':'0')}catch(e){}renderHeatmapMindmapPanel()}
 function heatmapMindTreeToolbarHtml(){
-    let h='<div class="kkmind-toolbar"><button type="button" onclick="heatmapMindCollapseAll()">⊟ Tümünü Kapat</button><button type="button" onclick="heatmapMindExpandTop()">⊞ 1. Seviyeyi Aç</button>';
+    // "Aç:" düğmeleri, o seviyeye kadar tüm dalları topluca açar (ör. Firma = her aşamanın firmaları görünür).
+    const levels=heatmapMindLevelKeys();
+    let h='<div class="kkmind-toolbar" data-fs-anchor><button type="button" onclick="heatmapMindCollapseAll()">⊟ Tümünü Kapat</button><span class="lbl">⊞ Aç:</span>'
+        +levels.slice(1).map((k,i)=>'<button type="button" onclick="heatmapMindExpandTo('+(i+1)+')" title="'+esc((HEATMAP_DIMENSIONS[k]||{}).label||'')+' seviyesine kadar tüm dalları aç">'+esc((HEATMAP_DIMENSIONS[k]||{}).label||(i+2)+'. seviye')+(i===levels.length-2&&i>0?' (tümü)':'')+'</button>').join('')
+        +'<button type="button" onclick="setHeatmapMindVertical(!heatmapMindVertical)" title="Harita panele sığmazsa dikey görünüm hepsini gösterir">'+(heatmapMindVertical?'↔ Yatay görünüm':'↕ Dikey görünüm')+'</button>';
     if(heatmapMindHidden.size){
         h+='<span class="lbl">Gizli:</span>'+[...heatmapMindHidden].map((k,i)=>'<span class="chip" title="Geri getir" onclick="heatmapMindUnhide('+i+')">'+esc(k.split('›').filter(Boolean).join(' › '))+' ↺</span>').join('');
         h+='<button type="button" onclick="heatmapMindUnhideAll()">Hepsini Göster</button>';
     }
     return h+'</div>';
 }
+function heatmapMindOutRowHtml(){
+    return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
+        +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="heatmapMindExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="heatmapMindExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="heatmapMindExport(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="heatmapMindExport(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button>'
+        +'<small class="tmap-out-view">'+(heatmapMindVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
+}
+function heatmapMindTreeHtml(exp){
+    const all=heatmapMindCards();
+    if(!exp){heatmapMindNodeCache=new Map();heatmapMindHideKeys=[]}
+    const levels=heatmapMindLevelKeys(),rootLabel=(HEATMAP_DIMENSIONS[levels[0]]||HEATMAP_DIMENSIONS.asama).label,sc=heatmapMindStageCounts();
+    return '<div class="tmap hm-map'+(heatmapMindVertical?' vertical':'')+'"><div class="tmap-root"><div class="tmap-node lvl0"><span class="tmap-name">🌡️ '+esc(rootLabel)+'</span><span class="tmap-count">'+heatmapMindTotalsText(all.length,all.reduce((s,k)=>s+num(k.kilo),0))+(sc.filtered?' • '+sc.shown+'/'+sc.total+' seçili':'')+'</span></div></div>'
+        +'<div class="tmap-branches">'+heatmapMindRenderBranches(all,0,'',levels,'',exp)+'</div></div>';
+}
+function heatmapMindExportTitle(){return 'Isı Haritası — '+heatmapMindLevelKeys().map(k=>(HEATMAP_DIMENSIONS[k]||{}).label).filter(Boolean).join(' › ')}
+function heatmapMindExport(mode){
+    const title=heatmapMindExportTitle(),sc=heatmapMindStageCounts();
+    return mapExportImage(mode,{title,file:'isi_haritasi_mindmap',build:white=>mapBuildExportEl(white,title,(heatmapMetric==='count'?'Adete':'Kg\'a')+' göre • her dalda ilk '+heatmapTopN+(sc.filtered?' • '+sc.shown+'/'+sc.total+' '+sc.label+' seçili':''),heatmapMindTreeHtml(true))});
+}
+/* ── 1. seviyede (ör. aşamalar) görünecekleri toplu seçme — bu cihazda saklanır ──
+   mode 'hide': list = gizlenenler (sonradan gelen yeni değerler görünür)
+   mode 'only': list = yalnızca görünenler ("Hiçbiri" ile başlanır; yeni gelenler gizli kalır) */
+let heatmapMindStageFilters=(()=>{try{const v=JSON.parse(localStorage.getItem('hmMindStages9')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return{}}})();
+let heatmapMindStagePickOpen=false,heatmapMindStageQ='',heatmapMindStagePickNames=[];
+function heatmapMindStageSave(){try{localStorage.setItem('hmMindStages9',JSON.stringify(heatmapMindStageFilters))}catch(e){}}
+function heatmapMindStageFilter(){const f=heatmapMindStageFilters[heatmapTopGroup];return f&&Array.isArray(f.list)&&(f.mode==='only'||f.list.length)?f:null}
+function heatmapMindStageVisible(name,f){if(f===undefined)f=heatmapMindStageFilter();if(!f)return true;const inList=f.list.includes(name);return f.mode==='only'?inList:!inList}
+function heatmapMindCards(){
+    const all=typeof getAllCards==='function'?getAllCards():[],f=heatmapMindStageFilter();if(!f)return all;
+    const dim=HEATMAP_DIMENSIONS[heatmapTopGroup]||HEATMAP_DIMENSIONS.asama;return all.filter(k=>heatmapMindStageVisible(dim.get(k),f));
+}
+function heatmapMindStageCounts(){
+    const f=heatmapMindStageFilter(),names=[...heatmapGroupCards(typeof getAllCards==='function'?getAllCards():[],heatmapTopGroup).keys()];
+    return{total:names.length,shown:f?names.filter(n=>heatmapMindStageVisible(n,f)).length:names.length,filtered:!!f,label:(HEATMAP_DIMENSIONS[heatmapTopGroup]||HEATMAP_DIMENSIONS.asama).label};
+}
+// Seçim değişince dal yolları (sıra numaraları) kayar: açık ve işaretli dallar adlarıyla eşlenip yeni yerlerine taşınır.
+function heatmapMindStageChange(mutate){
+    const toLabels=p=>{const l=heatmapMindPathLabels(p);return l.length===p.split('-').length?l:null};
+    const ex=[...heatmapMindExpandedPaths].map(toLabels).filter(Boolean),ch=[...heatmapMindCheckedPaths].map(toLabels).filter(Boolean);
+    mutate();heatmapMindStageSave();
+    const all=heatmapMindCards(),toPath=labels=>{let cards=all;const idx=[];for(let d=0;d<labels.length;d++){const rows=heatmapMindRowsOf(cards,d),i=rows.findIndex(r=>r.name===labels[d]);if(i<0)return null;idx.push(i);cards=rows[i].cards}return idx.join('-')};
+    heatmapMindExpandedPaths=new Set(ex.map(toPath).filter(Boolean));heatmapMindCheckedPaths=new Set(ch.map(toPath).filter(Boolean));
+    renderHeatmapMindmapPanel();
+}
+function heatmapMindStageEntry(){return heatmapMindStageFilters[heatmapTopGroup]||(heatmapMindStageFilters[heatmapTopGroup]={mode:'hide',list:[]})}
+function heatmapMindStageToggle(name){heatmapMindStageChange(()=>{const f=heatmapMindStageEntry(),i=f.list.indexOf(name);if(i>=0)f.list.splice(i,1);else f.list.push(name)})}
+function heatmapMindStageToggleIdx(i){const n=heatmapMindStagePickNames[i];if(n!=null)heatmapMindStageToggle(n)}
+// Haritadaki × (1. seviyede): o değeri seçimden çıkarır, kalıcı olarak gizler
+function heatmapMindStageHideIdx(i){const k=heatmapMindHideKeys[i];if(k==null)return;const n=k.slice(1);if(heatmapMindStageVisible(n))heatmapMindStageToggle(n);showToast('🙈 '+n+' gizlendi — geri açmak için 🎯 seçim listesini kullan')}
+function heatmapMindStageAll(show){heatmapMindStageChange(()=>{heatmapMindStageFilters[heatmapTopGroup]={mode:show?'hide':'only',list:[]}})}
+function heatmapMindStageInvert(){heatmapMindStageChange(()=>{const f=heatmapMindStageEntry();heatmapMindStageFilters[heatmapTopGroup]={mode:f.mode==='only'?'hide':'only',list:f.list.slice()}})}
+function heatmapMindStageSearch(q){
+    heatmapMindStageQ=q;const k=String(q||'').toLocaleLowerCase('tr-TR').trim();
+    document.querySelectorAll('#hmStageList .hm-stage-row').forEach(r=>{r.style.display=!k||r.dataset.n.includes(k)?'':'none'});
+}
+function heatmapMindStageBtnHtml(){
+    const sc=heatmapMindStageCounts();
+    return '<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Görünecek '+esc(sc.label)+'</label>'
+        +'<button type="button" class="btn-fire-export hm-stage-btn'+(sc.filtered?' on':'')+(heatmapMindStagePickOpen?' open':'')+'" onclick="heatmapMindStagePickOpen=!heatmapMindStagePickOpen;renderHeatmapMindmapPanel()">🎯 '+sc.shown+'/'+sc.total+' seçili '+(heatmapMindStagePickOpen?'▴':'▾')+'</button></div>';
+}
+function heatmapMindStagePickerHtml(){
+    if(!heatmapMindStagePickOpen)return'';
+    const f=heatmapMindStageFilter(),sc=heatmapMindStageCounts(),rows=heatmapBarRows(heatmapGroupCards(typeof getAllCards==='function'?getAllCards():[],heatmapTopGroup),heatmapMetric,0);
+    heatmapMindStagePickNames=rows.map(r=>r.name);
+    let h='<div class="hm-stage-pick"><div class="hm-stage-head"><b>🎯 Görünecek '+esc(sc.label)+'</b><small>'+sc.shown+'/'+sc.total+' görünür</small><button type="button" class="hm-stage-close" title="Kapat" onclick="heatmapMindStagePickOpen=false;renderHeatmapMindmapPanel()">✕</button></div>'
+        +'<div class="hm-stage-tools"><input id="hmStageQ" type="search" placeholder="🔎 Ara…" value="'+esc(heatmapMindStageQ)+'" oninput="heatmapMindStageSearch(this.value)">'
+        +'<button type="button" onclick="heatmapMindStageAll(true)" title="Hepsini göster">✓ Hepsi</button><button type="button" onclick="heatmapMindStageAll(false)" title="Hepsini gizle; sonra görmek istediklerini işaretle">✕ Hiçbiri</button><button type="button" onclick="heatmapMindStageInvert()" title="Görünenleri gizle, gizlenenleri göster">⇄ Tersine çevir</button></div>'
+        +'<div id="hmStageList" class="hm-stage-list">';
+    rows.forEach((r,i)=>{
+        const on=heatmapMindStageVisible(r.name,f);
+        h+='<div class="hm-stage-row'+(on?' on':'')+'" data-n="'+esc(String(r.name).toLocaleLowerCase('tr-TR'))+'" onclick="heatmapMindStageToggleIdx('+i+')">'+heatmapChkHtml(on,'')+'<span class="nm">'+esc(r.name)+'</span><small>'+heatmapMindTotalsText(r.count,r.kg)+'</small></div>';
+    });
+    return h+'</div><div class="hm-stage-foot">'+(f&&f.mode==='only'?'Yalnızca işaretliler görünür; sonradan gelen yeni '+esc(sc.label.toLocaleLowerCase('tr-TR'))+' değerleri gizli kalır.':'İşaretini kaldırdıkların gizlenir; sonradan gelen yeniler görünür.')+' Seçim bu cihazda saklanır.</div></div>';
+}
 function heatmapMindmapDiagramHtml(){
-    const all=typeof getAllCards==='function'?getAllCards():[];
-    heatmapMindNodeCache=new Map();heatmapMindHideKeys=[];
-    const levels=heatmapMindLevelKeys();
-    const rootLabel=(HEATMAP_DIMENSIONS[levels[0]]||HEATMAP_DIMENSIONS.asama).label;
-    let h=heatmapMindTreeToolbarHtml()+'<div class="kkmind-wrap"><div class="kkmind-trunk"><div class="kkmind-root">🌡️ '+esc(rootLabel)+'</div>';
-    h+=heatmapMindRenderBranches(all,0,'',levels);
-    h+='</div></div>';
-    return h;
+    return heatmapMindTreeToolbarHtml()+heatmapMindOutRowHtml()
+        +'<div id="hmMindFitHint" class="tmap-fit-hint" style="display:none">↔ Harita panele sığmıyor — sağdaki dallar için haritayı yana kaydır ya da <button type="button" onclick="setHeatmapMindVertical(true)">↕ Dikey görünüme geç</button></div>'
+        +heatmapMindTreeHtml(false);
 }
 function renderHeatmapMindmapPanel(){
     const p=document.getElementById('heatmapMindmapPanel'),ttl='Isı Haritası Mindmap';
+    const oldMap=p.querySelector('.hm-map'),mapScrollX=oldMap?oldMap.scrollLeft:0,scroll=p.scrollTop;
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapMindmapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🧠 '+ttl+'</h2>';
-    h+='<div class="panel-summary">Bir düğüme tıklayınca dalları açılır/kapanır; en uçtaki bir dala tıklayınca partilerin listesi altta görünür. 3., 4. ve 5. seviyeler ile kırılımı istediğin kadar derinleştirebilirsin — 5. seviyeyi "Parti No" seçersen en altta parti no ve kilo tek tek görünür.</div>';
+    h+='<div class="panel-summary">🎯 ile görmek istemediğin aşamaları (1. seviye) topluca gizleyebilir ya da "Hiçbiri" deyip yalnızca görmek istediklerini seçebilirsin; seçim bu cihazda kalır. Bir dala tıklayınca alt dalları açılır/kapanır (▸/▾). Toplu açmak için üstteki "⊞ Aç:" düğmeleri tüm dalları o seviyeye kadar açar; bir dalın yanındaki ⊞ altındakilerin hepsini açar, ⊟ alt dallarını topluca kapatır. En uçtaki dala tıklayınca partiler altta listelenir, ☐ ile birden çok uç dalı işaretleyip birlikte listeleyebilirsin, × dalı gizler. Noktanın rengi yoğunluğu gösterir (yeşil az → kırmızı çok). 3., 4. ve 5. seviyeler ile kırılımı istediğin kadar derinleştirebilirsin — 5. seviyeyi "Parti No" seçersen en altta parti no ve kilo tek tek görünür.</div>';
     h+='<button type="button" class="btn-fire-export" style="background:#D84315;color:#fff;margin-bottom:8px" onclick="toggleHeatmapTreemapPanel()">📊 Çubuk Görünümüne Geç</button>';
     h+=heatmapMindViewSwitchHtml();
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">1. Seviye</label>'+heatmapDimSelectHtml('heatmapMindTopSel','top',heatmapTopGroup)+'</div>';
+    h+=heatmapMindStageBtnHtml();
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">2. Seviye</label>'+heatmapDimSelectHtml('heatmapMindSubSel','sub',heatmapSubGroup)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">3. Seviye</label>'+heatmapMindLevelSelectHtml(3,heatmapMindLevel3)+'</div>';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">4. Seviye</label>'+heatmapMindLevelSelectHtml(4,heatmapMindLevel4)+'</div>';
@@ -3617,50 +3759,21 @@ function renderHeatmapMindmapPanel(){
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">Top N (Dal)</label><select class="filter-select" onchange="setHeatmapTopN(this.value)">'+[10,20,30,40,60].map(n=>'<option value="'+n+'" '+(heatmapTopN===n?'selected':'')+'>'+n+'</option>').join('')+'</select></div>';
     h+='<button type="button" class="btn-fire-export" onclick="renderHeatmapMindmapPanel()">🔄 Yenile</button>';
     h+='</div>';
+    const oldList=document.getElementById('hmStageList'),listScroll=oldList?oldList.scrollTop:0;
+    h+=heatmapMindStagePickerHtml();
     h+=heatmapMindView==='tree'?heatmapMindmapDiagramHtml():heatmapMindAltViewHtml();
     h+=heatmapLeafViewSectionHtml();
-    p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapMindmapPanel');ensureElementFullscreenToolbar('heatmapMindmapPanel',ttl);
-    if(heatmapMindView==='tree')setTimeout(()=>drawHeatmapMindConnectors('heatmapMindmapPanel'),0);
+    // Kaydırma, üstteki dışa aktarma araçları yeniden eklendikten sonra geri yüklenir (yoksa dal açınca sayfa kayıyor).
+    p.innerHTML=h;p.style.display='block';addPanelFullButton('heatmapMindmapPanel');ensureElementFullscreenToolbar('heatmapMindmapPanel',ttl);p.scrollTop=scroll;
+    const newList=document.getElementById('hmStageList');if(newList){if(heatmapMindStageQ)heatmapMindStageSearch(heatmapMindStageQ);newList.scrollTop=listScroll}
+    const tm=p.querySelector('.hm-map');if(tm){tm.scrollLeft=mapScrollX;const hint=document.getElementById('hmMindFitHint');if(hint)hint.style.display=!heatmapMindVertical&&tm.scrollWidth>tm.clientWidth+2?'':'none'}
 }
-function drawHeatmapMindConnectors(panelId){
-    const wrap=document.querySelector('#'+panelId+' .kkmind-wrap');
-    if(!wrap)return;
-    const trunk=wrap.querySelector('.kkmind-trunk');
-    if(!trunk)return;
-    let svg=wrap.querySelector('svg.kkmind-lines');
-    if(!svg){
-        svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-        svg.setAttribute('class','kkmind-lines');
-        wrap.insertBefore(svg,wrap.firstChild);
-    }
-    const w=trunk.scrollWidth,h=trunk.scrollHeight;
-    svg.setAttribute('width',w);svg.setAttribute('height',h);
-    while(svg.firstChild)svg.removeChild(svg.firstChild);
-    const wrapRect=wrap.getBoundingClientRect();
-    const originX=wrapRect.left-wrap.scrollLeft,originY=wrapRect.top-wrap.scrollTop;
-    const centerOf=(el,side)=>{
-        const r=el.getBoundingClientRect();
-        return{x:(side==='right'?r.right:r.left)-originX,y:r.top+r.height/2-originY};
-    };
-    const connect=(fromEl,toEl)=>{
-        const p1=centerOf(fromEl,'right'),p2=centerOf(toEl,'left'),midX=(p1.x+p2.x)/2;
-        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-        path.setAttribute('d','M'+p1.x+','+p1.y+' C'+midX+','+p1.y+' '+midX+','+p2.y+' '+p2.x+','+p2.y);
-        path.setAttribute('stroke','rgba(255,215,0,.38)');path.setAttribute('stroke-width','1.3');path.setAttribute('fill','none');
-        svg.appendChild(path);
-    };
-    wrap.querySelectorAll('.kkmind-branches').forEach(branchesDiv=>{
-        const parent=branchesDiv.parentElement;
-        let source=null;
-        if(parent.classList.contains('kkmind-trunk'))source=parent.querySelector(':scope > .kkmind-root');
-        else if(parent.classList.contains('kkmind-branch'))source=parent.querySelector(':scope > .kkmind-node');
-        if(!source)return;
-        if(branchesDiv.classList.contains('kkmind-leafgrid')){connect(source,branchesDiv);return}
-        [...branchesDiv.children].forEach(branchDiv=>{
-            const node=branchDiv.querySelector(':scope > .kkmind-node, :scope > .kkmind-leaf-row > .kkmind-leaf');
-            if(node)connect(source,node);
-        });
-    });
+// Yatay görünümde açılan dalın alt dalları sağdan taşarsa haritayı kaydırır: alt dallar görünür, açılan dalın sonu (~110px) solda kalır.
+function heatmapMindReveal(path){
+    const el=document.querySelector('#heatmapMindmapPanel .hm-map .hm-node[data-p="'+path+'"]'),tm=el&&el.closest('.tmap');if(!tm||heatmapMindVertical)return;
+    const kids=el.parentElement.querySelector(':scope>.tmap-children');if(!kids)return;
+    const kr=kids.getBoundingClientRect(),tr=tm.getBoundingClientRect();
+    if(kr.right>tr.right-4)tm.scrollLeft+=Math.max(0,Math.min(kr.right-tr.right+20,kr.left-tr.left-110));
 }
 /* ════════ 🧠 ISI HARİTASI MINDMAP — ALTERNATİF GÖRÜNÜMLER (deneme) ════════ */
 let heatmapMindView='tree',heatmapMindViewNodes=[];
@@ -3798,7 +3911,7 @@ function heatmapMindCompactLabels(prefix){
     return out.join(' — ');
 }
 function heatmapMindAltViewHtml(){
-    const all=typeof getAllCards==='function'?getAllCards():[],levels=heatmapMindLevelKeys();
+    const all=heatmapMindCards(),levels=heatmapMindLevelKeys();
     heatmapMindViewNodes=[];
     if(!all.length)return'<div class="kkview-hint">Kayıt yok</div>';
     if(heatmapMindView==='grid')return heatmapMindGridHtml(all,levels);
@@ -4696,7 +4809,7 @@ function renderTakipMapPanel(){
     h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Ana dal ve alt dalları sen tanımlarsın: her dal bir kurala (aşamada bekleyenler, bugün gelen/geçenler, acil listesi, tamir) ve/veya elle seçtiğin kartlara göre dolar; seçtiğin kartlar dalın altında kendi dalları olarak görünür. Haritada bir dala tıklayınca yanında araçlar çıkar: ✏️ adını orada değiştir, ➕ alt dal, 📝 not dalı, ⚙️ kural/aşama, 🗑️ sil (iki kez bas). Not dalına tıklayınca yerinde düzenlenir; 🎤 sesle yazma güvenli adreste (https ya da localhost) çalışır. Üst dal, alt dallarının toplamını gösterir. Alt dallara da "🌿 Alt dal ekle" ile alt dal açabilirsin ('+TMAP_MAX_DEPTH+' seviyeye kadar). Bir dala tıklayınca partiler altta listelenir. Tanımlar bu cihazda saklanır; dışa aktarıp başka cihaza yükleyebilirsin.</div></details>';
     h+='<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="tmapExportImage(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="tmapExportImage(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="tmapExportImage(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="tmapExportImage(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button><small class="tmap-out-view">'+(tmapVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
-    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn-all-export" onclick="tmapEdit=!tmapEdit;renderTakipMapPanel()">'+(tmapEdit?'✅ Düzenlemeyi bitir':'✏️ Dalları düzenle')+'</button>'
+    h+='<div data-fs-anchor style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn-all-export" onclick="tmapEdit=!tmapEdit;renderTakipMapPanel()">'+(tmapEdit?'✅ Düzenlemeyi bitir':'✏️ Dalları düzenle')+'</button>'
         +'<button type="button" class="btn-all-export tmap-view-toggle" onclick="tmapSetVertical(!tmapVertical)" title="Derin dallarda harita panele sığmazsa dikey görünüm hepsini gösterir">'+(tmapVertical?'↔ Yatay görünüm':'↕ Dikey görünüm')+'</button>'
         +'<button type="button" class="btn-fire-export" onclick="tmapExport()" title="Dal tanımlarını dosyaya kaydet">⬇️ Tanımları dışa aktar</button><button type="button" class="btn-fire-export" onclick="document.getElementById(&quot;tmapImportFile&quot;).click()" title="Kaydedilmiş dal tanımlarını yükle">⬆️ Tanımları içe aktar</button><input type="file" id="tmapImportFile" accept=".json,application/json" style="display:none" onchange="tmapImport(this)">'
         +(tmapEdit?'<button type="button" class="btn-fire-export'+(tmapIsArmed('reset','all')?' armed':'')+'" onclick="tmapReset()">'+(tmapIsArmed('reset','all')?'↺ Emin misin? Tekrar bas':'↺ Çizimdeki yapıya dön')+'</button>':'')
@@ -4715,10 +4828,12 @@ function renderTakipMapPanel(){
 function tmapSelect(id){
     tmapMapNoteCommit();if(tmapRenaming&&tmapRenaming!==id)tmapRenaming=null;tmapSel=id;tmapNoteEdit=null;if(tmapSel!=='root')tmapAddTarget=tmapSel;renderTakipMapPanel();
     const el=document.querySelector('#takipMapPanel .tmap-node.sel'),tm=el&&el.closest('.tmap');
-    if(tm){const er=el.getBoundingClientRect(),tr=tm.getBoundingClientRect();if(er.right>tr.right-4)tm.scrollLeft+=er.right-tr.right+40;else if(er.left<tr.left)tm.scrollLeft-=tr.left-er.left+40}
+    // Sağ kenar görünür olsun ama dalın adı (sol kenar) hiçbir zaman soldan taşmasın.
+    if(tm){const er=el.getBoundingClientRect(),tr=tm.getBoundingClientRect();let d=0;if(er.right>tr.right-4)d=er.right-tr.right+Math.min(40,Math.max(4,tr.width-er.width-4));if(er.left-d<tr.left+4)d=er.left-tr.left-4;if(d)tm.scrollLeft+=d}
 }
 function tmapCloseSel(){tmapSel=null;tmapNoteEdit=null;renderTakipMapPanel()}
-let tmapVertical=(()=>{try{return localStorage.getItem('tmapVert9')==='1'}catch(e){return false}})();
+// Seçim hiç yapılmadıysa telefonda dikey, geniş ekranda yatay başlar.
+let tmapVertical=(()=>{let v=null;try{v=localStorage.getItem('tmapVert9')}catch(e){}return v===null?!!(window.matchMedia&&matchMedia('(max-width:700px)').matches):v==='1'})();
 function tmapSetVertical(on){tmapVertical=!!on;try{localStorage.setItem('tmapVert9',tmapVertical?'1':'0')}catch(e){}renderTakipMapPanel()}
 function tmapOpenEditor(id){
     tmapMapNoteCommit();tmapEditing=id;tmapSel=id;tmapAddTarget=id;renderTakipMapPanel();
@@ -4796,28 +4911,32 @@ function tmapShowCards(){
 /* ── PNG / PDF / WhatsApp / Yazdır: yalnızca harita (butonlar, liste, ekleme kutusu olmadan) ── */
 let tmapWhite=(()=>{try{return localStorage.getItem('tmapWhite9')==='1'}catch(e){return false}})();
 function tmapSetWhite(on){tmapWhite=!!on;try{localStorage.setItem('tmapWhite9',tmapWhite?'1':'0')}catch(e){}}
-function tmapBuildExportEl(white){
-    // Çıktı ekranda seçili görünümü izler (dikey seçiliyse dikey basılır).
-    const ctx=tmapCtx(),e=tmapEdit,s=tmapSel,mn=tmapMapNoteEdit,re=tmapRootEdit,rn=tmapRenaming;tmapEdit=false;tmapSel=null;tmapMapNoteEdit=null;tmapRootEdit=false;tmapRenaming=null;
-    const tree=tmapTreeHtml(ctx);tmapEdit=e;tmapSel=s;tmapMapNoteEdit=mn;tmapRootEdit=re;tmapRenaming=rn;
+// Harita çıktısı (Takip Haritası ve Isı Haritası Mindmap ortak): yalnızca harita, ekranda seçili görünümle (yatay/dikey).
+function mapBuildExportEl(white,title,sub,tree){
     const wrap=document.createElement('div');wrap.className='tmap-export'+(white?' white':'');
-    wrap.innerHTML='<div class="tmap-export-title">'+esc(takipMap.name)+' — Takip Haritası</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div>'+tree;
+    wrap.innerHTML='<div class="tmap-export-title">'+esc(title)+'</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+(sub?' • '+esc(sub):'')+'</div>'+tree;
     const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
     outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;
     return wrap;
 }
-async function tmapExportImage(mode){
-    const white=mode==='print'||tmapWhite,name='takip_haritasi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+function tmapBuildExportEl(white){
+    const ctx=tmapCtx(),e=tmapEdit,s=tmapSel,mn=tmapMapNoteEdit,re=tmapRootEdit,rn=tmapRenaming;tmapEdit=false;tmapSel=null;tmapMapNoteEdit=null;tmapRootEdit=false;tmapRenaming=null;
+    const tree=tmapTreeHtml(ctx);tmapEdit=e;tmapSel=s;tmapMapNoteEdit=mn;tmapRootEdit=re;tmapRenaming=rn;
+    return mapBuildExportEl(white,takipMap.name+' — Takip Haritası','',tree);
+}
+function tmapExportImage(mode){return mapExportImage(mode,{title:takipMap.name+' — Takip Haritası',file:'takip_haritasi',build:tmapBuildExportEl})}
+async function mapExportImage(mode,o){
+    const white=mode==='print'||tmapWhite,name=o.file+'_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
     // Telefonda gizli çerçeveden yazdırma tüm sayfayı basabiliyor; yazdırma penceresi tıklama anında açılır (açılır pencere engeline takılmasın).
     const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
     if(printWin)printWin.document.write('<p style="font-family:sans-serif">Harita hazırlanıyor…</p>');
-    const el=tmapBuildExportEl(white);
+    const el=o.build(white);
     showToast(mode==='pdf'?'📄 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ Harita görseli hazırlanıyor...','warning');
     let canvas;
     try{canvas=await html2canvas(el,{scale:2,backgroundColor:white?'#ffffff':'#1a1a2e',useCORS:true,scrollY:0,onclone:sanitizeOklchColors})}
     catch(err){removeHeatmapExportEl(el);if(printWin)printWin.close();showToast('Harita görseli oluşturulamadı: '+err,'error');return}
     removeHeatmapExportEl(el);
-    if(mode==='print'){tmapPrintCanvas(canvas,printWin);return}
+    if(mode==='print'){tmapPrintCanvas(canvas,printWin,o.title);return}
     if(mode==='pdf'){
         // Harita tek sayfaya sığsın: sayfaya göre uzunsa genişliği küçültüp ortala (html2pdf genişliğe göre ölçekleyip sayfalara böler).
         const land=canvas.width>=canvas.height,pw=land?297:210,ph=land?210:297,m=6,ratio=canvas.height/canvas.width;
@@ -4829,9 +4948,9 @@ async function tmapExportImage(mode){
     canvas.toBlob(async blob=>{
         if(!blob){showToast('PNG oluşturulamadı','error');return}
         if(mode==='wa'){
-            const file=new File([blob],name+'.png',{type:'image/png'}),text='Parti Takip - '+takipMap.name+' Takip Haritası';
+            const file=new File([blob],name+'.png',{type:'image/png'}),text='Parti Takip - '+o.title;
             if(navigator.canShare&&navigator.canShare({files:[file]})){
-                try{await navigator.share({files:[file],title:'Takip Haritası',text});showToast('✅ Paylaşıldı!');return}
+                try{await navigator.share({files:[file],title:o.title,text});showToast('✅ Paylaşıldı!');return}
                 catch(e){if(e&&e.name==='AbortError')return}
             }
             window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
@@ -4839,18 +4958,18 @@ async function tmapExportImage(mode){
         fallbackDownload(blob,name+'.png');showToast('✅ PNG indirildi');
     });
 }
-function tmapPrintHtml(canvas){
+function tmapPrintHtml(canvas,title){
     const land=canvas.width>=canvas.height,iw=land?281:194,ih=land?194:281,w=Math.min(iw,ih*canvas.width/canvas.height)*0.99;
-    return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(takipMap.name)+' — Takip Haritası</title><style>@page{size:A4 '+(land?'landscape':'portrait')+';margin:8mm}html,body{margin:0;background:#fff}img{display:block;margin:0 auto;width:'+w.toFixed(1)+'mm;height:auto}</style></head><body><img src="'+canvas.toDataURL('image/png')+'"></body></html>';
+    return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(title||takipMap.name+' — Takip Haritası')+'</title><style>@page{size:A4 '+(land?'landscape':'portrait')+';margin:8mm}html,body{margin:0;background:#fff}img{display:block;margin:0 auto;width:'+w.toFixed(1)+'mm;height:auto}</style></head><body><img src="'+canvas.toDataURL('image/png')+'"></body></html>';
 }
-function tmapPrintCanvas(canvas,win){
+function tmapPrintCanvas(canvas,win,title){
     let target=win,frame=null;
     if(!target||target.closed){
         frame=document.getElementById('tmapPrintFrame');
         if(!frame){frame=document.createElement('iframe');frame.id='tmapPrintFrame';frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(frame)}
         target=frame.contentWindow;
     }
-    const doc=target.document;doc.open();doc.write(tmapPrintHtml(canvas));doc.close();
+    const doc=target.document;doc.open();doc.write(tmapPrintHtml(canvas,title));doc.close();
     const img=doc.querySelector('img'),go=()=>{target.focus();target.print()};
     if(img.complete)setTimeout(go,150);else img.onload=()=>setTimeout(go,150);
     showToast('🖨️ Yazdırma ekranı açıldı');
@@ -4891,7 +5010,7 @@ function tmapModalAdd(cardId){
         +'.tmap-node{position:relative;display:inline-block;padding:1px 5px;border-radius:5px;cursor:pointer;color:#ECEFF1;white-space:nowrap}.tmap-node .tmap-count,.tmap-node .tmap-card-info{margin-left:6px}'
         +'.tmap-node:hover{background:rgba(255,255,255,.07)}.tmap-node.sel{background:rgba(255,255,255,.13)}.tmap-node.sel .tmap-name{text-decoration:underline;text-underline-offset:3px}'
         +'.tmap-name{font-weight:800;color:var(--c,#90CAF9);font-size:13px}.tmap-node.lvl0{--c:#FFD700}.tmap-node.lvl0 .tmap-name{font-size:19px}.tmap-node.lvl1 .tmap-name{font-size:15px}'
-        +'.tmap-count{font-size:11px;color:#90A4AE}'
+        +'.tmap-count{font-size:11px;color:#90A4AE;white-space:nowrap}'
         +'.tmap-node.card .tmap-name{color:#FFD700;font-size:12px;font-weight:700}.tmap-card-info{font-size:11px;color:#B0BEC5}.tmap-node.card.gone{opacity:.6;cursor:default}'
         +'.tmap-tools{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}.tmap-tools button,.tmap-x,.tmap-chip button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:5px;cursor:pointer;font-size:11px;padding:0 4px;line-height:1.5}'
         +'.tmap-add{background:none;border:none;border-bottom:1px dashed #26A69A;color:#80CBC4;padding:1px 4px;cursor:pointer;font-weight:700;font-size:13px}'
@@ -4951,13 +5070,27 @@ function tmapModalAdd(cardId){
         +'.tmap.vertical .tmap-branch::before,.tmap.vertical .tmap-leaf::before{top:0;bottom:0}.tmap.vertical .tmap-branch:first-child::before,.tmap.vertical .tmap-leaf:first-child::before{top:0}.tmap.vertical .tmap-branch:last-child::before{bottom:auto;height:14px}.tmap.vertical .tmap-leaf:last-child::before{bottom:auto;height:11px}.tmap.vertical .tmap-branch:only-child::before,.tmap.vertical .tmap-leaf:only-child::before{display:block}'
         +'.tmap.vertical .tmap-branch::after{top:14px;width:16px}.tmap.vertical .tmap-leaf::after{top:11px;width:16px}.tmap.vertical .tmap-children{margin:1px 0 0 12px}.tmap.vertical .tmap-children::before{display:none}'
         +'.tmap-out-view{color:#90A4AE;font-size:11px}'
+        // Isı Haritası Mindmap ağacı (.tmap.hm-map): ısı noktası, aç/kapa oku, onay kutusu, gizle
+        +'.hm-map .hm-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 5px 0 1px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.4)}'
+        +'.hm-map .hm-caret{display:inline-block;width:11px;color:#B0BEC5;font-size:11px}.hm-map .hm-x{margin-left:5px;padding:0 4px;border-radius:4px;color:#78909C;font-weight:700;cursor:pointer}.hm-map .hm-x:hover{color:#fff;background:#E74C3C}'
+        +'.hm-map .hm-chk{display:inline-block;margin-right:4px;vertical-align:middle}.hm-map .hm-leaf .tmap-name{font-size:12px}.hm-map .tmap-node.hm-leaf.on{background:rgba(38,166,154,.22)}'
+        // 🎯 1. seviye seçim listesi
+        +'.hm-stage-btn.on{background:#00897B!important;color:#fff!important}.hm-stage-btn.open{outline:2px solid #FFD700}'
+        +'.hm-stage-pick{margin:4px 0 12px;padding:10px;border-radius:10px;background:rgba(0,137,123,.1);border:1px solid rgba(128,203,196,.45)}'
+        +'.hm-stage-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.hm-stage-head b{color:#80CBC4}.hm-stage-head small{color:#B0BEC5}.hm-stage-close{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;padding:3px 10px}'
+        +'.hm-stage-tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.hm-stage-tools input{flex:1 1 160px;min-width:0;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.3);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:13px}'
+        +'.hm-stage-tools button{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:700}.hm-stage-tools button:hover{background:#533b88}'
+        +'.hm-stage-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 10px;max-height:320px;overflow:auto;overscroll-behavior:contain}'
+        +'.hm-stage-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:7px;cursor:pointer;opacity:.55;background:rgba(0,0,0,.15)}.hm-stage-row.on{opacity:1;background:rgba(38,166,154,.18)}.hm-stage-row:hover{outline:1px solid rgba(128,203,196,.6)}'
+        +'.hm-stage-row .nm{flex:1 1 auto;min-width:0;font-weight:700;font-size:13px;color:#ECEFF1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hm-stage-row small{color:#90A4AE;font-size:11px;white-space:nowrap}'
+        +'.hm-stage-foot{margin-top:7px;font-size:11px;color:#B0BEC5}'
+        +'@media(pointer:coarse){.hm-stage-row{padding:9px 8px}.hm-stage-tools button{padding:8px 12px}}'
+        +'.hm-map .hm-bulk{margin-left:5px;padding:0 4px;border-radius:4px;color:#80CBC4;font-weight:700;cursor:pointer;border:1px solid rgba(128,203,196,.35)}.hm-map .hm-bulk:hover{color:#fff;background:#00897B}'
+        +'@media(pointer:coarse){.hm-map .tmap-node{padding:4px 6px}.hm-map .hm-x{padding:2px 8px}.hm-map .hm-bulk{padding:2px 8px;margin-left:6px}}'
         +'.tmap-rename-wrap{display:inline-flex;gap:4px;align-items:center}.tmap-rename{font-size:14px;font-weight:800;color:var(--c,#fff);background:rgba(0,0,0,.4);border:1px solid var(--c,#90CAF9);border-radius:6px;padding:4px 7px;width:170px;max-width:60vw}'
         +'.tmap-rename-wrap button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;padding:3px 8px}'
-        +'@media(max-width:700px){.tmap-view-toggle,.tmap-fit-hint,.tmap-out-view{display:none!important}}'
-        +'@media(max-width:700px){.tmap{flex-direction:column;align-items:flex-start;overflow-x:visible}.tmap-root{padding:0 0 2px 0}.tmap-root::after{display:none}.tmap-branches{align-self:stretch}'
-        +'.tmap-branch{flex-direction:column;align-items:flex-start;padding:3px 0 3px 16px}.tmap-leaf{flex-direction:column;align-items:flex-start;padding:1px 0 1px 16px}'
-        +'.tmap-branch::before,.tmap-leaf::before{top:0;bottom:0}.tmap-branch:first-child::before,.tmap-leaf:first-child::before{top:0}.tmap-branch:last-child::before{bottom:auto;height:14px}.tmap-leaf:last-child::before{bottom:auto;height:11px}.tmap-branch:only-child::before,.tmap-leaf:only-child::before{display:block}'
-        +'.tmap-branch::after{top:14px;width:14px}.tmap-leaf::after{top:11px;width:14px}.tmap-children{margin:1px 0 0 10px}.tmap-children::before{display:none}.tmap-node{white-space:normal}}';
+        // Telefonda da yatay/dikey seçilebilir (varsayılan dikey); yatayda harita parmakla yana kaydırılır.
+        +'@media(max-width:700px){.tmap-node.sel>.tmap-tools{display:flex;width:max-content;margin:5px 0 2px}.tmap.vertical .tmap-branch{padding-left:16px}.tmap.vertical .tmap-leaf{padding-left:16px}.tmap.vertical .tmap-branch::after,.tmap.vertical .tmap-leaf::after{width:14px}.tmap.vertical .tmap-children{margin-left:10px}.tmap.vertical .tmap-node{white-space:normal}}';
     document.head.appendChild(style);
 })();
 

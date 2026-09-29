@@ -692,7 +692,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
 <button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
 <button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#006064;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -1677,7 +1677,7 @@ function exportPDF(){
 }
 
 /* ── GROUP / VIEW / FILTER ── */
-function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel','takipMapPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
+function closeAllPanels(){['notePanel','firePanel','alarmPanel','selectionPanel','tamirPanel','todayPanel','bottleneckPanel','validationPanel','postProcessPanel','kkSarimPanel','heatmapTreemapPanel','heatmapMindmapPanel','liveScreenPanel','wetDryPanel','stageAgePanel','recentArrivalPanel','uretimLogPanel','takipMapPanel','singleWatchPanel'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.classList.remove('fullscreen-panel','mindmap-focus')}})}
 function addPanelFullButton(id){const p=document.getElementById(id);if(!p)return;if(!p.querySelector('.panel-full-btn')){const b=document.createElement('button');b.className='panel-full-btn';b.type='button';b.title='Tam ekran';b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';b.onclick=function(e){e.stopPropagation();if(id==='mindmapPanel'&&typeof window.toggleMindmapFullscreen==='function'){window.toggleMindmapFullscreen();return}p.classList.toggle('fullscreen-panel');b.textContent=p.classList.contains('fullscreen-panel')?'↙':'↗';if(p.classList.contains('fullscreen-panel'))panelScrollToMap(p)};p.appendChild(b)}addPanelExportTools(id,(p.querySelector('h2')||{}).textContent||'Görünüm',id+'.png')}
 // Tam ekrana geçince haritalı panellerde doğrudan haritaya kaydır (telefonda üstteki ayarlar ekranı dolduruyor, harita görünmüyordu).
 function panelScrollToMap(p){const a=p&&p.querySelector('[data-fs-anchor]');if(!a)return;p.scrollTop=Math.max(0,a.getBoundingClientRect().top-p.getBoundingClientRect().top+p.scrollTop-(p.classList.contains('view-fullscreen')?62:8))}
@@ -3555,8 +3555,8 @@ function heatmapMindLeafClickPath(path){
     }
 }
 // Flash kart penceresi (haritayı kapatmadan). Karta dokununca arkası (ayrıntılar) çevrilir.
-function hmCardPopupOpen(cards,title){
-    if(!cards||!cards.length)return;
+// Harita üstü açılır pencere (flash kartlar, üretim listesi); ayrıntı penceresi bunun da üstünde açılır.
+function hmModalShow(inner){
     let m=document.getElementById('hmCardModal');
     if(!m){
         m=document.createElement('div');m.id='hmCardModal';m.className='modal-overlay hm-card-modal';
@@ -3564,12 +3564,15 @@ function hmCardPopupOpen(cards,title){
         document.addEventListener('keydown',e=>{if(e.key==='Escape'&&m.classList.contains('show')&&!document.querySelector('#detailModal.show'))hmCardPopupClose()});
         document.body.appendChild(m);
     }
-    const kg=cards.reduce((s,k)=>s+num(k.kilo),0);
-    m.innerHTML='<div class="modal-box hm-card-box"><button class="modal-close" onclick="hmCardPopupClose()">×</button>'
-        +'<div class="hm-card-title">🃏 '+esc(title)+'<small>'+cards.length+' kart • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>'
-        +'<div class="cards-container hm-card-list">'+cards.map(k=>flashCardHtml(k,true)).join('')+'</div>'
-        +'<div class="hm-card-hint">Karta dokun: arkasını çevir (üretim sırası, bekleme…)</div></div>';
+    m.innerHTML='<div class="modal-box hm-card-box"><button class="modal-close" onclick="hmCardPopupClose()">×</button>'+inner+'</div>';
     m.classList.add('show');
+}
+function hmCardPopupOpen(cards,title){
+    if(!cards||!cards.length)return;
+    const kg=cards.reduce((s,k)=>s+num(k.kilo),0);
+    hmModalShow('<div class="hm-card-title">🃏 '+esc(title)+'<small>'+cards.length+' kart • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>'
+        +'<div class="cards-container hm-card-list">'+cards.map(k=>flashCardHtml(k,true)).join('')+'</div>'
+        +'<div class="hm-card-hint">Karta dokun: arkasını çevir (üretim sırası, bekleme…)</div>');
 }
 function hmCardPopupClose(){const m=document.getElementById('hmCardModal');if(m)m.classList.remove('show')}
 function heatmapMindCardsForPath(path){
@@ -4032,13 +4035,14 @@ function mapsAfterData(){
         renderActiveHeatmapPanels();
     }
     const tp=document.getElementById('takipMapPanel');if(tp&&tp.style.display==='block')renderTakipMapPanel();
+    const sw=document.getElementById('singleWatchPanel');if(sw&&sw.style.display==='block')renderSingleWatchPanel();
 }
 // Harita (Isı Haritası Mindmap ya da Takip Haritası) açıkken 2 dakikada bir ve ekrana dönülünce yeni veri var mı bakar.
 // no-cache: tarayıcı ETag ile sorar, veri değişmediyse 560 KB yeniden indirilmez. Yeni veri gelince aynı kurulumla yeniden çizilir.
 let mapsPollBusy=false;
 async function mapsLivePoll(){
     if(mapsPollBusy||document.hidden||!window.DATA_GENERATED_AT||typeof window.loadGithubJsonDashboard!=='function')return;
-    if(!['heatmapMindmapPanel','takipMapPanel'].some(id=>{const p=document.getElementById(id);return p&&p.style.display==='block'}))return;
+    if(!['heatmapMindmapPanel','takipMapPanel','singleWatchPanel'].some(id=>{const p=document.getElementById(id);return p&&p.style.display==='block'}))return;
     mapsPollBusy=true;
     try{
         const res=await fetch('data/partiler.json',{cache:'no-cache'});if(!res.ok)return;
@@ -4444,7 +4448,7 @@ function renderLiveScreenPanel(){
     const p=document.getElementById('liveScreenPanel'),ttl='Canlı İzleme Ekranı',stats=liveProdStats();
     let h='<button class="panel-close" onclick="document.getElementById(&quot;liveScreenPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">📡 '+ttl+'</h2>';
     h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Her kutuda en son gelen/hareket eden parti en üstte. Kalite Kontrol kutusunda yalnızca son KK aşamasına (sonrası FZK.KNT veya SEVK olan) gelen partiler listelenir. Kutu başlığındaki ⛶ ile o kutuyu tam ekran açabilirsin. Parti no yanındaki kutucuğu işaretlemek, o partiyi Acil Listesi\'ne (izlemeye) ekler/çıkarır; partinin üstüne tıklayınca detay kartı açılır. Üretim sayıları işyeri PC\'deki her veri güncellemesinde (~12 dk) kaydedilir: KK/Sarım1/Sarım2\'ye gelen ve geçen partiler vardiya (08:00–08:00) bazında tutulur; parti sonradan listeden çıksa (sevk edilse) bile sayıda kalır. Geçiş saati o güncellemenin saatidir (~ işareti: tahmini). Tüm kayıtlar ve parti bilgileri 📒 Üretim Kayıtları\'nda.</div></details>';
-    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button> <button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'+(stats.log.server?'':' <small style="color:#FFB74D">'+(URETIM_LOG?'Sunucu kaydı güncel değil (son: '+esc(uretimLogFmtTs(uretimLogParseTs(URETIM_LOG.snapshotAt)))+')':'Sunucu kaydı henüz yok')+' — bu tarayıcının kendi kaydı gösteriliyor</small>');
+    h+='<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderLiveScreenPanel())}else{renderLiveScreenPanel()}">🔄 Canlı Yenile</button> <button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button> <button type="button" class="btn-all-export" style="background:#006064" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button>'+(stats.log.server?'':' <small style="color:#FFB74D">'+(URETIM_LOG?'Sunucu kaydı güncel değil (son: '+esc(uretimLogFmtTs(uretimLogParseTs(URETIM_LOG.snapshotAt)))+')':'Sunucu kaydı henüz yok')+' — bu tarayıcının kendi kaydı gösteriliyor</small>');
     h+='<div class="live-grid">';
     liveLoadZaman();
     h+=liveShiftHistoryHtml(stats)||liveProductionSummaryHtml(stats);
@@ -4536,7 +4540,7 @@ function renderUretimLogPanel(){
     h+='<div class="panel-summary">Vardiya 08:00–08:00. İşyeri PC her veri güncellemesinde (~12 dk) KK / Sarım1 / Sarım2\'ye gelen ve geçen partileri kaydeder; parti sonradan listeden çıksa da kayıt kalır. Son kayıt: <b>'+esc(uretimLogFmtTs(snap))+'</b> • ~ = tahmini saat.'+(uretimLogFresh()?'':' <b style="color:#FFB74D">⚠️ Kayıt 45 dakikadan eski — işyeri PC\'de kayıt adımı çalışmıyor olabilir.</b>')+'</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><select onchange="setUretimLogDay(this.value)" style="padding:8px;border-radius:8px;background:rgba(0,0,0,.3);color:white;max-width:100%">'
         +(days.length?days:[today]).map(d=>'<option value="'+d+'"'+(d===day?' selected':'')+'>'+esc(uretimLogDayLabel(d))+(d===today?' (bugün)':'')+'</option>').join('')+'</select>'
-        +'<button class="btn-fire-export" onclick="exportUretimLogWorkbook()">📊 Excel</button><button class="btn-all-export" onclick="showUretimLogCards()">🃏 Kartları göster</button>'
+        +'<button class="btn-fire-export" onclick="exportUretimLogWorkbook()">📊 Excel</button><button class="btn-all-export" onclick="showUretimLogCards()">🃏 Kartları göster</button><button class="btn-all-export" style="background:#006064" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button>'
         +'<button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;uretimLogPanel&quot;,&quot;Üretim Kayıtları&quot;)">⛶ Tam Ekran</button></div>';
     h+='<div class="ulog-cats">'+URETIM_CATS.map(c=>{const t=uretimLogTotals(day,c.key);return'<button type="button" class="ulog-cat'+(c.key===cat.key?' active':'')+'" style="--c:'+c.color+'" onclick="setUretimLogCat(&quot;'+c.key+'&quot;)"><span>'+c.icon+' '+esc(c.label)+'</span><b>'+t.count+' parti</b><small>'+Math.round(t.kg).toLocaleString('tr-TR')+' kg</small></button>'}).join('')+'</div>';
     h+='<h3 style="color:'+cat.color+';margin:12px 0 6px;font-size:15px">'+cat.icon+' '+esc(cat.label)+' — '+esc(uretimLogDayLabel(day))+' • '+rows.length+' parti • '+Math.round(rows.reduce((s,r)=>s+r.kg,0)).toLocaleString('tr-TR')+' kg</h3>';
@@ -4574,6 +4578,297 @@ function exportUretimLogWorkbook(){
         +'.ulog-meta{color:#B0BEC5;font-size:11px;margin-top:2px;overflow-wrap:anywhere}'
         +'.ulog-days{margin-top:12px}.ulog-days summary{cursor:pointer;color:#90CAF9;font-weight:700}'
         +'@media(max-width:600px){.ulog-cats{grid-template-columns:1fr 1fr}.ulog-cat b{font-size:16px}}';
+    document.head.appendChild(style);
+})();
+/* ════════ 🖥️ TEK PENCERE İZLEME — KK / Sarım1 / Sarım2 için Gelecek · Üzerindekiler · Üretimi (ayrı ekran) ════════
+   Gelecek      : şu an başka aşamada bekleyip SONRAKİ aşaması bu olanlar → bulundukları aşamaya göre ("RAM'dan gelecek")
+   Üzerindekiler: şu an bu aşamada bekleyenler → geldikleri (son yapılan) aşamaya göre ("LAMİNASYON'dan gelen")
+   Üretimi      : bugünkü vardiyada (08:00'den) geçenler, üretim kaydından → gittikleri aşamaya göre
+   Kategoriye dokununca: Gelecek / Üzerindekiler → partilerin flash kartları; Üretim → kayıt listesi. */
+const SW_ROWS=[
+    {key:'kk',name:'Kalite Kontrol',icon:'🔵',color:'#42A5F5',is:k=>isCurrentlyStage(k,'KK'),next:n=>stageEquals(n,'KK'),log:'kkPassed',arr:'kkArrived',
+        gel:'Kalite Kontrole Gelecek',on:'Kalite Kontrol Üzerindekiler',prod:'Kalite Kontrol Üretimi'},
+    {key:'sr1',name:'Sarım1',icon:'🟣',color:'#B39DDB',is:k=>isCurrentlyStage(k,'SARIM1'),next:n=>stageEquals(n,'SARIM1'),log:'sarimPassed',arr:'sarimArrived',
+        gel:'Sarım1\'e Gelecek',on:'Sarım1 Üzerindekiler',prod:'Sarım1 Üretimi'},
+    {key:'sr2',name:'Sarım2',icon:'🟢',color:'#4DB6AC',is:k=>stageEquals(k._asama||k.asama||'','SARIM 2'),next:n=>stageEquals(n,'SARIM 2'),log:'sarim2Passed',arr:'sarim2Arrived',
+        gel:'Sarım2\'ye Gelecek',on:'Sarım2 Üzerindekiler',prod:'Sarım2 Üretimi'}];
+let swReg=[];
+// Türkçe ayrılma eki: RAM → RAM'dan, DİNKLEME → DİNKLEME'den, BURNOUT → BURNOUT'tan, BRONZİNG 1 → BRONZİNG 1'den
+function trAblative(name){
+    const s=String(name||'').trim();if(!s)return s;
+    const nums=['sıfır','bir','iki','üç','dört','beş','altı','yedi','sekiz','dokuz'];
+    let w=s.toLocaleLowerCase('tr-TR').replace(/[^a-zçğıöşü0-9 ]/g,' ').trim();
+    const lastCh=w.slice(-1);if(/\d/.test(lastCh))w=nums[+lastCh];
+    const vs=w.match(/[aeıioöuü]/g),v=vs?vs[vs.length-1]:'a',end=w.slice(-1);
+    return s+'\''+('çfhkpsşt'.includes(end)?'t':'d')+('aıou'.includes(v)?'a':'e')+'n';
+}
+function swGroups(items,keyFn,kgFn){
+    const m=new Map();
+    items.forEach(x=>{const g=String(keyFn(x)||'').trim()||'Bilinmiyor';if(!m.has(g))m.set(g,[]);m.get(g).push(x)});
+    return[...m.entries()].map(([name,list])=>({name,list,kg:list.reduce((s,x)=>s+kgFn(x),0)})).sort((a,b)=>b.kg-a.kg||b.list.length-a.list.length);
+}
+function swReg1(x){swReg.push(x);return swReg.length-1}
+function swOpen(i){
+    const x=swReg[i];if(!x)return;
+    if(x.split){swSplitOpen(x.split);return}
+    if(x.cards){if(x.cards.length)hmCardPopupOpen(x.cards,x.title);else showToast('Bu grupta parti yok','warning');return}
+    if(!x.rows.length){showToast('Bu grupta kayıt yok','warning');return}
+    const kg=x.rows.reduce((s,r)=>s+num(r.kg),0);
+    hmModalShow('<div class="hm-card-title">'+(x.gelen?'📥 ':'✅ ')+esc(x.title)+'<small>'+x.rows.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div><div class="ulog-list">'+x.rows.map((r,j)=>uretimLogItemHtml(r,j,!!x.gelen)).join('')+'</div>');
+}
+function swCellHtml(o){
+    // o: {title, cls, color, count, kg, openIdx, groups:[{label,count,kg,idx}], note}
+    const max=Math.max(1,...o.groups.map(g=>g.kg));
+    let h='<div class="sw-cell '+o.cls+'" style="--c:'+o.color+'"><div class="sw-cell-head" onclick="swOpen('+o.openIdx+')" title="Tümünü göster">'
+        +'<span class="sw-cell-title">'+esc(o.title)+'</span><span class="sw-total"><b>'+o.count+'</b> parti<small>'+Math.round(o.kg).toLocaleString('tr-TR')+' kg</small></span></div><div class="sw-cell-body">';
+    h+=o.groups.length?o.groups.map(g=>'<div class="sw-grp" onclick="swOpen('+g.idx+')" title="Partileri göster"><i class="sw-bar" style="width:'+Math.max(3,g.kg/max*100).toFixed(1)+'%"></i>'
+        +'<span class="sw-grp-name">'+esc(g.label)+'</span><span class="sw-grp-val"><b>'+g.count+'</b> • '+Math.round(g.kg).toLocaleString('tr-TR')+' kg</span></div>').join(''):'<div class="sw-empty">Şu an yok</div>';
+    return h+'</div>'+(o.note?'<div class="sw-note">'+o.note+'</div>':'')+'</div>';
+}
+/* ── Tek Pencere İzleme › 🧵 Firma › Kumaş: aynı firmanın aynı kumaşı tek satırda, seçili aşama için
+   Gelecek · Üzerinde (şu anki veri) · Bugün gelen · Üretim (Üretim Kayıtları, vardiya 08:00'den) yan yana. ── */
+let swView=mapLoadPref('swView9',v=>v==='grid'||v==='fk','grid'),swStage=mapLoadPref('swStage9',v=>v==='kk'||v==='sr1'||v==='sr2','kk');
+let swSort=mapLoadPref('swSort9',v=>['tot','g','u','a','p'].includes(v),'tot'),swQ='',swCollapsed=new Set();
+const SW_FK_COLS=[['g','⏳ Gelecek'],['u','📍 Üzerinde'],['a','📥 Bugün gelen'],['p','✅ Üretim']];
+function setSwView(v){swView=v;mapSavePref('swView9',v);renderSingleWatchPanel()}
+function setSwStage(v){swStage=v;mapSavePref('swStage9',v);renderSingleWatchPanel()}
+function setSwSort(v){swSort=v;mapSavePref('swSort9',v);renderSingleWatchPanel()}
+function swFkFirm(k){return String(liveFirmaShort(k)||'-').trim()||'-'}
+function swFkFab(k){return String(k.ham_adi||'').trim()||'—'}
+// Satırlar: firma|kumaş → {firm,fab,c:{g:[kart],u:[kart],a:[kayıt],p:[kayıt]}}. Kayıttaki parti hâlâ verideyse firma/kumaş karttan alınır (diğer sütunlarla aynı ad).
+function swFkRows(R,stats){
+    const all=getAllCards(),byParti=new Map(),rows=new Map();
+    all.forEach(k=>{const p=String(k.parti).trim();if(!byParti.has(p))byParti.set(p,k)});
+    const put=(firm,fab,col,item)=>{const key=firm+'|'+fab;let r=rows.get(key);if(!r){r={firm,fab,c:{g:[],u:[],a:[],p:[]}};rows.set(key,r)}r.c[col].push(item)};
+    all.forEach(k=>{if(R.is(k))put(swFkFirm(k),swFkFab(k),'u',k);else if(R.next(cardNextStage(k)))put(swFkFirm(k),swFkFab(k),'g',k)});
+    const fromLog=(obj,col)=>Object.keys(obj||{}).forEach(pn=>{
+        const e=obj[pn],k=byParti.get(pn),r=Object.assign({parti:pn},e);
+        put(k?swFkFirm(k):(upShortCompany(String(e.line1||'').split('|')[0])||String(e.line1||'').split(' / ')[0]||'-'),k?swFkFab(k):(String(e.kumas||'').trim()||'—'),col,r);
+    });
+    fromLog(stats.log[R.arr],'a');fromLog(stats.log[R.log],'p');
+    return[...rows.values()];
+}
+function swFkKg(list,col){return list.reduce((s,x)=>s+num(col==='g'||col==='u'?x.kilo:x.kg),0)}
+function swFkSum(rows){const o={};SW_FK_COLS.forEach(([c])=>{const items=rows.reduce((a,r)=>a.concat(r.c[c]),[]);o[c]={n:items.length,kg:swFkKg(items,c),items}});return o}
+// split: {title,g:[kart],u:[kart],mixed} — Gelecek / Üzerinde hücresi ikisini yan yana tek pencerede açar
+function swFkCellHtml(col,t,max,title,split){
+    const isLog=col==='a'||col==='p';
+    if(!t.n){
+        if(!isLog&&split&&(split.g.length||split.u.length))return'<div class="fk-c z zc" onclick="event.stopPropagation();swOpen('+swReg1({split})+')" title="Gelecek ve üzerindekileri yan yana göster">–</div>';
+        return'<div class="fk-c z">–</div>';
+    }
+    const f=t.kg/(max||1),lvl=f>0.5?3:f>0.2?2:1;
+    const idx=swReg1(isLog?{title,rows:t.items.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)),gelen:col==='a'}:split?{split}:{title,cards:t.items.slice().sort(newestFirstCompare)});
+    return '<div class="fk-c fk-'+col+' l'+lvl+'" onclick="event.stopPropagation();swOpen('+idx+')" title="Partileri göster"><b>'+t.n+'</b><small>'+Math.round(t.kg).toLocaleString('tr-TR')+' kg</small></div>';
+}
+function swFkHtml(stats){
+    const R=SW_ROWS.find(r=>r.key===swStage)||SW_ROWS[0],rows=swFkRows(R,stats),colTitle={g:R.gel,u:R.on,a:R.name+' — bugün gelen',p:R.prod};
+    const metric=r=>swSort==='tot'?SW_FK_COLS.reduce((s,[c])=>s+swFkKg(r.c[c],c),0):swFkKg(r.c[swSort],swSort);
+    const max={};SW_FK_COLS.forEach(([c])=>{max[c]=Math.max(1,...rows.map(r=>swFkKg(r.c[c],c)))});
+    const firms=new Map();rows.forEach(r=>{if(!firms.has(r.firm))firms.set(r.firm,[]);firms.get(r.firm).push(r)});
+    const groups=[...firms.entries()].map(([firm,list])=>({firm,list:list.sort((a,b)=>metric(b)-metric(a)),m:list.reduce((s,r)=>s+metric(r),0),s:swFkSum(list)})).sort((a,b)=>b.m-a.m);
+    const fmax={};SW_FK_COLS.forEach(([c])=>{fmax[c]=Math.max(1,...groups.map(g=>g.s[c].kg))});
+    const tot=swFkSum(rows);
+    let h='<div class="fk-bar"><span class="fk-chips">'+SW_ROWS.map(r=>'<button type="button" class="fk-chip'+(r.key===R.key?' on':'')+'" style="--c:'+r.color+'" onclick="setSwStage(&quot;'+r.key+'&quot;)">'+r.icon+' '+esc(r.name)+'</button>').join('')+'</span>'
+        +'<input id="swFkQ" type="search" autocomplete="off" placeholder="🔎 Firma ya da kumaş ara…" value="'+esc(swQ)+'" oninput="swQ=this.value;swFkFilter()">'
+        +'<select title="Sıralama" onchange="setSwSort(this.value)">'+[['tot','Sırala: toplam kg']].concat(SW_FK_COLS.map(([c,l])=>[c,'Sırala: '+l.replace(/^\S+\s/,'')])).map(([v,l])=>'<option value="'+v+'"'+(swSort===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
+        +'<button type="button" class="btn-fire-export" onclick="swFkAll(false)">⊞ Hepsini aç</button><button type="button" class="btn-fire-export" onclick="swFkAll(true)">⊟ Yalnız firmalar</button></div>';
+    h+='<div class="fk-table" style="--c:'+R.color+'"><div class="fk-row fk-head"><div class="fk-name">Firma › kumaş <small>'+groups.length+' firma • '+rows.length+' kumaş</small></div>'+SW_FK_COLS.map(([c,l])=>'<div class="fk-h fk-'+c+'">'+l+'</div>').join('')+'</div>';
+    h+='<div class="fk-row fk-total"><div class="fk-name">'+R.icon+' '+esc(R.name)+' toplam</div>'+SW_FK_COLS.map(([c])=>swFkCellHtml(c,tot[c],tot[c].kg,colTitle[c],{title:R.name+' — tümü',g:tot.g.items,u:tot.u.items,mixed:true,stage:R})).join('')+'</div>';
+    if(!groups.length)h+='<div class="sw-empty" style="padding:10px">Bu aşama için şu an kayıt yok</div>';
+    groups.forEach(g=>{
+        const col=swCollapsed.has(g.firm);
+        h+='<div class="fk-grp'+(col?' collapsed':'')+'" data-firm="'+esc(g.firm)+'" data-f="'+esc(g.firm.toLocaleLowerCase('tr-TR'))+'">'
+            +'<div class="fk-row fk-firm" onclick="swFkToggle(this)"><div class="fk-name"><span class="fk-caret">'+(col?'▸':'▾')+'</span>'+esc(g.firm)+' <small>'+g.list.length+' kumaş</small></div>'
+            +SW_FK_COLS.map(([c])=>swFkCellHtml(c,g.s[c],fmax[c],g.firm+' — '+colTitle[c],{title:g.firm+' — '+R.name,g:g.s.g.items,u:g.s.u.items,mixed:'kumas',stage:R})).join('')+'</div>';
+        g.list.forEach(r=>{
+            const t=swFkSum([r]);
+            h+='<div class="fk-row fk-fab" data-s="'+esc((r.firm+' '+r.fab).toLocaleLowerCase('tr-TR'))+'"><div class="fk-name" title="'+esc(r.fab)+'">'+esc(r.fab)+'</div>'
+                +SW_FK_COLS.map(([c])=>swFkCellHtml(c,t[c],max[c],r.firm+' › '+r.fab+' — '+colTitle[c],{title:r.firm+' › '+r.fab+' — '+R.name,g:t.g.items,u:t.u.items,mixed:false,stage:R})).join('')+'</div>';
+        });
+        h+='</div>';
+    });
+    h+='</div><div class="sw-note" style="margin-top:6px">Gelecek / Üzerinde: şu anki veri • Bugün gelen / Üretim: 📒 Üretim Kayıtları (vardiya 08:00\'den)'+(R.key==='kk'?' — KK için yalnızca son KK (sonrası FZK / SEVK) kaydedilir':'')+'. Bir sayıya dokun: partiler açılır; firma satırına dokun: kumaşları aç / kapat.</div>';
+    return h;
+}
+function swFkToggle(row){
+    const g=row.closest('.fk-grp'),c=g.classList.toggle('collapsed');
+    if(c)swCollapsed.add(g.dataset.firm);else swCollapsed.delete(g.dataset.firm);
+    const car=row.querySelector('.fk-caret');if(car)car.textContent=c?'▸':'▾';
+}
+function swFkAll(collapse){
+    swCollapsed=new Set();
+    document.querySelectorAll('#singleWatchPanel .fk-grp').forEach(g=>{
+        g.classList.toggle('collapsed',collapse);if(collapse)swCollapsed.add(g.dataset.firm);
+        const car=g.querySelector('.fk-caret');if(car)car.textContent=collapse?'▸':'▾';
+    });
+}
+// Arama yeniden çizmeden süzer (yazarken odak kaybolmasın). Firma adı uyuyorsa firmanın bütün kumaşları görünür.
+function swFkFilter(){
+    const toks=String(swQ||'').toLocaleLowerCase('tr-TR').split(/\s+/).filter(Boolean);
+    document.querySelectorAll('#singleWatchPanel .fk-grp').forEach(g=>{
+        const firmHit=toks.length&&toks.every(t=>g.dataset.f.includes(t));let any=false;
+        g.querySelectorAll('.fk-fab').forEach(r=>{const ok=!toks.length||firmHit||toks.every(t=>r.dataset.s.includes(t));r.style.display=ok?'':'none';if(ok)any=true});
+        g.style.display=!toks.length||firmHit||any?'':'none';
+        if(toks.length&&any&&!firmHit)g.classList.remove('collapsed');
+    });
+}
+/* ── Gelecek | Üzerinde yan yana: tüm kartlar küçültülerek tek ekrana sığdırılır (iki tarafta aynı boyut) ── */
+// "1 gün 0 saat 22 dakika" → "1g 0sa 22dk" (kartta tek satıra sığsın)
+function swShortWait(k){return String(waitHoursText(k)||'-').replace(/\s*gün/g,'g').replace(/\s*saat/g,'sa').replace(/\s*dakika/g,'dk').replace(/\s+/g,' ').trim()}
+// Müşteri siparişi: "BELLONA_FSA_2633_22/09/2026" → **BELLONA** FSA 2633 22/09/2026 (müşteri adı kalın, hepsi okunur)
+function swCustHtml(v){const t=String(v||'').replace(/_/g,' ').replace(/\s+/g,' ').trim(),m=t.match(/^([^\s.]+)[\s.]*(.*)$/);return m?'<b>'+esc(m[1])+'</b>'+(m[2]?' '+esc(m[2]):''):esc(t)}
+function swMiniCardHtml(k,side,mixed){
+    const sev=k.seviye==='kritik'?'kritik':k.seviye==='uyari'?'uyari':'normal';
+    const where=side==='g'?'▶ '+(k._asama||k.asama||'-'):'← '+(k.son_asama?k.son_asama:'?');
+    return '<div class="swm-card '+sev+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="'+esc([k.parti,k.line1||'',k.ham_adi?'Kumaş: '+k.ham_adi:'',k.recete_adi?'Reçete: '+k.recete_adi:'','Sonraki: '+(cardNextStage(k)||'-')].filter(Boolean).join('\n'))+'">'
+        +'<div class="swm-top"><b>'+esc(heatmapShortParti(k))+'</b><span>'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</span></div>'
+        +(String(k.musteri_siparis||'').trim()?'<div class="swm-cust">'+swCustHtml(k.musteri_siparis)+'</div>':'')
+        +'<div class="swm-mid"><span class="swm-where">'+esc(where)+'</span><span class="swm-wait">⏱ '+esc(swShortWait(k))+'</span></div>'
+        +(mixed==='kumas'?'<div class="swm-sub">'+esc(k.ham_adi||'-')+'</div>':mixed?'<div class="swm-sub">'+esc(liveFirmaShort(k))+' · '+esc(k.ham_adi||'-')+'</div>':'')
+        +(k.recete_adi?'<div class="swm-sub">🎨 '+esc(k.recete_adi)+'</div>':'')+'</div>';
+}
+let swSplitLast=null;
+function swSplitOpen(sp){
+    swSplitLast=sp;
+    const R=sp.stage||SW_ROWS[0],kg=l=>Math.round(l.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR');
+    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+label+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
+        +'<div class="swsp-cards"><div class="swsp-inner">'+(cards.length?cards.slice().sort(newestFirstCompare).map(k=>swMiniCardHtml(k,side,sp.mixed)).join(''):'<div class="sw-empty">Şu an yok</div>')+'</div></div></div>';
+    hmModalShow('<div class="hm-card-title">🧵 '+esc(sp.title)+'<small>Solda '+esc(R.gel)+', sağda '+esc(R.on)+' • karta dokun: ayrıntı</small></div>'
+        +'<div class="swsp-actions"><button type="button" class="view-action-btn" style="background:#1565C0" onclick="swSplitExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="swSplitExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="swSplitExport(&quot;wa&quot;)">📱 WhatsApp PNG</button></div>'
+        +'<div class="swsp">'+col('g','⏳ Gelecek',sp.g,'#42A5F5')+col('u','📍 Üzerinde',sp.u,'#B39DDB')+'</div>');
+    const box=document.querySelector('#hmCardModal .modal-box');if(box)box.classList.add('swsp-box');
+    swSplitFit();
+}
+// Ortak ölçek, kart sayısına göre: az kartta kartlar büyür (en çok 2,2 kat), çok kartta küçülür (en az %45; daha fazlası kaydırılır).
+// Genişlik ölçeğe göre açılır / daralır → satıra düşen kart sayısı da değişir; iki tarafta boyut aynı kalır.
+function swSplitFit(){
+    const cols=[...document.querySelectorAll('#hmCardModal .swsp-cards')];if(!cols.length)return;
+    const apply=s=>cols.forEach(c=>{const i=c.firstElementChild;i.style.width=(c.clientWidth/s)+'px';i.style.transform='scale('+s+')'});
+    const fits=()=>cols.every(c=>c.firstElementChild.offsetHeight*parseFloat(c.firstElementChild.style.transform.slice(6))<=c.clientHeight+1);
+    const MIN=0.45,MAX=2.2;
+    apply(MAX);if(fits()){cols.forEach(c=>c.classList.remove('scroll'));return}
+    let lo=MIN,hi=MAX;
+    for(let n=0;n<12;n++){const mid=(lo+hi)/2;apply(mid);if(fits())lo=mid;else hi=mid}
+    apply(lo);
+    // En küçükte de sığmıyorsa (çok fazla kart) o boyutta kaydırılabilir kalsın
+    cols.forEach(c=>c.classList.toggle('scroll',!fits()));
+}
+window.addEventListener('resize',()=>{const m=document.getElementById('hmCardModal');if(m&&m.classList.contains('show')&&m.querySelector('.swsp'))swSplitFit()});
+// Çıktı: ekrandaki küçültülmüş hali değil, tüm kartlar normal boyutta (solda Gelecek, sağda Üzerinde)
+function swSplitExportEl(sp){
+    const R=sp.stage||SW_ROWS[0],kg=l=>Math.round(l.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR');
+    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+label+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
+        +'<div class="swsp-inner">'+(cards.length?cards.slice().sort(newestFirstCompare).map(k=>swMiniCardHtml(k,side,sp.mixed)).join(''):'<div class="sw-empty">Şu an yok</div>')+'</div></div>';
+    const wrap=document.createElement('div');wrap.className='swsp-export';
+    wrap.innerHTML='<div class="tmap-export-title">🧵 '+esc(sp.title)+'</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+' • Solda '+esc(R.gel)+', sağda '+esc(R.on)+'</div>'
+        +'<div class="swsp">'+col('g','⏳ Gelecek',sp.g,'#42A5F5')+col('u','📍 Üzerinde',sp.u,'#B39DDB')+'</div>';
+    const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;return wrap;
+}
+function swSplitExport(mode){
+    const sp=swSplitLast;if(!sp)return;
+    const slug=String(sp.title||'').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50);
+    return mapExportImage(mode,{title:sp.title+' — Gelecek / Üzerinde',file:'gelecek_uzerinde_'+slug,bg:'#1a1a2e',noWhite:true,what:'Kart',build:()=>swSplitExportEl(sp)});
+}
+function toggleSingleWatchPanel(){
+    let p=document.getElementById('singleWatchPanel');
+    if(!p){p=document.createElement('div');p.className='panel';p.id='singleWatchPanel';p.style.cssText='width:min(1500px,calc(100vw - 32px));max-height:92vh';document.body.appendChild(p)}
+    uretimLogFetchedAt=0;safePanelOpen('singleWatchPanel','🖥️ Tek Pencere İzleme',renderSingleWatchPanel);
+}
+function renderSingleWatchPanel(){
+    const p=document.getElementById('singleWatchPanel');if(!p)return;
+    uretimLogRefresh(()=>{if(p.style.display==='block')renderSingleWatchPanel()});
+    swReg=[];
+    const all=getAllCards(),stats=liveProdStats(),kgOf=k=>num(k.kilo),rowsOf=obj=>Object.keys(obj||{}).map(pn=>({parti:pn,...obj[pn]})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const gen=window.DATA_GENERATED_AT?new Date(window.DATA_GENERATED_AT):null,snap=URETIM_LOG?uretimLogParseTs(URETIM_LOG.snapshotAt):0;
+    let h='<button class="panel-close" onclick="document.getElementById(&quot;singleWatchPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#4DD0E1">🖥️ Tek Pencere İzleme</h2>';
+    h+='<div class="sw-top"><span class="sw-meta">Veri: <b>'+(gen&&!isNaN(gen)?esc(gen.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'-')+'</b> • Üretim kaydı: <b>'+esc(snap?uretimLogFmtTs(snap):'-')+'</b> • Üretim: bugünkü vardiya (08:00\'den)'
+        +(stats.log.server?'':' • <span style="color:#FFB74D">sunucu kaydı güncel değil, bu cihazın kaydı gösteriliyor</span>')+'</span>'
+        +'<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderSingleWatchPanel())}else{renderSingleWatchPanel()}">🔄 Yenile</button>'
+        +'<button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'
+        +'<button type="button" class="view-action-btn full" onclick="toggleElementFullscreen(&quot;singleWatchPanel&quot;,&quot;Tek Pencere İzleme&quot;)">⛶ Tam Ekran</button></div>';
+    h+='<div class="sw-views">'+[['grid','▦ Aşama özeti (3×3)'],['fk','🧵 Firma › Kumaş']].map(([v,l])=>'<button type="button" class="'+(swView===v?'on':'')+'" onclick="setSwView(&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</div>';
+    if(swView==='fk')h+=swFkHtml(stats);
+    else{
+    h+='<div class="sw-grid"><div></div><div class="sw-colhead">⏳ Gelecek</div><div class="sw-colhead">📍 Üzerindekiler (şu an)</div><div class="sw-colhead">✅ Üretimi (bugün)</div>';
+    SW_ROWS.forEach(R=>{
+        const coming=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))),on=all.filter(R.is),prod=rowsOf(stats.log[R.log]),arrived=Object.keys(stats.log[R.arr]||{}).length;
+        const cell=(title,cls,items,groups,labelFn,isRows,note)=>swCellHtml({title,cls,color:R.color,count:items.length,kg:items.reduce((s,x)=>s+(isRows?num(x.kg):kgOf(x)),0),
+            openIdx:swReg1(isRows?{title,rows:items}:{title,cards:items.slice().sort(newestFirstCompare)}),note,
+            groups:groups.map(g=>({label:labelFn(g.name),count:g.list.length,kg:g.kg,idx:swReg1(isRows?{title:title+' — '+labelFn(g.name),rows:g.list}:{title:title+' — '+labelFn(g.name),cards:g.list.slice().sort(newestFirstCompare)})}))});
+        h+='<div class="sw-rowhead" style="--c:'+R.color+'"><span class="sw-row-icon">'+R.icon+'</span>'+esc(R.name)+'</div>';
+        h+=cell(R.gel,'gel',coming,swGroups(coming,k=>k._asama||k.asama,kgOf),n=>n==='Bilinmiyor'?n:trAblative(n)+' gelecek',false);
+        const finalKk=R.key==='kk'?on.filter(liveIsFinalKk).length:null;
+        h+=cell(R.on,'on',on,swGroups(on,k=>k.son_asama,kgOf),n=>n==='Bilinmiyor'?'Geldiği aşama bilinmiyor':trAblative(n)+' gelen',false,finalKk!=null?'Son KK\'da (sonrası FZK / SEVK): <b>'+finalKk+'</b> parti':'');
+        h+=cell(R.prod,'prod',prod,swGroups(prod,r=>r.a,r=>num(r.kg)),n=>n==='Bilinmiyor'?'Gittiği aşama bilinmiyor':'→ '+n,true,'Bugün gelen: <b>'+arrived+'</b> parti');
+    });
+    h+='</div><div class="sw-note" style="margin-top:8px">Bir satıra dokun: Gelecek / Üzerindekiler → partilerin flash kartları, Üretim → kayıt listesi. Ekran açıkken yeni veri gelince kendiliğinden güncellenir.</div>';
+    }
+    p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('singleWatchPanel','Tek Pencere İzleme');
+    if(swView==='fk'&&swQ)swFkFilter();
+}
+// Ekran açıkken dakikada bir yeniden çiz (üretim kaydı ve bekleme süreleri tazelensin)
+setInterval(()=>{const p=document.getElementById('singleWatchPanel');if(p&&p.style.display==='block'&&!document.hidden&&!document.querySelector('.modal-overlay.show')&&(document.activeElement||{}).id!=='swFkQ')renderSingleWatchPanel()},60000);
+(function injectSingleWatchStyles(){
+    const style=document.createElement('style');
+    style.textContent='.sw-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 6px}.sw-meta{flex:1 1 260px;font-size:12px;color:#B0BEC5}.sw-meta b{color:#ECEFF1}'
+        +'.sw-grid{display:grid;grid-template-columns:120px repeat(3,minmax(0,1fr));gap:10px;margin-top:8px}'
+        +'.sw-colhead{font-size:13px;font-weight:800;color:#CFD8DC;padding:0 4px;align-self:end}'
+        +'.sw-rowhead{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:12px;background:rgba(255,255,255,.05);border-left:5px solid var(--c);font-weight:900;font-size:17px;color:var(--c);text-align:center;padding:8px}.sw-row-icon{font-size:22px}'
+        +'.sw-cell{min-width:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-top:4px solid var(--c);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}'
+        +'.sw-cell.prod{background:rgba(0,168,204,.07)}'
+        +'.sw-cell-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;border-radius:8px}.sw-cell-head:hover{background:rgba(255,255,255,.06)}'
+        +'.sw-cell-title{font-weight:800;font-size:14px;color:#ECEFF1}'
+        +'.sw-total{white-space:nowrap;color:#CFD8DC;font-size:12px;text-align:right}.sw-total b{font-size:28px;color:#FFD700;line-height:1;margin-right:3px}.sw-total small{display:block;color:#B0BEC5;font-size:12px;font-weight:700}'
+        +'.sw-cell-body{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto}'
+        +'.sw-grp{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:rgba(0,0,0,.2);cursor:pointer;overflow:hidden;font-size:13px;flex:0 0 auto}'
+        +'.sw-grp:hover{background:rgba(255,255,255,.1)}.sw-bar{position:absolute;left:0;top:0;bottom:0;background:var(--c);opacity:.22;pointer-events:none}'
+        +'.sw-grp-name{position:relative;font-weight:700;color:#ECEFF1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'.sw-grp-val{position:relative;white-space:nowrap;color:#CFD8DC;font-size:12px}.sw-grp-val b{color:#fff;font-size:14px}'
+        +'.sw-note{font-size:11px;color:#90A4AE}.sw-note b{color:#ECEFF1}.sw-empty{font-size:12px;color:#90A4AE;padding:4px}'
+        // Tam ekranda ızgara ekranı doldurur, her hücre kendi içinde kayar
+        +'#singleWatchPanel.view-fullscreen{display:flex!important;flex-direction:column;overflow:hidden!important}#singleWatchPanel.view-fullscreen>*{flex:0 0 auto}'
+        +'#singleWatchPanel.view-fullscreen .sw-grid{flex:1 1 auto;min-height:0;grid-template-rows:auto repeat(3,minmax(0,1fr))}#singleWatchPanel.view-fullscreen .sw-cell{min-height:0}#singleWatchPanel.view-fullscreen .sw-cell-body{max-height:none;flex:1 1 auto;min-height:0}'
+        +'#singleWatchPanel.view-fullscreen .sw-total b{font-size:34px}#singleWatchPanel.view-fullscreen .sw-grp{font-size:15px}#singleWatchPanel.view-fullscreen .sw-cell-title{font-size:16px}'
+        // Görünüm seçimi ve Firma › Kumaş tablosu
+        +'.sw-views{display:inline-flex;gap:2px;padding:3px;margin:4px 0 8px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.14);border-radius:10px}.sw-views button{border:0;background:transparent;color:#CFD8DC;padding:7px 14px;border-radius:7px;cursor:pointer;font-weight:800;font-size:13px}.sw-views button.on{background:#4DD0E1;color:#0b1a24}'
+        +'.fk-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.fk-chips{display:inline-flex;gap:4px;flex-wrap:wrap}'
+        +'.fk-chip{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#ECEFF1;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer}.fk-chip.on{background:var(--c);color:#0b1324;border-color:var(--c)}'
+        +'.fk-bar input{flex:1 1 180px;min-width:0;padding:7px 10px;border-radius:8px;background:rgba(0,0,0,.3);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:13px}.fk-bar select{padding:7px;border-radius:8px;background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);font-weight:700}'
+        +'#singleWatchPanel{background:#110e2e!important}.fk-table{max-height:68vh;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px;overscroll-behavior:contain;background:#15112f}'
+        +'.fk-row{display:grid;grid-template-columns:minmax(150px,1.7fr) repeat(4,minmax(78px,1fr));gap:3px;align-items:stretch;padding:2px 6px}'
+        +'.fk-head{position:sticky;top:0;z-index:2;background:#1b1640;padding:6px;border-bottom:1px solid rgba(255,255,255,.15)}.fk-h{font-size:12px;font-weight:800;text-align:right;align-self:center}'
+        +'.fk-h.fk-g{color:#90CAF9}.fk-h.fk-u{color:#D1C4E9}.fk-h.fk-a{color:#FFCC80}.fk-h.fk-p{color:#A5D6A7}'
+        +'.fk-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:center;font-size:13px;color:#ECEFF1}.fk-name small{color:#90A4AE;font-weight:400;font-size:11px;margin-left:4px}'
+        +'.fk-total{background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.12)}.fk-total .fk-name{font-weight:900;color:var(--c)}'
+        +'.fk-firm{cursor:pointer;margin-top:4px;border-top:1px solid rgba(255,255,255,.1);padding-top:5px}.fk-firm:hover{background:rgba(255,255,255,.05)}.fk-firm .fk-name{font-weight:900}.fk-caret{display:inline-block;width:14px;color:#90A4AE}'
+        +'.fk-fab .fk-name{padding-left:18px;color:#CFD8DC}.fk-grp.collapsed .fk-fab{display:none}'
+        +'.fk-c{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;padding:4px 8px;border-radius:6px;cursor:pointer;line-height:1.15;min-width:0}.fk-c b{font-size:15px;color:#fff}.fk-c small{font-size:11px;color:#CFD8DC;white-space:nowrap}'
+        +'.fk-c:hover{outline:2px solid #FFD700;outline-offset:-2px}.fk-c.z{color:#546E7A;cursor:default}.fk-c.z:hover{outline:0}'
+        +'.fk-g.l1{background:rgba(66,165,245,.14)}.fk-g.l2{background:rgba(66,165,245,.28)}.fk-g.l3{background:rgba(66,165,245,.46)}'
+        +'.fk-u.l1{background:rgba(179,157,219,.14)}.fk-u.l2{background:rgba(179,157,219,.28)}.fk-u.l3{background:rgba(179,157,219,.46)}'
+        +'.fk-a.l1{background:rgba(255,183,77,.13)}.fk-a.l2{background:rgba(255,183,77,.26)}.fk-a.l3{background:rgba(255,183,77,.42)}'
+        +'.fk-p.l1{background:rgba(102,187,106,.14)}.fk-p.l2{background:rgba(102,187,106,.28)}.fk-p.l3{background:rgba(102,187,106,.46)}'
+        +'#singleWatchPanel.view-fullscreen .fk-table{flex:1 1 auto;min-height:0;max-height:none}#singleWatchPanel.view-fullscreen .fk-c b{font-size:18px}#singleWatchPanel.view-fullscreen .fk-name{font-size:15px}'
+        +'@media(max-width:700px){.fk-row{grid-template-columns:minmax(96px,1.2fr) repeat(4,minmax(52px,1fr));gap:2px;padding:2px 3px}.fk-c{padding:3px 4px}.fk-c b{font-size:13px}.fk-c small{font-size:9.5px}.fk-h{font-size:10px}.fk-name{font-size:12px}.fk-fab .fk-name{padding-left:8px}.sw-views button{padding:6px 9px;font-size:12px}}'
+        // Gelecek | Üzerinde yan yana pencere
+        +'.hm-card-box.swsp-box{width:min(1800px,calc(100vw - 16px));height:calc(100vh - 24px);max-height:none;display:flex;flex-direction:column;overflow:hidden;padding:14px 12px 10px}'
+        +'.swsp{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:6px}'
+        +'.swsp-col{min-height:0;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.12);border-top:4px solid var(--c);border-radius:10px;padding:6px;background:rgba(255,255,255,.03)}'
+        +'.swsp-head{flex:0 0 auto;font-weight:800;font-size:14px;color:var(--c);margin-bottom:6px}.swsp-head b{color:#FFD700;font-size:18px}'
+        +'.swsp-cards{flex:1 1 auto;min-height:0;overflow:hidden}.swsp-cards.scroll{overflow:auto}'
+        +'.swsp-inner{transform-origin:0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:6px;align-content:start}'
+        +'.swm-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-left:4px solid #66BB6A;border-radius:7px;padding:5px 7px;cursor:pointer;min-width:0;line-height:1.25}'
+        +'.swm-card.uyari{border-left-color:#FFB74D}.swm-card.kritik{border-left-color:#EF5350}.swm-card:hover{background:rgba(255,255,255,.14)}'
+        +'.swm-top{display:flex;justify-content:space-between;gap:6px;align-items:baseline}.swm-top b{color:#FFD700;font-size:16px}.swm-top span{color:#ECEFF1;font-size:13px;font-weight:800;white-space:nowrap}'
+        +'.swm-mid{display:flex;flex-wrap:wrap;justify-content:space-between;gap:0 6px;font-size:12.5px;margin-top:2px;font-weight:700}.swm-where{color:#4DD0E1;min-width:0;overflow-wrap:anywhere}.swm-wait{color:#CFD8DC;white-space:nowrap;margin-left:auto}'
+        +'.swm-sub{font-size:12px;color:#B0BEC5;overflow-wrap:anywhere;margin-top:1px}.fk-c.zc{cursor:pointer}'
+        +'.swsp-actions{flex:0 0 auto;display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}.swsp-actions .view-action-btn{padding:6px 12px;font-size:12px}'
+        +'.swsp-export{width:1700px;background:#1a1a2e;color:#fff;padding:18px 22px 22px;font-family:Segoe UI,Arial,sans-serif}.swsp-export .swsp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;align-items:start}'
+        +'.swsp-export .swsp-inner{transform:none;width:auto}.swsp-export .swsp-col{display:block}'
+        +'.swm-cust{font-size:13px;color:#FFE0B2;margin-top:2px;overflow-wrap:anywhere;line-height:1.2}.swm-cust b{color:#FFB74D;font-weight:900;font-size:14px;letter-spacing:.2px}'
+        +'@media(max-width:800px){.sw-grid{grid-template-columns:1fr}.sw-grid>div:first-child,.sw-colhead{display:none}.sw-rowhead{flex-direction:row;justify-content:flex-start;margin-top:6px}#singleWatchPanel.view-fullscreen{display:block!important;overflow:auto!important}#singleWatchPanel.view-fullscreen .sw-grid{height:auto;grid-template-rows:none}}';
     document.head.appendChild(style);
 })();
 
@@ -5140,12 +5435,12 @@ function tmapBuildExportEl(white){
 }
 function tmapExportImage(mode){return mapExportImage(mode,{title:takipMap.name+' — Takip Haritası',file:'takip_haritasi',bg:hmMindThemeOf(tmapTheme).bg,build:tmapBuildExportEl})}
 async function mapExportImage(mode,o){
-    const white=mode==='print'||tmapWhite||!!o.white,bg=white?'#ffffff':(o.bg||'#1a1a2e'),name=o.file+'_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+    const white=!o.noWhite&&(mode==='print'||tmapWhite||!!o.white),bg=white?'#ffffff':(o.bg||'#1a1a2e'),name=o.file+'_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
     // Telefonda gizli çerçeveden yazdırma tüm sayfayı basabiliyor; yazdırma penceresi tıklama anında açılır (açılır pencere engeline takılmasın).
     const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
     if(printWin)printWin.document.write('<p style="font-family:sans-serif">Harita hazırlanıyor…</p>');
     const el=o.build(white,bg);
-    showToast(mode==='pdf'?'📄 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ Harita görseli hazırlanıyor...','warning');
+    showToast(mode==='pdf'?'📄 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ '+(o.what||'Harita')+' görseli hazırlanıyor...','warning');
     let canvas;
     try{canvas=await html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,scrollY:0,onclone:sanitizeOklchColors})}
     catch(err){removeHeatmapExportEl(el);if(printWin)printWin.close();showToast('Harita görseli oluşturulamadı: '+err,'error');return}

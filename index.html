@@ -4732,21 +4732,22 @@ let swSplitLast=null;
 function swSplitOpen(sp){
     swSplitLast=sp;
     const R=sp.stage||SW_ROWS[0],kg=l=>Math.round(l.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR');
-    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+label+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
+    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+esc(label)+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
         +'<div class="swsp-cards"><div class="swsp-inner">'+(cards.length?cards.slice().sort(newestFirstCompare).map(k=>swMiniCardHtml(k,side,sp.mixed)).join(''):'<div class="sw-empty">Şu an yok</div>')+'</div></div></div>';
     hmModalShow('<div class="hm-card-title">🧵 '+esc(sp.title)+'<small>Solda '+esc(R.gel)+', sağda '+esc(R.on)+' • karta dokun: ayrıntı</small></div>'
         +'<div class="swsp-actions"><button type="button" class="view-action-btn" style="background:#1565C0" onclick="swSplitExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="swSplitExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="swSplitExport(&quot;wa&quot;)">📱 WhatsApp PNG</button></div>'
-        +'<div class="swsp">'+col('g','⏳ Gelecek',sp.g,'#42A5F5')+col('u','📍 Üzerinde',sp.u,'#B39DDB')+'</div>');
+        +'<div class="swsp">'+col('g',sp.gLabel||'⏳ Gelecek',sp.g,'#42A5F5')+col('u',sp.uLabel||'📍 Üzerinde',sp.u,'#B39DDB')+'</div>');
     const box=document.querySelector('#hmCardModal .modal-box');if(box)box.classList.add('swsp-box');
     swSplitFit();
 }
 // Ortak ölçek, kart sayısına göre: az kartta kartlar büyür (en çok 2,2 kat), çok kartta küçülür (en az %45; daha fazlası kaydırılır).
+// Telefonda okunurluk önce gelir: en az %85 (en çok 1,3 kat); sığmayan taraf kendi içinde parmakla kaydırılır.
 // Genişlik ölçeğe göre açılır / daralır → satıra düşen kart sayısı da değişir; iki tarafta boyut aynı kalır.
 function swSplitFit(){
     const cols=[...document.querySelectorAll('#hmCardModal .swsp-cards')];if(!cols.length)return;
     const apply=s=>cols.forEach(c=>{const i=c.firstElementChild;i.style.width=(c.clientWidth/s)+'px';i.style.transform='scale('+s+')'});
     const fits=()=>cols.every(c=>c.firstElementChild.offsetHeight*parseFloat(c.firstElementChild.style.transform.slice(6))<=c.clientHeight+1);
-    const MIN=0.45,MAX=2.2;
+    const phone=window.matchMedia&&matchMedia('(max-width:700px)').matches,MIN=phone?0.85:0.45,MAX=phone?1.3:2.2;
     apply(MAX);if(fits()){cols.forEach(c=>c.classList.remove('scroll'));return}
     let lo=MIN,hi=MAX;
     for(let n=0;n<12;n++){const mid=(lo+hi)/2;apply(mid);if(fits())lo=mid;else hi=mid}
@@ -4758,11 +4759,11 @@ window.addEventListener('resize',()=>{const m=document.getElementById('hmCardMod
 // Çıktı: ekrandaki küçültülmüş hali değil, tüm kartlar normal boyutta (solda Gelecek, sağda Üzerinde)
 function swSplitExportEl(sp){
     const R=sp.stage||SW_ROWS[0],kg=l=>Math.round(l.reduce((s,k)=>s+num(k.kilo),0)).toLocaleString('tr-TR');
-    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+label+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
+    const col=(side,label,cards,color)=>'<div class="swsp-col" style="--c:'+color+'"><div class="swsp-head">'+esc(label)+' <b>'+cards.length+'</b> parti • '+kg(cards)+' kg</div>'
         +'<div class="swsp-inner">'+(cards.length?cards.slice().sort(newestFirstCompare).map(k=>swMiniCardHtml(k,side,sp.mixed)).join(''):'<div class="sw-empty">Şu an yok</div>')+'</div></div>';
     const wrap=document.createElement('div');wrap.className='swsp-export';
     wrap.innerHTML='<div class="tmap-export-title">🧵 '+esc(sp.title)+'</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+' • Solda '+esc(R.gel)+', sağda '+esc(R.on)+'</div>'
-        +'<div class="swsp">'+col('g','⏳ Gelecek',sp.g,'#42A5F5')+col('u','📍 Üzerinde',sp.u,'#B39DDB')+'</div>';
+        +'<div class="swsp">'+col('g',sp.gLabel||'⏳ Gelecek',sp.g,'#42A5F5')+col('u',sp.uLabel||'📍 Üzerinde',sp.u,'#B39DDB')+'</div>';
     const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
     outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;return wrap;
 }
@@ -4794,16 +4795,24 @@ function renderSingleWatchPanel(){
     h+='<div class="sw-grid"><div></div><div class="sw-colhead">⏳ Gelecek</div><div class="sw-colhead">📍 Üzerindekiler (şu an)</div><div class="sw-colhead">✅ Üretimi (bugün)</div>';
     SW_ROWS.forEach(R=>{
         const coming=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))),on=all.filter(R.is),prod=rowsOf(stats.log[R.log]),arrived=Object.keys(stats.log[R.arr]||{}).length;
-        const cell=(title,cls,items,groups,labelFn,isRows,note)=>swCellHtml({title,cls,color:R.color,count:items.length,kg:items.reduce((s,x)=>s+(isRows?num(x.kg):kgOf(x)),0),
-            openIdx:swReg1(isRows?{title,rows:items}:{title,cards:items.slice().sort(newestFirstCompare)}),note,
-            groups:groups.map(g=>({label:labelFn(g.name),count:g.list.length,kg:g.kg,idx:swReg1(isRows?{title:title+' — '+labelFn(g.name),rows:g.list}:{title:title+' — '+labelFn(g.name),cards:g.list.slice().sort(newestFirstCompare)})}))});
+        // splitFor(ad): Gelecek / Üzerindekiler satırı tek pencerede yan yana — solda o aşamadan gelecek, sağda o aşamadan gelmiş olanlar
+        const gG=swGroups(coming,k=>k._asama||k.asama,kgOf),oG=swGroups(on,k=>k.son_asama,kgOf);
+        const listOf=(gs,n)=>{const x=gs.find(g=>g.name===n||stageKey(g.name)===stageKey(n));return x?x.list:[]};
+        const splitFor=n=>{
+            if(n==null)return{title:R.name+' — Gelecek ve Üzerindekiler',g:coming,u:on,mixed:true,stage:R};
+            const from=n==='Bilinmiyor'?'Aşaması bilinmeyen':trAblative(n);
+            return{title:R.name+' — '+from+(n==='Bilinmiyor'?'':' gelecek / gelen'),g:listOf(gG,n),u:listOf(oG,n),mixed:true,stage:R,gLabel:'⏳ '+from+(n==='Bilinmiyor'?'':' gelecek'),uLabel:'📍 '+from+(n==='Bilinmiyor'?'':' gelen')};
+        };
+        const cell=(title,cls,items,groups,labelFn,isRows,note,split)=>swCellHtml({title,cls,color:R.color,count:items.length,kg:items.reduce((s,x)=>s+(isRows?num(x.kg):kgOf(x)),0),
+            openIdx:swReg1(isRows?{title,rows:items}:split?{split:splitFor(null)}:{title,cards:items.slice().sort(newestFirstCompare)}),note,
+            groups:groups.map(g=>({label:labelFn(g.name),count:g.list.length,kg:g.kg,idx:swReg1(isRows?{title:title+' — '+labelFn(g.name),rows:g.list}:split?{split:splitFor(g.name)}:{title:title+' — '+labelFn(g.name),cards:g.list.slice().sort(newestFirstCompare)})}))});
         h+='<div class="sw-rowhead" style="--c:'+R.color+'"><span class="sw-row-icon">'+R.icon+'</span>'+esc(R.name)+'</div>';
-        h+=cell(R.gel,'gel',coming,swGroups(coming,k=>k._asama||k.asama,kgOf),n=>n==='Bilinmiyor'?n:trAblative(n)+' gelecek',false);
+        h+=cell(R.gel,'gel',coming,gG,n=>n==='Bilinmiyor'?n:trAblative(n)+' gelecek',false,'',true);
         const finalKk=R.key==='kk'?on.filter(liveIsFinalKk).length:null;
-        h+=cell(R.on,'on',on,swGroups(on,k=>k.son_asama,kgOf),n=>n==='Bilinmiyor'?'Geldiği aşama bilinmiyor':trAblative(n)+' gelen',false,finalKk!=null?'Son KK\'da (sonrası FZK / SEVK): <b>'+finalKk+'</b> parti':'');
+        h+=cell(R.on,'on',on,oG,n=>n==='Bilinmiyor'?'Geldiği aşama bilinmiyor':trAblative(n)+' gelen',false,finalKk!=null?'Son KK\'da (sonrası FZK / SEVK): <b>'+finalKk+'</b> parti':'',true);
         h+=cell(R.prod,'prod',prod,swGroups(prod,r=>r.a,r=>num(r.kg)),n=>n==='Bilinmiyor'?'Gittiği aşama bilinmiyor':'→ '+n,true,'Bugün gelen: <b>'+arrived+'</b> parti');
     });
-    h+='</div><div class="sw-note" style="margin-top:8px">Bir satıra dokun: Gelecek / Üzerindekiler → partilerin flash kartları, Üretim → kayıt listesi. Ekran açıkken yeni veri gelince kendiliğinden güncellenir.</div>';
+    h+='</div><div class="sw-note" style="margin-top:8px">Bir satıra dokun: Gelecek / Üzerindekiler → aynı aşamadan gelecek ve gelmiş olanlar tek pencerede yan yana (ör. LAMİNASYON’dan gelecek | LAMİNASYON’dan gelen), Üretim → kayıt listesi. Ekran açıkken yeni veri gelince kendiliğinden güncellenir.</div>';
     }
     p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('singleWatchPanel','Tek Pencere İzleme');
     if(swView==='fk'&&swQ)swFkFilter();
@@ -4865,6 +4874,11 @@ setInterval(()=>{const p=document.getElementById('singleWatchPanel');if(p&&p.sty
         +'.swm-mid{display:flex;flex-wrap:wrap;justify-content:space-between;gap:0 6px;font-size:12.5px;margin-top:2px;font-weight:700}.swm-where{color:#4DD0E1;min-width:0;overflow-wrap:anywhere}.swm-wait{color:#CFD8DC;white-space:nowrap;margin-left:auto}'
         +'.swm-sub{font-size:12px;color:#B0BEC5;overflow-wrap:anywhere;margin-top:1px}.fk-c.zc{cursor:pointer}'
         +'.swsp-actions{flex:0 0 auto;display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}.swsp-actions .view-action-btn{padding:6px 12px;font-size:12px}'
+        +'.swsp-cards.scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}'
+        +'@media(max-width:700px){.hm-card-box.swsp-box{width:100vw;max-width:none;height:100vh;height:100dvh;border-radius:0;padding:8px 6px 4px}'
+        +'.swsp-box .hm-card-title{font-size:14px;padding-right:44px}.swsp-box .hm-card-title small{font-size:11px}.swsp-actions{gap:4px;margin:4px 0 0}.swsp-actions .view-action-btn{padding:5px 8px;font-size:11px}'
+        +'.swsp{gap:5px;margin-top:4px}.swsp-col{padding:4px;border-radius:8px}.swsp-head{font-size:12px;margin-bottom:4px}.swsp-head b{font-size:15px}'
+        +'.swsp-inner{grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:5px}.swm-card{padding:5px 6px}.swm-top b{font-size:15px}}'
         +'.swsp-export{width:1700px;background:#1a1a2e;color:#fff;padding:18px 22px 22px;font-family:Segoe UI,Arial,sans-serif}.swsp-export .swsp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;align-items:start}'
         +'.swsp-export .swsp-inner{transform:none;width:auto}.swsp-export .swsp-col{display:block}'
         +'.swm-cust{font-size:13px;color:#FFE0B2;margin-top:2px;overflow-wrap:anywhere;line-height:1.2}.swm-cust b{color:#FFB74D;font-weight:900;font-size:14px;letter-spacing:.2px}'

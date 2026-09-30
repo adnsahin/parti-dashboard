@@ -4036,13 +4036,14 @@ function mapsAfterData(){
     }
     const tp=document.getElementById('takipMapPanel');if(tp&&tp.style.display==='block')renderTakipMapPanel();
     const sw=document.getElementById('singleWatchPanel');if(sw&&sw.style.display==='block')renderSingleWatchPanel();
+    if(lbVisible())lbRender();
 }
 // Harita (Isı Haritası Mindmap ya da Takip Haritası) açıkken 2 dakikada bir ve ekrana dönülünce yeni veri var mı bakar.
 // no-cache: tarayıcı ETag ile sorar, veri değişmediyse 560 KB yeniden indirilmez. Yeni veri gelince aynı kurulumla yeniden çizilir.
 let mapsPollBusy=false;
 async function mapsLivePoll(){
     if(mapsPollBusy||document.hidden||!window.DATA_GENERATED_AT||typeof window.loadGithubJsonDashboard!=='function')return;
-    if(!['heatmapMindmapPanel','takipMapPanel','singleWatchPanel'].some(id=>{const p=document.getElementById(id);return p&&p.style.display==='block'}))return;
+    if(!['heatmapMindmapPanel','takipMapPanel','singleWatchPanel'].some(id=>{const p=document.getElementById(id);return p&&p.style.display==='block'})&&!lbVisible())return;
     mapsPollBusy=true;
     try{
         const res=await fetch('data/partiler.json',{cache:'no-cache'});if(!res.ok)return;
@@ -4788,6 +4789,7 @@ function renderSingleWatchPanel(){
         +(stats.log.server?'':' • <span style="color:#FFB74D">sunucu kaydı güncel değil, bu cihazın kaydı gösteriliyor</span>')+'</span>'
         +'<button type="button" class="btn-fire-export" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>renderSingleWatchPanel())}else{renderSingleWatchPanel()}">🔄 Yenile</button>'
         +'<button type="button" class="btn-all-export" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button>'
+        +'<button type="button" class="btn-all-export" style="background:#AD1457" onclick="lbOpen()" title="3 aşama × 3 durum tek ekranda, küçük parti kutucukları, canlı hareket">📺 Canlı Hareket İzleme</button>'
         +'<button type="button" class="view-action-btn full" onclick="toggleElementFullscreen(&quot;singleWatchPanel&quot;,&quot;Tek Pencere İzleme&quot;)">⛶ Tam Ekran</button></div>';
     h+='<div class="sw-views">'+[['grid','▦ Aşama özeti (3×3)'],['fk','🧵 Firma › Kumaş']].map(([v,l])=>'<button type="button" class="'+(swView===v?'on':'')+'" onclick="setSwView(&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</div>';
     if(swView==='fk')h+=swFkHtml(stats);
@@ -4883,6 +4885,294 @@ setInterval(()=>{const p=document.getElementById('singleWatchPanel');if(p&&p.sty
         +'.swsp-export .swsp-inner{transform:none;width:auto}.swsp-export .swsp-col{display:block}'
         +'.swm-cust{font-size:13px;color:#FFE0B2;margin-top:2px;overflow-wrap:anywhere;line-height:1.2}.swm-cust b{color:#FFB74D;font-weight:900;font-size:14px;letter-spacing:.2px}'
         +'@media(max-width:800px){.sw-grid{grid-template-columns:1fr}.sw-grid>div:first-child,.sw-colhead{display:none}.sw-rowhead{flex-direction:row;justify-content:flex-start;margin-top:6px}#singleWatchPanel.view-fullscreen{display:block!important;overflow:auto!important}#singleWatchPanel.view-fullscreen .sw-grid{height:auto;grid-template-rows:none}}';
+    document.head.appendChild(style);
+})();
+/* ════════ 📺 CANLI HAREKET İZLEME — 3 aşama × (Gelecek · Üzerinde · Üretim) tek ekranda ════════
+   Gelecek / Üzerinde: her müşteri bir blok (alanı parti sayısıyla orantılı), bloklar hücreyi boşluksuz doldurur (treemap);
+   blok içinde partiler ince çizgilerle bölünmüş, aralarında boşluk yok → yazılar kutu boyuna göre olabildiğince büyük.
+   Müşteri = müşteri siparişindeki ad (BELLONA…), yoksa firma (ŞAHİNLER…). Aynı müşteri her iki sütunda aynı renk tonunda.
+   Üretim: yalnızca bugünkü vardiyanın parti sayısı ve kg'ı (dar sütun). Yeni veri gelince kutular yeni yerine uçar,
+   üretime geçen Üretim sayısına uçup söner; son 15 dakikada hareket edenler altın çerçeveli. Altta bugünün hareketleri kayar. */
+const LB_DAT={kk:'Kalite Kontrol\'e',sr1:'Sarım1\'e',sr2:'Sarım2\'ye'},LB_ABL={kk:'Kalite Kontrol\'den',sr1:'Sarım1\'den',sr2:'Sarım2\'den'};
+let lbRecent=new Map(),lbTimer=null,lbLastKeys=null,lbLastProd=null,lbReg=[],lbCells={};
+const LB_RECENT_MS=15*60000;
+// Aynı müşteri her yerde aynı ton (Gelecek mavi, Üzerinde mor tonları)
+const LB_TONES={g:['#1565C0','#0D47A1','#1E6FB8','#12508F'],u:['#5E35B1','#4527A0','#6A3FB5','#512DA8']};
+let lbShowCust=mapLoadPref('lbCust9',v=>v==='1'||v==='0','1')==='1';
+function lbToggleCust(){lbShowCust=!lbShowCust;mapSavePref('lbCust9',lbShowCust?'1':'0');lbLastKeys=null;lbRender()}
+// Üretim hücresi: bugün geçenlerin listesi (Tek Pencere İzleme ile aynı pencere; kayıtlar ayrı tutulur)
+function lbOpenProd(i){
+    const x=lbReg[i];if(!x)return;if(!x.rows.length){showToast('Bugün henüz kayıt yok','warning');return}
+    const kg=x.rows.reduce((s,r)=>s+num(r.kg),0);
+    hmModalShow('<div class="hm-card-title">✅ '+esc(x.title)+'<small>'+x.rows.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div><div class="ulog-list">'+x.rows.map((r,j)=>uretimLogItemHtml(r,j,false)).join('')+'</div>');
+}
+// Müşteri = kartın firma alanı (ÖZPOLAR, HEFA SUNİ DERİ, VEFA…). Sipariş metni serbest yazıldığı için ondan ad
+// tahmin edilmez; tek istisna FAYTEKS'in düzenli FSA kalıbı: "BELLONA_FSA_2633", "ROYAL YATAK.FSA_2432",
+// "FSA-2591 ERGÜL DEMO" → son müşteri (BELLONA, ROYAL, ERGÜL). DEMO / tarih / numara ise firma adı kalır.
+const LB_NOT_CUST=/^(DEMO|SEVK|ETME|STOK|DENEME|NUMUNE|KALİTE)$/;
+function lbFirm(k){return String(liveFirmaShort(k)||'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim().toLocaleUpperCase('tr-TR')}
+function lbFsaCust(v){
+    const t=String(v||'').toLocaleUpperCase('tr-TR'),i=t.search(/FSA[\s._-]*\d/);if(i<0)return'';
+    const ok=w=>w&&w.length>=3&&/^[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ-]*$/.test(w)&&!LB_NOT_CUST.test(w)?w:'';
+    const segs=t.slice(0,i).split(/[._*]+/).map(x=>x.trim()).filter(Boolean);
+    if(segs.length)return ok(segs[segs.length-1].split(/\s+/)[0]);
+    const m=t.slice(i).match(/^FSA[\s._-]*\d+[\s._-]+([^\s._\d/]+)/);return m?ok(m[1]):'';
+}
+function lbGroupName(k){const f=lbFirm(k),c=lbFsaCust(k.musteri_siparis);return(c&&c.slice(0,4)!==f.slice(0,4)?c:f)||'Müşteri yok'}
+function lbHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
+function lbOpen(){
+    let el=document.getElementById('liveBoard');
+    if(!el){el=document.createElement('div');el.id='liveBoard';el.className='lb';document.body.appendChild(el)}
+    el.style.display='flex';lbLastKeys=null;lbLastProd=null;uretimLogFetchedAt=0;lbRender();
+    if(!lbTimer)lbTimer=setInterval(lbTick,30000);
+}
+function lbClose(){
+    const el=document.getElementById('liveBoard');if(el)el.style.display='none';
+    if(lbTimer){clearInterval(lbTimer);lbTimer=null}
+    try{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{})}catch(e){}
+}
+function lbVisible(){const el=document.getElementById('liveBoard');return!!el&&el.style.display==='flex'}
+function lbTick(){
+    if(!lbVisible())return;
+    const c=document.getElementById('lbClock');if(c)c.textContent=new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+    uretimLogRefresh(()=>{if(lbVisible())lbRender()});
+}
+function lbToggleFull(){
+    try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lbVisible()&&!document.querySelector('.modal-overlay.show')&&!document.fullscreenElement)lbClose()});
+function lbShortKg(v){return Math.round(num(v)).toLocaleString('tr-TR')}
+function lbCellHtml(key,title,items,color){
+    const kg=items.reduce((s,x)=>s+num(x.kilo),0);
+    return '<div class="lb-cell" style="--c:'+color+'"><div class="lb-cell-h"><span>'+esc(title)+'</span><span><b>'+items.length+'</b> • '+Math.round(kg).toLocaleString('tr-TR')+' kg</span></div>'
+        +'<div class="lb-body" data-cell="'+key+'"></div></div>';
+}
+function lbProdCellHtml(R,rows){
+    const kg=rows.reduce((s,r)=>s+num(r.kg),0);lbReg.push({title:R.prod+' (bugün)',rows});const idx=lbReg.length-1;
+    return '<div class="lb-cell lb-prod" data-prod="'+R.key+'" style="--c:#66BB6A" onclick="lbOpenProd('+idx+')" title="Bugün geçen partilerin listesi">'
+        +'<div class="lb-prod-t">✅ '+esc(R.name)+'</div><div class="lb-prod-n"><b>'+rows.length+'</b><small>parti</small></div><div class="lb-prod-kg">'+Math.round(kg).toLocaleString('tr-TR')+' kg</div></div>';
+}
+// Yazı genişliği gerçek yazı tipiyle ölçülür (kalın büyük harfler tahminden geniş; ad kesilmesin) — 1 px yazı başına genişlik
+const lbMeasureCtx=document.createElement('canvas').getContext('2d');
+function lbMw(t){lbMeasureCtx.font='900 100px "Segoe UI",Arial,sans-serif';return lbMeasureCtx.measureText(t).width/100}
+// Bir hücreyi doldurur — satır akışı: her müşteri bir blok (üstte adı, altında partileri yapışık); bloklar yazı satırı gibi
+// dizilip satırı ve hücreyi tam doldurur (boşluk yok). Yazı boyutu, hücredeki her şeyin kaydırmasız sığdığı en büyük değer;
+// müşteri adı ile parti no aynı ölçekte (biri diğerini ezmez, ad hiç kesilmez). Parti no + kg alt alta ya da yan yana:
+// hangisi daha büyük yazı veriyorsa o seçilir.
+const LB_GAP=3;
+function lbFmax(){return window.matchMedia&&matchMedia('(max-width:700px)').matches?15:22}
+// Hücre içeriği: müşteri grupları (büyükten küçüğe) + en geniş parti no / kg (1 px yazı başına)
+function lbCellModel(d){
+    const m=new Map();d.items.forEach(x=>{const n=lbShowCust?lbGroupName(x.k):'';if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
+    const groups=[...m.entries()].map(([name,list])=>{const t=name+' '+list.length;return{name,list,nm:lbShowCust?lbMw(t):0,nl:t.length}})
+        .sort((a,b)=>b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
+    const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*0.8:0;
+    return{groups,noW,kgW,n:d.items.length};
+}
+// f px yazıyla W genişliğe yerleşim planı; H'ye sığmıyorsa (ya da bir ad genişliğe sığmıyorsa) null.
+// mode 's': parti no üstte kg altta · 'i': yan yana
+function lbPlan(M,W,H,f,mode,force){
+    // iç boşluklar yazıyla orantılı (küçük ekranda boşa yer gitmesin)
+    const hf=f*0.9,headH=lbShowCust?Math.ceil(hf*1.2+2):0,GAP=LB_GAP;
+    const tw=mode==='s'?Math.max(M.noW,M.kgW)*f*1.06+f*0.5+3:(M.noW+M.kgW+0.35)*f*1.06+f*0.6+4,th=mode==='s'?f*1.78+f*0.3+2:f*1.1+f*0.3+2;
+    const multi=[],single=[];
+    for(const g of M.groups){
+        const n=g.list.length,nw=lbShowCust?g.nm*hf*1.04+0.2*g.nl+hf*0.8+6:0;
+        if(nw>W&&!force)return null;
+        const w0=Math.max(nw,n*tw);
+        if(w0<=W)single.push({g,w:w0,h:headH+th,rows:1,cols:n});
+        else{const cols=Math.max(1,Math.floor(W/tw)),rows=Math.ceil(n/cols);multi.push({g,w:W,h:headH+rows*th,rows,cols})}
+    }
+    const lines=multi.map(b=>({items:[b],h:b.h}));
+    const sl=[];for(const b of single){let L=sl.find(L=>L.used+GAP+b.w<=W);if(!L){L={items:[],h:b.h,used:-GAP};sl.push(L)}L.items.push(b);L.used+=GAP+b.w}
+    lines.push(...sl);
+    const total=lines.reduce((s,L)=>s+L.h,0)+GAP*(lines.length-1);
+    return total<=H||force?{lines,total,f,hf,headH,mode}:null;
+}
+// f px yazı için hücrenin gerektirdiği yükseklik (iki kipten az olanı)
+function lbCellNeed(M,W,f){
+    if(!M.n)return 0;
+    const a=lbPlan(M,W,Infinity,f,'s'),b=lbPlan(M,W,Infinity,f,'i');
+    return Math.min(a?a.total:Infinity,b?b.total:Infinity);
+}
+// Satır yükseklikleri: üç aşamada yazı aynı büyüklükte olacak şekilde her satıra içeriğinin gerektirdiği yükseklik verilir
+// (az partili aşama boşuna yer kaplamaz, kalabalık aşama sıkışmaz)
+function lbBalanceRows(){
+    const grid=document.querySelector('#liveBoard .lb-grid');if(!grid)return;
+    const rows=SW_ROWS.map(R=>{
+        const bg=grid.querySelector('.lb-body[data-cell="'+R.key+'g"]'),bu=grid.querySelector('.lb-body[data-cell="'+R.key+'u"]');
+        if(!bg||!bu||!lbCells[R.key+'g']||!lbCells[R.key+'u'])return null;
+        const cell=bg.closest('.lb-cell');
+        return{h:cell.offsetHeight,over:cell.offsetHeight-bg.clientHeight,Wg:bg.clientWidth,Wu:bu.clientWidth,Mg:lbCellModel(lbCells[R.key+'g']),Mu:lbCellModel(lbCells[R.key+'u'])};
+    });
+    if(rows.some(r=>!r))return;
+    const avail=rows.reduce((s,r)=>s+r.h,0),FMAX=lbFmax();
+    const need=(r,f)=>Math.max(lbCellNeed(r.Mg,r.Wg,f),lbCellNeed(r.Mu,r.Wu,f),24)+r.over;
+    const fits=f=>rows.reduce((s,r)=>s+need(r,f),0)<=avail;
+    let f=FMAX;
+    if(!fits(f)){let lo=3,hi=FMAX;for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(fits(mid))lo=mid;else hi=mid}f=lo}
+    const nd=rows.map(r=>Math.min(need(r,f),1e6));
+    grid.style.gridTemplateRows='auto '+nd.map(v=>'minmax(0,'+v.toFixed(1)+'fr)').join(' ');
+}
+function lbLayoutCell(body){
+    const d=lbCells[body.dataset.cell];if(!d)return;
+    const FMAX=lbFmax(),GAP=LB_GAP;
+    const W=body.clientWidth,H=body.clientHeight;if(W<10||H<10)return;
+    body.classList.remove('scroll');
+    if(!d.items.length){body.innerHTML='<span class="lb-empty">—</span>';return}
+    const M=lbCellModel(d);
+    let P=null;
+    for(const mode of['s','i']){
+        let p=lbPlan(M,W,H,FMAX,mode);
+        if(!p){let lo=3,hi=FMAX;for(let it=0;it<14;it++){const mid=(lo+hi)/2,q=lbPlan(M,W,H,mid,mode);if(q){p=q;lo=mid}else hi=mid}}
+        if(p&&(!P||p.f>P.f*1.08))P=p;
+    }
+    if(!P)P=lbPlan(M,W,H,3,'i',true);
+    // artan yer: yükseklik parti satırlarına, genişlik bloklara orantılı dağıtılır (hücre tam dolar)
+    const tileSum=P.lines.reduce((s,L)=>s+L.h-P.headH,0),exH=Math.max(0,H-P.total);
+    let y=0,h='<div class="lb-canvas" style="height:'+H+'px">';
+    P.lines.forEach(L=>{
+        const LH=L.h+(tileSum?exH*(L.h-P.headH)/tileSum:0),sumW=L.items.reduce((s,b)=>s+b.w,0),exW=Math.max(0,W-sumW-GAP*(L.items.length-1));
+        let x=0;
+        L.items.forEach(b=>{
+            const g=b.g,n=g.list.length,bw=b.w+(sumW?exW*b.w/sumW:0),tone=LB_TONES[d.cls][lbHash(g.name)%4],th=(LH-P.headH)/b.rows;
+            h+='<div class="lb-grpbox" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px;width:'+bw.toFixed(1)+'px;height:'+LH.toFixed(1)+'px;--tc:'+tone+'">';
+            if(lbShowCust){
+                const firms=[...new Set(g.list.map(x=>lbFirm(x.k)))].filter(f=>f&&f!==g.name),htip=g.name+(firms.length?' — '+firms.join(', '):'')+' • '+n+' parti';
+                h+='<div class="lb-grp-h" style="height:'+P.headH+'px;font-size:'+P.hf.toFixed(1)+'px" title="'+esc(htip)+'"><span>'+esc(g.name)+' <i>'+n+'</i></span></div>';
+            }
+            g.list.forEach((it,i)=>{
+                const r=Math.floor(i/b.cols),inLast=r===b.rows-1,lastCount=n-(b.rows-1)*b.cols,cw=bw/(inLast?lastCount:b.cols),c=inLast?i-(b.rows-1)*b.cols:i%b.cols;
+                const k=it.k,rec=lbRecent.get(it.key),recent=rec&&Date.now()-rec<LB_RECENT_MS,sev=k.seviye==='kritik'?' kritik':k.seviye==='uyari'?' uyari':'';
+                h+='<div class="lb-t'+(P.mode==='i'?' in':'')+sev+(recent?' recent':'')+'" data-k="'+esc(it.key)+'" data-c="'+body.dataset.cell+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="'+esc(it.tip)+'" style="left:'+(c*cw).toFixed(1)+'px;top:'+(P.headH+r*th).toFixed(1)+'px;width:'+cw.toFixed(1)+'px;height:'+th.toFixed(1)+'px;font-size:'+P.f.toFixed(1)+'px">'
+                    +'<b>'+esc(heatmapShortParti(k))+'</b><span>'+lbShortKg(k.kilo)+'</span></div>';
+            });
+            h+='</div>';x+=bw+GAP;
+        });
+        y+=LH+GAP;
+    });
+    body.innerHTML=h+'</div>';
+}
+function lbLayout(){lbBalanceRows();document.querySelectorAll('#liveBoard .lb-body[data-cell]').forEach(lbLayoutCell)}
+function lbEventsHtml(stats){
+    const ev=[];
+    SW_ROWS.forEach(R=>{
+        const add=(obj,kind)=>Object.keys(obj||{}).forEach(pn=>{const e=obj[pn];if(e&&e.ts)ev.push({ts:e.ts,pn,kg:e.kg,a:e.a,kind,R})});
+        add(stats.log[R.arr],'a');add(stats.log[R.log],'p');
+    });
+    ev.sort((a,b)=>b.ts-a.ts);
+    if(!ev.length)return'<span class="lb-ev">Bugün henüz kayıtlı hareket yok</span>';
+    return ev.slice(0,24).map(e=>{
+        const t=new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),p=String(e.pn).replace(/^\s*\(\d{4}\)\s*/,'');
+        return '<span class="lb-ev"><b>'+t+'</b> '+(e.kind==='a'?'📥':'✅')+' <i style="color:'+e.R.color+'">'+esc(p)+'</i> · '+lbShortKg(e.kg)+' kg '
+            +(e.kind==='a'?esc(LB_DAT[e.R.key])+' geldi'+(e.a?' (← '+esc(e.a)+')':''):esc(LB_ABL[e.R.key])+' geçti'+(e.a?' → '+esc(e.a):''))+'</span>';
+    }).join('<span class="lb-sep">•</span>');
+}
+function lbRender(){
+    const el=document.getElementById('liveBoard');if(!el)return;
+    // önceki konumlar (hareket için)
+    const old=new Map();
+    el.querySelectorAll('.lb-t').forEach(t=>{const r=t.getBoundingClientRect();old.set(t.dataset.k,{x:r.left,y:r.top,c:t.dataset.c,html:t.outerHTML,w:r.width,h:r.height,bg:getComputedStyle(t).backgroundColor})});
+    lbReg=[];lbCells={};
+    const all=getAllCards(),stats=liveProdStats(),gen=window.DATA_GENERATED_AT?new Date(window.DATA_GENERATED_AT):null,now=new Date();
+    const keys=new Map(),prodSets={},prodCount={};
+    let h='<div class="lb-top"><span class="lb-title">📺 Canlı Hareket İzleme</span><span class="lb-meta">Veri: <b>'+(gen&&!isNaN(gen)?esc(gen.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})):'-')+'</b>'
+        +' • Üretim: bugünkü vardiya (08:00\'den)'+(stats.log.server?'':' • <span style="color:#FFB74D">sunucu kaydı güncel değil</span>')+'</span>'
+        +'<span class="lb-legend"><i class="g"></i>Gelecek <i class="u"></i>Üzerinde <i class="rc"></i>son 15 dk hareket</span>'
+        +'<span id="lbClock" class="lb-clock">'+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</span>'
+        +'<button type="button" title="Yenile" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>lbRender())}else{lbRender()}">🔄</button>'
+        +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Aynı müşterinin kutularını bir blokta göster / kapat" onclick="lbToggleCust()">👤</button>'
+        +'<button type="button" title="Tam ekran" onclick="lbToggleFull()">⛶</button><button type="button" class="lb-x" title="Kapat (Esc)" onclick="lbClose()">✕</button></div>';
+    // Satır yükseklikleri içerikle orantılı (parti + müşteri başlığı): böylece üç aşamada yazılar aynı büyüklüğe yakın olur,
+    // az partili aşama boşuna yer kaplamaz, kalabalık aşama sıkışmaz
+    const units=list=>list.length+(lbShowCust?1.3*new Set(list.map(lbGroupName)).size:0);
+    const rowW=SW_ROWS.map(R=>{const c=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))),o=all.filter(R.is);return Math.max(5,Math.max(units(c),units(o))+3)});
+    h+='<div class="lb-grid" style="grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div><div class="lb-colh">⏳ Gelecek</div><div class="lb-colh">📍 Üzerinde</div><div class="lb-colh">✅ Üretim</div>';
+    SW_ROWS.forEach(R=>{
+        const coming=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
+        const prodObj=stats.log[R.log]||{},prod=Object.keys(prodObj).map(pn=>Object.assign({parti:pn},prodObj[pn])).sort((a,b)=>(b.ts||0)-(a.ts||0));
+        prodSets[R.key]=new Set(prod.map(r=>r.parti));prodCount[R.key]=prod.length;
+        const key=(p,col)=>{let k=R.key+'|'+p;if(keys.has(k))k+='|'+col;keys.set(k,1);return k};
+        const tip=(k,line)=>k.parti+' • '+Math.round(num(k.kilo))+' kg\n'+line+'\nBekleme: '+waitHoursText(k)+'\n'+(liveFirmaShort(k)||'')+(k.musteri_siparis?'\n'+k.musteri_siparis:'');
+        lbCells[R.key+'g']={cls:'g',items:coming.map(k=>({k,key:key(String(k.parti).trim(),'g'),tip:tip(k,'▶ şu an: '+(k._asama||'-'))}))};
+        lbCells[R.key+'u']={cls:'u',items:on.map(k=>({k,key:key(String(k.parti).trim(),'u'),tip:tip(k,'← '+(k.son_asama||'-'))}))};
+        h+='<div class="lb-rowh" style="--c:'+R.color+'"><span class="lb-row-icon">'+R.icon+'</span><span class="lb-row-name">'+esc(R.name)+'</span></div>';
+        h+=lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5')+lbCellHtml(R.key+'u',R.on,on,'#9575CD')+lbProdCellHtml(R,prod);
+    });
+    h+='</div><div class="lb-ticker"><div class="lb-ticker-in">'+lbEventsHtml(stats)+'</div></div>';
+    el.innerHTML=h;el.classList.toggle('cust',lbShowCust);
+    lbLayout();
+    const tin=el.querySelector('.lb-ticker-in');if(tin)tin.style.setProperty('--dur',Math.max(30,Math.round(tin.scrollWidth/60))+'s');
+    // hareket: ilk açılışta değil, veri değiştikten sonra
+    const animate=lbLastKeys!==null,prevProd=lbLastProd;lbLastKeys=new Set(keys.keys());lbLastProd=prodCount;
+    if(!animate)return;
+    if(prevProd)el.querySelectorAll('.lb-prod').forEach(c=>{const k=c.dataset.prod;if((prodCount[k]||0)>(prevProd[k]||0))c.animate([{boxShadow:'0 0 0 0 rgba(255,215,0,.9)',transform:'scale(1)'},{boxShadow:'0 0 0 10px rgba(255,215,0,0)',transform:'scale(1.06)'},{boxShadow:'0 0 0 0 rgba(255,215,0,0)',transform:'scale(1)'}],{duration:1400,iterations:2})});
+    if(!old.size)return;
+    el.classList.add('lb-anim');
+    el.querySelectorAll('.lb-t').forEach(t=>{
+        const o=old.get(t.dataset.k),r=t.getBoundingClientRect();
+        if(o){
+            const dx=o.x-r.left,dy=o.y-r.top,moved=o.c!==t.dataset.c;
+            if(moved){lbRecent.set(t.dataset.k,Date.now());t.classList.add('recent','moving')}
+            if(Math.abs(dx)>1||Math.abs(dy)>1)t.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],{duration:moved?1600:700,easing:'cubic-bezier(.2,.8,.2,1)'});
+        }else{
+            lbRecent.set(t.dataset.k,Date.now());t.classList.add('recent','moving');
+            t.animate([{opacity:0,transform:'scale(.2)'},{opacity:1,transform:'scale(1.2)',offset:.7},{opacity:1,transform:'none'}],{duration:1200,easing:'ease-out'});
+        }
+    });
+    // çıkanlar: üretime geçtiyse Üretim sayısına uçar, değilse olduğu yerde söner
+    const layer=document.createElement('div');layer.className='lb-ghosts';el.appendChild(layer);
+    old.forEach((o,k)=>{
+        if(keys.has(k))return;
+        const g=document.createElement('div');g.innerHTML=o.html;const t=g.firstElementChild;if(!t)return;
+        t.style.left=o.x+'px';t.style.top=o.y+'px';t.style.width=o.w+'px';t.style.height=o.h+'px';t.style.position='fixed';t.style.background=o.bg||'#5E35B1';t.removeAttribute('onclick');layer.appendChild(t);
+        const row=k.split('|')[0],parti=k.split('|')[1],pc=prodSets[row]&&prodSets[row].has(parti)&&el.querySelector('.lb-prod[data-prod="'+row+'"] .lb-prod-n');
+        if(pc){const pr=pc.getBoundingClientRect(),dx=pr.left+pr.width/2-(o.x+o.w/2),dy=pr.top+pr.height/2-(o.y+o.h/2);
+            t.classList.add('recent');t.animate([{transform:'none',opacity:1},{transform:'translate('+dx+'px,'+dy+'px) scale(.5)',opacity:.9,offset:.85},{transform:'translate('+dx+'px,'+dy+'px) scale(.2)',opacity:0}],{duration:1700,easing:'cubic-bezier(.4,.1,.2,1)',fill:'forwards'})}
+        else t.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(24px) scale(.6)'}],{duration:1500,easing:'ease-in',fill:'forwards'});
+    });
+    setTimeout(()=>{el.classList.remove('lb-anim');layer.remove();el.querySelectorAll('.lb-t.moving').forEach(t=>t.classList.remove('moving'))},1900);
+}
+function lbFit(){lbLayout()}
+let lbResizeT=null;
+window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResizeT);lbResizeT=setTimeout(lbLayout,150)});
+(function injectLiveBoardStyles(){
+    const style=document.createElement('style');
+    style.textContent='.lb{position:fixed;inset:0;z-index:10025;background:#0d0b24;display:none;flex-direction:column;color:#fff;font-family:Segoe UI,Arial,sans-serif}'
+        +'.lb-top{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1)}'
+        +'.lb-title{font-weight:900;font-size:18px;color:#4DD0E1}.lb-meta{font-size:12px;color:#B0BEC5;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}.lb-meta b{color:#ECEFF1}'
+        +'.lb-legend{font-size:11px;color:#B0BEC5;display:inline-flex;align-items:center;gap:4px}.lb-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-left:6px}'
+        +'.lb-legend i.g{background:#1565C0}.lb-legend i.u{background:#5E35B1}.lb-legend i.rc{box-shadow:0 0 0 2px #FFD700 inset}'
+        +'.lb-clock{margin-left:auto;font-size:22px;font-weight:900;color:#FFD700;font-variant-numeric:tabular-nums}'
+        +'.lb-top button{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;width:38px;height:34px;font-size:16px;cursor:pointer}.lb-top button:hover{background:#533b88}.lb-top button.on{background:#00897B}.lb-top .lb-x{background:#B71C1C}'
+        +'.lb-grid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:78px minmax(0,1fr) minmax(0,1fr) 92px;grid-template-rows:auto repeat(3,minmax(0,1fr));gap:5px;padding:5px 6px}'
+        +'.lb-colh{font-weight:900;font-size:14px;text-align:center;color:#CFD8DC;align-self:end}'
+        +'.lb-rowh{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:900;font-size:13px;color:var(--c);border-left:5px solid var(--c);background:rgba(255,255,255,.04);border-radius:0 10px 10px 0;text-align:center;padding:4px}.lb-row-icon{font-size:22px}'
+        +'.lb-cell{min-height:0;min-width:0;display:flex;flex-direction:column;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-top:3px solid var(--c);border-radius:10px;padding:4px 5px}'
+        +'.lb-cell-h{flex:0 0 auto;display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:12px;color:#CFD8DC;margin-bottom:3px}.lb-cell-h b{font-size:20px;color:#FFD700}'
+        +'.lb-body{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}.lb-body.scroll{overflow-y:auto;overscroll-behavior:contain}.lb.lb-anim .lb-body{overflow:visible}'
+        +'.lb-canvas{position:relative;width:100%}'
+        // Müşteri bloğu: yuvarlak köşe, kalın çerçeve; içindeki partiler ince çizgilerle bölünmüş (boşluk yok)
+        +'.lb-grpbox{position:absolute;border-radius:8px;overflow:hidden;background:var(--tc);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}'
+        +'.lb:not(.cust) .lb-grpbox{border-radius:6px;box-shadow:none}'
+        +'.lb-grp-h{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;justify-content:center;padding:0 5px;background:rgba(0,0,0,.38);color:#FFE0B2;font-weight:900;letter-spacing:.2px;white-space:nowrap;overflow:hidden;line-height:1.12}'
+        +'.lb-grp-h span{display:block}.lb-grp-h i{font-style:normal;color:#ECEFF1;opacity:.85;font-weight:700}'
+        +'.lb-t{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer;line-height:1.02;box-shadow:inset -1px -1px 0 rgba(0,0,0,.45);background:var(--tc);overflow:hidden}'
+        +'.lb-t b{font-weight:900;letter-spacing:.2px}.lb-t span{font-size:.74em;opacity:.92;font-weight:700}.lb-t.in{flex-direction:row;gap:.35em}.lb-t:hover{filter:brightness(1.3)}'
+        +'.lb-t.uyari::after,.lb-t.kritik::after{content:"";position:absolute;left:12%;right:12%;bottom:2px;height:3px;border-radius:2px;background:#FFB74D}.lb-t.kritik::after{background:#EF5350}'
+        +'.lb-t.recent{box-shadow:inset 0 0 0 3px #FFD700}.lb-t.moving{z-index:5}.lb-empty{color:#546E7A;font-size:13px}'
+        +'.lb-prod{cursor:pointer;align-items:center;justify-content:center;text-align:center;gap:2px;background:rgba(46,125,50,.12)}.lb-prod:hover{background:rgba(46,125,50,.22)}'
+        +'.lb-prod{padding:4px 2px}.lb-prod-t{font-size:11px;font-weight:800;color:#A5D6A7;line-height:1.15}.lb-prod-n b{display:block;font-size:38px;line-height:1;color:#FFD700;font-weight:900;font-variant-numeric:tabular-nums}.lb-prod-n small{font-size:11px;color:#CFD8DC}.lb-prod-kg{font-size:14px;font-weight:900;color:#ECEFF1;white-space:nowrap}'
+        +'.lb-ghosts{position:fixed;inset:0;pointer-events:none;z-index:6}'
+        +'.lb-ticker{flex:0 0 auto;overflow:hidden;white-space:nowrap;border-top:1px solid rgba(255,255,255,.1);padding:7px 0;font-size:15px;background:rgba(0,0,0,.25)}'
+        +'.lb-ticker-in{display:inline-block;padding-left:100%;animation:lbTick var(--dur,60s) linear infinite}.lb-ticker:hover .lb-ticker-in{animation-play-state:paused}'
+        +'.lb-ev b{color:#FFD700}.lb-ev i{font-style:normal;font-weight:900}.lb-sep{color:#546E7A;margin:0 14px}'
+        +'@keyframes lbTick{from{transform:translateX(0)}to{transform:translateX(-100%)}}'
+        +'@media(max-width:1250px){.lb-legend{display:none}}'
+        +'@media(max-width:700px){.lb-top{padding:6px 8px;gap:4px 8px;flex-wrap:nowrap}.lb-meta{display:none}.lb-title{font-size:15px;white-space:nowrap}.lb-clock{font-size:17px}.lb-top button{width:34px;height:30px;font-size:14px}'
+        +'.lb-grid{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 42px;gap:3px;padding:3px}.lb-colh{font-size:11px}.lb-rowh{padding:2px;font-size:11px}.lb-row-name{writing-mode:vertical-rl;transform:rotate(180deg)}.lb-row-icon{font-size:15px}'
+        +'.lb-cell{padding:3px 3px;border-radius:8px}.lb-cell-h{font-size:10px;flex-direction:column;align-items:flex-start;gap:0}.lb-cell-h b{font-size:15px}'
+        +'.lb-prod-t{display:none}.lb-prod-n b{font-size:20px}.lb-prod-n small{font-size:8px}.lb-prod-kg{font-size:8px;white-space:normal}.lb-ticker{font-size:13px}}';
     document.head.appendChild(style);
 })();
 

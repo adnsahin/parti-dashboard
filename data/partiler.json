@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T15:37:22.351149",
+  "generatedAt": "2026-09-30T15:50:02.484837",
   "source": {
     "mainFile": "partiler.xlsx",
     "repairFile": "tamir.xlsx"
@@ -85,7 +85,7 @@
       "parti": "(2026) 2802",
       "stage": "SARIM 1",
       "kg": 220.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2024) 1091",
@@ -474,9 +474,9 @@
     {
       "id": "p19",
       "parti": "(2026) 5008",
-      "stage": "POLISH AKTARMA",
+      "stage": "SARIM 1",
       "kg": 440.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2024) 1187",
@@ -490,8 +490,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, BRONZİNG 1, SARIM 1, LAMİNASYON, KK, SEVK",
       "machine": "SL500-8",
-      "lastStage": "TRAŞ 2",
-      "hareket": "29.09.2026 14:29",
+      "lastStage": "BRONZİNG 1",
+      "hareket": "30.09.2026 15:46",
       "repairs": []
     },
     {
@@ -606,7 +606,7 @@
       "parti": "(2026) 6153",
       "stage": "KALİTE KONTROL",
       "kg": 220.0,
-      "wait": 0.9583333333333334,
+      "wait": 1,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2025) 164",
@@ -629,7 +629,7 @@
       "parti": "(2026) 6175",
       "stage": "SARIM 2",
       "kg": 440.0,
-      "wait": 11,
+      "wait": 12,
       "sev": "warn",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2024) 1187",
@@ -1633,7 +1633,7 @@
       "parti": "(2026) 8753",
       "stage": "FİZİKSEL KONTROL",
       "kg": 440.0,
-      "wait": 0.08333333333333333,
+      "wait": 0.125,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 422",
@@ -2158,29 +2158,6 @@
     },
     {
       "id": "p83",
-      "parti": "(2026) 8902",
-      "stage": "BURNOUT",
-      "kg": 440.0,
-      "wait": 5,
-      "sev": "ok",
-      "firma": "MERKEZ KADİFE TEKS MOB OTO GIDA SAN TİC",
-      "order": "(2025) 545",
-      "customer": "18/09/2026 - MRKZ",
-      "fabric": "DWB010517",
-      "recipe": "15 KREM",
-      "term": "10.04.2026",
-      "due": -173,
-      "pri": "29",
-      "inner": "",
-      "blocked": "",
-      "flow": "PARTİ, M.AÇMA, ZMPR 1, YIKAMA, Y.AÇMA, FIRÇA, RAMKURUTMA, BURNOUT, YIKAMA, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
-      "machine": "DSL500-1",
-      "lastStage": "RAM KURUTMA",
-      "hareket": "24.09.2026 17:00",
-      "repairs": []
-    },
-    {
-      "id": "p84",
       "parti": "(2026) 8905",
       "stage": "SEVK TESLİM",
       "kg": 440.0,
@@ -2203,7 +2180,7 @@
       "repairs": []
     },
     {
-      "id": "p85",
+      "id": "p84",
       "parti": "(2026) 8906",
       "stage": "PFD AÇMA",
       "kg": 440.0,
@@ -2226,7 +2203,7 @@
       "repairs": []
     },
     {
-      "id": "p86",
+      "id": "p85",
       "parti": "(2026) 8907",
       "stage": "SEVK TESLİM",
       "kg": 440.0,
@@ -2249,7 +2226,7 @@
       "repairs": []
     },
     {
-      "id": "p87",
+      "id": "p86",
       "parti": "(2026) 8908",
       "stage": "BRONZİNG 1",
       "kg": 220.0,
@@ -2272,7 +2249,7 @@
       "repairs": []
     },
     {
-      "id": "p88",
+      "id": "p87",
       "parti": "(2026) 8912",
       "stage": "KALİTE KONTROL",
       "kg": 440.0,
@@ -2295,7 +2272,7 @@
       "repairs": []
     },
     {
-      "id": "p89",
+      "id": "p88",
       "parti": "(2026) 8913",
       "stage": "BURNOUT",
       "kg": 440.0,
@@ -2318,7 +2295,7 @@
       "repairs": []
     },
     {
-      "id": "p90",
+      "id": "p89",
       "parti": "(2026) 8914",
       "stage": "AKTARMA",
       "kg": 440.0,
@@ -2341,7 +2318,7 @@
       "repairs": []
     },
     {
-      "id": "p91",
+      "id": "p90",
       "parti": "(2026) 8916",
       "stage": "SEVK TESLİM",
       "kg": 440.0,
@@ -2364,7 +2341,7 @@
       "repairs": []
     },
     {
-      "id": "p92",
+      "id": "p91",
       "parti": "(2026) 8920",
       "stage": "LAMİNASYON",
       "kg": 110.0,
@@ -2387,7 +2364,7 @@
       "repairs": []
     },
     {
-      "id": "p93",
+      "id": "p92",
       "parti": "(2026) 8925",
       "stage": "FİZİKSEL KONTROL",
       "kg": 220.0,
@@ -2410,7 +2387,7 @@
       "repairs": []
     },
     {
-      "id": "p94",
+      "id": "p93",
       "parti": "(2026) 8930",
       "stage": "FİZİKSEL KONTROL",
       "kg": 220.0,
@@ -2462,7 +2439,7 @@
       ]
     },
     {
-      "id": "p95",
+      "id": "p94",
       "parti": "(2026) 8933",
       "stage": "BURNOUT",
       "kg": 440.0,
@@ -2485,7 +2462,7 @@
       "repairs": []
     },
     {
-      "id": "p96",
+      "id": "p95",
       "parti": "(2026) 8934",
       "stage": "LAMİNASYON",
       "kg": 440.0,
@@ -2508,7 +2485,7 @@
       "repairs": []
     },
     {
-      "id": "p97",
+      "id": "p96",
       "parti": "(2026) 8936",
       "stage": "SEVK TESLİM",
       "kg": 440.0,
@@ -2531,7 +2508,7 @@
       "repairs": []
     },
     {
-      "id": "p98",
+      "id": "p97",
       "parti": "(2026) 8938",
       "stage": "BOYAMA",
       "kg": 440.0,
@@ -2554,7 +2531,7 @@
       "repairs": []
     },
     {
-      "id": "p99",
+      "id": "p98",
       "parti": "(2026) 8939",
       "stage": "PFD AÇMA",
       "kg": 440.0,
@@ -2577,7 +2554,7 @@
       "repairs": []
     },
     {
-      "id": "p100",
+      "id": "p99",
       "parti": "(2026) 8940",
       "stage": "BOYAMA",
       "kg": 440.0,
@@ -2600,7 +2577,7 @@
       "repairs": []
     },
     {
-      "id": "p101",
+      "id": "p100",
       "parti": "(2026) 8941",
       "stage": "PFD AÇMA",
       "kg": 365.0,
@@ -2623,7 +2600,7 @@
       "repairs": []
     },
     {
-      "id": "p102",
+      "id": "p101",
       "parti": "(2026) 8944",
       "stage": "FİZİKSEL KONTROL",
       "kg": 440.0,
@@ -2646,7 +2623,7 @@
       "repairs": []
     },
     {
-      "id": "p103",
+      "id": "p102",
       "parti": "(2026) 8945",
       "stage": "PFD AÇMA",
       "kg": 220.0,
@@ -2669,7 +2646,7 @@
       "repairs": []
     },
     {
-      "id": "p104",
+      "id": "p103",
       "parti": "(2026) 8949",
       "stage": "LAMİNASYON",
       "kg": 315.0,
@@ -2692,7 +2669,7 @@
       "repairs": []
     },
     {
-      "id": "p105",
+      "id": "p104",
       "parti": "(2026) 8949",
       "stage": "KALİTE KONTROL",
       "kg": 125.0,
@@ -2715,7 +2692,7 @@
       "repairs": []
     },
     {
-      "id": "p106",
+      "id": "p105",
       "parti": "(2026) 8950",
       "stage": "RAM FENOLK",
       "kg": 220.0,
@@ -2738,7 +2715,7 @@
       "repairs": []
     },
     {
-      "id": "p107",
+      "id": "p106",
       "parti": "(2026) 8951",
       "stage": "LAMİNASYON",
       "kg": 440.0,
@@ -2761,7 +2738,7 @@
       "repairs": []
     },
     {
-      "id": "p108",
+      "id": "p107",
       "parti": "(2026) 8952",
       "stage": "LAMİNASYON",
       "kg": 440.0,
@@ -2784,7 +2761,7 @@
       "repairs": []
     },
     {
-      "id": "p109",
+      "id": "p108",
       "parti": "(2026) 9080",
       "stage": "SEVK TESLİM",
       "kg": 450.0,
@@ -2807,7 +2784,7 @@
       "repairs": []
     },
     {
-      "id": "p110",
+      "id": "p109",
       "parti": "(2026) 9082",
       "stage": "SEVK TESLİM",
       "kg": 450.0,
@@ -2830,7 +2807,7 @@
       "repairs": []
     },
     {
-      "id": "p111",
+      "id": "p110",
       "parti": "(2026) 2834",
       "stage": "KALİTE KONTROL",
       "kg": 440.763,
@@ -2853,7 +2830,7 @@
       "repairs": []
     },
     {
-      "id": "p112",
+      "id": "p111",
       "parti": "(2026) 4567",
       "stage": "KALİTE KONTROL",
       "kg": 450.47,
@@ -2876,11 +2853,11 @@
       "repairs": []
     },
     {
-      "id": "p113",
+      "id": "p112",
       "parti": "(2026) 4579",
       "stage": "SEVK TESLİM",
       "kg": 445.0,
-      "wait": 0.625,
+      "wait": 0.6666666666666666,
       "sev": "ok",
       "firma": "HEFA SUNİ DERİ",
       "order": "(2026) 7",
@@ -2899,7 +2876,7 @@
       "repairs": []
     },
     {
-      "id": "p114",
+      "id": "p113",
       "parti": "(2026) 4582",
       "stage": "KALİTE KONTROL",
       "kg": 443.0,
@@ -2922,7 +2899,7 @@
       "repairs": []
     },
     {
-      "id": "p115",
+      "id": "p114",
       "parti": "(2026) 4590",
       "stage": "KALİTE KONTROL",
       "kg": 446.0,
@@ -2945,7 +2922,7 @@
       "repairs": []
     },
     {
-      "id": "p116",
+      "id": "p115",
       "parti": "(2026) 4595",
       "stage": "KALİTE KONTROL",
       "kg": 448.0,
@@ -2968,7 +2945,7 @@
       "repairs": []
     },
     {
-      "id": "p117",
+      "id": "p116",
       "parti": "(2026) 4596",
       "stage": "KALİTE KONTROL",
       "kg": 448.2,
@@ -2991,7 +2968,7 @@
       "repairs": []
     },
     {
-      "id": "p118",
+      "id": "p117",
       "parti": "(2026) 4613",
       "stage": "KALİTE KONTROL",
       "kg": 438.0,
@@ -3014,7 +2991,7 @@
       "repairs": []
     },
     {
-      "id": "p119",
+      "id": "p118",
       "parti": "(2026) 4618",
       "stage": "KALİTE KONTROL",
       "kg": 394.8,
@@ -3037,7 +3014,7 @@
       "repairs": []
     },
     {
-      "id": "p120",
+      "id": "p119",
       "parti": "(2026) 4619",
       "stage": "KALİTE KONTROL",
       "kg": 395.9,
@@ -3060,7 +3037,7 @@
       "repairs": []
     },
     {
-      "id": "p121",
+      "id": "p120",
       "parti": "(2026) 4917",
       "stage": "SEVK TESLİM",
       "kg": 465.73,
@@ -3083,7 +3060,7 @@
       "repairs": []
     },
     {
-      "id": "p122",
+      "id": "p121",
       "parti": "(2026) 4941",
       "stage": "SEVK TESLİM",
       "kg": 454.22,
@@ -3106,7 +3083,7 @@
       "repairs": []
     },
     {
-      "id": "p123",
+      "id": "p122",
       "parti": "(2026) 4944",
       "stage": "KALİTE KONTROL",
       "kg": 442.49,
@@ -3129,11 +3106,11 @@
       "repairs": []
     },
     {
-      "id": "p124",
+      "id": "p123",
       "parti": "(2026) 4952",
       "stage": "SEVK TESLİM",
       "kg": 425.78,
-      "wait": 0.6666666666666666,
+      "wait": 0.7083333333333334,
       "sev": "ok",
       "firma": "HEFA SUNİ DERİ",
       "order": "(2026) 7",
@@ -3152,7 +3129,7 @@
       "repairs": []
     },
     {
-      "id": "p125",
+      "id": "p124",
       "parti": "(2026) 4967",
       "stage": "KALİTE KONTROL",
       "kg": 80.881,
@@ -3190,7 +3167,7 @@
       ]
     },
     {
-      "id": "p126",
+      "id": "p125",
       "parti": "(2026) 4969",
       "stage": "RAM",
       "kg": 345.0,
@@ -3228,7 +3205,7 @@
       ]
     },
     {
-      "id": "p127",
+      "id": "p126",
       "parti": "(2026) 4970",
       "stage": "KALİTE KONTROL",
       "kg": 416.1,
@@ -3251,7 +3228,7 @@
       "repairs": []
     },
     {
-      "id": "p128",
+      "id": "p127",
       "parti": "(2026) 9006",
       "stage": "MAL AÇMA",
       "kg": 135.0,
@@ -3289,7 +3266,7 @@
       ]
     },
     {
-      "id": "p129",
+      "id": "p128",
       "parti": "(2026) 9024",
       "stage": "FİZİKSEL KONTROL",
       "kg": 250.0,
@@ -3369,7 +3346,7 @@
       ]
     },
     {
-      "id": "p130",
+      "id": "p129",
       "parti": "(2026) 8402",
       "stage": "LAMİNASYON",
       "kg": 65.0,
@@ -3421,7 +3398,7 @@
       ]
     },
     {
-      "id": "p131",
+      "id": "p130",
       "parti": "(2026) 8733",
       "stage": "DİNKLEME",
       "kg": 193.0,
@@ -3515,9 +3492,9 @@
       ]
     },
     {
-      "id": "p132",
+      "id": "p131",
       "parti": "(2026) 9601",
-      "stage": "RAM APRE",
+      "stage": "POLISH 2",
       "kg": 220.0,
       "wait": 0.25,
       "sev": "ok",
@@ -3533,12 +3510,12 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, SUB. BASKI, SARIM 1, LAMİNASYON, KK, SEVK",
       "machine": "DSL250-1",
-      "lastStage": "FIRÇA",
+      "lastStage": "RAM APRE",
       "hareket": "30.09.2026 09:16",
       "repairs": []
     },
     {
-      "id": "p133",
+      "id": "p132",
       "parti": "(2026) 7864",
       "stage": "SEVK TESLİM",
       "kg": 252.0,
@@ -3590,7 +3567,7 @@
       ]
     },
     {
-      "id": "p134",
+      "id": "p133",
       "parti": "(2026) 7865",
       "stage": "SEVK TESLİM",
       "kg": 33.0,
@@ -3628,7 +3605,7 @@
       ]
     },
     {
-      "id": "p135",
+      "id": "p134",
       "parti": "(2026) 7865",
       "stage": "SEVK TESLİM",
       "kg": 117.0,
@@ -3666,7 +3643,7 @@
       ]
     },
     {
-      "id": "p136",
+      "id": "p135",
       "parti": "(2026) 7867",
       "stage": "SEVK TESLİM",
       "kg": 319.0,
@@ -3689,7 +3666,7 @@
       "repairs": []
     },
     {
-      "id": "p137",
+      "id": "p136",
       "parti": "(2026) 7869",
       "stage": "SEVK TESLİM",
       "kg": 94.0,
@@ -3741,7 +3718,7 @@
       ]
     },
     {
-      "id": "p138",
+      "id": "p137",
       "parti": "(2026) 7870",
       "stage": "SEVK TESLİM",
       "kg": 314.0,
@@ -3764,7 +3741,7 @@
       "repairs": []
     },
     {
-      "id": "p139",
+      "id": "p138",
       "parti": "(2026) 7872",
       "stage": "SEVK TESLİM",
       "kg": 141.0,
@@ -3802,7 +3779,7 @@
       ]
     },
     {
-      "id": "p140",
+      "id": "p139",
       "parti": "(2026) 7873",
       "stage": "SEVK TESLİM",
       "kg": 284.0,
@@ -3825,7 +3802,7 @@
       "repairs": []
     },
     {
-      "id": "p142",
+      "id": "p141",
       "parti": "(2026) 8030",
       "stage": "SEVK TESLİM",
       "kg": 175.0,
@@ -3863,7 +3840,7 @@
       ]
     },
     {
-      "id": "p143",
+      "id": "p142",
       "parti": "(2026) 8034",
       "stage": "SEVK TESLİM",
       "kg": 177.0,
@@ -3901,7 +3878,7 @@
       ]
     },
     {
-      "id": "p144",
+      "id": "p143",
       "parti": "(2026) 8036",
       "stage": "SEVK TESLİM",
       "kg": 175.0,
@@ -3939,7 +3916,7 @@
       ]
     },
     {
-      "id": "p145",
+      "id": "p144",
       "parti": "(2026) 8037",
       "stage": "SEVK TESLİM",
       "kg": 175.0,
@@ -3977,7 +3954,7 @@
       ]
     },
     {
-      "id": "p146",
+      "id": "p145",
       "parti": "(2026) 8073",
       "stage": "SEVK TESLİM",
       "kg": 40.0,
@@ -4015,7 +3992,7 @@
       ]
     },
     {
-      "id": "p147",
+      "id": "p146",
       "parti": "(2026) 7497",
       "stage": "LAMİNASYON",
       "kg": 114.0,
@@ -4067,7 +4044,7 @@
       ]
     },
     {
-      "id": "p149",
+      "id": "p148",
       "parti": "(2026) 8663",
       "stage": "LAMİNASYON",
       "kg": 220.0,
@@ -4090,7 +4067,7 @@
       "repairs": []
     },
     {
-      "id": "p150",
+      "id": "p149",
       "parti": "(2026) 9727",
       "stage": "BOYAMA",
       "kg": 440.0,
@@ -4113,7 +4090,7 @@
       "repairs": []
     },
     {
-      "id": "p151",
+      "id": "p150",
       "parti": "(2026) 9728",
       "stage": "BOYAMA",
       "kg": 220.0,
@@ -4136,7 +4113,7 @@
       "repairs": []
     },
     {
-      "id": "p152",
+      "id": "p151",
       "parti": "(2026) 9729",
       "stage": "BOYAMA",
       "kg": 202.0,
@@ -4159,7 +4136,7 @@
       "repairs": []
     },
     {
-      "id": "p153",
+      "id": "p152",
       "parti": "(2026) 9730",
       "stage": "BOYAMA",
       "kg": 425.0,
@@ -4182,7 +4159,7 @@
       "repairs": []
     },
     {
-      "id": "p154",
+      "id": "p153",
       "parti": "(2026) 8484",
       "stage": "FİZİKSEL KONTROL",
       "kg": 120.0,
@@ -4220,7 +4197,7 @@
       ]
     },
     {
-      "id": "p155",
+      "id": "p154",
       "parti": "(2026) 9230",
       "stage": "BURNOUT",
       "kg": 220.0,
@@ -4243,7 +4220,7 @@
       "repairs": []
     },
     {
-      "id": "p156",
+      "id": "p155",
       "parti": "(2026) 8615",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4281,7 +4258,7 @@
       ]
     },
     {
-      "id": "p157",
+      "id": "p156",
       "parti": "(2026) 8616",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4304,7 +4281,7 @@
       "repairs": []
     },
     {
-      "id": "p158",
+      "id": "p157",
       "parti": "(2026) 8617",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4327,7 +4304,7 @@
       "repairs": []
     },
     {
-      "id": "p159",
+      "id": "p158",
       "parti": "(2026) 8618",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4365,7 +4342,7 @@
       ]
     },
     {
-      "id": "p160",
+      "id": "p159",
       "parti": "(2026) 8620",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4388,7 +4365,7 @@
       "repairs": []
     },
     {
-      "id": "p161",
+      "id": "p160",
       "parti": "(2026) 8621",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4411,7 +4388,7 @@
       "repairs": []
     },
     {
-      "id": "p162",
+      "id": "p161",
       "parti": "(2026) 8622",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4449,7 +4426,7 @@
       ]
     },
     {
-      "id": "p163",
+      "id": "p162",
       "parti": "(2026) 8623",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4487,7 +4464,7 @@
       ]
     },
     {
-      "id": "p164",
+      "id": "p163",
       "parti": "(2026) 8624",
       "stage": "LAMİNASYON",
       "kg": 120.0,
@@ -4525,7 +4502,7 @@
       ]
     },
     {
-      "id": "p166",
+      "id": "p165",
       "parti": "(2026) 9222",
       "stage": "KALİTE KONTROL",
       "kg": 260.0,
@@ -4548,7 +4525,7 @@
       "repairs": []
     },
     {
-      "id": "p167",
+      "id": "p166",
       "parti": "(2026) 9223",
       "stage": "YAŞ AÇMA",
       "kg": 260.0,
@@ -4571,7 +4548,7 @@
       "repairs": []
     },
     {
-      "id": "p168",
+      "id": "p167",
       "parti": "(2026) 9225",
       "stage": "DİNKLEME",
       "kg": 520.0,
@@ -4591,6 +4568,29 @@
       "machine": "SL500-3",
       "lastStage": "RAM FIRÇA",
       "hareket": "30.09.2026 12:53",
+      "repairs": []
+    },
+    {
+      "id": "p168",
+      "parti": "(2026) 9467",
+      "stage": "SEVK TESLİM",
+      "kg": 220.0,
+      "wait": 0.2916666666666667,
+      "sev": "ok",
+      "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
+      "order": "(2025) 466",
+      "customer": "İSTİKBAL.FSA_2592_10/09/2026",
+      "fabric": "DWB010517",
+      "recipe": "102 İSTİKBAL BEJ",
+      "term": "31.08.2026",
+      "due": -30,
+      "pri": "29",
+      "inner": "",
+      "blocked": "",
+      "flow": "PARTİ, M.AÇMA, ZMPR 1, KK, PARTİ, PFD AÇMA, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, LAMİNASYON, KK, SEVK",
+      "machine": "DSL250-1",
+      "lastStage": "KALİTE KONTROL",
+      "hareket": "30.09.2026 08:27",
       "repairs": []
     },
     {
@@ -4682,7 +4682,7 @@
       "parti": "(2026) 9318",
       "stage": "AKTARMA",
       "kg": 220.0,
-      "wait": 0.9583333333333334,
+      "wait": 1,
       "sev": "ok",
       "firma": "OTURAKÇI TOYS SAN.TİC.A.Ş",
       "order": "(2023) 210",
@@ -5421,7 +5421,7 @@
       "parti": "(2026) 9306",
       "stage": "FİZİKSEL KONTROL",
       "kg": 120.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "ŞAHİNLER TİC.LTD.ŞTİ. (APEX)",
       "order": "(2026) 401",
@@ -5513,7 +5513,7 @@
       "parti": "(2026) 9605",
       "stage": "RAM",
       "kg": 220.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2024) 932",
@@ -5689,7 +5689,7 @@
       "parti": "(2026) 9691",
       "stage": "BOYAMA",
       "kg": 440.0,
-      "wait": 0.16666666666666666,
+      "wait": 0.20833333333333334,
       "sev": "ok",
       "firma": "OTURAKÇI TOYS SAN.TİC.A.Ş",
       "order": "(2025) 392",
@@ -5894,9 +5894,9 @@
     {
       "id": "p219",
       "parti": "(2026) 9675",
-      "stage": "LAMİNASYON",
+      "stage": "KALİTE KONTROL",
       "kg": 440.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2024) 130",
@@ -5910,8 +5910,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, BOYA, Y.AÇMA, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "SL500-4",
-      "lastStage": "SARIM 1",
-      "hareket": "29.09.2026 12:40",
+      "lastStage": "LAMİNASYON",
+      "hareket": "30.09.2026 15:40",
       "repairs": []
     },
     {
@@ -7144,7 +7144,7 @@
       "parti": "(2026) 9745",
       "stage": "FİZİKSEL KONTROL",
       "kg": 22.0,
-      "wait": 0.9166666666666666,
+      "wait": 0.9583333333333334,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 318",
@@ -7351,7 +7351,7 @@
       "parti": "(2026) 9813",
       "stage": "FİZİKSEL KONTROL",
       "kg": 67.0,
-      "wait": 0.9166666666666666,
+      "wait": 0.9583333333333334,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 318",
@@ -8045,7 +8045,7 @@
       "parti": "(2026) 9463",
       "stage": "LAMİNASYON",
       "kg": 990.0,
-      "wait": 10,
+      "wait": 11,
       "sev": "warn",
       "firma": "HEFA LAMİNASYON",
       "order": "(2026) 258",
@@ -8206,7 +8206,7 @@
       "parti": "(2026) 9292",
       "stage": "FİZİKSEL KONTROL",
       "kg": 32.0,
-      "wait": 1,
+      "wait": 2,
       "sev": "ok",
       "firma": "HEFA AR-GE",
       "order": "(2026) 402",
@@ -8505,7 +8505,7 @@
       "parti": "(2026) 9888",
       "stage": "RAM",
       "kg": 440.0,
-      "wait": 0.041666666666666664,
+      "wait": 0.08333333333333333,
       "sev": "ok",
       "firma": "MAKRO KUMAŞÇILIK KONF.SAN.VE TİC.LTD.ŞTİ.",
       "order": "(2026) 350",
@@ -8758,7 +8758,7 @@
       "parti": "(2026) 9687",
       "stage": "SEVK TESLİM",
       "kg": 314.0,
-      "wait": 0.08333333333333333,
+      "wait": 0.125,
       "sev": "ok",
       "firma": "HEFA SUNİ DERİ",
       "order": "(2023) 1368",
@@ -8986,7 +8986,7 @@
       "parti": "(2026) 9688",
       "stage": "MAL AÇMA",
       "kg": 360.0,
-      "wait": 0.125,
+      "wait": 0.16666666666666666,
       "sev": "ok",
       "firma": "KARMODA KUMAŞ TEKSTİL SAN.İÇ VE DIŞ TİC.LTD.ŞTİ.",
       "order": "(2026) 389",
@@ -9032,7 +9032,7 @@
       "parti": "(2026) 9810",
       "stage": "FİZİKSEL KONTROL",
       "kg": 360.0,
-      "wait": 0.25,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "KARMODA KUMAŞ TEKSTİL SAN.İÇ VE DIŞ TİC.LTD.ŞTİ.",
       "order": "(2026) 389",
@@ -9047,7 +9047,7 @@
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, ÇİFTBOYA, Y.AÇMA, RAM APRE, RAM APRE, KK, FZK.KNT, SEVK",
       "machine": "SL500-6",
       "lastStage": "KALİTE KONTROL",
-      "hareket": "30.09.2026 09:05",
+      "hareket": "30.09.2026 15:36",
       "repairs": []
     },
     {
@@ -9055,7 +9055,7 @@
       "parti": "(2026) 9907",
       "stage": "ÇİFT BOYAMA",
       "kg": 360.0,
-      "wait": 0.041666666666666664,
+      "wait": 0.08333333333333333,
       "sev": "ok",
       "firma": "KARMODA KUMAŞ TEKSTİL SAN.İÇ VE DIŞ TİC.LTD.ŞTİ.",
       "order": "(2026) 389",
@@ -9078,7 +9078,7 @@
       "parti": "(2026) 9911",
       "stage": "MAL AÇMA",
       "kg": 240.0,
-      "wait": 0.08333333333333333,
+      "wait": 0.125,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2023) 1101",
@@ -9101,7 +9101,7 @@
       "parti": "(2026) 9472",
       "stage": "KALİTE KONTROL",
       "kg": 700.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "VEFA GRUP KİMYA TEKS.SAN.İÇ.VE DIŞ.TİC.LTD.ŞTİ",
       "order": "(2023) 1425",
@@ -9239,7 +9239,7 @@
       "parti": "(2026) 9640",
       "stage": "FİZİKSEL KONTROL",
       "kg": 600.0,
-      "wait": 0.20833333333333334,
+      "wait": 0.25,
       "sev": "ok",
       "firma": "VEFA GRUP KİMYA TEKS.SAN.İÇ.VE DIŞ.TİC.LTD.ŞTİ",
       "order": "(2023) 1425",
@@ -9858,7 +9858,7 @@
       "parti": "(2026) 9814",
       "stage": "FIRÇA",
       "kg": 33.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 433",
@@ -9881,7 +9881,7 @@
       "parti": "(2026) 9815",
       "stage": "FIRÇA",
       "kg": 33.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 433",
@@ -9904,7 +9904,7 @@
       "parti": "(2026) 9816",
       "stage": "FIRÇA",
       "kg": 33.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 433",
@@ -10019,7 +10019,7 @@
       "parti": "(2026) 9737",
       "stage": "RAM APRE",
       "kg": 28.0,
-      "wait": 0.25,
+      "wait": 0.2916666666666667,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 400",
@@ -10540,7 +10540,7 @@
       "parti": "(2026) 9679",
       "stage": "YAŞ FIRÇA",
       "kg": 28.0,
-      "wait": 0.8333333333333334,
+      "wait": 0.875,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 438",
@@ -10678,7 +10678,7 @@
       "parti": "(2026) 9696",
       "stage": "AKTARMA",
       "kg": 28.0,
-      "wait": 0.16666666666666666,
+      "wait": 0.20833333333333334,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 438",
@@ -10862,7 +10862,7 @@
       "parti": "(2026) 9711",
       "stage": "AKTARMA",
       "kg": 28.0,
-      "wait": 0.16666666666666666,
+      "wait": 0.20833333333333334,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 438",
@@ -11253,7 +11253,7 @@
       "parti": "(2026) 9633",
       "stage": "TARAK",
       "kg": 960.0,
-      "wait": 0.25,
+      "wait": 0.2916666666666667,
       "sev": "ok",
       "firma": "KÜTAHYA T TİPİ KAPALI VE AÇIK İNFAZ KURUMU İŞ YURDU MÜDÜRLÜĞÜ",
       "order": "(2026) 435",
@@ -11849,7 +11849,7 @@
     {
       "id": "p471",
       "parti": "(2026) 9901",
-      "stage": "MAL AÇMA",
+      "stage": "BOYAMA",
       "kg": 500.0,
       "wait": 1,
       "sev": "ok",
@@ -11865,7 +11865,7 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, BOYA, Y.AÇMA, RAM, ŞARDON, RAM APRE, KK, FZK.KNT, SEVK",
       "machine": "SL500-7",
-      "lastStage": "PARTİLEME",
+      "lastStage": "MAL AÇMA",
       "hareket": "29.09.2026 12:58",
       "repairs": []
     },
@@ -12012,7 +12012,7 @@
       "parti": "(2026) 9808",
       "stage": "FİZİKSEL KONTROL",
       "kg": 424.0,
-      "wait": 0.16666666666666666,
+      "wait": 0.20833333333333334,
       "sev": "ok",
       "firma": "ÇAĞLAYAN TEKSTİL + SÜLEYMAN DİZDAK",
       "order": "(2025) 627",
@@ -12265,7 +12265,7 @@
       "parti": "(2026) 9903",
       "stage": "İNCELTME",
       "kg": 600.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "MODA DORA TEKS.İNŞ.TURZ.KUYM.SAN.TİC.LTD.ŞTİ.",
       "order": "(2026) 231",
@@ -12280,7 +12280,7 @@
       "flow": "PARTİ, M.AÇMA, İNCELTME, Y.AÇMA, ÖNFİKSE 1, ZMPR 1, BOYA, Y.AÇMA, FIRÇA, , THUMPLER, RAM FIRÇA, KK, FZK.KNT, SEVK",
       "machine": "SL500-3",
       "lastStage": "MAL AÇMA",
-      "hareket": "29.09.2026 14:25",
+      "hareket": "30.09.2026 15:39",
       "repairs": []
     },
     {
@@ -12357,7 +12357,7 @@
       "parti": "(2026) 9914",
       "stage": "YAŞ AÇMA",
       "kg": 207.75,
-      "wait": 0.9166666666666666,
+      "wait": 0.9583333333333334,
       "sev": "ok",
       "firma": "AKA GİYİM SAN.VE DIŞ TİC.A.Ş",
       "order": "(2026) 446",
@@ -12771,7 +12771,7 @@
       "parti": "(2026) 9798",
       "stage": "ZIMPARA 1",
       "kg": 473.0,
-      "wait": 0.625,
+      "wait": 0.6666666666666666,
       "sev": "ok",
       "firma": "ÖZEN TEKSTİL İNŞAAT SAN TİC LTD ŞTİ",
       "order": "(2026) 434",
@@ -12840,7 +12840,7 @@
       "parti": "(2026) 9913",
       "stage": "BOYAMA",
       "kg": 432.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "GÖRSAN TEKSTİL SAN VE TİC LTD ŞTİ",
       "order": "(2025) 112",
@@ -12863,7 +12863,7 @@
       "parti": "(2026) 9916",
       "stage": "MAL AÇMA",
       "kg": 230.0,
-      "wait": 0.125,
+      "wait": 0.16666666666666666,
       "sev": "ok",
       "firma": "ÖZPİRAN TEKSTİL SAN.TİC.LTD.ŞTİ.",
       "order": "(2025) 562",
@@ -12909,7 +12909,7 @@
       "parti": "(2026) 9918",
       "stage": "MAL AÇMA",
       "kg": 230.0,
-      "wait": 0.125,
+      "wait": 0.16666666666666666,
       "sev": "ok",
       "firma": "ÖZPİRAN TEKSTİL SAN.TİC.LTD.ŞTİ.",
       "order": "(2025) 562",
@@ -12955,7 +12955,7 @@
       "parti": "(2026) 9915",
       "stage": "YAŞ AÇMA",
       "kg": 582.2,
-      "wait": 0.041666666666666664,
+      "wait": 0.08333333333333333,
       "sev": "ok",
       "firma": "VEFA GRUP KİMYA TEKS.SAN.İÇ.VE DIŞ.TİC.LTD.ŞTİ",
       "order": "(2025) 118",

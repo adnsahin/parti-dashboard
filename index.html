@@ -4254,10 +4254,14 @@ function zamanHistoryHtml(k){
 }
 function liveIsFzkStage(v){const s=stageKey(v);return s.startsWith('FZK')||s.startsWith('FİZİKSEL')||s.startsWith('FIZIKSEL')}
 function liveIsSevkStage(v){return stageKey(v).startsWith('SEVK')}
+// Son KK mı: ERP sonraki aşamayı verdiyse ona, vermediyse (KK'da hep boş gelir) partinin akışta hangi KK'da olduğuna bakılır.
+// cardNextStage burada kullanılmaz: akıştaki İLK KK'yı esas aldığı için iki KK'lı akışta son KK'daki partiyi ara KK sanar.
 function liveIsFinalKk(k){
     if(!isCurrentlyStage(k,'KK'))return false;
-    const n=cardNextStage(k);
-    return !n||liveIsFzkStage(n)||liveIsSevkStage(n);
+    const n=k.sonraki_asama||k.bir_sonraki;
+    if(n)return liveIsFzkStage(n)||liveIsSevkStage(n);
+    const x=swKkIndexAt(k);
+    return x.idx<0||swKkFinalAt(x.parts,x.idx);
 }
 function liveIsAfterFinalKk(k){
     if(isAfterStage(k,'KK'))return true;
@@ -4585,14 +4589,38 @@ function exportUretimLogWorkbook(){
 // ("…ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA … TRAŞ 2, KK, FZK.KNT, SEVK"): ara KK'daki ya da ara KK'ya gidecek parti sayılmaz.
 // Üretim kaydı da (update_uretim_log.py) aynı kuralı kullanır.
 function swKkFinalAt(parts,i){const n=parts[i+1];return !n||liveIsFzkStage(n)||liveIsSevkStage(n)}
+// Akıştaki kısaltma (M.AÇMA, FZK.KNT, ZMPR 1, RAMKURUTMA, ALTBEZ LAM…) tam aşama adına (MAL AÇMA, FİZİKSEL KONTROL, ZIMPARA 1,
+// RAM KURUTMA, ALTBEZ LAMİNASYON) uyuyor mu: tam adın her kelimesinin ilk harfi şart, diğer harfleri atlanabilir.
+// (RAM ≠ RAM APRE, FIRÇA ≠ K.FIRÇA: fazla ya da eksik kelime uymaz.)
+const swAbbrCache=new Map();
+function swFlowIs(token,stage){
+    const t=stageKey(token),words=normalizeStageName(stage).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    if(!t||!words.length)return false;
+    const ck=words.join(' ');let re=swAbbrCache.get(ck);
+    if(!re){re=new RegExp('^'+words.map(w=>[...w].map((c,i)=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+(i?'?':'')).join('')).join('')+'$','u');swAbbrCache.set(ck,re)}
+    return re.test(t);
+}
+// Partinin şu an bulunduğu KK'nın akıştaki yeri: geldiği aşamanın (son_asama) akışta SON geçtiği yerden sonraki ilk KK.
+// Tamir akışa eklenince aynı aşamalar tekrar eder ("…RAM APRE, KK, BOYA … RAM APRE, KK, SEVK"); iki KK'dan da önce aynı aşama
+// varsa veri hangisi olduğunu söylemez, sondaki kabul edilir. Üretim kaydı da (update_uretim_log.py, next_after) böyle sayar.
+// Geldiği aşama akışta bulunamazsa ilk KK alınır.
+function swKkIndexAt(k){
+    const parts=flowParts(k),ti=[],li=[],last=k.son_asama||'';
+    parts.forEach((p,i)=>{if(stageEquals(p,'KK'))ti.push(i);else if(last&&swFlowIs(p,last))li.push(i)});
+    if(!ti.length)return{parts,idx:-1};
+    if(!li.length)return{parts,idx:ti[0]};
+    const l=li[li.length-1],hit=ti.find(i=>i>=l);
+    return{parts,idx:hit!=null?hit:ti[ti.length-1]};
+}
 function swKkComingFinal(k){
     if(isCurrentlyStage(k,'KK')||!stageEquals(cardNextStage(k),'KK'))return false;
     const parts=flowParts(k),cur=cardCurrentStage(k),kks=[];
     parts.forEach((p,i)=>{if(stageEquals(p,'KK'))kks.push(i)});
     if(!kks.length)return true;
-    // gidilecek KK: akışta şu anki aşamadan hemen sonra gelen KK (aynı aşama iki KK'dan da önce geliyorsa biri son KK ise sayılır)
-    const cand=kks.filter(i=>i>0&&(stageKey(parts[i-1])===stageKey(cur)||stageEquals(parts[i-1],cur)));
-    return (cand.length?cand:[kks[kks.length-1]]).some(i=>swKkFinalAt(parts,i));
+    // gidilecek KK: akışta şu anki aşamadan hemen sonra gelen KK; aynı aşama birden çok KK'dan önce geliyorsa sondaki
+    // (yukarıdaki kuralla aynı); şu anki aşama akışta bulunamazsa son KK
+    const cand=kks.filter(i=>i>0&&swFlowIs(parts[i-1],cur));
+    return swKkFinalAt(parts,cand.length?cand[cand.length-1]:kks[kks.length-1]);
 }
 const SW_ROWS=[
     {key:'kk',name:'Kalite Kontrol',icon:'🔵',color:'#42A5F5',is:k=>liveIsFinalKk(k),coming:k=>swKkComingFinal(k),next:n=>stageEquals(n,'KK'),log:'kkPassed',arr:'kkArrived',

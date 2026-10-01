@@ -263,6 +263,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .note-form,.fire-form,.alarm-card-form{margin-top:8px;padding:8px;border-radius:8px}
 .note-form{background:rgba(47,117,181,.1);border:1px solid rgba(129,212,250,.3)}
 .fire-form{background:rgba(255,112,67,.08);border:1px solid rgba(255,120,120,.3)}
+/* Fire bölümü kaldırıldı: kartlardaki fire formu ve rozeti gizli (kayıtlar silinmedi; bu satır silinirse geri gelir) */
+.fire-form,.fire-pill{display:none!important}
 .alarm-card-form{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3)}
 .note-form-title{color:#90CAF9;font-weight:800;margin-bottom:6px;font-size:12px}
 .fire-form-title{color:#FFB3B3;font-weight:800;margin-bottom:6px;font-size:12px}
@@ -393,7 +395,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 @keyframes slideUp{from{transform:translateX(-50%) translateY(100px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
 /* MOBİL GEZİNME BAR STİLLERİ */
-.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;width:100%;height:60px;background:#110e2e;border-top:2px solid #2F75B5;z-index:10001;grid-template-columns:repeat(8,1fr);box-shadow:0 -4px 10px rgba(0,0,0,.3)}
+.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;width:100%;height:60px;background:#110e2e;border-top:2px solid #2F75B5;z-index:10001;grid-auto-flow:column;grid-auto-columns:1fr;box-shadow:0 -4px 10px rgba(0,0,0,.3)}
 .mobile-bottom-nav button{background:transparent;border:none;color:#fff;font-size:10px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px}
 .mobile-bottom-nav button span{font-size:18px}
 .mobile-bottom-nav button:active{background:rgba(255,255,255,.1)}
@@ -420,6 +422,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .quick-insights button{min-width:135px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:white;cursor:pointer;font-weight:bold;text-align:left}
 .quick-insights button b{display:block;color:#FFD700;font-size:18px;line-height:1.1}
 .quick-insights button small{display:block;opacity:.75;font-size:11px;margin-top:2px}
+.quick-insights button.qi-live{background:linear-gradient(135deg,#AD1457,#6A1B9A);border-color:rgba(255,255,255,.35);padding:10px 18px;box-shadow:0 4px 12px rgba(173,20,87,.35)}
+.quick-insights button.qi-live b{color:#fff;font-size:16px}.quick-insights button.qi-live:hover{filter:brightness(1.15)}
 .validation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
 .validation-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;cursor:pointer;text-align:left;color:white}
 .validation-box:hover,.validation-box.active{background:rgba(47,117,181,.35);border-color:#FFD700;transform:translateY(-1px)}
@@ -621,11 +625,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
   <div class="upload-status" id="uploadStatus">Colab gerekmez. Ana takip ve tamir Excel dosyalarını seçip yükleyin.</div>
 </div>
 <div class="quick-insights" id="quickInsights">
-<button type="button" data-action="today" onclick="toggleTodayPanel()"><b id="qiToday">0</b><small>Bugün Çöz</small></button>
-<button type="button" data-action="bottleneck" onclick="toggleBottleneckPanel()"><b id="qiBottleneck">-</b><small>Darboğaz</small></button>
-<button type="button" data-action="validation" onclick="toggleValidationPanel()"><b id="qiValidation">-</b><small>Veri Kontrol</small></button>
+<button type="button" class="qi-live" onclick="lbOpen()" title="Kalite Kontrol, Sarım1 ve Sarım2: Gelecek · Üzerinde · Üretim tek ekranda, canlı"><b>📺 Canlı Hareket İzleme</b><small>Kalite Kontrol · Sarım1 · Sarım2 — tıkla izle</small></button>
+<button type="button" class="qi-ana" onclick="paOpen()" title="Günlük üretim trendi, gelen–geçen dengesi, saatlik dağılım, aşamada kalış süresi"><b>📊 Üretim Analizi</b><small>günlük trend · denge · saatler · kalış süresi</small></button>
 <button type="button" data-action="repair" onclick="showTamirCards()"><b id="qiRepair">0</b><small>Tamirli Parti</small></button>
-<button type="button" data-action="wetdry" onclick="toggleWetDryPanel()"><b id="qiWetDry">930</b><small>Islak-Kuru</small></button>
 </div>
 <div class="group-mode-bar">
 <button class="group-mode-btn gm-hedef active" data-gmode="hedef" onclick="setGroupMode('hedef')">🔵 Şu An Beklediği Aşama</button>
@@ -685,14 +687,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button class="btn-uyari" onclick="filterSeviye('uyari')">🟡</button>
 <button class="btn-normal" onclick="filterSeviye('normal')">🟢</button>
 <button class="btn-note-list" onclick="toggleNotePanel()">📝</button>
-<button class="btn-fire-list" onclick="toggleFirePanel()">🔥</button>
-<button class="btn-fire-export" onclick="exportFireWorkbook()">📊 Fire</button>
 <button class="btn-alarm-list" onclick="toggleAlarmPanel()">🔔 Alarm</button>
 <button class="btn-tamir-list" id="btnTamirList" onclick="toggleTamirPanel()">🛠️ Tamir (0)</button>
-<button data-action="today" style="background:#C0392B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTodayPanel()">🎯 Bugün</button>
-<button data-action="bottleneck" style="background:#795548;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleBottleneckPanel()">🏭 Darboğaz</button>
-<button data-action="validation" style="background:#607D8B;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleValidationPanel()">✅ Kontrol</button>
-<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#D84315;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapTreemapPanel()">🌡️ Isı Haritası</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#E53935;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleLiveScreenPanel()">📡 Canlı İzleme Ekranı</button><button style="background:#0288D1;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleWetDryPanel()">💧 Islak-Kuru</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#006064;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
+<button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#006064;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button><button style="background:#AD1457;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="lbOpen()">📺 Canlı Hareket İzleme</button><button style="background:#1565C0;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="paOpen()">📊 Üretim Analizi</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
 <button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
@@ -702,9 +699,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="mobile-bottom-nav">
 <button onclick="openNumpad()"><span>🔢</span>Klavye</button>
 <button onclick="filterSeviye('kritik')"><span>🔴</span>Kritik</button>
-<button data-action="today" onclick="toggleTodayPanel()"><span>🎯</span>Bugün</button>
+<button onclick="lbOpen()"><span>📺</span>Canlı İzle</button>
 <button onclick="toggleTamirPanel()" id="btnTamirBottom"><span>🛠️</span>Tamir (0)</button>
-<button data-action="bottleneck" onclick="toggleBottleneckPanel()"><span>🏭</span>Darboğaz</button>
 </div>
 
 <div class="panel" id="notePanel"></div>
@@ -1899,7 +1895,7 @@ function flashCardHtml(k,popup){
     const alarmBtnH='<span class="alarm-btn '+(hasAl?'active':'')+'" onclick="event.stopPropagation();openAlarmModal(\''+k.id+'\')" title="Alarm">'+(hasAl?'🔔':'🔕')+'</span>';
     const ro=['<option value="">Sebep</option>'].concat(FIRE_REASONS.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
     let fml='';if(fl.length){fml='<div class="fire-mini-list">';fl.forEach((fr,i)=>{fml+='<div class="fire-mini-item"><b>'+(i+1)+') '+esc(fr.fire_sebebi||'')+'</b> '+num(fr.fire_kg).toLocaleString('tr-TR')+'kg<button onclick="deleteFireLine(event,\''+k.id+'\',\''+fr.uid+'\')">Sil</button></div>'});fml+='</div>'}
-    return '<div class="flash-card '+sev+' '+(ic?'is-checked':'')+' '+(hasAl?'has-alarm':'')+'"'+(popup?'':' id="card_'+k.id+'"')+' onclick="this.classList.toggle(\'flipped\')"><div class="card-header"><div style="display:flex;align-items:center;gap:5px">'+starH+alarmBtnH+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"><div class="parti" style="margin-left:5px">'+esc(k.parti)+'</div></div><div class="kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <span>kg</span></div></div><div class="card-body"><div class="asama-badge">'+esc(k._asama)+'</div>'+alBadge+tamirBadge+nb+'<div class="line1">'+esc(k.line1||'')+'</div>'+(k.recete_adi?'<div class="recipe-pill">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'tamir-pill')+'<div class="line2">'+esc(k.line2||'')+'</div>'+pipe+np2+fp+'</div><div class="card-detail"><div class="det-row"><span class="det-label">Bekliyor:</span><span>'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+esc(k.bir_sonraki||'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div><div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span>'+esc(bt)+'</span></div>'+(popup?'<div class="hm-card-more" onclick="event.stopPropagation()"><button type="button" onclick="openDetailModal(&quot;'+k.id+'&quot;)">📝 Not · 🔥 Fire · 🔔 Alarm · ayrıntı</button></div>':'<div class="note-form" onclick="event.stopPropagation()"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="note_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNote(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNote(event,\''+k.id+'\')">Sil</button></div></div><div class="fire-form" onclick="event.stopPropagation()"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="firekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="firemt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="firesebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="firenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFire(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFire(event,\''+k.id+'\')">Hepsini Sil</button></div></div>')+'</div><div class="card-footer"><div class="bekleme '+sev+'">'+esc(bt)+'</div><div class="badge '+sev+'">'+bl+'</div></div></div>';
+    return '<div class="flash-card '+sev+' '+(ic?'is-checked':'')+' '+(hasAl?'has-alarm':'')+'"'+(popup?'':' id="card_'+k.id+'"')+' onclick="this.classList.toggle(\'flipped\')"><div class="card-header"><div style="display:flex;align-items:center;gap:5px">'+starH+alarmBtnH+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"><div class="parti" style="margin-left:5px">'+esc(k.parti)+'</div></div><div class="kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <span>kg</span></div></div><div class="card-body"><div class="asama-badge">'+esc(k._asama)+'</div>'+alBadge+tamirBadge+nb+'<div class="line1">'+esc(k.line1||'')+'</div>'+(k.recete_adi?'<div class="recipe-pill">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'tamir-pill')+'<div class="line2">'+esc(k.line2||'')+'</div>'+pipe+np2+fp+'</div><div class="card-detail"><div class="det-row"><span class="det-label">Bekliyor:</span><span>'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+esc(k.bir_sonraki||'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div><div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span>'+esc(bt)+'</span></div>'+(popup?'<div class="hm-card-more" onclick="event.stopPropagation()"><button type="button" onclick="openDetailModal(&quot;'+k.id+'&quot;)">📝 Not · 🔔 Alarm · ayrıntı</button></div>':'<div class="note-form" onclick="event.stopPropagation()"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="note_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNote(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNote(event,\''+k.id+'\')">Sil</button></div></div><div class="fire-form" onclick="event.stopPropagation()"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="firekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="firemt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="firesebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="firenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFire(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFire(event,\''+k.id+'\')">Hepsini Sil</button></div></div>')+'</div><div class="card-footer"><div class="bekleme '+sev+'">'+esc(bt)+'</div><div class="badge '+sev+'">'+bl+'</div></div></div>';
 }
 function renderCardsView(kartlar){
     const c=document.getElementById('cardsContainer');if(!kartlar.length){c.innerHTML='<div class="no-results">Sonuç bulunamadı</div>';return}
@@ -3950,7 +3946,6 @@ function renderHeatmapMindmapPanel(){
     const oldMap=p.querySelector('.hm-map'),mapScrollX=oldMap?oldMap.scrollLeft:0,scroll=p.scrollTop;
     let h='<button class="panel-close" onclick="document.getElementById(&quot;heatmapMindmapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#F39C12">🧠 '+ttl+'</h2>';
     h+='<details class="live-help"><summary>ℹ️ Nasıl kullanılır?</summary><div class="panel-summary">🎯 ile görmek istemediğin aşamaları (1. seviye) topluca gizleyebilir ya da "Hiçbiri" deyip yalnızca görmek istediklerini seçebilirsin; seçim bu cihazda kalır. Bir dala tıklayınca alt dalları açılır/kapanır (▸/▾). Toplu açmak için üstteki "⊞ Aç:" düğmeleri tüm dalları o seviyeye kadar açar; bir dalın yanındaki ⊞ altındakilerin hepsini açar, ⊟ alt dallarını topluca kapatır. En uçta parti no varsa tıklayınca partinin flash kartı açılır; diğer uç dallarda partiler altta listelenir. "⤢ Ekrana sığdır" haritanın tamamını ekrana sığdırır (büyüdükçe yeniden sığar); sonra sürükleyerek kaydır, tekerlek / iki parmak / ＋－ ile büyüt, ⤢ ile yeniden tamamını gör.  ☐ ile birden çok uç dalı işaretleyip birlikte listeleyebilirsin, × dalı gizler. Noktanın rengi yoğunluğu gösterir (yeşil az → kırmızı çok). 3., 4. ve 5. seviyeler ile kırılımı istediğin kadar derinleştirebilirsin — 5. seviyeyi "Parti No" seçersen en altta parti no ve kilo tek tek görünür. "⛶ Tam ekran harita" yalnızca haritayı tüm ekranda gösterir (Esc ile çık). Tema ve yazı kutularından göz yormayan zemini ve yazı kalınlığını seçebilirsin.</div></details>';
-    h+='<button type="button" class="btn-fire-export" style="background:#D84315;color:#fff;margin-bottom:8px" onclick="toggleHeatmapTreemapPanel()">📊 Çubuk Görünümüne Geç</button>';
     h+=heatmapMindViewSwitchHtml();
     h+='<div class="filter-controls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:10px 0">';
     h+='<div class="filter-group"><label class="filter-label" style="display:block;font-size:11px;color:#FFD700;margin-bottom:4px;font-weight:800">1. Seviye</label>'+heatmapDimSelectHtml('heatmapMindTopSel','top',heatmapTopGroup)+'</div>';
@@ -4586,12 +4581,25 @@ function exportUretimLogWorkbook(){
    Üzerindekiler: şu an bu aşamada bekleyenler → geldikleri (son yapılan) aşamaya göre ("LAMİNASYON'dan gelen")
    Üretimi      : bugünkü vardiyada (08:00'den) geçenler, üretim kaydından → gittikleri aşamaya göre
    Kategoriye dokununca: Gelecek / Üzerindekiler → partilerin flash kartları; Üretim → kayıt listesi. */
+// Kalite Kontrol = yalnız SON KK (sonrası Fizik Kontrol / Sevk). Akışta ara KK da olabilir
+// ("…ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA … TRAŞ 2, KK, FZK.KNT, SEVK"): ara KK'daki ya da ara KK'ya gidecek parti sayılmaz.
+// Üretim kaydı da (update_uretim_log.py) aynı kuralı kullanır.
+function swKkFinalAt(parts,i){const n=parts[i+1];return !n||liveIsFzkStage(n)||liveIsSevkStage(n)}
+function swKkComingFinal(k){
+    if(isCurrentlyStage(k,'KK')||!stageEquals(cardNextStage(k),'KK'))return false;
+    const parts=flowParts(k),cur=cardCurrentStage(k),kks=[];
+    parts.forEach((p,i)=>{if(stageEquals(p,'KK'))kks.push(i)});
+    if(!kks.length)return true;
+    // gidilecek KK: akışta şu anki aşamadan hemen sonra gelen KK (aynı aşama iki KK'dan da önce geliyorsa biri son KK ise sayılır)
+    const cand=kks.filter(i=>i>0&&(stageKey(parts[i-1])===stageKey(cur)||stageEquals(parts[i-1],cur)));
+    return (cand.length?cand:[kks[kks.length-1]]).some(i=>swKkFinalAt(parts,i));
+}
 const SW_ROWS=[
-    {key:'kk',name:'Kalite Kontrol',icon:'🔵',color:'#42A5F5',is:k=>isCurrentlyStage(k,'KK'),next:n=>stageEquals(n,'KK'),log:'kkPassed',arr:'kkArrived',
+    {key:'kk',name:'Kalite Kontrol',icon:'🔵',color:'#42A5F5',is:k=>liveIsFinalKk(k),coming:k=>swKkComingFinal(k),next:n=>stageEquals(n,'KK'),log:'kkPassed',arr:'kkArrived',
         gel:'Kalite Kontrole Gelecek',on:'Kalite Kontrol Üzerindekiler',prod:'Kalite Kontrol Üretimi'},
-    {key:'sr1',name:'Sarım1',icon:'🟣',color:'#B39DDB',is:k=>isCurrentlyStage(k,'SARIM1'),next:n=>stageEquals(n,'SARIM1'),log:'sarimPassed',arr:'sarimArrived',
+    {key:'sr1',name:'Sarım1',icon:'🟣',color:'#B39DDB',is:k=>isCurrentlyStage(k,'SARIM1'),coming:k=>!isCurrentlyStage(k,'SARIM1')&&stageEquals(cardNextStage(k),'SARIM1'),next:n=>stageEquals(n,'SARIM1'),log:'sarimPassed',arr:'sarimArrived',
         gel:'Sarım1\'e Gelecek',on:'Sarım1 Üzerindekiler',prod:'Sarım1 Üretimi'},
-    {key:'sr2',name:'Sarım2',icon:'🟢',color:'#4DB6AC',is:k=>stageEquals(k._asama||k.asama||'','SARIM 2'),next:n=>stageEquals(n,'SARIM 2'),log:'sarim2Passed',arr:'sarim2Arrived',
+    {key:'sr2',name:'Sarım2',icon:'🟢',color:'#4DB6AC',is:k=>stageEquals(k._asama||k.asama||'','SARIM 2'),coming:k=>!stageEquals(k._asama||k.asama||'','SARIM 2')&&stageEquals(cardNextStage(k),'SARIM 2'),next:n=>stageEquals(n,'SARIM 2'),log:'sarim2Passed',arr:'sarim2Arrived',
         gel:'Sarım2\'ye Gelecek',on:'Sarım2 Üzerindekiler',prod:'Sarım2 Üretimi'}];
 let swReg=[];
 // Türkçe ayrılma eki: RAM → RAM'dan, DİNKLEME → DİNKLEME'den, BURNOUT → BURNOUT'tan, BRONZİNG 1 → BRONZİNG 1'den
@@ -4641,7 +4649,7 @@ function swFkRows(R,stats){
     const all=getAllCards(),byParti=new Map(),rows=new Map();
     all.forEach(k=>{const p=String(k.parti).trim();if(!byParti.has(p))byParti.set(p,k)});
     const put=(firm,fab,col,item)=>{const key=firm+'|'+fab;let r=rows.get(key);if(!r){r={firm,fab,c:{g:[],u:[],a:[],p:[]}};rows.set(key,r)}r.c[col].push(item)};
-    all.forEach(k=>{if(R.is(k))put(swFkFirm(k),swFkFab(k),'u',k);else if(R.next(cardNextStage(k)))put(swFkFirm(k),swFkFab(k),'g',k)});
+    all.forEach(k=>{if(R.is(k))put(swFkFirm(k),swFkFab(k),'u',k);else if(R.coming(k))put(swFkFirm(k),swFkFab(k),'g',k)});
     const fromLog=(obj,col)=>Object.keys(obj||{}).forEach(pn=>{
         const e=obj[pn],k=byParti.get(pn),r=Object.assign({parti:pn},e);
         put(k?swFkFirm(k):(upShortCompany(String(e.line1||'').split('|')[0])||String(e.line1||'').split(' / ')[0]||'-'),k?swFkFab(k):(String(e.kumas||'').trim()||'—'),col,r);
@@ -4796,7 +4804,7 @@ function renderSingleWatchPanel(){
     else{
     h+='<div class="sw-grid"><div></div><div class="sw-colhead">⏳ Gelecek</div><div class="sw-colhead">📍 Üzerindekiler (şu an)</div><div class="sw-colhead">✅ Üretimi (bugün)</div>';
     SW_ROWS.forEach(R=>{
-        const coming=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))),on=all.filter(R.is),prod=rowsOf(stats.log[R.log]),arrived=Object.keys(stats.log[R.arr]||{}).length;
+        const coming=all.filter(R.coming),on=all.filter(R.is),prod=rowsOf(stats.log[R.log]),arrived=Object.keys(stats.log[R.arr]||{}).length;
         // splitFor(ad): Gelecek / Üzerindekiler satırı tek pencerede yan yana — solda o aşamadan gelecek, sağda o aşamadan gelmiş olanlar
         const gG=swGroups(coming,k=>k._asama||k.asama,kgOf),oG=swGroups(on,k=>k.son_asama,kgOf);
         const listOf=(gs,n)=>{const x=gs.find(g=>g.name===n||stageKey(g.name)===stageKey(n));return x?x.list:[]};
@@ -4898,8 +4906,18 @@ let lbRecent=new Map(),lbTimer=null,lbLastKeys=null,lbLastProd=null,lbReg=[],lbC
 const LB_RECENT_MS=15*60000;
 // Aynı müşteri her yerde aynı ton (Gelecek mavi, Üzerinde mor tonları)
 const LB_TONES={g:['#1565C0','#0D47A1','#1E6FB8','#12508F'],u:['#5E35B1','#4527A0','#6A3FB5','#512DA8']};
-let lbShowCust=mapLoadPref('lbCust9',v=>v==='1'||v==='0','1')==='1';
-function lbToggleCust(){lbShowCust=!lbShowCust;mapSavePref('lbCust9',lbShowCust?'1':'0');lbLastKeys=null;lbRender()}
+// Gruplama: müşteriye göre · geldiği aşamaya göre (Gelecek: şu an bulunduğu aşama → "RAM'dan gelecek"; Üzerinde: son geçtiği aşama → "RAM'dan gelen") · yok
+const LB_GRP=['cust','from','none'],LB_GRP_LABEL={cust:'müşteriye göre',from:'geldiği aşamaya göre',none:'yok'},LB_GRP_ICON={cust:'👤',from:'🏭',none:'▦'};
+let lbGroupMode=mapLoadPref('lbGrp9',v=>LB_GRP.includes(v),mapLoadPref('lbCust9',v=>v==='1'||v==='0','1')==='0'?'none':'cust'),lbShowCust=lbGroupMode!=='none';
+function lbToggleCust(){
+    lbGroupMode=LB_GRP[(LB_GRP.indexOf(lbGroupMode)+1)%LB_GRP.length];lbShowCust=lbGroupMode!=='none';mapSavePref('lbGrp9',lbGroupMode);
+    lbLastKeys=null;lbRender();showToast(LB_GRP_ICON[lbGroupMode]+' Gruplama: '+LB_GRP_LABEL[lbGroupMode]);
+}
+function lbFromStage(k,cls){return normalizeStageName(cls==='g'?(k._asama||k.asama):k.son_asama)||'?'}
+function lbGroupOf(k,cls){return lbGroupMode==='from'?lbFromStage(k,cls):lbGroupName(k)}
+// Birim: parti adedi ya da kg (başlıklar, sıralama, üretim hücresi ve grafikler seçilen birime göre)
+let lbUnit=mapLoadPref('lbUnit9',v=>v==='n'||v==='kg','n');
+function lbToggleUnit(){lbUnit=lbUnit==='n'?'kg':'n';mapSavePref('lbUnit9',lbUnit);lbLastKeys=null;lbRender();showToast(lbUnit==='kg'?'⚖ Kg görünümü':'# Parti adedi görünümü')}
 // Odak: soldaki aşama adına tıklayınca yalnız o aşama tüm ekranı kaplar (yazı ve kutular orantılı büyür); tekrar tıklayınca üçü birden
 let lbFocus=null,lbGridHtml='';
 function lbSetFocus(key){lbFocus=lbFocus===key?null:key;lbLastKeys=null;lbRender()}
@@ -4914,7 +4932,7 @@ let lbQuery='',lbSearchOpen=false,lbRec=null,lbSearchT=null;
 function lbNorm(s){return String(s||'').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()}
 function lbMatch(k){
     if(!lbQuery)return false;
-    const hay=lbNorm([lbGroupName(k),lbFirm(k),k.firma,k.musteri_siparis,k.parti,k.ham_adi,k.recete_adi,k.line2].join(' | '));
+    const hay=lbNorm([lbGroupName(k),lbFirm(k),k.firma,k.musteri_siparis,k.parti,k.ham_adi,k.recete_adi,k.line2,k._asama||k.asama,k.son_asama].join(' | '));
     return lbNorm(lbQuery).split(' ').every(t=>hay.includes(t));
 }
 function lbSearchSummary(){
@@ -4980,19 +4998,45 @@ function lbShiftEnd(){
     const{start}=todayShiftWindow(),m=String(lbGoal.end||'08:00').match(/^(\d{1,2}):(\d{2})$/),e=new Date(start);
     e.setHours(m?+m[1]:8,m?+m[2]:0,0,0);if(e<=start)e.setDate(e.getDate()+1);return e;
 }
+// Seçili birimde değer: parti adedi ya da kg
+function lbVal(r){return lbUnit==='kg'?num(r.kg):1}
+function lbFmtV(v){return lbUnit==='kg'?lbShortKg(v)+' kg':String(Math.round(v))+' parti'}
 function lbProdStats(rows){
-    const{start}=todayShiftWindow(),s0=start.getTime(),now=Date.now(),hrs=Math.max(0.25,(now-s0)/3600000),rate=rows.length/hrs;
-    const end=lbShiftEnd(),left=Math.max(0,(end.getTime()-now)/3600000),est=Math.round(rows.length+rate*left);
+    const{start}=todayShiftWindow(),s0=start.getTime(),now=Date.now(),hrs=Math.max(0.25,(now-s0)/3600000);
+    const total=rows.reduce((s,r)=>s+lbVal(r),0),rate=total/hrs,nRate=rows.length/hrs;
+    const end=lbShiftEnd(),left=Math.max(0,(end.getTime()-now)/3600000),est=Math.round(total+rate*left),nEst=Math.round(rows.length+nRate*left);
     const nH=Math.max(1,Math.min(24,Math.floor((now-s0)/3600000)+1)),b=new Array(nH).fill(0);
-    rows.forEach(r=>{const i=Math.floor(((r.ts||0)-s0)/3600000);if(i>=0&&i<nH)b[i]++});
+    rows.forEach(r=>{const i=Math.floor(((r.ts||0)-s0)/3600000);if(i>=0&&i<nH)b[i]+=lbVal(r)});
     const from=Math.max(0,nH-12);
-    return{rate,est,end,bars:b.slice(from),h0:new Date(s0+from*3600000).getHours()};
+    return{total,rate,nRate,est,nEst,end,bars:b.slice(from),h0:new Date(s0+from*3600000).getHours()};
+}
+// Önceki günler (sunucu üretim kaydından, en çok 7 gün): gün toplamı ve "bugün bu saate kadar"ki karşılığı.
+// Dün kayıtta yoksa (ör. pazar) 0 sayılır; kayıt düne kadar gitmiyorsa dün = null.
+function lbPrevDays(R){
+    if(!URETIM_LOG||!URETIM_LOG.days)return{days:[],y:null};
+    const cat=(URETIM_CATS.find(c=>c.local===R.log)||{}).key,{start}=todayShiftWindow(),off=Date.now()-start.getTime(),today=liveProdLogKey();
+    const key=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const yd=new Date(start);yd.setDate(yd.getDate()-1);const yKey=key(yd),all=Object.keys(URETIM_LOG.days).sort();
+    const one=d=>{
+        const b=(URETIM_LOG.days[d]||{})[cat]||{},m=d.match(/^(\d{4})-(\d\d)-(\d\d)$/),s0=m?new Date(+m[1],+m[2]-1,+m[3],start.getHours(),0).getTime():0;
+        let total=0,same=0;Object.keys(b).forEach(pn=>{const v=lbVal(b[pn]),ts=uretimLogParseTs(b[pn].t);total+=v;if(ts&&ts-s0<=off)same+=v});
+        return{day:d,total,same};
+    };
+    return{days:all.filter(d=>d<today).slice(-7).map(one),y:all.length&&all[0]<=yKey?one(yKey):null};
 }
 function lbChartHtml(s){
     const n=s.bars.length,max=Math.max(1,...s.bars),hh=h=>String(h%24).padStart(2,'0');
     return '<svg class="lb-prod-chart" viewBox="0 0 '+(n*10)+' 30" preserveAspectRatio="none">'+s.bars.map((v,i)=>{const h=v?Math.max(3,v/max*28):1;
-        return '<rect x="'+(i*10+1)+'" y="'+(30-h).toFixed(1)+'" width="8" height="'+h.toFixed(1)+'" fill="'+(i===n-1?'#FFD700':'#66BB6A')+'"><title>'+hh(s.h0+i)+':00–'+hh(s.h0+i+1)+':00 • '+v+' parti</title></rect>'}).join('')
+        return '<rect x="'+(i*10+1)+'" y="'+(30-h).toFixed(1)+'" width="8" height="'+h.toFixed(1)+'" fill="'+(i===n-1?'#FFD700':'#66BB6A')+'"><title>'+hh(s.h0+i)+':00–'+hh(s.h0+i+1)+':00 • '+lbFmtV(v)+'</title></rect>'}).join('')
         +'</svg><div class="lb-prod-ax"><span>'+hh(s.h0)+'</span><span>saatlik</span><span>'+hh(s.h0+n-1)+'</span></div>';
+}
+// Son günlerin gün toplamları + bugün (şu ana kadar, altın)
+function lbDaysChartHtml(days,todayTotal){
+    const list=days.concat([{day:liveProdLogKey(),total:todayTotal,today:true}]),n=list.length,max=Math.max(1,...list.map(d=>d.total));
+    const lab=d=>{const m=d.match(/^(\d{4})-(\d\d)-(\d\d)$/);return m?m[3]+'.'+m[2]:d},dow=d=>{const m=d.match(/^(\d{4})-(\d\d)-(\d\d)$/);return m?['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'][new Date(+m[1],+m[2]-1,+m[3]).getDay()]:''};
+    return '<svg class="lb-prod-chart" viewBox="0 0 '+(n*10)+' 30" preserveAspectRatio="none">'+list.map((d,i)=>{const h=d.total?Math.max(3,d.total/max*28):1;
+        return '<rect x="'+(i*10+1)+'" y="'+(30-h).toFixed(1)+'" width="8" height="'+h.toFixed(1)+'" fill="'+(d.today?'#FFD700':'#4FC3F7')+'"><title>'+lab(d.day)+' '+dow(d.day)+(d.today?' (bugün, şu ana kadar)':'')+' • '+lbFmtV(d.total)+'</title></rect>'}).join('')
+        +'</svg><div class="lb-prod-ax"><span>'+lab(list[0].day)+'</span><span>günlük</span><span>bugün</span></div>';
 }
 function lbGoalOpen(){
     const row=(k,l)=>'<label class="lb-gl"><span>'+l+'</span><input type="number" min="0" step="1" inputmode="numeric" id="lbG_'+k+'" value="'+(lbGoal[k]||'')+'" placeholder="—"></label>';
@@ -5036,6 +5080,8 @@ function lbOpen(){
     if(!el){el=document.createElement('div');el.id='liveBoard';el.className='lb';document.body.appendChild(el)}
     el.style.display='flex';lbLastKeys=null;lbLastProd=null;lbFocus=null;lbQuery='';lbSearchOpen=false;uretimLogFetchedAt=0;lbRender();
     if(!lbTimer)lbTimer=setInterval(lbTick,30000);
+    // ana sayfadan doğrudan açılınca da sunucudaki üretim kaydı hemen okunsun
+    uretimLogRefresh(()=>{if(lbVisible())lbRender()});
 }
 function lbClose(){
     const el=document.getElementById('liveBoard');if(el)el.style.display='none';
@@ -5056,7 +5102,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lbVisible()&&!docum
 function lbShortKg(v){return Math.round(num(v)).toLocaleString('tr-TR')}
 function lbCellHtml(key,title,items,color){
     const kg=items.reduce((s,x)=>s+num(x.kilo),0);
-    return '<div class="lb-cell" style="--c:'+color+'"><div class="lb-cell-h"><span>'+esc(title)+'</span><span><b>'+items.length+'</b> • '+Math.round(kg).toLocaleString('tr-TR')+' kg</span></div>'
+    const kgT=Math.round(kg).toLocaleString('tr-TR');
+    return '<div class="lb-cell" style="--c:'+color+'"><div class="lb-cell-h"><span>'+esc(title)+'</span><span>'+(lbUnit==='kg'?'<b>'+kgT+' kg</b> • '+items.length+' parti':'<b>'+items.length+'</b> • '+kgT+' kg')+'</span></div>'
         +'<div class="lb-body" data-cell="'+key+'"></div></div>';
 }
 function lbProdCellHtml(R,rows){
@@ -5066,19 +5113,32 @@ function lbProdCellHtml(R,rows){
     if(goal){
         const rem=goal-n;
         if(rem<=0)eta='🎉 Hedef tamam';
-        else if(s.rate>0){const t=Date.now()+rem/s.rate*3600000;eta=t<=s.end.getTime()?'Hedef ~'+hm(t):'Hedefe '+Math.max(1,goal-s.est)+' eksik'}
+        else if(s.nRate>0){const t=Date.now()+rem/s.nRate*3600000;eta=t<=s.end.getTime()?'Hedef ~'+hm(t):'Hedefe '+Math.max(1,goal-s.nEst)+' eksik'}
         else eta='Hedefe '+rem+' kaldı';
     }
-    const tip='Bugün geçen partilerin listesi\nOrtalama hız: '+s.rate.toLocaleString('tr-TR',{maximumFractionDigits:1})+' parti/saat (08:00\'den)\nBu hızla gün sonunda ('+hm(s.end)+'): ~'+s.est+' parti'+(goal?'\nHedef: '+goal+' parti':'');
-    return '<div class="lb-cell lb-prod" data-prod="'+R.key+'" style="--c:#66BB6A" onclick="lbOpenProd('+idx+')" title="'+esc(tip)+'">'
+    // seçili birimde (adet / kg): hız, gün sonu tahmini, dün ile karşılaştırma
+    const kgv=lbUnit==='kg',kgT=Math.round(kg).toLocaleString('tr-TR'),fv=v=>kgv?lbShortKg(v):String(Math.round(v)),unit=kgv?'kg':'parti';
+    const rateT=kgv?lbShortKg(s.rate)+' kg/sa':s.rate.toLocaleString('tr-TR',{maximumFractionDigits:1})+'/sa';
+    const prev=lbPrevDays(R),y=prev.y;
+    let yHtml='',yTip='';
+    if(y){
+        const d=s.total-y.same,cls=d>0?'up':d<0?'dn':'';
+        yHtml='<div class="lb-px lb-px-m lb-px-y">Dün<span class="lb-hm"> bu saatte</span> '+fv(y.same)+(d?' <b class="'+cls+'">'+(d>0?'▲':'▼')+fv(Math.abs(d))+'</b>':'')+'</div>'
+            +'<div class="lb-px lb-px-l">Dün toplam '+fv(y.total)+'</div>';
+        yTip='\nDün aynı saatte: '+fv(y.same)+' '+unit+' • dün toplam: '+fv(y.total)+' '+unit;
+    }
+    const tip='Bugün geçen partilerin listesi\nOrtalama hız: '+rateT.replace('/sa',kgv?'/saat':' parti/saat')+' (08:00\'den)\nBu hızla gün sonunda ('+hm(s.end)+'): ~'+fv(s.est)+' '+unit+(goal?'\nHedef: '+goal+' parti':'')+yTip;
+    return '<div class="lb-cell lb-prod'+(kgv?' kgv':'')+'" data-prod="'+R.key+'" style="--c:#66BB6A" onclick="lbOpenProd('+idx+')" title="'+esc(tip)+'">'
         +'<button type="button" class="lb-goal-b" onclick="event.stopPropagation();lbGoalOpen()" title="Günlük hedef ve gün sonu saati">🎯</button>'
-        +'<div class="lb-prod-t">✅ '+esc(R.name)+'</div><div class="lb-prod-n"><b>'+n+'</b><small>'+(goal?'/ '+goal+' parti':'parti')+'</small></div>'
+        +'<div class="lb-prod-t">✅ '+esc(R.name)+'</div><div class="lb-prod-n"><b>'+(kgv?kgT:n)+'</b><small>'+(kgv?'kg':goal?'/ '+goal+' parti':'parti')+'</small></div>'
         +(goal?'<div class="lb-prod-bar'+(n>=goal?' done':'')+'"><i style="width:'+Math.min(100,n/goal*100).toFixed(0)+'%"></i></div>':'')
-        +'<div class="lb-prod-kg">'+Math.round(kg).toLocaleString('tr-TR')+' kg</div>'
-        +'<div class="lb-px lb-px-m">ort. '+s.rate.toLocaleString('tr-TR',{maximumFractionDigits:1})+'/sa</div>'
+        +'<div class="lb-prod-kg">'+(kgv?n+(goal?' / '+goal:'')+' parti':kgT+' kg')+'</div>'
+        +'<div class="lb-px lb-px-m">ort. '+rateT+'</div>'
         +(eta?'<div class="lb-px lb-px-m lb-px-eta'+(n>=goal?' ok':'')+'">'+eta+'</div>':'')
-        +'<div class="lb-px lb-px-l">Gün sonu ~'+s.est+'</div>'
-        +'<div class="lb-px lb-px-l lb-px-chart">'+lbChartHtml(s)+'</div></div>';
+        +yHtml
+        +'<div class="lb-px lb-px-l">Gün sonu ~'+fv(s.est)+'</div>'
+        +'<div class="lb-px lb-px-l lb-px-chart">'+lbChartHtml(s)+'</div>'
+        +(prev.days.length?'<div class="lb-px lb-px-xl lb-px-chart">'+lbDaysChartHtml(prev.days,s.total)+'</div>':'')+'</div>';
 }
 // Yazı genişliği gerçek yazı tipiyle ölçülür (kalın büyük harfler tahminden geniş; ad kesilmesin) — 1 px yazı başına genişlik
 const lbMeasureCtx=document.createElement('canvas').getContext('2d');
@@ -5092,18 +5152,23 @@ const LB_GAP=3;
 function lbFmax(root){const phone=!(root&&root.classList.contains('lb-export'))&&window.matchMedia&&matchMedia('(max-width:700px)').matches;return lbFocus?(phone?26:44):(phone?15:22)}
 // Hücre içeriği: müşteri grupları (büyükten küçüğe) + en geniş parti no / kg (1 px yazı başına)
 function lbCellModel(d){
-    const m=new Map();d.items.forEach(x=>{const n=lbShowCust?lbGroupName(x.k):'';if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
-    const groups=[...m.entries()].map(([name,list])=>{const t=name+' '+list.length;return{name,list,nm:lbShowCust?lbMw(t):0,nl:t.length}})
-        .sort((a,b)=>b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
-    const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*0.8:0;
-    return{groups,noW,kgW,n:d.items.length};
+    const kgv=lbUnit==='kg',from=lbGroupMode==='from',kgS=kgv?0.92:0.74;
+    const m=new Map();d.items.forEach(x=>{const n=lbShowCust?lbGroupOf(x.k,d.cls):'';if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
+    // başlık: ad (ya da "RAM'dan") + adet ya da toplam kg; kg görünümünde gruplar ve partiler kg'a göre sıralı
+    const groups=[...m.entries()].map(([name,list])=>{
+        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),lab=kgv?lbShortKg(kg)+' kg':String(list.length),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):name,t=title+' '+lab;
+        if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
+        return{name,title,lab,kg,list,nm:lbShowCust?lbMw(t):0,nl:t.length};
+    }).sort((a,b)=>(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
+    const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*(kgS+0.06):0;
+    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length};
 }
 // f px yazıyla W genişliğe yerleşim planı; H'ye sığmıyorsa (ya da bir ad genişliğe sığmıyorsa) null.
 // mode 's': parti no üstte kg altta · 'i': yan yana
 function lbPlan(M,W,H,f,mode,force){
     // iç boşluklar yazıyla orantılı (küçük ekranda boşa yer gitmesin)
     const hf=f*0.9,headH=lbShowCust?Math.ceil(hf*1.2+2):0,GAP=LB_GAP;
-    const tw=mode==='s'?Math.max(M.noW,M.kgW)*f*1.06+f*0.5+3:(M.noW+M.kgW+0.35)*f*1.06+f*0.6+4,th=mode==='s'?f*1.78+f*0.3+2:f*1.1+f*0.3+2;
+    const tw=mode==='s'?Math.max(M.noW,M.kgW)*f*1.06+f*0.5+3:(M.noW+M.kgW+0.35)*f*1.06+f*0.6+4,th=mode==='s'?f*1.04*(1+M.kgS)+f*0.3+2:f*1.1+f*0.3+2;
     const multi=[],single=[];
     for(const g of M.groups){
         const n=g.list.length,nw=lbShowCust?g.nm*hf*1.04+0.2*g.nl+hf*0.8+6:0;
@@ -5169,14 +5234,15 @@ function lbLayoutCell(body,root){
             const hits=lbQuery?g.list.map(it=>lbMatch(it.k)):null;
             h+='<div class="lb-grpbox'+(hits&&hits.some(Boolean)?' hit':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px;width:'+bw.toFixed(1)+'px;height:'+LH.toFixed(1)+'px;--tc:'+tone+'">';
             if(lbShowCust){
-                const firms=[...new Set(g.list.map(x=>lbFirm(x.k)))].filter(f=>f&&f!==g.name),htip=g.name+(firms.length?' — '+firms.join(', '):'')+' • '+n+' parti';
-                h+='<div class="lb-grp-h" style="height:'+P.headH+'px;font-size:'+P.hf.toFixed(1)+'px" title="'+esc(htip)+'"><span>'+esc(g.name)+' <i>'+n+'</i></span></div>';
+                const firms=lbGroupMode==='from'?[]:[...new Set(g.list.map(x=>lbFirm(x.k)))].filter(f=>f&&f!==g.name);
+                const htip=(lbGroupMode==='from'?g.title+(d.cls==='g'?' gelecek':' gelen'):g.name+(firms.length?' — '+firms.join(', '):''))+' • '+n+' parti • '+lbShortKg(g.kg)+' kg';
+                h+='<div class="lb-grp-h" style="height:'+P.headH+'px;font-size:'+P.hf.toFixed(1)+'px" title="'+esc(htip)+'"><span>'+esc(g.title)+' <i>'+g.lab+'</i></span></div>';
             }
             g.list.forEach((it,i)=>{
                 const r=Math.floor(i/b.cols),inLast=r===b.rows-1,lastCount=n-(b.rows-1)*b.cols,cw=bw/(inLast?lastCount:b.cols),c=inLast?i-(b.rows-1)*b.cols:i%b.cols;
                 const k=it.k,rec=lbRecent.get(it.key),recent=rec&&Date.now()-rec<LB_RECENT_MS,sev=k.seviye==='kritik'?' kritik':k.seviye==='uyari'?' uyari':'';
                 const wc=lbWaitMode?lbWaitColor(k):'',hit=hits&&hits[i]?' hit':'';
-                h+='<div class="lb-t'+(P.mode==='i'?' in':'')+sev+(recent?' recent':'')+hit+'" data-k="'+esc(it.key)+'" data-c="'+body.dataset.cell+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="'+esc(it.tip)+'" style="left:'+(c*cw).toFixed(1)+'px;top:'+(P.headH+r*th).toFixed(1)+'px;width:'+cw.toFixed(1)+'px;height:'+th.toFixed(1)+'px;font-size:'+P.f.toFixed(1)+'px'+(wc?';background:'+wc:'')+'">'
+                h+='<div class="lb-t'+(P.mode==='i'?' in':'')+(lbUnit==='kg'?' kgv':'')+sev+(recent?' recent':'')+hit+'" data-k="'+esc(it.key)+'" data-c="'+body.dataset.cell+'" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="'+esc(it.tip)+'" style="left:'+(c*cw).toFixed(1)+'px;top:'+(P.headH+r*th).toFixed(1)+'px;width:'+cw.toFixed(1)+'px;height:'+th.toFixed(1)+'px;font-size:'+P.f.toFixed(1)+'px'+(wc?';background:'+wc:'')+'">'
                     +'<b>'+esc(heatmapShortParti(k))+'</b><span>'+lbShortKg(k.kilo)+'</span></div>';
             });
             h+='</div>';x+=bw+GAP;
@@ -5189,7 +5255,7 @@ function lbLayout(root){
     root=root||document.getElementById('liveBoard');if(!root)return;
     lbBalanceRows(root);root.querySelectorAll('.lb-body[data-cell]').forEach(b=>lbLayoutCell(b,root));
     // Üretim hücresi yüksekliğine göre ne kadar bilgi gösterileceği (kısa satırda yalnız sayı)
-    root.querySelectorAll('.lb-prod').forEach(c=>{const h=c.clientHeight;c.dataset.sz=h<92?'xs':h<150?'s':h<215?'m':'l'});
+    root.querySelectorAll('.lb-prod').forEach(c=>{const h=c.clientHeight,z=lbFocus?1.35:1;c.dataset.sz=h<92*z?'xs':h<150*z?'s':h<232*z?'m':h<312*z?'l':'xl'});
 }
 // Kayan şerit: bugünün hareketleri; bir harekete tıklayınca partinin kartı açılır
 // (parti güncel veride yoksa — ör. sevk edildi — üretim kaydındaki bilgisi gösterilir)
@@ -5230,7 +5296,8 @@ function lbRender(){
         +'<span class="lb-legend"><i class="g"></i>Gelecek <i class="u"></i>Üzerinde <i class="rc"></i>son 15 dk hareket</span>'
         +'<span id="lbClock" class="lb-clock">'+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</span>'
         +'<button type="button" title="Yenile" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>lbRender())}else{lbRender()}">🔄</button>'
-        +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Aynı müşterinin kutularını bir blokta göster / kapat" onclick="lbToggleCust()">👤</button>'
+        +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Gruplama (şu an: '+LB_GRP_LABEL[lbGroupMode]+') — tıkla: müşteri → geldiği aşama → yok" onclick="lbToggleCust()">'+LB_GRP_ICON[lbGroupMode]+'</button>'
+        +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
         +'<button type="button" class="'+(lbSearchOpen||lbQuery?'on':'')+'" title="Müşteri / parti ara ve vurgula" onclick="lbSearchToggle()">🔍</button>'
         +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" onclick="lbToggleWait()">⏱</button>'
         +'<button type="button" class="lb-exp" style="background:#1565C0" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
@@ -5239,11 +5306,11 @@ function lbRender(){
         +'<button type="button" title="Tam ekran" onclick="lbToggleFull()">⛶</button><button type="button" class="lb-x" title="Kapat (Esc)" onclick="lbClose()">✕</button></div>';
     // Satır yükseklikleri içerikle orantılı (parti + müşteri başlığı): böylece üç aşamada yazılar aynı büyüklüğe yakın olur,
     // az partili aşama boşuna yer kaplamaz, kalabalık aşama sıkışmaz
-    const units=list=>list.length+(lbShowCust?1.3*new Set(list.map(lbGroupName)).size:0);
-    const rowW=lbRows().map(R=>{const c=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))),o=all.filter(R.is);return Math.max(5,Math.max(units(c),units(o))+3)});
+    const units=(list,cls)=>list.length+(lbShowCust?1.3*new Set(list.map(k=>lbGroupOf(k,cls))).size:0);
+    const rowW=lbRows().map(R=>{const c=all.filter(R.coming),o=all.filter(R.is);return Math.max(5,Math.max(units(c,'g'),units(o,'u'))+3)});
     let g='<div class="lb-grid" style="grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div><div class="lb-colh">⏳ Gelecek</div><div class="lb-colh">📍 Üzerinde</div><div class="lb-colh">✅ Üretim</div>';
     lbRows().forEach(R=>{
-        const coming=all.filter(k=>!R.is(k)&&R.next(cardNextStage(k))).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
+        const coming=all.filter(R.coming).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
         const prodObj=stats.log[R.log]||{},prod=Object.keys(prodObj).map(pn=>Object.assign({parti:pn},prodObj[pn])).sort((a,b)=>(b.ts||0)-(a.ts||0));
         prodSets[R.key]=new Set(prod.map(r=>r.parti));prodCount[R.key]=prod.length;
         const key=(p,col)=>{let k=R.key+'|'+p;if(keys.has(k))k+='|'+col;keys.set(k,1);return k};
@@ -5384,7 +5451,11 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-prod{position:relative;overflow:hidden}.lb-goal-b{position:absolute;top:3px;right:3px;background:none;border:0;font-size:13px;cursor:pointer;opacity:.55;padding:2px;line-height:1}.lb-goal-b:hover{opacity:1}'
         +'.lb-prod-bar{width:84%;height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden;margin:3px 0}.lb-prod-bar i{display:block;height:100%;background:linear-gradient(90deg,#43A047,#9CCC65);border-radius:3px}.lb-prod-bar.done i{background:#FFD700}'
         +'.lb-px{display:none;font-size:11px;color:#B0BEC5;font-weight:700;line-height:1.25}.lb-px-eta{color:#FFCC80}.lb-px-eta.ok{color:#FFD700}'
-        +'.lb-prod[data-sz="m"] .lb-px-m,.lb-prod[data-sz="l"] .lb-px{display:block}'
+        +'.lb-prod[data-sz="m"] .lb-px-m,.lb-prod[data-sz="l"] .lb-px-m,.lb-prod[data-sz="l"] .lb-px-l,.lb-prod[data-sz="xl"] .lb-px{display:block}'
+        +'.lb-px-y b{font-weight:900}.lb-px-y b.up{color:#69F0AE}.lb-px-y b.dn{color:#FF8A80}'
+        // kg görünümü: üretim hücresinde büyük sayı kg (dar sütuna sığsın diye daha küçük), kutularda kg vurgulu
+        +'.lb-prod.kgv .lb-prod-n b{font-size:23px}.lb.focus .lb-prod.kgv .lb-prod-n b{font-size:32px}.lb-prod.kgv .lb-prod-kg{font-size:13px}'
+        +'.lb-t.kgv span{font-size:.92em;opacity:1;font-weight:900;color:#FFE082}.lb-top button.lb-unit{font-weight:900;font-size:14px}'
         +'.lb-px-chart{width:92%;margin-top:4px}.lb-prod-chart{display:block;width:100%;height:30px}.lb-prod-ax{display:flex;justify-content:space-between;font-size:9px;color:#78909C;font-weight:600}'
         +'.lb-prod[data-sz="xs"] .lb-prod-t{display:none}.lb-prod[data-sz="xs"] .lb-prod-n{display:flex;align-items:baseline;justify-content:center;gap:3px}.lb-prod[data-sz="xs"] .lb-prod-n b{display:inline;font-size:26px}.lb-prod[data-sz="xs"] .lb-prod-n small{font-size:10px}.lb-prod[data-sz="xs"] .lb-prod-kg{font-size:11px}'
         +'.lb.focus .lb-px{font-size:14px}.lb.focus .lb-prod-chart{height:48px}.lb.focus .lb-prod-ax{font-size:11px}.lb.focus .lb-goal-b{font-size:18px}'
@@ -5396,15 +5467,306 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'@media(max-width:1500px){#liveBoard .lb-legend{display:none}}@media(max-width:1150px){#liveBoard .lb-meta{display:none}}'
         // Telefon: yalnız ekrandaki pano (çıktı kopyası masaüstü düzeninde kalır)
         +'@media(max-width:700px){#liveBoard .lb-top{padding:6px 6px;gap:4px 5px;flex-wrap:nowrap}#liveBoard .lb-title{font-size:15px;white-space:nowrap}#liveBoard .lb-tt,#liveBoard .lb-bl{display:none}#liveBoard .lb-clock{font-size:16px}'
-        +'#liveBoard .lb-top{gap:4px}#liveBoard .lb-top button,#liveBoard .lb-top button.lb-exp{width:29px;height:30px;font-size:13px;padding:0}'
+        +'#liveBoard .lb-top{gap:3px}#liveBoard .lb-top button,#liveBoard .lb-top button.lb-exp{width:27px;height:30px;font-size:12px;padding:0}#liveBoard .lb-top button.lb-unit{font-size:11px}'
+        +'#liveBoard .lb-hm{display:none}#liveBoard .lb-prod.kgv .lb-prod-n b{font-size:11px}#liveBoard.focus .lb-prod.kgv .lb-prod-n b{font-size:14px}#liveBoard .lb-prod.kgv .lb-prod-kg{font-size:8px}'
         +'#liveBoard .lb-search{padding:4px 6px;gap:4px 6px}#liveBoard .lb-search input{font-size:14px;padding:5px 8px;flex:1 1 150px}#liveBoard .lb-q-res{font-size:11px;flex-basis:100%}'
         +'#liveBoard .lb-waitleg{font-size:10px;padding:3px 6px;gap:2px 8px}#liveBoard .lb-waitleg i{width:11px;height:11px}#liveBoard .lb-stale{font-size:12px;padding:4px 6px}'
-        +'#liveBoard .lb-goal-b{font-size:10px;top:1px;right:1px}#liveBoard .lb-px{font-size:9px}'
+        +'#liveBoard .lb-goal-b{font-size:10px;top:1px;right:1px}#liveBoard .lb-px{font-size:9px;max-width:100%;overflow-wrap:anywhere}'
+        +'#liveBoard .lb-prod-ax{justify-content:center;font-size:7px}#liveBoard .lb-prod-ax span:first-child,#liveBoard .lb-prod-ax span:last-child{display:none}'
+        +'#liveBoard .lb-prod>*{max-width:100%}#liveBoard .lb-prod-n,#liveBoard .lb-prod-kg{overflow-wrap:anywhere}'
         +'#liveBoard .lb-grid{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 42px;gap:3px;padding:3px}#liveBoard .lb-colh{font-size:11px}#liveBoard .lb-rowh{padding:2px;font-size:11px;gap:2px}#liveBoard .lb-row-name,#liveBoard .lb-row-back{writing-mode:vertical-rl;transform:rotate(180deg)}#liveBoard .lb-row-icon{font-size:15px}#liveBoard .lb-row-back{font-size:9px}'
         +'#liveBoard .lb-cell{padding:3px 3px;border-radius:8px}#liveBoard .lb-cell-h{font-size:10px;flex-direction:column;align-items:flex-start;gap:0}#liveBoard .lb-cell-h b{font-size:15px}'
         +'#liveBoard .lb-prod-t{display:none}#liveBoard .lb-prod-n b{font-size:20px}#liveBoard .lb-prod-n small{font-size:8px}#liveBoard .lb-prod-kg{font-size:8px;white-space:normal}#liveBoard .lb-ticker{font-size:13px}'
         +'#liveBoard.focus .lb-grid{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 54px}#liveBoard.focus .lb-rowh{font-size:14px}#liveBoard.focus .lb-row-icon{font-size:20px}#liveBoard.focus .lb-row-back{font-size:11px}'
         +'#liveBoard.focus .lb-cell-h{font-size:11px}#liveBoard.focus .lb-cell-h b{font-size:18px}#liveBoard.focus .lb-prod-n b{font-size:28px}#liveBoard.focus .lb-prod-kg{font-size:10px}#liveBoard.focus .lb-colh{font-size:12px}}';
+    document.head.appendChild(style);
+})();
+
+/* ════════ 📊 ÜRETİM ANALİZİ — günlük trend · gelen–geçen dengesi · saat×gün ısı haritası · aşamada kalış süresi ════════
+   Veri: sunucu üretim kaydı (data/uretim_log.json — Kalite Kontrol / Sarım1 / Sarım2 için günlük gelen ve geçen partiler, en çok 31 gün).
+   Gün = vardiya günü (08:00 → ertesi 08:00). Bugün devam ettiği için ortalamalara ve karşılaştırmalara katılmaz.
+   Renkler işe göre sabittir: Üretim (geçen) mavi, Gelen turuncu, Biriken iş yeşil, Kalış süresi sarı; ısı haritası tek renk (mavi, çok = açık). */
+const PA_C={prod:'#3987e5',avg:'#9ec5f4',gel:'#d95926',back:'#199e70',dwell:'#c98500',surf:'#1a1836',grid:'#2b2850',axis:'#47437a',ink:'#ffffff',ink2:'#c3c2b7',mute:'#928fb0',zero:'#211e45'};
+const PA_SEQ=['#0d366b','#104281','#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#5598e7','#6da7ec','#86b6ef','#9ec5f4','#b7d3f6','#cde2fb'];
+const PA_FONT='Segoe UI,system-ui,Arial,sans-serif',PA_DOW=['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+let paStage=mapLoadPref('paStage9',v=>['kk','sr1','sr2'].includes(v),'kk'),paUnit=mapLoadPref('paUnit9',v=>v==='n'||v==='kg','n'),paRange=+mapLoadPref('paRange9',v=>['7','14','31'].includes(v),'14'),paTable=false,paTimer=null,paTips=[],paWide=true;
+// Grafik çizim genişliği: telefonda dar çizilir ki yazılar küçülmesin; masaüstünde ve çıktıda geniş
+function paW(){return paWide?600:360}
+function paVisible(){const el=document.getElementById('prodAnalysis');return!!el&&el.style.display==='flex'}
+function paOpen(){
+    let el=document.getElementById('prodAnalysis');
+    if(!el){el=document.createElement('div');el.id='prodAnalysis';el.className='pa';document.body.appendChild(el);paBindTips(el)}
+    el.style.display='flex';paRender();
+    uretimLogFetchedAt=0;uretimLogRefresh(()=>{if(paVisible())paRender()});
+    if(!paTimer)paTimer=setInterval(()=>{if(paVisible())uretimLogRefresh(()=>paRender())},120000);
+}
+function paClose(){const el=document.getElementById('prodAnalysis');if(el)el.style.display='none';if(paTimer){clearInterval(paTimer);paTimer=null}paTipHide()}
+function paSet(key,v){
+    if(key==='stage'){paStage=v;mapSavePref('paStage9',v)}else if(key==='unit'){paUnit=v;mapSavePref('paUnit9',v)}else if(key==='range'){paRange=+v;mapSavePref('paRange9',String(v))}else if(key==='table')paTable=!paTable;
+    paRender();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&paVisible()&&!document.querySelector('.modal-overlay.show')&&!(typeof lbVisible==='function'&&lbVisible()))paClose()});
+function paFmt(v){return paUnit==='kg'?Math.round(v).toLocaleString('tr-TR'):(Math.round(v*10)/10).toLocaleString('tr-TR')}
+function paHours(h){return h==null?'-':h<48?(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa':(Math.round(h/2.4)/10).toLocaleString('tr-TR')+' gün'}
+function paDay(x){return String(x.date.getDate()).padStart(2,'0')+'.'+String(x.date.getMonth()+1).padStart(2,'0')}
+function paDayL(x){return paDay(x)+' '+PA_DOW[x.date.getDay()]+(x.today?' (bugün)':'')}
+function paMedian(a){if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+// Seçili aşama / birim / dönem için günlük tablo: gelen, geçen, saatlik dağılım, biriken iş, 7 gün ort., kalış süresi
+function paModel(){
+    const L=URETIM_LOG;if(!L||!L.days)return null;
+    const keys=Object.keys(L.days).sort();if(!keys.length)return null;
+    const R=SW_ROWS.find(r=>r.key===paStage),cG=paStage+'Gelen',cP=paStage+'Gecen',val=r=>paUnit==='kg'?num(r.kg):1,today=liveProdLogKey();
+    const sh=L.shiftStartHour!=null?+L.shiftStartHour:8,p=d=>{const m=d.match(/^(\d{4})-(\d\d)-(\d\d)$/);return new Date(+m[1],+m[2]-1,+m[3],sh,0)};
+    const k=dt=>dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+    // takvim günleri: ilk kayıt gününden bugüne; kaydı olmayan gün 0 sayılır
+    const all=[];for(let dt=p(keys[0]),i=0;k(dt)<=today&&i<400;dt.setDate(dt.getDate()+1),i++)all.push(k(dt));
+    if(!all.length)return null;
+    const off=Date.now()-p(today).getTime();
+    // geliş saatleri (kalış süresi için; tahmini saatli kayıtlar hariç)
+    const arr={};keys.forEach(d=>{const g=L.days[d][cG]||{};Object.keys(g).forEach(pn=>{if(!g[pn].e)(arr[pn]=arr[pn]||[]).push(uretimLogParseTs(g[pn].t))})});
+    const dwAll=[];
+    const days=all.slice(-paRange).map(d=>{
+        const g=(L.days[d]||{})[cG]||{},q=(L.days[d]||{})[cP]||{},date=p(d),s0=date.getTime(),hours=new Array(24).fill(0),hs=[];
+        let gel=0,prod=0,same=0;
+        Object.values(g).forEach(r=>gel+=val(r));
+        Object.keys(q).forEach(pn=>{
+            const r=q[pn],v=val(r),t=uretimLogParseTs(r.t),i=Math.floor((t-s0)/3600000);prod+=v;
+            if(i>=0&&i<24)hours[i]+=v;if(t-s0<=off)same+=v;
+            if(!r.e){const c=(arr[pn]||[]).filter(a=>a<=t);if(c.length)hs.push((t-Math.max(...c))/3600000)}
+        });
+        hs.forEach(h=>dwAll.push(h));
+        return{d,date,gel,prod,same,hours,net:gel-prod,dw:paMedian(hs),dwN:hs.length,today:d===today};
+    });
+    let cum=0;days.forEach((x,i)=>{cum+=x.net;x.cum=cum;const w=days.slice(Math.max(0,i-6),i+1).filter(y=>!y.today);x.avg=!x.today&&w.length>=3?w.reduce((s,y)=>s+y.prod,0)/w.length:null});
+    const done=days.filter(x=>!x.today);
+    return{R,days,done,today:days.find(x=>x.today)||null,sh,off,unit:paUnit==='kg'?'kg':'parti',dwAll:paMedian(dwAll),dwAllN:dwAll.length,
+        span:paDay(days[0])+' – '+paDay(days[days.length-1])+' ('+days.length+' gün'+(days.length<paRange?', kayıt '+paDay(days[0])+' tarihinde başlıyor':'')+')'};
+}
+// ── ipucu (hover / dokunma): tek kutu, değerler koyu, etiketler ikincil ──
+function paTip(title,rows){paTips.push({title,rows});return paTips.length-1}
+function paTipHide(){const d=document.getElementById('paTip');if(d)d.style.display='none'}
+function paTipShow(tip,x,y){
+    if(!tip){paTipHide();return}
+    let d=document.getElementById('paTip');if(!d){d=document.createElement('div');d.id='paTip';d.className='pa-tip';document.body.appendChild(d)}
+    d.textContent='';const t=document.createElement('div');t.className='pa-tip-t';t.textContent=tip.title;d.appendChild(t);
+    tip.rows.forEach(r=>{const row=document.createElement('div');row.className='pa-tip-r';
+        if(r.c){const key=document.createElement('i');key.style.background=r.c;row.appendChild(key)}
+        const l=document.createElement('span');l.textContent=r.l;row.appendChild(l);const v=document.createElement('b');v.textContent=r.v;row.appendChild(v);d.appendChild(row)});
+    d.style.display='block';const w=d.offsetWidth,h=d.offsetHeight;
+    d.style.left=Math.max(6,Math.min(x+14,innerWidth-w-6))+'px';d.style.top=(y+18+h>innerHeight?Math.max(6,y-h-12):y+18)+'px';
+}
+function paBindTips(el){
+    const show=e=>{const t=e.target.closest&&e.target.closest('[data-t]');if(!t){paTipHide();return}paTipShow(paTips[+t.dataset.t],e.clientX,e.clientY)};
+    el.addEventListener('pointermove',show);el.addEventListener('pointerdown',show);el.addEventListener('pointerleave',paTipHide);
+    el.addEventListener('scroll',paTipHide,true);
+}
+// ── çizim yardımcıları (SVG; stiller nitelik olarak yazılır ki PNG / PDF çıktısında da aynı görünsün) ──
+function paNice(max,n){if(!(max>0))return{step:1,top:1};const raw=max/(n||4),p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p,step=(f<=1?1:f<=2?2:f<=5?5:10)*p;return{step,top:Math.ceil(max/step-1e-9)*step}}
+function paTxt(x,y,t,o){o=o||{};return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="'+(o.a||'start')+'" font-size="'+(o.s||10.5)+'" font-weight="'+(o.w||400)+'" fill="'+(o.f||PA_C.mute)+'" font-family="'+PA_FONT+'">'+esc(t)+'</text>'}
+// üstü 4 px yuvarlak, tabanı düz sütun
+function paBar(x,y,w,h,fill,extra){if(!(h>0))return'';const r=Math.min(4,w/2,h);return '<path d="M'+x.toFixed(1)+','+(y+h).toFixed(1)+'V'+(y+r).toFixed(1)+'Q'+x.toFixed(1)+','+y.toFixed(1)+' '+(x+r).toFixed(1)+','+y.toFixed(1)+'H'+(x+w-r).toFixed(1)+'Q'+(x+w).toFixed(1)+','+y.toFixed(1)+' '+(x+w).toFixed(1)+','+(y+r).toFixed(1)+'V'+(y+h).toFixed(1)+'Z" fill="'+fill+'"'+(extra||'')+'/>'}
+function paFrame(W,H,m,lo,hi,fmt){
+    const t=paNice(hi-lo,4),top=lo+Math.ceil((hi-lo)/t.step-1e-9)*t.step,ph=H-m.t-m.b,y=v=>m.t+ph-((v-lo)/((top-lo)||1))*ph;let s='';
+    for(let v=lo;v<=top+1e-9;v+=t.step){const yy=y(v);s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'" stroke="'+(Math.abs(v)<1e-9?PA_C.axis:PA_C.grid)+'" stroke-width="1"/>'+paTxt(m.l-6,yy+3.5,fmt?fmt(v):paFmt(v),{a:'end'})}
+    return{svg:s,y};
+}
+function paXLabels(days,W,m,H){const n=days.length,bw=(W-m.l-m.r)/n,ev=Math.ceil(n/(W<400?5:8));return days.map((x,i)=>(i===n-1||(i%ev===0&&n-1-i>=ev*0.7))?paTxt(m.l+bw*(i+.5),H-m.b+15,x.today?'bugün':paDay(x),{a:'middle',f:x.today?PA_C.ink2:PA_C.mute}):'').join('')}
+function paHits(days,W,m,H,tipOf){const n=days.length,bw=(W-m.l-m.r)/n;return days.map((x,i)=>'<rect class="pa-hit" data-t="'+tipOf(x)+'" x="'+(m.l+bw*i).toFixed(1)+'" y="'+m.t+'" width="'+bw.toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="transparent"/>').join('')}
+function paSvg(W,H,inner,label){return '<svg class="pa-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(label)+'">'+inner+'</svg>'}
+function paLine(pts,color){return pts.length>1?'<polyline points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>':''}
+function paDot(p,color){return '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4" fill="'+color+'" stroke="'+PA_C.surf+'" stroke-width="2"/>'}
+// 1) Günlük üretim trendi: günlük sütun + 7 gün ortalaması çizgisi + (varsa) hedef çizgisi
+function paTrendSvg(M){
+    const W=paW(),H=250,m={l:46,r:58,t:18,b:26},days=M.days,n=days.length,goal=paUnit==='n'?(+lbGoal[paStage]||0):0;
+    const F=paFrame(W,H,m,0,Math.max(1,goal,...days.map(x=>x.prod),...days.map(x=>x.avg||0))),bw=(W-m.l-m.r)/n,w=Math.min(24,Math.max(3,bw-2));
+    let s=F.svg;
+    days.forEach((x,i)=>{const y=F.y(x.prod);s+=paBar(m.l+bw*i+(bw-w)/2,y,w,F.y(0)-y,PA_C.prod,x.today?' opacity=".45"':'')});
+    if(goal){const y=F.y(goal);s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+PA_C.ink2+'" stroke-width="1"/>'+paTxt(W-m.r+5,y+3.5,'Hedef '+goal,{f:PA_C.ink2})}
+    const pts=[];days.forEach((x,i)=>{if(x.avg!=null)pts.push([m.l+bw*(i+.5),F.y(x.avg),x.avg])});
+    if(pts.length){s+=paLine(pts,PA_C.avg);const e=pts[pts.length-1];s+=paDot(e,PA_C.avg);const gy=goal?F.y(goal):-99;s+=paTxt(e[0]+9,e[1]+(Math.abs(e[1]-gy)<13&&e[0]>W-m.r-30?(e[1]>gy?16:-8):4),paFmt(e[2]),{f:PA_C.ink,w:700,s:11})}
+    // en yüksek tamamlanmış günün değeri sütunun üstünde
+    const best=M.done.reduce((b,x)=>!b||x.prod>b.prod?x:b,null);
+    if(best&&best.prod>0){const i=days.indexOf(best);s+=paTxt(m.l+bw*(i+.5),F.y(best.prod)-5,paFmt(best.prod),{a:'middle',f:PA_C.ink,w:700,s:11})}
+    s+=paXLabels(days,W,m,H)+paHits(days,W,m,H,x=>paTip(paDayL(x),[{c:PA_C.prod,l:'Üretim'+(x.today?' (şu ana kadar)':''),v:paFmt(x.prod)+' '+M.unit}].concat(x.avg!=null?[{c:PA_C.avg,l:'7 gün ortalaması',v:paFmt(x.avg)}]:[],goal?[{l:'Hedef',v:String(goal)}]:[])));
+    return paSvg(W,H,s,'Günlük üretim trendi');
+}
+// 2) Gelen – geçen: gün gün yan yana iki sütun; altında dönem başından biriken iş (gelen − geçen toplamı)
+function paBalanceSvg(M){
+    const W=paW(),H=190,m={l:46,r:14,t:14,b:26},days=M.days,n=days.length,F=paFrame(W,H,m,0,Math.max(1,...days.map(x=>Math.max(x.gel,x.prod)))),bw=(W-m.l-m.r)/n,w=Math.min(14,Math.max(2,(bw-6)/2));
+    let s=F.svg;
+    days.forEach((x,i)=>{const cx=m.l+bw*(i+.5),o=x.today?' opacity=".45"':'';s+=paBar(cx-w-1,F.y(x.gel),w,F.y(0)-F.y(x.gel),PA_C.gel,o)+paBar(cx+1,F.y(x.prod),w,F.y(0)-F.y(x.prod),PA_C.prod,o)});
+    s+=paXLabels(days,W,m,H)+paHits(days,W,m,H,x=>paTip(paDayL(x),[{c:PA_C.gel,l:'Gelen',v:paFmt(x.gel)},{c:PA_C.prod,l:'Geçen (üretim)',v:paFmt(x.prod)},{l:'Fark (gelen − geçen)',v:(x.net>0?'+':'')+paFmt(x.net)},{c:PA_C.back,l:'Biriken iş',v:(x.cum>0?'+':'')+paFmt(x.cum)}]));
+    return paSvg(W,H,s,'Gelen ve geçen, günlük');
+}
+function paBacklogSvg(M){
+    const W=paW(),H=120,m={l:46,r:58,t:12,b:24},days=M.days,n=days.length,lo0=Math.min(0,...days.map(x=>x.cum)),hi0=Math.max(0,...days.map(x=>x.cum)),t=paNice((hi0-lo0)||1,3);
+    const lo=Math.floor(lo0/t.step+1e-9)*t.step,F=paFrame(W,H,m,lo,Math.max(hi0,lo+t.step)),bw=(W-m.l-m.r)/n,pts=days.map((x,i)=>[m.l+bw*(i+.5),F.y(x.cum),x.cum]);
+    let s=F.svg+'<polygon points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+' '+pts[n-1][0].toFixed(1)+','+F.y(0).toFixed(1)+' '+pts[0][0].toFixed(1)+','+F.y(0).toFixed(1)+'" fill="'+PA_C.back+'" opacity=".12"/>'+paLine(pts,PA_C.back);
+    const e=pts[n-1];s+=paDot(e,PA_C.back)+paTxt(e[0]+9,e[1]+4,(e[2]>0?'+':'')+paFmt(e[2]),{f:PA_C.ink,w:700,s:11});
+    s+=paXLabels(days,W,m,H)+paHits(days,W,m,H,x=>paTip(paDayL(x),[{c:PA_C.back,l:'Biriken iş (dönem başından)',v:(x.cum>0?'+':'')+paFmt(x.cum)+' '+M.unit},{l:'O günkü fark',v:(x.net>0?'+':'')+paFmt(x.net)}]));
+    return paSvg(W,H,s,'Biriken iş');
+}
+// 3) Saat × gün ısı haritası (tek renk: çok = açık mavi; bugünün gelmemiş saatleri boş)
+function paHeatHtml(M){
+    const days=M.days,max=Math.max(1,...days.map(x=>Math.max(...x.hours))),hh=i=>String((M.sh+i)%24).padStart(2,'0'),nowI=Math.floor(M.off/3600000);
+    let h='<div class="pa-heat" style="grid-template-columns:auto repeat(24,minmax(0,1fr))"><span></span>';
+    for(let i=0;i<24;i++)h+='<span class="pa-heat-h">'+(i%2===0?hh(i):'')+'</span>';
+    days.forEach(x=>{
+        h+='<span class="pa-heat-d">'+esc(x.today?'bugün':paDay(x))+'</span>';
+        x.hours.forEach((v,i)=>{
+            if(x.today&&i>nowI){h+='<i class="fut"></i>';return}
+            const c=v>0?PA_SEQ[Math.min(PA_SEQ.length-1,Math.floor(v/max*(PA_SEQ.length-0.001)))]:PA_C.zero;
+            h+='<i data-t="'+paTip(paDayL(x)+' • '+hh(i)+':00–'+hh(i+1)+':00',[{c:PA_C.prod,l:'Üretim',v:paFmt(v)+' '+M.unit}])+'" style="background:'+c+'"></i>';
+        });
+    });
+    return h+'</div><div class="pa-scale"><span>0</span><i style="background:'+PA_C.zero+'"></i>'+PA_SEQ.filter((c,i)=>i%2===0).map(c=>'<i style="background:'+c+'"></i>').join('')+'<span>'+paFmt(max)+' '+M.unit+' / saat</span></div>';
+}
+// 4) Aşamada kalış süresi: geliş → geçiş arası, o gün geçen partilerin ortancası (saat)
+function paDwellSvg(M){
+    const W=paW(),H=190,m={l:46,r:58,t:14,b:26},days=M.days,n=days.length,F=paFrame(W,H,m,0,Math.max(1,...days.map(x=>x.dw||0)),v=>(Math.round(v*10)/10).toLocaleString('tr-TR')),bw=(W-m.l-m.r)/n;
+    let s=F.svg,run=[],last=null;
+    const flush=()=>{s+=paLine(run,PA_C.dwell);run=[]};
+    days.forEach((x,i)=>{if(x.dw==null){flush();return}const p=[m.l+bw*(i+.5),F.y(x.dw),x.dw];run.push(p);last=p});flush();
+    days.forEach((x,i)=>{if(x.dw!=null)s+=paDot([m.l+bw*(i+.5),F.y(x.dw)],PA_C.dwell)});
+    if(last)s+=paTxt(last[0]+9,last[1]+4,paHours(last[2]),{f:PA_C.ink,w:700,s:11});
+    s+=paTxt(m.l-40,m.t-4,'saat',{s:10})+paXLabels(days,W,m,H)+paHits(days,W,m,H,x=>paTip(paDayL(x),x.dw==null?[{l:'Ölçülebilen parti yok',v:'-'}]:[{c:PA_C.dwell,l:'Kalış süresi (ortanca)',v:paHours(x.dw)},{l:'Ölçülen parti',v:String(x.dwN)}]));
+    return paSvg(W,H,s,'Aşamada kalış süresi');
+}
+function paWaitListHtml(M){
+    const list=getAllCards().filter(M.R.is).map(k=>({k,d:fifoAgeDays(k)})).filter(x=>x.d!=null&&Number.isFinite(x.d)).sort((a,b)=>b.d-a.d).slice(0,5);
+    if(!list.length)return '<div class="pa-note">Şu an '+esc(M.R.name)+' üzerinde parti yok.</div>';
+    return '<div class="pa-sub">Şu an en uzun bekleyenler</div><div class="pa-wait">'+list.map(x=>'<button type="button" onclick="openDetailModal(&quot;'+esc(x.k.id)+'&quot;)"><b>'+esc(heatmapShortParti(x.k))+'</b><span>'+esc(lbGroupName(x.k))+'</span><span>'+lbShortKg(x.k.kilo)+' kg</span><em>'+paHours(x.d*24)+'</em></button>').join('')+'</div>';
+}
+// Özet kutuları: değer + (yönü okla ve yazıyla belirtilen) fark
+function paTilesHtml(M){
+    const done=M.done,t=M.today,last=done[done.length-1]||null,mean=a=>a.length?a.reduce((s,x)=>s+x.prod,0)/a.length:null;
+    const l7=done.slice(-7),b7=done.slice(-14,-7),avg7=mean(l7),avgB=b7.length>=5?mean(b7):null,best=done.reduce((b,x)=>!b||x.prod>b.prod?x:b,null);
+    const delta=(cur,ref,lab,abs)=>{if(cur==null||ref==null)return'';const d=cur-ref;if(!abs&&!ref)return'';const up=d>0,txt=abs?paFmt(Math.abs(d)):'%'+Math.abs(Math.round(d/ref*100));
+        return '<div class="pa-delta">'+(Math.abs(d)<1e-9?'<span>= aynı</span>':'<span class="'+(up?'up':'dn')+'">'+(up?'▲ ':'▼ ')+txt+(up?' fazla':' az')+'</span>')+' <small>'+lab+'</small></div>'};
+    const tile=(lab,val,sub)=>'<div class="pa-tile"><div class="pa-tile-l">'+lab+'</div><div class="pa-tile-v">'+val+'</div>'+(sub||'')+'</div>';
+    return '<div class="pa-tiles">'
+        +tile('Bugün (şu ana kadar)',t?paFmt(t.prod)+' <small>'+M.unit+'</small>':'-',t&&last?delta(t.prod,last.same,'dün bu saatte '+paFmt(last.same),true):'')
+        +tile('Dün',last?paFmt(last.prod)+' <small>'+M.unit+'</small>':'-',last&&avg7!=null&&done.length>1?delta(last.prod,avg7,'7 gün ortalamasına göre'):'')
+        +tile('7 gün ortalaması',avg7!=null?paFmt(avg7)+' <small>'+M.unit+'/gün</small>':'-',avgB!=null?delta(avg7,avgB,'önceki 7 güne göre'):'<div class="pa-delta"><small>haftalık karşılaştırma için 12 günlük kayıt gerekir ('+done.length+' var)</small></div>')
+        +tile('En iyi gün',best?paFmt(best.prod)+' <small>'+M.unit+'</small>':'-',best?'<div class="pa-delta"><small>'+esc(paDayL(best))+'</small></div>':'')
+        +tile('Aşamada kalış (ortanca)',M.dwAll!=null?paHours(M.dwAll):'-','<div class="pa-delta"><small>'+(M.dwAllN?M.dwAllN+' parti ölçüldü':'ölçülebilen parti yok')+'</small></div>')
+        +'</div>';
+}
+// Otomatik yorum: sayılardan çıkan kısa cümleler (karar vermeye yardımcı; kesin hüküm değil)
+function paInsights(M){
+    const out=[],done=M.done,mean=a=>a.reduce((s,x)=>s+x.prod,0)/a.length;
+    if(done.length>=6){const a=mean(done.slice(-3)),b=mean(done.slice(-6,-3));
+        if(b>0){const pc=Math.round((a-b)/b*100);out.push('Son 3 günün ortalaması <b>'+paFmt(a)+'</b>, önceki 3 günün <b>'+paFmt(b)+'</b>: '+(Math.abs(pc)<5?'üretim aynı düzeyde.':'üretim <b>%'+Math.abs(pc)+(pc>0?' arttı':' düştü')+'</b>.'))}}
+    else out.push('Eğilim yorumu için en az 6 tamamlanmış gün gerekir (şu an '+done.length+').');
+    if(done.length){const g=done.reduce((s,x)=>s+x.gel,0),q=done.reduce((s,x)=>s+x.prod,0),d=g-q;let streak=0;for(let i=done.length-1;i>=0&&done[i].net>0;i--)streak++;
+        out.push('Dönemde <b>'+paFmt(g)+'</b> '+M.unit+' geldi, <b>'+paFmt(q)+'</b> geçti: biriken iş <b>'+paFmt(Math.abs(d))+' '+(d>0?'arttı':d<0?'azaldı':'değişmedi')+'</b>.'+(streak>=2?' Son <b>'+streak+' gündür</b> gelen geçenden fazla, iş birikiyor.':''))}
+    if(done.length>=2){const hrs=new Array(24).fill(0);done.forEach(x=>x.hours.forEach((v,i)=>hrs[i]+=v));const hh=i=>String((M.sh+i)%24).padStart(2,'0')+':00',order=hrs.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+        if(order[0][0]>0){out.push('En çok üretim görülen saatler: <b>'+hh(order[0][1])+'</b>'+(order[1][0]>0?' ve <b>'+hh(order[1][1])+'</b>':'')+' (gün başına ort. '+paFmt(order[0][0]/done.length)+(order[1][0]>0?' ve '+paFmt(order[1][0]/done.length):'')+').');
+            const runs=[];let st=-1;for(let i=0;i<=24;i++){if(i<24&&hrs[i]===0){if(st<0)st=i}else if(st>=0){runs.push([st,i]);st=-1}}
+            const big=runs.filter(r=>r[1]-r[0]>=2).map(r=>hh(r[0])+'–'+hh(r[1]));if(big.length)out.push('Dönem boyunca hiç üretim görülmeyen saatler: <b>'+big.join(', ')+'</b>.')}}
+    const dw=done.filter(x=>x.dw!=null);
+    if(dw.length>=2){const worst=dw.reduce((b,x)=>x.dw>b.dw?x:b);out.push('Aşamada kalış ortancası <b>'+paHours(M.dwAll)+'</b>; en uzun gün '+esc(paDayL(worst))+' (<b>'+paHours(worst.dw)+'</b>).')}
+    return '<div class="pa-ins"><div class="pa-ins-t">💡 Öne çıkanlar</div><ul>'+out.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+}
+function paTablesHtml(M){
+    const hh=i=>String((M.sh+i)%24).padStart(2,'0');
+    let h='<div class="pa-card"><div class="pa-card-t">Günlük tablo <small>'+esc(M.unit)+'</small></div><div class="pa-tw"><table class="pa-tbl"><thead><tr><th>Gün</th><th>Gelen</th><th>Geçen</th><th>Fark</th><th>Biriken</th><th>7 gün ort.</th><th>Kalış (ortanca)</th><th>Ölçülen</th></tr></thead><tbody>';
+    M.days.forEach(x=>{h+='<tr><td>'+esc(paDayL(x))+'</td><td>'+paFmt(x.gel)+'</td><td>'+paFmt(x.prod)+'</td><td>'+(x.net>0?'+':'')+paFmt(x.net)+'</td><td>'+(x.cum>0?'+':'')+paFmt(x.cum)+'</td><td>'+(x.avg!=null?paFmt(x.avg):'-')+'</td><td>'+paHours(x.dw)+'</td><td>'+x.dwN+'</td></tr>'});
+    h+='</tbody></table></div></div><div class="pa-card"><div class="pa-card-t">Saatlik üretim <small>'+esc(M.unit)+'</small></div><div class="pa-tw"><table class="pa-tbl"><thead><tr><th>Gün</th>';
+    for(let i=0;i<24;i++)h+='<th>'+hh(i)+'</th>';
+    h+='</tr></thead><tbody>';M.days.forEach(x=>{h+='<tr><td>'+esc(paDayL(x))+'</td>'+x.hours.map(v=>'<td>'+(v?paFmt(v):'')+'</td>').join('')+'</tr>'});
+    return h+'</tbody></table></div></div>';
+}
+function paBodyHtml(M){
+    paTips=[];
+    const leg=items=>'<div class="pa-leg">'+items.map(([c,l,line])=>'<span><i class="'+(line?'ln':'')+'" style="background:'+c+'"></i>'+l+'</span>').join('')+'</div>';
+    let h=paTilesHtml(M)+paInsights(M);
+    if(paTable)return h+paTablesHtml(M);
+    h+='<div class="pa-grid">'
+        +'<div class="pa-card"><div class="pa-card-t">Günlük üretim <small>'+esc(M.R.name)+' • '+esc(M.unit)+' / gün</small></div>'+leg([[PA_C.prod,'Günlük üretim'],[PA_C.avg,'7 gün ortalaması',1]])+paTrendSvg(M)+'<div class="pa-note">Bugün devam ettiği için soluk çizilir ve ortalamaya katılmaz.</div></div>'
+        +'<div class="pa-card"><div class="pa-card-t">Gelen – geçen dengesi <small>'+esc(M.unit)+' / gün</small></div>'+leg([[PA_C.gel,'Gelen'],[PA_C.prod,'Geçen (üretim)']])+paBalanceSvg(M)
+            +'<div class="pa-sub">Biriken iş <small>dönem başından gelen − geçen toplamı; yukarı gidiyorsa iş birikiyor</small></div>'+paBacklogSvg(M)+'</div>'
+        +'<div class="pa-card"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'+paHeatHtml(M)+'</div>'
+        +'<div class="pa-card"><div class="pa-card-t">Aşamada kalış süresi <small>geliş → geçiş, o gün geçen partilerin ortancası</small></div>'+paDwellSvg(M)+paWaitListHtml(M)+'</div>'
+        +'</div>';
+    return h;
+}
+function paRender(){
+    const el=document.getElementById('prodAnalysis');if(!el)return;
+    const sc=el.querySelector('.pa-scroll'),top=sc?sc.scrollTop:0;paTipHide();
+    paWide=!(window.matchMedia&&matchMedia('(max-width:700px)').matches);
+    const M=paModel(),snap=URETIM_LOG?uretimLogParseTs(URETIM_LOG.snapshotAt):0;
+    const seg=(key,cur,opts)=>'<span class="pa-seg">'+opts.map(([v,l])=>'<button type="button" class="'+(String(cur)===String(v)?'on':'')+'" onclick="paSet(&quot;'+key+'&quot;,&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</span>';
+    let h='<div class="pa-top"><span class="pa-title">📊<span class="pa-tt"> Üretim Analizi</span></span><span class="pa-meta">Üretim kaydı: <b>'+esc(uretimLogFmtTs(snap))+'</b>'+(M?' • '+esc(M.span):'')+'</span><span class="pa-sp"></span>'
+        +'<button type="button" class="pa-b" style="background:#1565C0" title="PNG indir" onclick="paExport(&quot;png&quot;)">🖼️<span class="pa-bl"> PNG</span></button>'
+        +'<button type="button" class="pa-b" style="background:#C62828" title="PDF indir" onclick="paExport(&quot;pdf&quot;)">📄<span class="pa-bl"> PDF</span></button>'
+        +'<button type="button" class="pa-b" style="background:#1FA855" title="WhatsApp ile paylaş (PNG)" onclick="paExport(&quot;wa&quot;)">📱<span class="pa-bl"> WhatsApp PNG</span></button>'
+        +'<button type="button" class="pa-b pa-x" title="Kapat (Esc)" onclick="paClose()">✕</button></div>';
+    h+='<div class="pa-filters"><span class="pa-fl">Aşama</span>'+seg('stage',paStage,SW_ROWS.map(R=>[R.key,R.icon+' '+esc(R.name)]))
+        +'<span class="pa-fl">Birim</span>'+seg('unit',paUnit,[['n','Parti adedi'],['kg','Kg']])
+        +'<span class="pa-fl">Dönem</span>'+seg('range',paRange,[['7','7 gün'],['14','14 gün'],['31','31 gün']])
+        +'<button type="button" class="pa-tog'+(paTable?' on':'')+'" onclick="paSet(&quot;table&quot;)" title="Grafikler yerine sayıları tablo olarak göster">📋 Tablo</button></div>';
+    h+='<div class="pa-scroll"><div class="pa-content" id="paContent">'+(M?paBodyHtml(M):'<div class="pa-empty">Üretim kaydı '+(URETIM_LOG?'boş.':'okunuyor… Birkaç saniye içinde gelmezse internet bağlantısını kontrol edin.')+'</div>')+'</div></div>';
+    el.innerHTML=h;const s2=el.querySelector('.pa-scroll');if(s2)s2.scrollTop=top;
+}
+// Çıktı: ekrandaki içerik 1400 px masaüstü düzeninde (telefondan alınsa da iki sütun)
+function paExportEl(){
+    const R=SW_ROWS.find(r=>r.key===paStage),wrap=document.createElement('div'),M=paModel();
+    // çıktı için içerik geniş çizimle yeniden üretilir; ekrandaki ipuçları korunur
+    const keepTips=paTips,keepWide=paWide;paWide=true;const body=M?paBodyHtml(M):'';paTips=keepTips;paWide=keepWide;
+    wrap.className='pa pa-export';wrap.style.width='1400px';
+    wrap.innerHTML='<div class="pa-exp-h"><b>📊 Üretim Analizi — '+esc(R.name)+'</b><span>'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+' • '+(paUnit==='kg'?'kg':'parti adedi')+' • son '+paRange+' gün</span></div><div class="pa-content">'+body+'</div>';
+    const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;return wrap;
+}
+let paResizeT=null;
+window.addEventListener('resize',()=>{if(!paVisible())return;clearTimeout(paResizeT);paResizeT=setTimeout(paRender,200)});
+function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExportImage(mode,{title:'Üretim Analizi — '+R.name,file:'uretim_analizi_'+paStage,bg:'#0d0b24',noWhite:true,what:'Analiz',build:paExportEl})}
+(function injectProdAnalysisStyles(){
+    const style=document.createElement('style');
+    style.textContent='.pa{position:fixed;inset:0;z-index:10024;background:#0d0b24;display:none;flex-direction:column;color:#fff;font-family:Segoe UI,system-ui,Arial,sans-serif}'
+        +'.pa-top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1)}.pa-title{font-weight:900;font-size:18px;color:#4DD0E1;white-space:nowrap}'
+        +'.pa-meta{font-size:12px;color:#B0BEC5;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pa-meta b{color:#ECEFF1}.pa-sp{flex:1 1 auto}'
+        +'.pa-b{flex:0 0 auto;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;height:34px;padding:0 10px;font-size:15px;cursor:pointer;white-space:nowrap}.pa-b:hover{filter:brightness(1.15)}.pa-bl{font-size:13px;font-weight:800}.pa-b.pa-x{background:#B71C1C;width:38px;padding:0}'
+        // süzgeçler: tek satır, kapsadığı her şeyin üstünde
+        +'.pa-filters{flex:0 0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.08)}.pa-fl{font-size:12px;color:#928fb0;font-weight:700}'
+        +'.pa-seg{display:inline-flex;border:1px solid rgba(255,255,255,.22);border-radius:9px;overflow:hidden}.pa-seg button{background:transparent;color:#c3c2b7;border:0;border-right:1px solid rgba(255,255,255,.15);padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}'
+        +'.pa-seg button:last-child{border-right:0}.pa-seg button:hover{background:rgba(255,255,255,.08)}.pa-seg button.on{background:#3987e5;color:#fff}'
+        +'.pa-tog{margin-left:auto;background:transparent;color:#c3c2b7;border:1px solid rgba(255,255,255,.22);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}.pa-tog.on{background:#3987e5;color:#fff}'
+        +'.pa-scroll{flex:1 1 auto;min-height:0;overflow-y:auto}.pa-content{max-width:1500px;margin:0 auto;padding:12px}.pa-empty{color:#928fb0;padding:40px;text-align:center}'
+        // özet kutuları
+        +'.pa-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.pa-tile{background:#1a1836;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 12px;min-width:0}'
+        +'.pa-tile-l{font-size:12px;color:#c3c2b7}.pa-tile-v{font-size:28px;font-weight:700;line-height:1.15;margin-top:2px}.pa-tile-v small{font-size:12px;font-weight:600;color:#928fb0}'
+        +'.pa-delta{font-size:12px;color:#c3c2b7;margin-top:2px}.pa-delta .up{color:#0ca30c;font-weight:800}.pa-delta .dn{color:#e66767;font-weight:800}.pa-delta small{font-size:11.5px;color:#928fb0}'
+        +'.pa-ins{margin-top:10px;background:#1a1836;border:1px solid rgba(255,255,255,.1);border-left:4px solid #3987e5;border-radius:12px;padding:10px 14px}.pa-ins-t{font-size:13px;font-weight:800;color:#c3c2b7;margin-bottom:4px}'
+        +'.pa-ins ul{margin:0;padding-left:18px}.pa-ins li{font-size:14px;line-height:1.5;color:#e8e7f0}.pa-ins b{color:#fff}'
+        // grafik kartları
+        +'.pa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}.pa-card{background:#1a1836;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;min-width:0;margin-top:0}'
+        +'.pa-content>.pa-card{margin-top:10px}.pa-card-t{font-size:15px;font-weight:800}.pa-card-t small,.pa-sub small{font-size:11.5px;font-weight:500;color:#928fb0;margin-left:6px}.pa-sub{font-size:13px;font-weight:800;margin-top:10px}'
+        +'.pa-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 2px;font-size:12px;color:#c3c2b7}.pa-leg span{display:inline-flex;align-items:center;gap:6px}.pa-leg i{display:inline-block;width:12px;height:12px;border-radius:3px}.pa-leg i.ln{height:3px;width:18px;border-radius:2px}'
+        +'.pa-svg{display:block;width:100%;height:auto;overflow:visible}.pa-hit{cursor:crosshair}.pa-hit:hover{fill:rgba(255,255,255,.07)}.pa-note{font-size:11.5px;color:#928fb0;margin-top:4px}'
+        // ısı haritası: hücreler arasında 2 px yüzey boşluğu
+        +'.pa-heat{display:grid;gap:2px;align-items:center;margin-top:8px}.pa-heat-h{font-size:10px;color:#928fb0;text-align:left}.pa-heat-d{font-size:10.5px;color:#928fb0;padding-right:6px;white-space:nowrap;text-align:right}'
+        +'.pa-heat i{display:block;height:18px;border-radius:3px}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
+        +'.pa-scale{display:flex;align-items:center;gap:2px;margin-top:8px;font-size:11px;color:#928fb0}.pa-scale i{display:inline-block;width:18px;height:10px;border-radius:2px}.pa-scale span{margin:0 6px}'
+        +'.pa-wait{display:flex;flex-direction:column;gap:4px;margin-top:6px}.pa-wait button{display:grid;grid-template-columns:64px minmax(0,1fr) auto 84px;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e8e7f0;padding:6px 10px;font-size:13px;text-align:left;cursor:pointer}'
+        +'.pa-wait button:hover{background:rgba(255,255,255,.1)}.pa-wait b{font-weight:800}.pa-wait span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c2b7}.pa-wait em{font-style:normal;font-weight:800;text-align:right}'
+        +'.pa-tw{overflow-x:auto;margin-top:8px}.pa-tbl{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}.pa-tbl th,.pa-tbl td{padding:5px 8px;border-bottom:1px solid #2b2850;text-align:right;white-space:nowrap}'
+        +'.pa-tbl th{color:#c3c2b7;font-weight:700;position:sticky;top:0;background:#1a1836}.pa-tbl th:first-child,.pa-tbl td:first-child{text-align:left}'
+        // ipucu
+        +'.pa-tip{position:fixed;z-index:10029;display:none;pointer-events:none;background:#0b0a1c;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-family:Segoe UI,system-ui,Arial,sans-serif;max-width:280px}'
+        +'.pa-tip-t{font-size:12px;color:#c3c2b7;margin-bottom:4px}.pa-tip-r{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#c3c2b7;line-height:1.6}.pa-tip-r i{display:inline-block;width:14px;height:3px;border-radius:2px;flex:0 0 auto}'
+        +'.pa-tip-r span{flex:1 1 auto}.pa-tip-r b{color:#fff;font-size:13.5px;font-weight:700;margin-left:10px}'
+        // çıktı kopyası (ekran dışında, sabit genişlik)
+        +'.pa.pa-export{position:relative;inset:auto;display:block;z-index:auto}.pa-exp-h{display:flex;align-items:baseline;gap:16px;padding:12px 14px 0}.pa-exp-h b{font-size:22px;color:#4DD0E1}.pa-exp-h span{font-size:14px;color:#c3c2b7}'
+        +'.qi-ana{background:linear-gradient(135deg,#1565C0,#283593)!important;border-color:rgba(255,255,255,.35)!important;padding:10px 18px!important}.qi-ana b{color:#fff!important;font-size:16px!important}'
+        // dar ekran: yalnız ekrandaki panel (çıktı kopyası masaüstü düzeninde kalır)
+        +'@media(max-width:1100px){#prodAnalysis .pa-meta{display:none}#prodAnalysis .pa-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}'
+        +'@media(max-width:820px){#prodAnalysis .pa-grid{grid-template-columns:minmax(0,1fr)}}'
+        +'@media(max-width:700px){#prodAnalysis .pa-top{padding:6px 8px;gap:5px}#prodAnalysis .pa-bl{display:none}#prodAnalysis .pa-b{padding:0;width:34px;height:32px}#prodAnalysis .pa-title{font-size:16px}'
+        +'#prodAnalysis .pa-filters{padding:6px 8px;gap:5px 8px}#prodAnalysis .pa-fl{display:none}#prodAnalysis .pa-seg button{padding:7px 9px;font-size:12px}#prodAnalysis .pa-tog{margin-left:0}'
+        +'#prodAnalysis .pa-content{padding:8px}#prodAnalysis .pa-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#prodAnalysis .pa-tile-v{font-size:22px}#prodAnalysis .pa-ins li{font-size:13px}'
+        +'#prodAnalysis .pa-heat{gap:1px}#prodAnalysis .pa-heat i{height:14px;border-radius:2px}#prodAnalysis .pa-heat-h,#prodAnalysis .pa-heat-d{font-size:9px}#prodAnalysis .pa-wait button{grid-template-columns:50px minmax(0,1fr) auto 64px;font-size:12px;padding:6px 8px}}';
     document.head.appendChild(style);
 })();
 

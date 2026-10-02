@@ -5880,20 +5880,80 @@ function paBacklogSvg(M){
     s+=paXLabels(days,W,m,H)+paHits(days,W,m,H,x=>paTip(paDayL(x),[{c:PA_C.back,l:'Biriken iş (dönem başından)',v:(x.cum>0?'+':'')+paFmt(x.cum)+' '+M.unit},{l:'O günkü fark',v:(x.net>0?'+':'')+paFmt(x.net)}]));
     return paSvg(W,H,s,'Biriken iş');
 }
-// 3) Saat × gün ısı haritası (tek renk: çok = açık mavi; bugünün gelmemiş saatleri boş)
+// 3) Saat × gün ısı haritası (tek renk: çok = açık mavi; bugünün gelmemiş saatleri boş).
+//    Parti adedi görünümünde her hücrede sayı yazar; sağda gün toplamı. Altında iki ölçülebilir grafik: saatlik ortalama ve gün içi birikim.
 function paHeatHtml(M){
-    const days=M.days,max=Math.max(1,...days.map(x=>Math.max(...x.hours))),hh=i=>String((M.sh+i)%24).padStart(2,'0'),nowI=Math.floor(M.off/3600000);
-    let h='<div class="pa-heat" style="grid-template-columns:auto repeat(24,minmax(0,1fr))"><span></span>';
+    const days=M.days,max=Math.max(1,...days.map(x=>Math.max(...x.hours))),hh=i=>String((M.sh+i)%24).padStart(2,'0'),nowI=Math.floor(M.off/3600000),num1=paUnit==='n';
+    let h='<div class="pa-heat" style="grid-template-columns:auto repeat(24,minmax(0,1fr)) auto"><span></span>';
     for(let i=0;i<24;i++)h+='<span class="pa-heat-h">'+(i%2===0?hh(i):'')+'</span>';
+    h+='<span class="pa-heat-s pa-heat-sh">Toplam</span>';
     days.forEach(x=>{
         h+='<span class="pa-heat-d">'+esc(x.today?'bugün':paDay(x))+'</span>';
         x.hours.forEach((v,i)=>{
             if(x.today&&i>nowI){h+='<i class="fut"></i>';return}
-            const c=v>0?PA_SEQ[Math.min(PA_SEQ.length-1,Math.floor(v/max*(PA_SEQ.length-0.001)))]:PA_C.zero;
-            h+='<i data-t="'+paTip(paDayL(x)+' • '+hh(i)+':00–'+hh(i+1)+':00',[{c:PA_C.prod,l:'Üretim',v:paFmt(v)+' '+M.unit}])+'" style="background:'+c+'"></i>';
+            const ci=v>0?Math.min(PA_SEQ.length-1,Math.floor(v/max*(PA_SEQ.length-0.001))):-1,c=ci<0?PA_C.zero:PA_SEQ[ci];
+            h+='<i data-t="'+paTip(paDayL(x)+' • '+hh(i)+':00–'+hh(i+1)+':00',[{c:PA_C.prod,l:'Üretim',v:paFmt(v)+' '+M.unit}])+'" style="background:'+c+';color:'+(ci>=7?'#0b0b0b':'#fff')+'">'+(num1&&v>0?paFmt(v):'')+'</i>';
         });
+        h+='<span class="pa-heat-s">'+paFmt(x.prod)+'</span>';
     });
     return h+'</div><div class="pa-scale"><span>0</span><i style="background:'+PA_C.zero+'"></i>'+PA_SEQ.filter((c,i)=>i%2===0).map(c=>'<i style="background:'+c+'"></i>').join('')+'<span>'+paFmt(max)+' '+M.unit+' / saat</span></div>';
+}
+// Saat profili verisi: tamamlanmış günlerin saatlik ortalaması, en yüksek / en düşük gün, bugün (şu ana kadar) ve birikimli değerler
+function paHourData(M){
+    const done=M.done,n=done.length,t=M.today,nowI=Math.min(23,Math.floor(M.off/3600000));
+    const avg=Array.from({length:24},(_,i)=>n?done.reduce((s,x)=>s+x.hours[i],0)/n:0);
+    const hi=avg.map((_,i)=>done.reduce((b,x)=>!b||x.hours[i]>b.hours[i]?x:b,null)),lo=avg.map((_,i)=>done.reduce((b,x)=>!b||x.hours[i]<b.hours[i]?x:b,null));
+    const cum=[],tcum=[];let a=0,b=0;
+    for(let i=0;i<24;i++){a+=avg[i];cum.push(a);if(t&&i<=nowI){b+=t.hours[i];tcum.push(b)}}
+    return{n,avg,hi,lo,cum,tcum,t,nowI};
+}
+// Saatlik ortalama: her saat için tamamlanmış günlerin ortalaması (sütun) ve bugünün o saatteki değeri (nokta)
+function paHourSvg(M,D){
+    const W=paW(),H=190,m={l:46,r:14,t:18,b:26},hh=i=>String((M.sh+i)%24).padStart(2,'0'),bw=(W-m.l-m.r)/24,w=Math.min(24,Math.max(3,bw-2));
+    const F=paFrame(W,H,m,0,Math.max(1,...D.avg,...(D.t?D.t.hours.slice(0,D.nowI+1):[0])));
+    let s=F.svg;
+    D.avg.forEach((v,i)=>{const y=F.y(v);s+=paBar(m.l+bw*i+(bw-w)/2,y,w,F.y(0)-y,PA_C.prod)});
+    if(D.t)for(let i=0;i<=D.nowI;i++)s+='<circle cx="'+(m.l+bw*(i+.5)).toFixed(1)+'" cy="'+F.y(D.t.hours[i]).toFixed(1)+'" r="3.5" fill="'+PA_C.avg+'" stroke="'+PA_C.surf+'" stroke-width="2"/>';
+    const mx=Math.max(...D.avg),mi=D.avg.indexOf(mx);if(mx>0)s+=paTxt(m.l+bw*(mi+.5),F.y(mx)-6,paFmt(mx),{a:'middle',f:PA_C.ink,w:700,s:11});
+    const ev=W<400?4:2;for(let i=0;i<24;i+=ev)s+=paTxt(m.l+bw*(i+.5),H-m.b+15,hh(i),{a:'middle'});
+    for(let i=0;i<24;i++){
+        const rows=[{c:PA_C.prod,l:'Ortalama ('+D.n+' gün)',v:paFmt(D.avg[i])+' '+M.unit}];
+        if(D.t&&i<=D.nowI)rows.push({c:PA_C.avg,l:'Bugün',v:paFmt(D.t.hours[i])+' '+M.unit});
+        if(D.n>1&&D.hi[i])rows.push({l:'En yüksek gün',v:paFmt(D.hi[i].hours[i])+' ('+paDay(D.hi[i])+')'},{l:'En düşük gün',v:paFmt(D.lo[i].hours[i])+' ('+paDay(D.lo[i])+')'});
+        s+='<rect class="pa-hit" data-t="'+paTip(hh(i)+':00–'+hh(i+1)+':00',rows)+'" x="'+(m.l+bw*i).toFixed(1)+'" y="'+m.t+'" width="'+bw.toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="transparent"/>';
+    }
+    return paSvg(W,H,s,'Saatlik ortalama üretim');
+}
+// Gün içi birikim: ortalama günün saat saat toplamı (çizgi) ve bugünün şu ana kadarki toplamı; aynı saatte öndeyiz / gerideyiz
+function paCumSvg(M,D){
+    const W=paW(),H=190,m={l:46,r:58,t:14,b:26},hh=i=>String((M.sh+i)%24).padStart(2,'0'),bw=(W-m.l-m.r)/24,x=i=>m.l+bw*(i+1);
+    const F=paFrame(W,H,m,0,Math.max(1,D.cum[23],...(D.tcum.length?D.tcum:[0])));
+    const pa=[[m.l,F.y(0)]].concat(D.cum.map((v,i)=>[x(i),F.y(v)])),pt=D.tcum.length?[[m.l,F.y(0)]].concat(D.tcum.map((v,i)=>[x(i),F.y(v)])):[];
+    let s=F.svg+paLine(pa,PA_C.prod)+paLine(pt,PA_C.avg);
+    const ea=pa[pa.length-1];s+=paDot(ea,PA_C.prod);
+    let ya=ea[1]+4;
+    if(pt.length){const et=pt[pt.length-1];s+=paDot(et,PA_C.avg);const yt=et[1]+4,near=et[0]>W-m.r-40&&Math.abs(yt-ya)<13;
+        s+=paTxt(et[0]+9,near?(yt<ya?ya-14:ya+14):yt,paFmt(D.tcum[D.tcum.length-1]),{f:PA_C.ink,w:700,s:11})}
+    s+=paTxt(ea[0]+9,ya,paFmt(D.cum[23]),{f:PA_C.ink2,w:700,s:11});
+    const ev=W<400?4:2;for(let i=0;i<=24;i+=ev)s+=paTxt(m.l+bw*i,H-m.b+15,hh(i),{a:'middle'});
+    for(let i=0;i<24;i++){
+        const rows=[{c:PA_C.prod,l:'Ortalama gün ('+D.n+' gün)',v:paFmt(D.cum[i])+' '+M.unit}];
+        if(i<D.tcum.length){const d=D.tcum[i]-D.cum[i];rows.push({c:PA_C.avg,l:'Bugün',v:paFmt(D.tcum[i])+' '+M.unit},{l:'Fark',v:(d>0?'+':'')+paFmt(d)})}
+        s+='<rect class="pa-hit" data-t="'+paTip(hh(i+1)+':00 itibarıyla toplam',rows)+'" x="'+(m.l+bw*i).toFixed(1)+'" y="'+m.t+'" width="'+bw.toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="transparent"/>';
+    }
+    return paSvg(W,H,s,'Gün içi birikimli üretim');
+}
+function paHourChartsHtml(M){
+    const D=paHourData(M),hh=i=>String((M.sh+i)%24).padStart(2,'0')+':00';
+    if(!D.n)return '<div class="pa-note">Saatlik ortalama için en az bir tamamlanmış gün gerekir.</div>';
+    const leg=(a,b)=>'<div class="pa-leg"><span><i'+(a[1]?' class="ln"':'')+' style="background:'+PA_C.prod+'"></i>'+a[0]+'</span>'+(D.t?'<span><i class="'+(b[1]?'ln':'dot')+'" style="background:'+PA_C.avg+'"></i>'+b[0]+'</span>':'')+'</div>';
+    // gün içinde üretimin yarısına ve %90'ına hangi saatte ulaşılıyor
+    const tot=D.cum[23],at=p=>{const i=D.cum.findIndex(v=>v>=tot*p);return i<0?'-':hh(i+1)};
+    let note='Ortalama günde üretimin yarısı <b>'+at(.5)+'</b>, %90\'ı <b>'+at(.9)+'</b> itibarıyla tamamlanıyor.';
+    if(D.tcum.length){const i=D.tcum.length-1,d=D.tcum[i]-D.cum[i];note+=' Bugün '+hh(i+1)+' itibarıyla <b>'+paFmt(D.tcum[i])+' '+M.unit+'</b>; ortalama gün bu saatte '+paFmt(D.cum[i])+': <b>'+(Math.abs(d)<0.05?'aynı düzeyde':paFmt(Math.abs(d))+' '+(d>0?'ileride':'geride'))+'</b>.'}
+    return '<div class="pa-sub">Saatlik ortalama <small>'+esc(M.unit)+' / saat • tamamlanmış '+D.n+' günün ortalaması</small></div>'+leg(['Ortalama',0],['Bugün',0])+paHourSvg(M,D)
+        +'<div class="pa-sub">Gün içi birikim <small>08:00\'den itibaren toplam • '+esc(M.unit)+'</small></div>'+leg(['Ortalama gün',1],['Bugün',1])+paCumSvg(M,D)
+        +'<div class="pa-note pa-note-b">'+note+'</div>';
 }
 // 4) Aşamada kalış süresi: geliş → geçiş arası, o gün geçen partilerin ortancası (saat)
 function paDwellSvg(M){
@@ -5942,11 +6002,87 @@ function paInsights(M){
     if(dw.length>=2){const worst=dw.reduce((b,x)=>x.dw>b.dw?x:b);out.push('Aşamada kalış ortancası <b>'+paHours(M.dwAll)+'</b>; en uzun gün '+esc(paDayL(worst))+' (<b>'+paHours(worst.dw)+'</b>).')}
     {const W=paWorkload(M);if(W.stock>0){const old=W.bands[3],pc=Math.round(old.v/W.stock*100);
         out.push('Şu an <b>'+paFmt(W.stock)+' '+M.unit+'</b> bekliyor'+(W.days!=null?': günlük ortalama üretimle <b>'+paDaysTxt(W.days)+' günlük iş</b>':'')+'.'+(old.v>0?' 7 günden eski bekleyenlerin payı <b>%'+pc+'</b>.':''))}}
+    {const Z=paSizeModel(M.R.key),ok=Z?Z.bins.filter(x=>x.H>=8&&x.b.lo>=150):[];if(ok.length>=2){const a=ok[0],z=ok[ok.length-1];
+        out.push('Parti büyüklüğü: '+z.b.l+' partilerde saatte <b>'+paNum0(z.kph)+' kg</b>, '+a.b.l+' partilerde <b>'+paNum0(a.kph)+' kg</b>'+(Z.fit&&Z.fit.E?'; bir tak-çıkar yaklaşık <b>'+paNum0(Z.fit.E)+' kg</b> işlemeye bedel.':'.'))}}
     {const S=paShiftData(M);if(S.n>=2){const a=S.sh.slice().sort((x,y)=>x.v-y.v);if(a[2].v>0)out.push('En zayıf vardiya <b>'+a[0].l+'</b> (günlük üretimdeki payı %'+Math.round(a[0].pc)+'), en güçlü <b>'+a[2].l+'</b> (%'+Math.round(a[2].pc)+').')}}
     {const T=paRepairs(M);if(T.rows.length&&T.byStage.length)out.push('Dönemde <b>'+T.rows.length+' tamir kaydı</b> var; en çok <b>'+esc(T.byStage[0][0])+'</b> (%'+Math.round(T.byStage[0][1]/T.total*100)+').')}
     return '<div class="pa-ins"><div class="pa-ins-t">💡 Öne çıkanlar</div><ul>'+out.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
 }
+// ── Parti büyüklüğünün üretime etkisi (tak-çıkar kaybı) ──
+// Üretim kaydındaki her saat, o saatte geçen partilerin ortalama büyüklüğüne göre gruplanır (kaydın tamamı; tahmini saatli
+// kayıtlar hariç). Küçük partili saatlerde kg/saat düşük, parti/saat ise az değişiyorsa: parti başına süre büyük ölçüde sabittir.
+// Model: parti başına süre = sabit (tak-çıkar) + kg × birim süre. En az 8 saatlik kaydı olan ve 150 kg üstü gruplardan,
+// saat sayısıyla ağırlıklı doğru uydurulur. E = sabit ÷ birim = bir tak-çıkarın kaç kg işlemeye bedel olduğu.
+// Süreler "üretim görülen saat" üzerinden olduğu için mutlak dakika değil, oran olarak anlamlıdır; eritme süresinde yalnız oran kullanılır.
+const PA_SZ=[{lo:0,hi:150,l:'150 kg altı'},{lo:150,hi:300,l:'150–300 kg'},{lo:300,hi:450,l:'300–450 kg'},{lo:450,hi:Infinity,l:'450 kg üstü'}];
+const paSizeCache={snap:null,v:{}};
+function paSizeModel(st){
+    const L=URETIM_LOG;if(!L||!L.days)return null;
+    if(paSizeCache.snap!==L.snapshotAt){paSizeCache.snap=L.snapshotAt;paSizeCache.v={}}
+    if(st in paSizeCache.v)return paSizeCache.v[st];
+    const cP=st+'Gecen',hb=new Map();
+    Object.keys(L.days).forEach(d=>{const q=L.days[d][cP]||{};Object.keys(q).forEach(pn=>{const r=q[pn];if(r.e)return;const t=uretimLogParseTs(r.t);if(!t)return;const k=Math.floor(t/3600000);if(!hb.has(k))hb.set(k,[]);hb.get(k).push(num(r.kg))})});
+    const bins=PA_SZ.map(b=>({b,H:0,N:0,K:0}));
+    hb.forEach(ks=>{const kg=ks.reduce((a,c)=>a+c,0),avg=kg/ks.length,x=bins.find(x=>avg>=x.b.lo&&avg<x.b.hi);if(x){x.H++;x.N+=ks.length;x.K+=kg}});
+    bins.forEach(x=>{x.pph=x.H?x.N/x.H:null;x.kph=x.H?x.K/x.H:null;x.size=x.N?x.K/x.N:null;x.min=x.pph?60/x.pph:null});
+    const pts=bins.filter(x=>x.H>=8&&x.b.lo>=150);let fit=null;
+    if(pts.length>=2){
+        const w=pts.reduce((s,x)=>s+x.H,0),mx=pts.reduce((s,x)=>s+x.H*x.size,0)/w,my=pts.reduce((s,x)=>s+x.H*x.min,0)/w;
+        const sxx=pts.reduce((s,x)=>s+x.H*(x.size-mx)*(x.size-mx),0),sxy=pts.reduce((s,x)=>s+x.H*(x.size-mx)*(x.min-my),0),b=sxx?sxy/sxx:0,a=my-b*mx;
+        if(a>0&&b>0)fit={s:a,b,E:a/b,pts:pts.length,H:w};
+        else if(my>0)fit={s:my,b:0,E:null,pts:pts.length,H:w};   // süre büyüklükle artmıyor: üretimi parti adedi belirliyor
+    }
+    return paSizeCache.v[st]={bins,hours:hb.size,fit};
+}
+// Eritme süresi üç yolla: yalnız parti adedine göre, yalnız kg'a göre, parti büyüklüğü modeliyle (iş birimi = sabit + kg × birim).
+function paEritme(R,on,dayKeys){
+    const L=URETIM_LOG,cP=R.key+'Gecen',S=paSizeModel(R.key),fit=S&&S.fit,w=kg=>fit?fit.s+fit.b*kg:1;
+    let dn=0,dkg=0,du=0;
+    dayKeys.forEach(d=>{const q=((L&&L.days&&L.days[d])||{})[cP]||{};Object.keys(q).forEach(pn=>{const kg=num(q[pn].kg);dn++;dkg+=kg;du+=w(kg)})});
+    const nd=dayKeys.length||1,sn=on.length,skg=on.reduce((s,k)=>s+num(k.kilo),0),su=on.reduce((s,k)=>s+w(num(k.kilo)),0);
+    return{fit,n:dn>0?sn/(dn/nd):null,kg:dkg>0?skg/(dkg/nd):null,model:fit&&du>0?su/(du/nd):null};
+}
+function paCorr(xs,ys){
+    const n=xs.length;if(n<3)return null;const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
+    let sxx=0,syy=0,sxy=0;for(let i=0;i<n;i++){sxx+=(xs[i]-mx)*(xs[i]-mx);syy+=(ys[i]-my)*(ys[i]-my);sxy+=(xs[i]-mx)*(ys[i]-my)}
+    return sxx&&syy?sxy/Math.sqrt(sxx*syy):null;
+}
+// Günlük: parti adedi, kg, ortalama parti büyüklüğü, 150 kg altı parti payı (en az 5 parti geçen tamamlanmış günler)
+function paSizeDaily(M){
+    const L=URETIM_LOG,cP=M.R.key+'Gecen',rows=[];
+    M.done.forEach(x=>{const q=((L&&L.days&&L.days[x.d])||{})[cP]||{},ks=Object.keys(q).map(pn=>num(q[pn].kg));if(ks.length<5)return;
+        const kg=ks.reduce((a,b)=>a+b,0);rows.push({x,n:ks.length,kg,avg:kg/ks.length,small:ks.filter(k=>k<150).length/ks.length})});
+    return{rows,rN:paCorr(rows.map(r=>r.n),rows.map(r=>r.kg)),rAvg:paCorr(rows.map(r=>r.avg),rows.map(r=>r.kg)),rSmall:paCorr(rows.map(r=>r.small),rows.map(r=>r.kg))};
+}
+function paNum1(v){return v==null?'-':(Math.round(v*10)/10).toLocaleString('tr-TR')}
+function paNum0(v){return v==null?'-':Math.round(v).toLocaleString('tr-TR')}
+function paSizeHtml(M){
+    const S=paSizeModel(M.R.key);if(!S||!S.hours)return '<div class="pa-note">Üretim kaydında ölçülebilen saat yok.</div>';
+    const used=S.bins.filter(x=>x.H>0),D=paSizeDaily(M),r2=v=>(Math.round(v*100)/100).toLocaleString('tr-TR');
+    const left=paBars('Saatlik üretim <small>o saatte geçen partilerin ortalama büyüklüğüne göre • kg / saat</small>',used.map(x=>({l:x.b.l,v:x.kph,
+        vt:'<b>'+paNum0(x.kph)+'</b> kg/sa • '+paNum1(x.pph)+' parti/sa'+(x.H<8?' <span class="pa-na">(az kayıt)</span>':''),
+        tip:[{c:PA_C.prod,l:'Saatlik üretim',v:paNum0(x.kph)+' kg'},{l:'Saatte geçen parti',v:paNum1(x.pph)},{l:'Ortalama parti',v:paNum0(x.size)+' kg'},{l:'Kayıtlı saat',v:String(x.H)}]})),PA_C.prod);
+    const out=[],ok=used.filter(x=>x.H>=8&&x.b.lo>=150);
+    if(ok.length>=2){const a=ok[0],z=ok[ok.length-1];
+        out.push('<b>'+z.b.l+'</b> partilerin geçtiği saatlerde saatte ortalama <b>'+paNum0(z.kph)+' kg</b>, <b>'+a.b.l+'</b> partilerde <b>'+paNum0(a.kph)+' kg</b> çıkıyor.');
+        out.push('Saatte geçen parti sayısı ise '+paNum1(z.pph)+' ve '+paNum1(a.pph)+': parti büyüdükçe süre '+(z.min>a.min*1.15?'uzuyor ama kg kadar değil':'neredeyse değişmiyor')+'.')}
+    const f=S.fit;
+    if(f&&f.E)out.push('Hesap: her parti, kg\'ından bağımsız olarak yaklaşık <b>'+paNum0(f.E)+' kg</b> işlemeye eşdeğer sabit süre alıyor (tak-çıkar kaybı). '+f.H+' saatlik kayıttan; yaklaşık değerdir, kayıt biriktikçe güncellenir.');
+    else if(f)out.push('Hesap: parti başına süre büyüklükle artmıyor; bu aşamada üretimi parti adedi belirliyor ('+f.H+' saatlik kayıt).');
+    else out.push('Sabit süre hesabı için yeterli kayıt yok (150 kg üstü en az iki grupta 8\'er saat gerekir).');
+    if(D.rows.length>=5&&D.rN!=null)out.push('Gün gün bakınca ('+D.rows.length+' gün): kg ile parti adedinin uyumu <b>'+r2(D.rN)+'</b>, ortalama parti büyüklüğünün uyumu <b>'+r2(D.rAvg)+'</b>, 150 kg altı parti payının uyumu <b>'+r2(D.rSmall)+'</b>. (1 tam uyum, 0 ilişki yok, eksi değer ters yönlü.)');
+    return '<div class="pa-two"><div>'+left+'</div><div><div class="pa-sub">Ne anlama geliyor</div><ul class="pa-ul">'+out.map(x=>'<li>'+x+'</li>').join('')+'</ul>'
+        +'<div class="pa-note">Saatler veri güncellemelerinden çıktığı için yaklaşıktır; üretim görülen saatler sayılır. Bu ölçüm iş yükü kartındaki eritme süresinde kullanılır.</div></div></div>';
+}
+function paSizeTableHtml(M){
+    const S=paSizeModel(M.R.key),D=paSizeDaily(M);if(!S)return'';
+    const tbl=(head,rows)=>'<div class="pa-tw"><table class="pa-tbl"><thead><tr>'+head.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+    return '<div class="pa-card"><div class="pa-card-t">Parti büyüklüğünün etkisi <small>'+esc(M.R.name)+'</small></div>'
+        +tbl(['Saatteki ortalama parti','Saat','Parti','Kg','Kg / saat','Parti / saat','Ort. parti (kg)'],S.bins.map(x=>[esc(x.b.l),x.H,x.N,paNum0(x.K),paNum0(x.kph),paNum1(x.pph),paNum0(x.size)]))
+        +tbl(['Gün','Parti','Kg','Ort. parti (kg)','150 kg altı payı'],D.rows.map(r=>[esc(paDayL(r.x)),r.n,paNum0(r.kg),paNum0(r.avg),'%'+Math.round(r.small*100)]))+'</div>';
+}
 // ── İş yükü ve eritme süresi: şu an aşamada bekleyen (güncel kart verisi) ÷ son 7 tamamlanmış günün ortalama üretimi ──
+// Eritme süresi parti büyüklüğü modeliyle hesaplanır (varsa); yalnız parti adedine ve yalnız kg'a göre değerler de yanında verilir.
 // Yaş bantları sıralı olduğu için tek renk (mavi), eski = açık; etiket rengi dolgunun açıklığına göre.
 const PA_AGE=[{d:1,l:'1 günden az',c:'#184f95',ink:'#fff'},{d:3,l:'1–3 gün',c:'#2a78d6',ink:'#fff'},{d:7,l:'3–7 gün',c:'#6da7ec',ink:'#0b0b0b'},{d:Infinity,l:'7 günden fazla',c:'#cde2fb',ink:'#0b0b0b'}];
 function paWorkload(M){
@@ -5954,7 +6090,8 @@ function paWorkload(M){
     const l7=M.done.slice(-7),avg=l7.length?l7.reduce((s,x)=>s+x.prod,0)/l7.length:null,bands=PA_AGE.map(b=>({b,v:0,n:0}));
     on.forEach(k=>{const d=fifoAgeDays(k);let i=d==null||!Number.isFinite(d)?0:PA_AGE.findIndex(b=>d<b.d);if(i<0)i=PA_AGE.length-1;bands[i].v+=val(k);bands[i].n++});
     const stock=sum(on);
-    return{n:on.length,stock,coming:sum(all.filter(R.coming)),avg,avgN:l7.length,days:avg>0?stock/avg:null,bands};
+    const X=paEritme(R,on,l7.map(x=>x.d));
+    return{n:on.length,stock,coming:sum(all.filter(R.coming)),avg,avgN:l7.length,days:X.model!=null?X.model:(avg>0?stock/avg:null),dN:X.n,dKg:X.kg,modeled:X.model!=null,bands};
 }
 function paDaysTxt(d){return d==null?'-':(Math.round(d*10)/10).toLocaleString('tr-TR')}
 function paWorkloadHtml(M){
@@ -5962,7 +6099,7 @@ function paWorkloadHtml(M){
     let h='<div class="pa-sts">'
         +stat('Şu an bekleyen',paFmt(W.stock)+' <small>'+u+'</small>','yolda (gelecek): '+paFmt(W.coming)+' '+u)
         +stat('Günlük üretim',W.avg!=null?paFmt(W.avg)+' <small>'+u+'/gün</small>':'-',W.avgN?'son '+W.avgN+' tamamlanmış günün ortalaması':'tamamlanmış gün yok')
-        +stat('Eritme süresi',paDaysTxt(W.days)+(W.days!=null?' <small>gün</small>':''),'yeni iş gelmese bekleyenin bitme süresi')+'</div>';
+        +stat('Eritme süresi',paDaysTxt(W.days)+(W.days!=null?' <small>gün</small>':''),(W.modeled?'parti büyüklüğü hesaba katıldı • ':'')+'parti adedine göre '+paDaysTxt(W.dN)+' • kg\'a göre '+paDaysTxt(W.dKg))+'</div>';
     h+='<div class="pa-sub">Bekleyenlerin yaşı <small>son hareketten beri • '+u+'</small></div>';
     if(W.stock>0){
         h+='<div class="pa-stack">'+W.bands.filter(x=>x.v>0).map(x=>{const pc=x.v/W.stock*100;
@@ -6032,7 +6169,7 @@ function paRepairHtml(M){
 function paExtraTablesHtml(M){
     const W=paWorkload(M),S=paShiftData(M),T=paRepairs(M),u=M.unit,tbl=(head,rows)=>'<div class="pa-tw"><table class="pa-tbl"><thead><tr>'+head.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
     return '<div class="pa-card"><div class="pa-card-t">İş yükü <small>'+esc(M.R.name)+' • '+esc(u)+'</small></div>'
-        +tbl(['Bekleyen','Yolda','Günlük üretim (ort.)','Eritme süresi (gün)'],[[paFmt(W.stock),paFmt(W.coming),W.avg!=null?paFmt(W.avg):'-',paDaysTxt(W.days)]])
+        +tbl(['Bekleyen','Yolda','Günlük üretim (ort.)','Eritme süresi (gün)','Parti adedine göre','Kg\'a göre'],[[paFmt(W.stock),paFmt(W.coming),W.avg!=null?paFmt(W.avg):'-',paDaysTxt(W.days),paDaysTxt(W.dN),paDaysTxt(W.dKg)]])
         +tbl(['Bekleme yaşı','Bekleyen','Parti'],W.bands.map(x=>[esc(x.b.l),paFmt(x.v),x.n]))+'</div>'
         +'<div class="pa-card"><div class="pa-card-t">Vardiya ve haftanın günü <small>'+esc(u)+' • ortalama</small></div>'
         +tbl(['Vardiya','Gün başına ortalama','Pay'],S.sh.map(x=>[esc(x.l),paFmt(x.v),'%'+Math.round(x.pc)]))
@@ -6048,7 +6185,9 @@ function paTablesHtml(M){
     h+='</tbody></table></div></div><div class="pa-card"><div class="pa-card-t">Saatlik üretim <small>'+esc(M.unit)+'</small></div><div class="pa-tw"><table class="pa-tbl"><thead><tr><th>Gün</th>';
     for(let i=0;i<24;i++)h+='<th>'+hh(i)+'</th>';
     h+='</tr></thead><tbody>';M.days.forEach(x=>{h+='<tr><td>'+esc(paDayL(x))+'</td>'+x.hours.map(v=>'<td>'+(v?paFmt(v):'')+'</td>').join('')+'</tr>'});
-    return h+'</tbody></table></div></div>'+paExtraTablesHtml(M);
+    {const D=paHourData(M);if(D.n)h+='<tr><td><b>Ortalama ('+D.n+' gün)</b></td>'+D.avg.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr><tr><td><b>Ortalama birikim</b></td>'+D.cum.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr>'
+        +(D.tcum.length?'<tr><td><b>Bugün birikim</b></td>'+D.cum.map((_,i)=>'<td>'+(i<D.tcum.length?paFmt(D.tcum[i]):'')+'</td>').join('')+'</tr>':'')}
+    return h+'</tbody></table></div></div>'+paExtraTablesHtml(M)+paSizeTableHtml(M);
 }
 function paBodyHtml(M){
     paTips=[];
@@ -6061,8 +6200,10 @@ function paBodyHtml(M){
             +'<div class="pa-sub">Biriken iş <small>dönem başından gelen − geçen toplamı; yukarı gidiyorsa iş birikiyor</small></div>'+paBacklogSvg(M)+'</div>'
         +'<div class="pa-card"><div class="pa-card-t">İş yükü ve eritme süresi <small>'+esc(M.R.name)+' • bekleyen ÷ günlük üretim</small></div>'+paWorkloadHtml(M)+'</div>'
         +'<div class="pa-card"><div class="pa-card-t">Vardiya ve haftanın günü <small>'+esc(M.R.name)+' • '+esc(M.unit)+'</small></div>'+paShiftHtml(M)+'</div>'
-        +'<div class="pa-card"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'+paHeatHtml(M)+'</div>'
-        +'<div class="pa-card"><div class="pa-card-t">Aşamada kalış süresi <small>geliş → geçiş, o gün geçen partilerin ortancası</small></div>'+paDwellSvg(M)+paWaitListHtml(M)+'</div>'
+        +'<div class="pa-card pa-wide"><div class="pa-card-t">Parti büyüklüğünün üretime etkisi <small>'+esc(M.R.name)+' • tak-çıkar kaybı • kaydın tamamından</small></div>'+paSizeHtml(M)+'</div>'
+        +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'
+            +'<div class="pa-two"><div><div class="pa-sub">Gün gün, saat saat <small>hücrede o saatte geçen miktar • sağda gün toplamı</small></div>'+paHeatHtml(M)+'</div><div>'+paHourChartsHtml(M)+'</div></div></div>'
+        +'<div class="pa-card pa-wide"><div class="pa-card-t">Aşamada kalış süresi <small>geliş → geçiş, o gün geçen partilerin ortancası</small></div><div class="pa-two"><div>'+paDwellSvg(M)+'</div><div>'+paWaitListHtml(M)+'</div></div></div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Tamir analizi <small>tüm aşamalar • tamir kaydı tarihine göre</small></div>'+paRepairHtml(M)+'</div>'
         +'</div>';
     return h;
@@ -6130,10 +6271,11 @@ function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExpor
         +'.pa-bars{display:flex;flex-direction:column;gap:5px;margin-top:6px}.pa-bar{display:grid;grid-template-columns:minmax(84px,34%) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12.5px;color:#c3c2b7;border-radius:6px;padding:1px 4px}'
         +'.pa-bar:hover{background:rgba(255,255,255,.06)}.pa-bar-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pa-bar-t{height:12px;display:block}.pa-bar-t i{display:block;height:100%;border-radius:0 4px 4px 0}'
         +'.pa-bar-v{white-space:nowrap;text-align:right;min-width:70px;font-variant-numeric:tabular-nums}.pa-bar-v b{color:#fff}.pa-na{color:#6f6c8e}'
+        +'.pa-two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:8px 26px}.pa-two>div>.pa-sub:first-child{margin-top:8px}.pa-ul{margin:6px 0 0;padding-left:18px}.pa-ul li{font-size:13.5px;line-height:1.5;color:#e8e7f0;margin-bottom:4px}.pa-ul b{color:#fff}'
         +'.pa-rep{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);gap:8px 22px}'
         // ısı haritası: hücreler arasında 2 px yüzey boşluğu
         +'.pa-heat{display:grid;gap:2px;align-items:center;margin-top:8px}.pa-heat-h{font-size:10px;color:#928fb0;text-align:left}.pa-heat-d{font-size:10.5px;color:#928fb0;padding-right:6px;white-space:nowrap;text-align:right}'
-        +'.pa-heat i{display:block;height:18px;border-radius:3px}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
+        +'.pa-heat i{display:flex;align-items:center;justify-content:center;height:20px;border-radius:3px;font-style:normal;font-size:10.5px;font-weight:700;overflow:hidden}.pa-heat-s{font-size:11px;font-weight:700;color:#e8e7f0;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}.pa-heat-sh{font-size:10px;font-weight:500;color:#928fb0}.pa-leg i.dot{width:9px;height:9px;border-radius:50%}.pa-note-b{font-size:13px;color:#c3c2b7;line-height:1.5;margin-top:6px}.pa-note-b b{color:#fff}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
         +'.pa-scale{display:flex;align-items:center;gap:2px;margin-top:8px;font-size:11px;color:#928fb0}.pa-scale i{display:inline-block;width:18px;height:10px;border-radius:2px}.pa-scale span{margin:0 6px}'
         +'.pa-wait{display:flex;flex-direction:column;gap:4px;margin-top:6px}.pa-wait button{display:grid;grid-template-columns:64px minmax(0,1fr) auto 84px;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e8e7f0;padding:6px 10px;font-size:13px;text-align:left;cursor:pointer}'
         +'.pa-wait button:hover{background:rgba(255,255,255,.1)}.pa-wait b{font-weight:800}.pa-wait span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c2b7}.pa-wait em{font-style:normal;font-weight:800;text-align:right}'
@@ -6148,11 +6290,11 @@ function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExpor
         +'.qi-ana{background:linear-gradient(135deg,#1565C0,#283593)!important;border-color:rgba(255,255,255,.35)!important;padding:10px 18px!important}.qi-ana b{color:#fff!important;font-size:16px!important}'
         // dar ekran: yalnız ekrandaki panel (çıktı kopyası masaüstü düzeninde kalır)
         +'@media(max-width:1100px){#prodAnalysis .pa-meta{display:none}#prodAnalysis .pa-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}'
-        +'@media(max-width:1100px){#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#prodAnalysis .pa-rep>div:first-child{grid-column:1/-1}}@media(max-width:820px){#prodAnalysis .pa-grid{grid-template-columns:minmax(0,1fr)}#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr)}}'
+        +'@media(max-width:1100px){#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#prodAnalysis .pa-rep>div:first-child{grid-column:1/-1}}@media(max-width:820px){#prodAnalysis .pa-grid{grid-template-columns:minmax(0,1fr)}#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr)}#prodAnalysis .pa-two{grid-template-columns:minmax(0,1fr)}}'
         +'@media(max-width:700px){#prodAnalysis .pa-top{padding:6px 8px;gap:5px}#prodAnalysis .pa-bl{display:none}#prodAnalysis .pa-b{padding:0;width:34px;height:32px}#prodAnalysis .pa-title{font-size:16px}'
         +'#prodAnalysis .pa-filters{padding:6px 8px;gap:5px 8px}#prodAnalysis .pa-fl{display:none}#prodAnalysis .pa-seg button{padding:7px 9px;font-size:12px}#prodAnalysis .pa-tog{margin-left:0}'
         +'#prodAnalysis .pa-content{padding:8px}#prodAnalysis .pa-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#prodAnalysis .pa-tile-v{font-size:22px}#prodAnalysis .pa-ins li{font-size:13px}#prodAnalysis .pa-sts{gap:5px}#prodAnalysis .pa-st{padding:6px 7px}#prodAnalysis .pa-st-v{font-size:17px}#prodAnalysis .pa-st-s{font-size:10px}#prodAnalysis .pa-bar{grid-template-columns:minmax(70px,32%) minmax(0,1fr) auto;font-size:12px}#prodAnalysis .pa-bar-v{min-width:58px}'
-        +'#prodAnalysis .pa-heat{gap:1px}#prodAnalysis .pa-heat i{height:14px;border-radius:2px}#prodAnalysis .pa-heat-h,#prodAnalysis .pa-heat-d{font-size:9px}#prodAnalysis .pa-wait button{grid-template-columns:50px minmax(0,1fr) auto 64px;font-size:12px;padding:6px 8px}}';
+        +'#prodAnalysis .pa-heat{gap:1px}#prodAnalysis .pa-heat i{height:14px;border-radius:2px;font-size:0}#prodAnalysis .pa-heat-s{font-size:9.5px;padding-left:4px}#prodAnalysis .pa-heat-h,#prodAnalysis .pa-heat-d{font-size:9px}#prodAnalysis .pa-wait button{grid-template-columns:50px minmax(0,1fr) auto 64px;font-size:12px;padding:6px 8px}}';
     document.head.appendChild(style);
 })();
 

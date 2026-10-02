@@ -5888,7 +5888,8 @@ function paHeatHtml(M){
     for(let i=0;i<24;i++)h+='<span class="pa-heat-h">'+(i%2===0?hh(i):'')+'</span>';
     h+='<span class="pa-heat-s pa-heat-sh">Toplam</span>';
     days.forEach(x=>{
-        h+='<span class="pa-heat-d">'+esc(x.today?'bugün':paDay(x))+'</span>';
+        const selD=days.find(y=>y.d===paCmpDay)||days[days.length-1],isSel=x===selD,isPrev=days.indexOf(x)===days.indexOf(selD)-1;
+        h+='<span class="pa-heat-d pa-heat-dc'+(isSel?' sel':isPrev?' prev':'')+'" onclick="paCmpSet(&quot;'+(x.today?'':x.d)+'&quot;)" title="Saatlik karşılaştırmada bu günü seç">'+esc(x.today?'bugün':paDay(x))+'</span>';
         x.hours.forEach((v,i)=>{
             if(x.today&&i>nowI){h+='<i class="fut"></i>';return}
             const ci=v>0?Math.min(PA_SEQ.length-1,Math.floor(v/max*(PA_SEQ.length-0.001))):-1,c=ci<0?PA_C.zero:PA_SEQ[ci];
@@ -5898,88 +5899,105 @@ function paHeatHtml(M){
     });
     return h+'</div><div class="pa-scale"><span>0</span><i style="background:'+PA_C.zero+'"></i>'+PA_SEQ.filter((c,i)=>i%2===0).map(c=>'<i style="background:'+c+'"></i>').join('')+'<span>'+paFmt(max)+' '+M.unit+' / saat</span></div>';
 }
-// Saat profili verisi: tamamlanmış günlerin saatlik ortalaması, dün, bugün (şu ana kadar), birikimli değerler ve vardiya toplamları.
-// Vardiyalar vardiya başlangıcından (08:00) itibaren 8'er saat. Süren vardiyada bugün, ortalamanın ve dünün AYNI SAATE KADARKİ
-// kısmıyla karşılaştırılır (yarım vardiyayı tam vardiyayla kıyaslamamak için).
+// Saatlik karşılaştırma verisi: SEÇİLEN gün (varsayılan: bugün), bir önceki gün ve tamamlanmış günlerin ortalaması;
+// saat saat, birikimli ve vardiya toplamlarıyla. Vardiyalar vardiya başlangıcından (08:00) itibaren 8'er saat.
+// Seçilen gün bugünse süren vardiya ve gün toplamı, önceki günün ve ortalamanın AYNI SAATE KADARKİ kısmıyla karşılaştırılır.
 const PA_H={avg:'#256abf',y:'#6da7ec',t:'#cde2fb'};
+let paCmpDay='',paCmpShow={avg:true,prev:true};
+function paCmpSet(d){paCmpDay=d||'';paRender()}
+function paCmpStep(dir){const M=paModel();if(!M)return;const D=paHourData(M),i=M.days.indexOf(D.sel)+dir;if(i>=0&&i<M.days.length){paCmpDay=M.days[i].today?'':M.days[i].d;paRender()}}
+function paCmpToggle(k){paCmpShow[k]=!paCmpShow[k];paRender()}
 function paHourData(M){
-    const done=M.done,n=done.length,t=M.today,nowI=Math.min(23,Math.floor(M.off/3600000)),y=n?done[n-1]:null;
+    const done=M.done,n=done.length,days=M.days;
+    const sel=days.find(x=>x.d===paCmpDay)||days[days.length-1],si=days.indexOf(sel),prev=si>0?days[si-1]:null;
+    const upTo=sel.today?Math.min(23,Math.floor(M.off/3600000)):23;
     const avg=Array.from({length:24},(_,i)=>n?done.reduce((s,x)=>s+x.hours[i],0)/n:0);
-    const hi=avg.map((_,i)=>done.reduce((b,x)=>!b||x.hours[i]>b.hours[i]?x:b,null)),lo=avg.map((_,i)=>done.reduce((b,x)=>!b||x.hours[i]<b.hours[i]?x:b,null));
-    const cum=[],ycum=[],tcum=[];let a=0,b=0,c=0;
-    for(let i=0;i<24;i++){a+=avg[i];cum.push(a);if(y){c+=y.hours[i];ycum.push(c)}if(t&&i<=nowI){b+=t.hours[i];tcum.push(b)}}
+    const hi=avg.map((_,i)=>done.reduce((b,x)=>!b||x.hours[i]>b.hours[i]?x:b,null));
+    const cum=[],pcum=[],scum=[];let a=0,b=0,c=0;
+    for(let i=0;i<24;i++){a+=avg[i];cum.push(a);if(prev){c+=prev.hours[i];pcum.push(c)}if(i<=upTo){b+=sel.hours[i];scum.push(b)}}
     const sum=(arr,from,to)=>{let s=0;for(let i=from;i<=to;i++)s+=arr[i];return s};
-    // vardiyalar: tam toplamlar + süren vardiyada "bu saate kadar" toplamları
-    const shifts=[0,8,16].map(s=>{const e=s+7,state=!t?'none':nowI>e?'done':nowI>=s?'now':'future',upto=state==='now'?nowI:e;
-        return{s,e,state,upto,avg:sum(avg,s,e),y:y?sum(y.hours,s,e):null,t:state==='done'||state==='now'?sum(t.hours,s,upto):null,avgUpto:sum(avg,s,upto),yUpto:y?sum(y.hours,s,upto):null}});
-    return{n,avg,hi,lo,cum,ycum,tcum,t,y,nowI,shifts};
+    const shifts=[0,8,16].map(s=>{const e=s+7,state=upTo>=e?'done':upTo>=s?'now':'future',upto=state==='now'?upTo:e;
+        return{s,e,state,upto,sel:state==='future'?null:sum(sel.hours,s,upto),avg:sum(avg,s,e),avgUpto:sum(avg,s,upto),prev:prev?sum(prev.hours,s,e):null,prevUpto:prev?sum(prev.hours,s,upto):null}});
+    return{n,avg,hi,cum,pcum,scum,sel,prev,si,upTo,shifts,showAvg:paCmpShow.avg,showPrev:paCmpShow.prev&&!!prev};
 }
-// Saatlik karşılaştırma: ortalama (sütun), dün ve bugün (çizgi + nokta); vardiyalar dikey çizgilerle ayrılır
+// Saatlik karşılaştırma: ortalama (sütun), önceki gün ve seçilen gün (çizgi + nokta); vardiyalar dikey çizgilerle ayrılır
 function paHourSvg(M,D){
     const W=paW(),H=210,m={l:46,r:14,t:30,b:26},hh=i=>String((M.sh+i)%24).padStart(2,'0'),bw=(W-m.l-m.r)/24,w=Math.min(20,Math.max(3,bw-3)),cx=i=>m.l+bw*(i+.5);
-    const F=paFrame(W,H,m,0,Math.max(1,...D.avg,...(D.y?D.y.hours:[0]),...(D.t?D.t.hours.slice(0,D.nowI+1):[0])));
+    const F=paFrame(W,H,m,0,Math.max(1,...(D.showAvg?D.avg:[0]),...(D.showPrev?D.prev.hours:[0]),...D.sel.hours.slice(0,D.upTo+1)));
     let s='';
-    // vardiya bantları ve adları
     [0,8,16].forEach((st,k)=>{const x0=m.l+bw*st;
         if(k===1)s+='<rect x="'+x0.toFixed(1)+'" y="'+m.t+'" width="'+(bw*8).toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="#ffffff" opacity=".035"/>';
         if(k)s+='<line x1="'+x0.toFixed(1)+'" x2="'+x0.toFixed(1)+'" y1="'+(m.t-16)+'" y2="'+(H-m.b)+'" stroke="'+PA_C.axis+'" stroke-width="1"/>';
         s+=paTxt(x0+bw*4,m.t-8,hh(st)+':00–'+hh(st+8)+':00',{a:'middle',f:PA_C.ink2,w:700,s:W<400?9.5:11})});
     s+=F.svg;
-    D.avg.forEach((v,i)=>{const yy=F.y(v);s+=paBar(cx(i)-w/2,yy,w,F.y(0)-yy,PA_H.avg)});
-    if(D.y){const pts=D.y.hours.map((v,i)=>[cx(i),F.y(v)]);s+=paLine(pts,PA_H.y);pts.forEach(p=>{s+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+PA_C.surf+'" stroke="'+PA_H.y+'" stroke-width="2"/>'})}
-    if(D.t){const pts=[];for(let i=0;i<=D.nowI;i++)pts.push([cx(i),F.y(D.t.hours[i])]);s+=paLine(pts,PA_H.t);pts.forEach(p=>{s+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+PA_H.t+'" stroke="'+PA_C.surf+'" stroke-width="1.5"/>'})}
+    if(D.showAvg)D.avg.forEach((v,i)=>{const yy=F.y(v);s+=paBar(cx(i)-w/2,yy,w,F.y(0)-yy,PA_H.avg)});
+    if(D.showPrev){const pts=D.prev.hours.map((v,i)=>[cx(i),F.y(v)]);s+=paLine(pts,PA_H.y);pts.forEach(p=>{s+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+PA_C.surf+'" stroke="'+PA_H.y+'" stroke-width="2"/>'})}
+    {const pts=[];for(let i=0;i<=D.upTo;i++)pts.push([cx(i),F.y(D.sel.hours[i])]);s+=paLine(pts,PA_H.t);pts.forEach(p=>{s+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+PA_H.t+'" stroke="'+PA_C.surf+'" stroke-width="1.5"/>'})}
     const ev=W<400?4:2;for(let i=0;i<24;i+=ev)s+=paTxt(cx(i),H-m.b+15,hh(i),{a:'middle'});
     for(let i=0;i<24;i++){
-        const rows=[{c:PA_H.avg,l:'Ortalama ('+D.n+' gün)',v:paFmt(D.avg[i])+' '+M.unit}];
-        if(D.y)rows.push({c:PA_H.y,l:'Dün ('+paDay(D.y)+')',v:paFmt(D.y.hours[i])});
-        if(D.t&&i<=D.nowI){const tv=D.t.hours[i],d=tv-D.avg[i];rows.push({c:PA_H.t,l:'Bugün',v:paFmt(tv)},{l:'Bugün − ortalama',v:(d>0?'+':'')+paFmt(d)});if(D.y){const d2=tv-D.y.hours[i];rows.push({l:'Bugün − dün',v:(d2>0?'+':'')+paFmt(d2)})}}
+        const rows=[],sv=i<=D.upTo?D.sel.hours[i]:null;
+        if(sv!=null)rows.push({c:PA_H.t,l:paDayL(D.sel),v:paFmt(sv)+' '+M.unit});
+        if(D.prev){rows.push({c:PA_H.y,l:'Önceki gün ('+paDay(D.prev)+')',v:paFmt(D.prev.hours[i])});if(sv!=null){const d=sv-D.prev.hours[i];rows.push({l:'Fark (önceki güne göre)',v:(d>0?'+':'')+paFmt(d)})}}
+        rows.push({c:PA_H.avg,l:'Ortalama ('+D.n+' gün)',v:paFmt(D.avg[i])});
+        if(sv!=null){const d=sv-D.avg[i];rows.push({l:'Fark (ortalamaya göre)',v:(d>0?'+':'')+paFmt(d)})}
         if(D.n>1&&D.hi[i])rows.push({l:'En yüksek gün',v:paFmt(D.hi[i].hours[i])+' ('+paDay(D.hi[i])+')'});
         s+='<rect class="pa-hit" data-t="'+paTip(hh(i)+':00–'+hh(i+1)+':00',rows)+'" x="'+(m.l+bw*i).toFixed(1)+'" y="'+m.t+'" width="'+bw.toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="transparent"/>';
     }
-    return paSvg(W,H,s,'Saatlik üretim: ortalama, dün ve bugün, vardiyalara göre');
+    return paSvg(W,H,s,'Saatlik üretim: seçilen gün, önceki gün ve ortalama, vardiyalara göre');
 }
-// Vardiya özeti: her vardiya için ortalama, dün ve bugün; farklar ortalamaya göre (süren vardiyada aynı saate kadar)
+// Vardiya özeti: seçilen gün, önceki gün ve ortalama; farklar önceki güne ve ortalamaya göre
 function paShiftCmpHtml(M,D){
-    const hh=i=>String((M.sh+i)%24).padStart(2,'0')+':00',dl=(v,ref)=>{if(v==null||ref==null)return'';const d=v-ref;return Math.abs(d)<0.05?' <span class="pa-eq">=</span>':' <span class="'+(d>0?'up':'dn')+'">'+(d>0?'▲':'▼')+paFmt(Math.abs(d))+'</span>'};
-    const tot={avg:D.cum[23],y:D.y?D.ycum[23]:null,t:D.tcum.length?D.tcum[D.tcum.length-1]:null,avgUpto:D.tcum.length?D.cum[D.tcum.length-1]:null};
-    let h='<div class="pa-tw"><table class="pa-tbl pa-cmp"><thead><tr><th></th>'+D.shifts.map(x=>'<th title="'+hh(x.s)+'–'+hh(x.s+8)+'">'+hh(x.s).slice(0,2)+'–'+hh(x.s+8).slice(0,2)+(x.state==='now'?'<small>sürüyor</small>':'')+'</th>').join('')+'<th>Gün</th></tr></thead><tbody>';
-    h+='<tr><td><i style="background:'+PA_H.avg+'"></i>Ortalama</td>'+D.shifts.map(x=>'<td>'+paFmt(x.avg)+'</td>').join('')+'<td>'+paFmt(tot.avg)+'</td></tr>';
-    if(D.y)h+='<tr><td><i style="background:'+PA_H.y+'"></i>Dün</td>'+D.shifts.map(x=>'<td><b>'+paFmt(x.y)+'</b>'+dl(x.y,x.avg)+'</td>').join('')+'<td><b>'+paFmt(tot.y)+'</b>'+dl(tot.y,tot.avg)+'</td></tr>';
-    if(D.t)h+='<tr><td><i style="background:'+PA_H.t+'"></i>Bugün</td>'+D.shifts.map(x=>x.t==null?'<td class="pa-na">—</td>':'<td><b>'+paFmt(x.t)+'</b>'+dl(x.t,x.avgUpto)+(x.state==='now'&&x.upto<x.e?'<small>'+hh(x.upto+1)+'\'e kadar ort. '+paFmt(x.avgUpto)+'</small>':'')+'</td>').join('')
-        +'<td><b>'+paFmt(tot.t)+'</b>'+dl(tot.t,tot.avgUpto)+'</td></tr>';
-    return h+'</tbody></table></div><div class="pa-note">▲▼ ortalamaya göre fark. Süren vardiyada ve gün toplamında bugün, ortalamanın aynı saate kadarki kısmıyla karşılaştırılır.</div>';
+    const hh=i=>String((M.sh+i)%24).padStart(2,'0'),dl=(v,ref)=>{if(v==null||ref==null)return'<span class="pa-na">—</span>';const d=v-ref;return Math.abs(d)<0.05?'<span class="pa-eq">= aynı</span>':'<span class="'+(d>0?'up':'dn')+'">'+(d>0?'▲ ':'▼ ')+paFmt(Math.abs(d))+'</span>'};
+    const last=D.scum.length-1,T={sel:D.scum[last],avg:D.cum[23],avgUpto:D.cum[last],prev:D.prev?D.pcum[23]:null,prevUpto:D.prev?D.pcum[last]:null},cell=v=>v==null?'<td class="pa-na">—</td>':'<td><b>'+paFmt(v)+'</b></td>';
+    let h='<div class="pa-tw"><table class="pa-tbl pa-cmp"><thead><tr><th></th>'+D.shifts.map(x=>'<th title="'+hh(x.s)+':00–'+hh(x.s+8)+':00">'+hh(x.s)+'–'+hh(x.s+8)+(x.state==='now'?'<small>sürüyor</small>':'')+'</th>').join('')+'<th>Gün</th></tr></thead><tbody>';
+    h+='<tr><td><i style="background:'+PA_H.t+'"></i>'+esc(paDayL(D.sel))+'</td>'+D.shifts.map(x=>cell(x.sel)).join('')+cell(T.sel)+'</tr>';
+    if(D.prev)h+='<tr><td><i style="background:'+PA_H.y+'"></i>Önceki gün ('+paDay(D.prev)+')</td>'+D.shifts.map(x=>'<td>'+paFmt(x.prev)+'</td>').join('')+'<td>'+paFmt(T.prev)+'</td></tr>'
+        +'<tr class="pa-cmp-d"><td>Fark: önceki güne göre</td>'+D.shifts.map(x=>'<td>'+dl(x.sel,x.prevUpto)+'</td>').join('')+'<td>'+dl(T.sel,T.prevUpto)+'</td></tr>';
+    h+='<tr><td><i style="background:'+PA_H.avg+'"></i>Ortalama ('+D.n+' gün)</td>'+D.shifts.map(x=>'<td>'+paFmt(x.avg)+'</td>').join('')+'<td>'+paFmt(T.avg)+'</td></tr>'
+        +'<tr class="pa-cmp-d"><td>Fark: ortalamaya göre</td>'+D.shifts.map(x=>'<td>'+dl(x.sel,x.avgUpto)+'</td>').join('')+'<td>'+dl(T.sel,T.avgUpto)+'</td></tr>';
+    return h+'</tbody></table></div>'+(D.sel.today?'<div class="pa-note">Bugün devam ettiği için süren vardiyada ve gün toplamında farklar, önceki günün ve ortalamanın aynı saate kadarki kısmına göre hesaplanır.</div>':'');
 }
-// Gün içi birikim: ortalama gün (alan), dün ve bugün (çizgi); aynı saatte öndeyiz / gerideyiz
+// Gün içi birikim: ortalama gün (alan), önceki gün ve seçilen gün (çizgi)
 function paCumSvg(M,D){
-    const W=paW(),H=190,m={l:46,r:64,t:14,b:26},hh=i=>String((M.sh+i)%24).padStart(2,'0'),bw=(W-m.l-m.r)/24,x=i=>m.l+bw*(i+1);
-    const F=paFrame(W,H,m,0,Math.max(1,D.cum[23],...(D.ycum.length?D.ycum:[0]),...(D.tcum.length?D.tcum:[0]))),line=arr=>[[m.l,F.y(0)]].concat(arr.map((v,i)=>[x(i),F.y(v)]));
-    const pa=line(D.cum),py=D.ycum.length?line(D.ycum):[],pt=D.tcum.length?line(D.tcum):[];
-    let s=F.svg+'<polygon points="'+pa.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+' '+pa[pa.length-1][0].toFixed(1)+','+F.y(0).toFixed(1)+'" fill="'+PA_H.avg+'" opacity=".22"/>'+paLine(pa,PA_H.avg)+paLine(py,PA_H.y)+paLine(pt,PA_H.t);
+    const W=paW(),H=190,m={l:46,r:74,t:14,b:26},hh=i=>String((M.sh+i)%24).padStart(2,'0'),bw=(W-m.l-m.r)/24,x=i=>m.l+bw*(i+1);
+    const F=paFrame(W,H,m,0,Math.max(1,D.showAvg?D.cum[23]:0,D.showPrev?D.pcum[23]:0,...D.scum)),line=arr=>[[m.l,F.y(0)]].concat(arr.map((v,i)=>[x(i),F.y(v)]));
+    const pa=D.showAvg?line(D.cum):[],py=D.showPrev?line(D.pcum):[],pt=line(D.scum);
+    let s=F.svg+(pa.length?'<polygon points="'+pa.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+' '+pa[pa.length-1][0].toFixed(1)+','+F.y(0).toFixed(1)+'" fill="'+PA_H.avg+'" opacity=".22"/>'+paLine(pa,PA_H.avg):'')+paLine(py,PA_H.y)+paLine(pt,PA_H.t);
     // uç etiketleri: üst üste gelmesin diye en az 13 px aralıkla dizilir
-    const ends=[{p:pa[pa.length-1],c:PA_H.avg,t:'ort. '+paFmt(D.cum[23])}];
-    if(py.length)ends.push({p:py[py.length-1],c:PA_H.y,t:'dün '+paFmt(D.ycum[23])});
-    if(pt.length)ends.push({p:pt[pt.length-1],c:PA_H.t,t:'bugün '+paFmt(D.tcum[D.tcum.length-1])});
+    const ends=[];
+    if(pa.length)ends.push({p:pa[pa.length-1],c:PA_H.avg,t:'ort. '+paFmt(D.cum[23])});
+    if(py.length)ends.push({p:py[py.length-1],c:PA_H.y,t:paDay(D.prev)+': '+paFmt(D.pcum[23])});
+    ends.push({p:pt[pt.length-1],c:PA_H.t,t:(D.sel.today?'bugün':paDay(D.sel))+': '+paFmt(D.scum[D.scum.length-1])});
     ends.forEach(e=>{s+=paDot(e.p,e.c);e.y=e.p[1]+4});
     const right=ends.filter(e=>e.p[0]>W-m.r-30).sort((a,b)=>a.y-b.y);for(let i=1;i<right.length;i++)if(right[i].y-right[i-1].y<13)right[i].y=right[i-1].y+13;
     ends.forEach(e=>{s+=paTxt(e.p[0]+8,e.y,e.t,{f:PA_C.ink,w:700,s:10.5})});
     const ev=W<400?4:2;for(let i=0;i<=24;i+=ev)s+=paTxt(m.l+bw*i,H-m.b+15,hh(i),{a:'middle'});
     for(let i=0;i<24;i++){
-        const rows=[{c:PA_H.avg,l:'Ortalama gün ('+D.n+' gün)',v:paFmt(D.cum[i])+' '+M.unit}];
-        if(D.ycum.length)rows.push({c:PA_H.y,l:'Dün',v:paFmt(D.ycum[i])});
-        if(i<D.tcum.length){const d=D.tcum[i]-D.cum[i];rows.push({c:PA_H.t,l:'Bugün',v:paFmt(D.tcum[i])},{l:'Bugün − ortalama',v:(d>0?'+':'')+paFmt(d)});if(D.ycum.length){const d2=D.tcum[i]-D.ycum[i];rows.push({l:'Bugün − dün',v:(d2>0?'+':'')+paFmt(d2)})}}
+        const rows=[],sv=i<D.scum.length?D.scum[i]:null;
+        if(sv!=null)rows.push({c:PA_H.t,l:paDayL(D.sel),v:paFmt(sv)+' '+M.unit});
+        if(D.prev){rows.push({c:PA_H.y,l:'Önceki gün ('+paDay(D.prev)+')',v:paFmt(D.pcum[i])});if(sv!=null){const d=sv-D.pcum[i];rows.push({l:'Fark (önceki güne göre)',v:(d>0?'+':'')+paFmt(d)})}}
+        rows.push({c:PA_H.avg,l:'Ortalama gün ('+D.n+' gün)',v:paFmt(D.cum[i])});
+        if(sv!=null){const d=sv-D.cum[i];rows.push({l:'Fark (ortalamaya göre)',v:(d>0?'+':'')+paFmt(d)})}
         s+='<rect class="pa-hit" data-t="'+paTip(hh(i+1)+':00 itibarıyla toplam',rows)+'" x="'+(m.l+bw*i).toFixed(1)+'" y="'+m.t+'" width="'+bw.toFixed(1)+'" height="'+(H-m.t-m.b)+'" fill="transparent"/>';
     }
-    return paSvg(W,H,s,'Gün içi birikimli üretim: ortalama, dün ve bugün');
+    return paSvg(W,H,s,'Gün içi birikimli üretim: seçilen gün, önceki gün ve ortalama');
 }
 function paHourChartsHtml(M){
-    const D=paHourData(M),hh=i=>String((M.sh+i)%24).padStart(2,'0')+':00';
-    if(!D.n)return '<div class="pa-note">Saatlik karşılaştırma için en az bir tamamlanmış gün gerekir.</div>';
-    const leg='<div class="pa-leg"><span><i style="background:'+PA_H.avg+'"></i>Ortalama ('+D.n+' gün)</span>'+(D.y?'<span><i class="ring" style="border-color:'+PA_H.y+'"></i>Dün ('+paDay(D.y)+')</span>':'')+(D.t?'<span><i class="dot" style="background:'+PA_H.t+'"></i>Bugün</span>':'')+'</div>';
-    // gün içinde üretimin yarısına ve %90'ına hangi saatte ulaşılıyor
-    const tot=D.cum[23],at=p=>{const i=D.cum.findIndex(v=>v>=tot*p);return i<0?'-':hh(i+1)};
-    let note='Ortalama günde üretimin yarısı <b>'+at(.5)+'</b>, %90\'ı <b>'+at(.9)+'</b> itibarıyla tamamlanıyor.';
-    if(D.tcum.length){const i=D.tcum.length-1,d=D.tcum[i]-D.cum[i];note+=' Bugün şu ana kadar <b>'+paFmt(D.tcum[i])+' '+M.unit+'</b>; ortalama gün '+hh(i+1)+' itibarıyla '+paFmt(D.cum[i])+(D.ycum.length?', dün '+paFmt(D.ycum[i]):'')+': ortalamaya göre <b>'+(Math.abs(d)<0.05?'aynı düzeyde':paFmt(Math.abs(d))+' '+(d>0?'ileride':'geride'))+'</b>.'}
-    return '<div class="pa-sub">Vardiyalara göre saatlik karşılaştırma <small>'+esc(M.unit)+' / saat • ortalama, dün, bugün</small></div>'+leg+paHourSvg(M,D)+paShiftCmpHtml(M,D)
+    const D=paHourData(M),hh=i=>String((M.sh+i)%24).padStart(2,'0')+':00',days=M.days,sel=D.sel;
+    // gün seçimi: ◀ liste ▶ ; ısı haritasında gün adına tıklamak da seçer
+    const bar='<div class="pa-cmpbar"><span class="pa-fl">Gün</span><button type="button" class="pa-stp" title="Önceki gün" onclick="paCmpStep(-1)"'+(D.si<=0?' disabled':'')+'>◀</button>'
+        +'<select onchange="paCmpSet(this.value)" aria-label="Karşılaştırılacak gün">'+days.slice().reverse().map(x=>'<option value="'+(x.today?'':x.d)+'"'+(x===sel?' selected':'')+'>'+esc(paDayL(x))+'</option>').join('')+'</select>'
+        +'<button type="button" class="pa-stp" title="Sonraki gün" onclick="paCmpStep(1)"'+(D.si>=days.length-1?' disabled':'')+'>▶</button>'
+        +(D.si<days.length-1?'<button type="button" class="pa-stp pa-stp-t" onclick="paCmpSet(&quot;&quot;)">'+(days[days.length-1].today?'Bugün':'Son gün')+'</button>':'')
+        +'<span class="pa-cmp-vs">'+(D.prev?'önceki gün: <b>'+esc(paDayL(D.prev))+'</b>':'önceki gün seçili dönemde yok')+'</span></div>';
+    // açıklama: tıklanınca o seri gizlenir / gösterilir (seçilen gün hep görünür)
+    const leg='<div class="pa-leg pa-leg-t"><span><i class="dot" style="background:'+PA_H.t+'"></i>'+esc(paDayL(sel))+'</span>'
+        +(D.prev?'<button type="button" class="'+(paCmpShow.prev?'':'off')+'" onclick="paCmpToggle(&quot;prev&quot;)" title="Tıkla: göster / gizle"><i class="ring" style="border-color:'+PA_H.y+'"></i>Önceki gün ('+paDay(D.prev)+')</button>':'')
+        +'<button type="button" class="'+(paCmpShow.avg?'':'off')+'" onclick="paCmpToggle(&quot;avg&quot;)" title="Tıkla: göster / gizle"><i style="background:'+PA_H.avg+'"></i>Ortalama ('+D.n+' gün)</button></div>';
+    const last=D.scum.length-1,sv=D.scum[last],dv=(ref,l)=>{const d=sv-ref;return l+' '+paFmt(ref)+' (<b>'+(Math.abs(d)<0.05?'aynı':paFmt(Math.abs(d))+' '+(d>0?'fazla':'az'))+'</b>)'};
+    let note='<b>'+esc(paDayL(sel))+'</b> '+(sel.today?'şu ana kadar':'toplam')+' <b>'+paFmt(sv)+' '+M.unit+'</b>'+(D.prev?'; '+dv(D.pcum[last],'önceki gün'+(sel.today?' aynı saatte':'')):'')+(D.n?'; '+dv(D.cum[last],'ortalama gün'+(sel.today?' aynı saatte':'')):'')+'.';
+    if(D.n){const tot=D.cum[23],at=p=>{const i=D.cum.findIndex(v=>v>=tot*p);return i<0?'-':hh(i+1)};note+=' Ortalama günde üretimin yarısı <b>'+at(.5)+'</b>, %90\'ı <b>'+at(.9)+'</b> itibarıyla tamamlanıyor.'}
+    return '<div class="pa-sub">Günlük saatlik karşılaştırma <small>'+esc(M.unit)+' / saat • seçilen gün, önceki gün ve ortalama • vardiyalara göre</small></div>'+bar+leg+paHourSvg(M,D)+paShiftCmpHtml(M,D)
         +'<div class="pa-sub">Gün içi birikim <small>08:00\'den itibaren toplam • '+esc(M.unit)+'</small></div>'+paCumSvg(M,D)
         +'<div class="pa-note pa-note-b">'+note+'</div>';
 }
@@ -6214,8 +6232,8 @@ function paTablesHtml(M){
     for(let i=0;i<24;i++)h+='<th>'+hh(i)+'</th>';
     h+='</tr></thead><tbody>';M.days.forEach(x=>{h+='<tr><td>'+esc(paDayL(x))+'</td>'+x.hours.map(v=>'<td>'+(v?paFmt(v):'')+'</td>').join('')+'</tr>'});
     {const D=paHourData(M);if(D.n)h+='<tr><td><b>Ortalama ('+D.n+' gün)</b></td>'+D.avg.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr><tr><td><b>Ortalama birikim</b></td>'+D.cum.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr>'
-        +(D.ycum.length?'<tr><td><b>Dün birikim</b></td>'+D.ycum.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr>':'')
-        +(D.tcum.length?'<tr><td><b>Bugün birikim</b></td>'+D.cum.map((_,i)=>'<td>'+(i<D.tcum.length?paFmt(D.tcum[i]):'')+'</td>').join('')+'</tr>':'')}
+        +(D.prev?'<tr><td><b>Önceki gün birikim ('+paDay(D.prev)+')</b></td>'+D.pcum.map(v=>'<td>'+paFmt(v)+'</td>').join('')+'</tr>':'')
+        +'<tr><td><b>Seçilen gün birikim ('+paDay(D.sel)+')</b></td>'+D.cum.map((_,i)=>'<td>'+(i<D.scum.length?paFmt(D.scum[i]):'')+'</td>').join('')+'</tr>'}
     return h+'</tbody></table></div></div>'+paExtraTablesHtml(M)+paSizeTableHtml(M);
 }
 function paBodyHtml(M){
@@ -6304,7 +6322,7 @@ function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExpor
         +'.pa-rep{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);gap:8px 22px}'
         // ısı haritası: hücreler arasında 2 px yüzey boşluğu
         +'.pa-heat{display:grid;gap:2px;align-items:center;margin-top:8px}.pa-heat-h{font-size:10px;color:#928fb0;text-align:left}.pa-heat-d{font-size:10.5px;color:#928fb0;padding-right:6px;white-space:nowrap;text-align:right}'
-        +'.pa-heat i{display:flex;align-items:center;justify-content:center;height:20px;border-radius:3px;font-style:normal;font-size:10.5px;font-weight:700;overflow:hidden}.pa-heat-s{font-size:11px;font-weight:700;color:#e8e7f0;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}.pa-heat-sh{font-size:10px;font-weight:500;color:#928fb0}.pa-leg i.dot{width:9px;height:9px;border-radius:50%}.pa-leg i.ring{width:9px;height:9px;border-radius:50%;background:transparent;border:2px solid;box-sizing:border-box}.pa-cmp{margin-top:2px}.pa-cmp th small,.pa-cmp td small{display:block;font-weight:500;color:#928fb0;font-size:10.5px}.pa-cmp td:first-child{color:#c3c2b7;font-weight:700}.pa-cmp td:first-child i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}.pa-cmp b{color:#fff;font-size:13.5px}.pa-cmp .up{color:#0ca30c;font-weight:800}.pa-cmp .dn{color:#e66767;font-weight:800}.pa-cmp .pa-eq{color:#928fb0}.pa-cmp td{white-space:normal}.pa-note-b{font-size:13px;color:#c3c2b7;line-height:1.5;margin-top:6px}.pa-note-b b{color:#fff}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
+        +'.pa-heat i{display:flex;align-items:center;justify-content:center;height:20px;border-radius:3px;font-style:normal;font-size:10.5px;font-weight:700;overflow:hidden}.pa-heat-s{font-size:11px;font-weight:700;color:#e8e7f0;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}.pa-heat-sh{font-size:10px;font-weight:500;color:#928fb0}.pa-leg i.dot{width:9px;height:9px;border-radius:50%}.pa-leg i.ring{width:9px;height:9px;border-radius:50%;background:transparent;border:2px solid;box-sizing:border-box}.pa-cmpbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.pa-cmpbar select{background:#1b1740;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:13px;font-weight:700;padding:6px 8px;max-width:190px}.pa-stp{background:transparent;color:#c3c2b7;border:1px solid rgba(255,255,255,.22);border-radius:8px;min-width:32px;height:32px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px}.pa-stp:hover{background:rgba(255,255,255,.1);color:#fff}.pa-stp:disabled{opacity:.35;cursor:default}.pa-stp-t{color:#fff;background:#3987e5;border-color:#3987e5}.pa-cmp-vs{font-size:12px;color:#928fb0;margin-left:4px}.pa-cmp-vs b{color:#e8e7f0}.pa-leg-t button{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:12px;color:#c3c2b7;font-size:12px;padding:2px 9px;cursor:pointer;font-family:inherit}.pa-leg-t button:hover{background:rgba(255,255,255,.08)}.pa-leg-t button.off{opacity:.45;text-decoration:line-through}.pa-heat-dc{cursor:pointer;border-radius:4px}.pa-heat-dc:hover{color:#fff}.pa-heat-dc.sel{color:#0b0b0b;background:#cde2fb;font-weight:800;padding-left:4px}.pa-heat-dc.prev{color:#fff;box-shadow:inset 0 0 0 1px #6da7ec;padding-left:4px}.pa-cmp-d td{color:#c3c2b7;font-size:11.5px;border-bottom-color:#47437a}.pa-cmp-d td:first-child{font-weight:500;padding-left:22px}.pa-export .pa-cmpbar{display:none}.pa-cmp{margin-top:2px}.pa-cmp th small,.pa-cmp td small{display:block;font-weight:500;color:#928fb0;font-size:10.5px}.pa-cmp td:first-child{color:#c3c2b7;font-weight:700}.pa-cmp td:first-child i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}.pa-cmp b{color:#fff;font-size:13.5px}.pa-cmp .up{color:#0ca30c;font-weight:800}.pa-cmp .dn{color:#e66767;font-weight:800}.pa-cmp .pa-eq{color:#928fb0}.pa-cmp td{white-space:normal}.pa-note-b{font-size:13px;color:#c3c2b7;line-height:1.5;margin-top:6px}.pa-note-b b{color:#fff}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
         +'.pa-scale{display:flex;align-items:center;gap:2px;margin-top:8px;font-size:11px;color:#928fb0}.pa-scale i{display:inline-block;width:18px;height:10px;border-radius:2px}.pa-scale span{margin:0 6px}'
         +'.pa-wait{display:flex;flex-direction:column;gap:4px;margin-top:6px}.pa-wait button{display:grid;grid-template-columns:64px minmax(0,1fr) auto 84px;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e8e7f0;padding:6px 10px;font-size:13px;text-align:left;cursor:pointer}'
         +'.pa-wait button:hover{background:rgba(255,255,255,.1)}.pa-wait b{font-weight:800}.pa-wait span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c2b7}.pa-wait em{font-style:normal;font-weight:800;text-align:right}'

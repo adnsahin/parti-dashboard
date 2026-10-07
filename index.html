@@ -4204,6 +4204,7 @@ function liveLoadZaman(){
         if(!j)return;
         ZAMAN_OZET=j;
         if(typeof paVisible==='function'&&paVisible())paRender();
+        if(typeof lbVisible==='function'&&lbVisible())lbRender();
         const p=document.getElementById('liveScreenPanel');
         if(p&&p.style.display==='block')renderLiveScreenPanel();
     }).catch(()=>{});
@@ -4975,7 +4976,7 @@ function lbRows(){return lbFocus?SW_ROWS.filter(R=>R.key===lbFocus):SW_ROWS}
 // Görünüm: 'all' pano · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (sütun tam ekran) · 'sel' seçilen partiler (ayrı ekran)
 let lbView='all';
 const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler'};
-function lbSetView(v){lbView=lbView===v&&v!=='all'?'all':v;if(lbView==='sel')lbSelMode=false;lbLastKeys=null;lbPvHide();lbRender()}
+function lbSetView(v){lbView=lbView===v&&v!=='all'?'all':v;if(lbView==='sel'){lbSelMode=false;lbSelEvSeen()}lbLastKeys=null;lbPvHide();lbRender()}
 // ── Seçim: parti kutularını seç, seçilenleri ayrı ekranda Gelecek / Üzerinde düzeninde göster. Seçim parti no ile bu
 //    tarayıcıda saklanır (sayfa yenilense de kalır). ☑ ile seçim kipi: kutuya tıkla seç / kaldır, müşteri başlığına tıkla
 //    o bloğun hepsi; seçim kipi kapalıyken Ctrl (ya da Shift) + tık da seçer.
@@ -4987,10 +4988,10 @@ function lbSelOpen(){if(!lbSel.size&&lbView!=='sel'){showToast('Seçili parti yo
 function lbSelToggle(parts,on){
     parts=[...new Set(parts.filter(Boolean))];if(!parts.length)return;
     if(on===undefined)on=!parts.every(p=>lbSel.has(p));
-    parts.forEach(p=>on?lbSel.add(p):lbSel.delete(p));lbSelSave();lbSelRefresh();
+    parts.forEach(p=>on?lbSel.add(p):lbSel.delete(p));lbSelSave();lbSelSnapSync(parts,on);lbSelRefresh();
     if(parts.length>1)showToast((on?'☑ ':'☐ ')+parts.length+' parti '+(on?'seçildi':'seçimden çıkarıldı'));
 }
-function lbSelClear(){if(!lbSel.size||!confirm(lbSel.size+' partilik seçim temizlensin mi?'))return;lbSel.clear();lbSelSave();lbSelRefresh()}
+function lbSelClear(){if(!lbSel.size||!confirm(lbSel.size+' partilik seçim temizlensin mi?'))return;lbSel.clear();lbSelSave();lbSelSnap={};lbSelEvSave();lbSelRefresh()}
 function lbSelDropGone(){const present=new Set(getAllCards().map(lbPn));lbSelToggle([...lbSel].filter(p=>!present.has(p)),false)}
 // ekrandaki kutuları ve sayaçları baştan çizmeden güncelle (seçilenler ekranında baştan çizilir)
 function lbSelRefresh(){
@@ -5045,7 +5046,7 @@ function lbSelGridHtml(all,units,keys){
     let g='<div class="lb-grid" style="grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div><div class="lb-colh">⏳ Gelecek</div><div class="lb-colh">📍 Üzerinde</div>';
     rows.forEach(({R,c,o})=>{
         const norm=lbStageNorm(R),thr=norm&&norm.thr;
-        lbCells['S'+R.key+'g']={cls:'g',items:c.map(k=>({k,key:key(R.key,lbPn(k),'g'),tip:lbTip(k,'▶ şu an: '+(k._asama||'-'))}))};
+        lbCells['S'+R.key+'g']={cls:'g',items:c.map(k=>({k,key:key(R.key,lbPn(k),'g'),tip:lbGelTip(k)}))};
         lbCells['S'+R.key+'u']={cls:'u',thr,items:o.map(k=>({k,key:key(R.key,lbPn(k),'u'),tip:lbTip(k,'← '+(k.son_asama||'-'))}))};
         g+='<div class="lb-rowh lb-rowh-s" style="--c:'+R.color+'"><span class="lb-row-icon">'+R.icon+'</span><span class="lb-row-name">'+esc(R.name)+'</span></div>'
             +lbCellHtml('S'+R.key+'g',R.gel,c,'#42A5F5')+lbCellHtml('S'+R.key+'u',R.on,o,'#9575CD');
@@ -5056,6 +5057,112 @@ function lbSelGridHtml(all,units,keys){
             +lbCellHtml('Soth','Bu üç aşamanın dışında • şu anki aşamasına göre',oth,'#90A4AE','','lb-span2');
     }
     return g+'</div>';
+}
+// ── Seçilenlerin hareketi: veri her yenilendiğinde seçili partilerin aşaması önceki hâliyle karşılaştırılır; değişen
+//    olursa ekranda bildirim çıkar (pano kapalıyken de) ve Seçilenler ekranında "son hareketler" şeridinde görünür.
+//    Bu tarayıcıda saklanır; telefona bildirim gönderilmez.
+let lbSelSnap=safeParse('lbSelSnap9','{}'),lbSelEv=safeParse('lbSelEv9','[]'),lbSelUnseen=+(localStorage.getItem('lbSelUnseen9')||0)||0;
+if(!lbSelSnap||typeof lbSelSnap!=='object'||Array.isArray(lbSelSnap))lbSelSnap={};if(!Array.isArray(lbSelEv))lbSelEv=[];
+function lbSelEvSave(){try{localStorage.setItem('lbSelSnap9',JSON.stringify(lbSelSnap));localStorage.setItem('lbSelEv9',JSON.stringify(lbSelEv));localStorage.setItem('lbSelUnseen9',String(lbSelUnseen))}catch(e){}}
+// partinin şu anki aşaması (bölünmüş partide aşamalar birlikte); güncel veride yoksa ''
+function lbSelStageOf(p,all){return[...new Set(all.filter(k=>lbPn(k)===p).map(k=>normalizeStageName(k._asama||k.asama)||'?'))].sort().join(' + ')}
+function lbSelSnapSync(parts,on){
+    const all=typeof getAllCards==='function'?getAllCards():[];
+    parts.forEach(p=>{if(on)lbSelSnap[p]=lbSelStageOf(p,all);else delete lbSelSnap[p]});lbSelEvSave();
+}
+function lbSelEvText(x){const p=String(x.p).replace(/^\s*\(\d{4}\)\s*/,'');return p+': '+(x.from||'veride yoktu')+' → '+(x.to||'güncel veride yok (sevk edilmiş / bitmiş olabilir)')}
+function lbSelWatch(){
+    const all=typeof getAllCards==='function'?getAllCards():[];if(!all.length||!lbSel.size)return;
+    const ev=[];
+    [...lbSel].forEach(p=>{
+        const cur=lbSelStageOf(p,all),old=lbSelSnap[p];
+        if(old!==undefined&&old!==cur){const k=all.find(c=>lbPn(c)===p),d=k&&typeof latestUpdateDate==='function'?latestUpdateDate(k):null;ev.push({t:d&&!isNaN(d)?d.getTime():Date.now(),p,from:old,to:cur})}
+        lbSelSnap[p]=cur;
+    });
+    if(ev.length){lbSelEv=ev.concat(lbSelEv).slice(0,60);lbSelUnseen+=ev.length}
+    lbSelEvSave();
+    if(!ev.length)return;
+    ev.slice(0,3).forEach((x,i)=>setTimeout(()=>showToast('🔔 '+lbSelEvText(x),'success'),i*1500));
+    if(ev.length>3)setTimeout(()=>showToast('🔔 Seçilenlerden '+ev.length+' parti hareket etti — 📋 Seçilenler ekranında'),4500);
+    if(typeof lbVisible==='function'&&lbVisible())lbRender();
+}
+function lbSelEvSeen(){if(lbSelUnseen){lbSelUnseen=0;lbSelEvSave()}}
+function lbSelEvClear(){lbSelEv=[];lbSelUnseen=0;lbSelEvSave();lbRender()}
+function lbSelEvHtml(){
+    if(!lbSelEv.length)return '<div class="lb-selevs"><b>🔔 Son hareketler</b><span class="lb-na">henüz yok — seçili bir parti aşama değiştirince burada ve ekranda bildirim olarak görünür</span></div>';
+    const hm=t=>{const d=new Date(t);return(d.toDateString()===new Date().toDateString()?'':String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+' ')+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})};
+    return '<div class="lb-selevs"><b>🔔 Son hareketler</b>'+lbSelEv.slice(0,12).map(x=>'<button type="button" class="lb-sev" onclick="openDetailModalByParti(&quot;'+esc(x.p)+'&quot;)" title="Parti kartını aç">'+esc(hm(x.t))+' <b>'+esc(String(x.p).replace(/^\s*\(\d{4}\)\s*/,''))+'</b> '+esc(x.from||'—')+' → <i>'+esc(x.to||'veride yok')+'</i></button>').join('')
+        +'<button type="button" class="lb-sev-x" onclick="lbSelEvClear()" title="Listeyi temizle">temizle</button></div>';
+}
+// ── Gelecek'teki partinin ne zaman geleceği: şu anki aşamasında geçmişte ne kadar kaldığı (bir önceki aşamadan çıkış →
+//    bu aşamadan çıkış; zaman raporu) ve orada ne zamandır beklediği. Dağılım: zaman_ozet.dwell (ondalık dilimler);
+//    yoksa aktif partilerin aşama geçmişinden. Aşama başına en çok örneğe dayanan kullanılır, 10 örnekten azı kullanılmaz.
+const LB_ETA_H=4;
+let lbDwellCache=null,lbEtaHi=false;
+function lbDwell(){
+    const Z=typeof ZAMAN_OZET!=='undefined'&&ZAMAN_OZET;if(!Z)return null;
+    if(lbDwellCache&&lbDwellCache.Z===Z)return lbDwellCache.m;
+    const m={},put=(st,n,q)=>{const k=normalizeStageName(st);if(k&&(!m[k]||m[k].n<n))m[k]={n,q}},S={};
+    Object.values(Z.history||{}).forEach(lst=>{let prev=null;(lst||[]).forEach(r=>{const g=Date.parse(r[1]),c=Date.parse(r[2]);if(!g||!c)return;if(prev!=null)(S[r[0]]=S[r[0]]||[]).push(Math.max(0,(c-(prev<=g?prev:g))/3600000));prev=c})});
+    Object.keys(S).forEach(st=>{const v=S[st].sort((a,b)=>a-b);if(v.length>=10)put(st,v.length,Array.from({length:11},(_,i)=>v[Math.round(i/10*(v.length-1))]))});
+    Object.keys(Z.dwell||{}).forEach(st=>{const d=Z.dwell[st];if(d&&Array.isArray(d.q)&&d.q.length===11&&d.n>=10)put(st,d.n,d.q)});
+    lbDwellCache={Z,m};return m;
+}
+// ondalık dilimlerden dağılım: F(x) ve tersi (dilimler arası doğrusal)
+function lbQF(q,x){if(x<=q[0])return 0;if(x>=q[10])return 1;for(let i=0;i<10;i++)if(x<=q[i+1]){const d=q[i+1]-q[i];return(i+(d>0?(x-q[i])/d:1))/10}return 1}
+function lbQInv(q,p){p=Math.max(0,Math.min(1,p));const i=Math.min(9,Math.floor(p*10));return q[i]+(q[i+1]-q[i])*(p*10-i)}
+// Koşullu tahmin: orada e saattir bekleyen partinin 4 saat içinde gelme olasılığı ve kalan sürenin ortancası.
+// Geçmişteki partilerin %97'sinden uzun beklemişse "normal süresini aştı" (tahmin verilmez).
+function lbEta(k){
+    const D=lbDwell();if(!D)return null;
+    const st=normalizeStageName(k._asama||k.asama),d=D[st],e=lbWaitH(k);if(!d||e==null)return null;
+    const Fe=lbQF(d.q,e);
+    if(Fe>=0.97)return{over:true,st,e,max:d.q[10],med:d.q[5],n:d.n};
+    const rest=1-Fe;
+    return{over:false,st,e,p:(lbQF(d.q,e+LB_ETA_H)-Fe)/rest,rem:Math.max(0,lbQInv(d.q,Fe+rest/2)-e),med:d.q[5],n:d.n};
+}
+function lbEtaSoon(k){const x=lbEta(k);return!!x&&!x.over&&x.p>=0.5}
+function lbEtaTxt(h){return h<0.25?'her an':h<1?'~'+Math.max(5,Math.round(h*12)*5)+' dk':'~'+(Math.round(h*2)/2).toLocaleString('tr-TR')+' sa'}
+function lbEtaTip(k){
+    const x=lbEta(k);if(!x)return'';
+    if(x.over)return '\n⏩ '+x.st+'\'de normal süresini aştı: '+paHours(x.e)+' oradaki (genelde '+paHours(x.med)+', en uzun ~'+paHours(x.max)+')';
+    const at=new Date(Date.now()+x.rem*3600000);
+    return '\n⏩ Tahmini geliş: '+lbEtaTxt(x.rem)+(x.rem>=0.25?' (≈ '+at.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+')':'')+' • 4 sa içinde gelme olasılığı %'+Math.round(x.p*100);
+}
+function lbGelTip(k){return lbTip(k,'▶ şu an: '+(k._asama||'-'))+lbEtaTip(k)}
+function lbEtaToggle(){lbEtaHi=!lbEtaHi;if(lbEtaHi)lbStuckHi=false;lbRender();showToast(lbEtaHi?'⏩ 4 saat içinde gelmesi muhtemel partiler vurgulandı — kapatmak için tekrar tıkla':'⏩ Vurgulama kapatıldı')}
+// Gelecek başlığı: önümüzdeki 4 saatte gelmesi beklenen (olasılıklar toplamı; kg görünümünde kg)
+function lbEtaChip(R,list){
+    if(!lbDwell()||!list.length)return'';
+    const kgv=lbUnit==='kg',xs=list.map(k=>({k,x:lbEta(k)})),ok=xs.filter(o=>o.x&&!o.x.over);
+    const exp=ok.reduce((s,o)=>s+o.x.p*(kgv?num(o.k.kilo):1),0),expN=ok.reduce((s,o)=>s+o.x.p,0),expKg=ok.reduce((s,o)=>s+o.x.p*num(o.k.kilo),0);
+    const over=xs.filter(o=>o.x&&o.x.over).length,unk=xs.filter(o=>!o.x).length,soon=ok.filter(o=>o.x.p>=0.5).length;
+    const tip='Önümüzdeki 4 saatte '+R.name+' için gelmesi beklenen: ~'+Math.round(expN)+' parti (≈ '+lbShortKg(expKg)+' kg).\nHer parti için: şu anki aşamasında geçmişte ne kadar kaldığı (zaman raporu) ve orada ne zamandır beklediği.'
+        +(over?'\nŞu anki aşamasında normal süresini aşmış '+over+' parti hesaba katılmadı.':'')+(unk?'\nAşamasının geçmiş verisi olmayan '+unk+' parti hesaba katılmadı.':'')+'\nTıkla: 4 saat içinde gelmesi muhtemel '+soon+' partiyi vurgula';
+    return '<button type="button" class="lb-hour lb-eta'+(lbEtaHi?' on':'')+'" onclick="lbEtaToggle()" title="'+esc(tip)+'">⏩<span class="lb-hm"> 4 sa içinde</span> <b>~'+(kgv?lbShortKg(exp)+' kg':Math.round(exp))+'</b></button>';
+}
+// ── Birikiyor / eriyor: son 2 saatte aşamaya gelen ile geçen karşılaştırılır (sunucudaki üretim kaydından; kayıt eskiyse gösterilmez)
+const LB_TREND_H=2;
+let lbTrendReg={};
+function lbTrend(R){
+    if(typeof URETIM_LOG==='undefined'||!URETIM_LOG||!URETIM_LOG.days||!uretimLogFresh())return null;
+    const t0=Date.now()-LB_TREND_H*3600000,days=Object.keys(URETIM_LOG.days).sort().slice(-2);
+    const get=key=>{const seen=new Set(),out=[];days.forEach(d=>{const e=uretimLogEntries(d,key);Object.keys(e).forEach(pn=>{if((e[pn].ts||0)>=t0&&!seen.has(pn)){seen.add(pn);out.push(Object.assign({parti:pn},e[pn]))}})});return out.sort((a,b)=>(b.ts||0)-(a.ts||0))};
+    const arr=get(R.key+'Gelen'),pas=get(R.key+'Gecen'),kgv=lbUnit==='kg',v=l=>kgv?l.reduce((s,r)=>s+num(r.kg),0):l.length;
+    const gel=v(arr),gec=v(pas),net=gel-gec,tol=kgv?Math.max(150,0.15*Math.max(gel,gec)):Math.max(1,0.15*Math.max(gel,gec));
+    return{R,arr,pas,gel,gec,net,kgv,dir:Math.abs(net)<=tol?'eq':net>0?'up':'dn'};
+}
+function lbTrendChip(R){
+    const T=lbTrend(R);if(!T)return'';lbTrendReg[R.key]=T;
+    const f=v=>T.kgv?lbShortKg(v)+' kg':String(Math.round(v)),lab={up:'birikiyor',dn:'eriyor',eq:'dengede'}[T.dir];
+    const tip='Son 2 saatte '+R.name+': gelen '+f(T.gel)+', geçen '+f(T.gec)+' → '+lab+(T.dir==='up'?' (gelen geçenden fazla, iş birikiyor)':T.dir==='dn'?' (geçen gelenden fazla, bekleyen iş azalıyor)':'')+'\nTıkla: gelen ve geçen partiler';
+    return '<button type="button" class="lb-hour lb-trend '+T.dir+'" onclick="lbTrendOpen(&quot;'+R.key+'&quot;)" title="'+esc(tip)+'">'+(T.dir==='up'?'▲':T.dir==='dn'?'▼':'=')+' <b>'+(T.dir==='eq'?'':(T.net>0?'+':'−')+f(Math.abs(T.net)))+'</b><span class="lb-hm">'+(T.dir==='eq'?'':' ')+lab+'</span></button>';
+}
+function lbTrendOpen(key){
+    const T=lbTrendReg[key];if(!T)return;
+    const sec=(t,rows,isGelen)=>rows.length?'<div class="lb-cu-st">'+t+' <small>'+rows.length+' parti</small></div><div class="ulog-list">'+rows.map((r,i)=>uretimLogItemHtml(r,i,isGelen)).join('')+'</div>':'<div class="lb-cu-st">'+t+' <small>yok</small></div>';
+    const f=v=>T.kgv?lbShortKg(v)+' kg':Math.round(v)+' parti';
+    hmModalShow('<div class="hm-card-title">'+(T.dir==='up'?'▲':T.dir==='dn'?'▼':'=')+' '+esc(T.R.name)+' — son 2 saat<small>gelen '+f(T.gel)+' • geçen '+f(T.gec)+'</small></div>'+sec('📥 Gelenler',T.arr,true)+sec('✅ Geçenler',T.pas,false));
 }
 // Bekleme renkleri: kutu, son hareketten beri geçen süreye göre yeşilden kırmızıya (nerede takıldığı tek bakışta)
 let lbWaitMode=mapLoadPref('lbWait9',v=>v==='1'||v==='0','0')==='1';
@@ -5085,7 +5192,7 @@ function lbSearchSummary(){
 }
 function lbSearchApply(){
     const el=document.getElementById('liveBoard');if(!el)return;
-    el.classList.toggle('searching',!!lbQuery||lbStuckHi);
+    el.classList.toggle('searching',!!lbQuery||lbStuckHi||lbEtaHi);
     const r=document.getElementById('lbQRes');if(r)r.innerHTML=lbSearchSummary();
     const sb=document.getElementById('lbSelBar');if(sb)sb.innerHTML=lbSelBarInner();
     lbLayout();
@@ -5214,9 +5321,9 @@ function lbHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0
 function lbOpen(){
     let el=document.getElementById('liveBoard');
     if(!el){el=document.createElement('div');el.id='liveBoard';el.className='lb';document.body.appendChild(el)}
-    el.style.display='flex';lbLastKeys=null;lbLastProd=null;lbFocus=null;lbView='all';lbSelMode=false;lbQuery='';lbSearchOpen=false;lbStuckHi=false;uretimLogFetchedAt=0;
+    el.style.display='flex';lbLastKeys=null;lbLastProd=null;lbFocus=null;lbView='all';lbSelMode=false;lbEtaHi=false;lbQuery='';lbSearchOpen=false;lbStuckHi=false;uretimLogFetchedAt=0;
     if(lbCycle.on){lbCycle.idx=3;lbCycle.nextAt=Date.now()+lbCycle.sec*1000;lbCycle.pausedUntil=0}
-    lbRender();
+    lbRender();if(typeof liveLoadZaman==='function')liveLoadZaman();
     if(!lbTimer)lbTimer=setInterval(lbTick,30000);
     // ana sayfadan doğrudan açılınca da sunucudaki üretim kaydı hemen okunsun
     uretimLogRefresh(()=>{if(lbVisible())lbRender()});
@@ -5369,7 +5476,7 @@ function lbLayoutCell(body,root){
         let x=0;
         L.items.forEach(b=>{
             const g=b.g,n=g.list.length,bw=b.w+(sumW?exW*b.w/sumW:0),tone=LB_TONES[d.cls][lbHash(g.name)%4],th=(LH-P.headH)/b.rows;
-            const hits=lbQuery||lbStuckHi?g.list.map(it=>(!lbQuery||lbMatch(it.k))&&(!lbStuckHi||lbIsStuck(it.k,d.thr))):null;
+            const hits=lbQuery||lbStuckHi||lbEtaHi?g.list.map(it=>(!lbQuery||lbMatch(it.k))&&(!lbStuckHi||lbIsStuck(it.k,d.thr))&&(!lbEtaHi||d.cls==='g'&&lbEtaSoon(it.k))):null;
             h+='<div class="lb-grpbox'+(hits&&hits.some(Boolean)?' hit':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px;width:'+bw.toFixed(1)+'px;height:'+LH.toFixed(1)+'px;--tc:'+tone+'">';
             if(M.head){
                 const firms=lbGroupMode==='from'||d.groupBy?[]:[...new Set(g.list.map(x=>lbFirm(x.k)))].filter(f=>f&&f!==g.name);
@@ -5418,7 +5525,7 @@ function lbWaitH(k){const d=fifoAgeDays(k);return d==null||!Number.isFinite(d)?n
 function lbIsStuck(k,thr){const w=lbWaitH(k);return thr!=null&&w!=null&&w>thr}
 // ⏳ etiketine tıklayınca uzun bekleyenler vurgulanır (diğerleri soluklaşır); tekrar tıklayınca kapanır
 let lbStuckHi=false;
-function lbStuckToggle(){lbStuckHi=!lbStuckHi;lbRender();showToast(lbStuckHi?'⏳ Uzun bekleyenler vurgulandı — kapatmak için tekrar tıkla':'⏳ Vurgulama kapatıldı')}
+function lbStuckToggle(){lbStuckHi=!lbStuckHi;if(lbStuckHi)lbEtaHi=false;lbRender();showToast(lbStuckHi?'⏳ Uzun bekleyenler vurgulandı — kapatmak için tekrar tıkla':'⏳ Vurgulama kapatıldı')}
 // Tamir kaydı olan parti: kutunun köşesinde 🛠️
 function lbTamirN(k){return k&&Array.isArray(k.tamirler)?k.tamirler.length:0}
 // Son 1 saatte gelen / geçen partiler (üretim kaydındaki saatlerle)
@@ -5495,7 +5602,7 @@ function lbRender(){
         +'<button type="button" class="'+(lbSearchOpen||lbQuery?'on':'')+'" title="Müşteri / parti ara ve vurgula" onclick="lbSearchToggle()">🔍</button>'
         +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" onclick="lbToggleWait()">⏱</button>'
         +'<button type="button" class="lb-selb'+(lbSelMode?' on':'')+'" title="Seç: parti kutularına tıklayarak seç (Ctrl + tık her zaman seçer)" onclick="lbSelModeSet()">☑</button>'
-        +'<button type="button" class="lb-exp lb-selo'+(lbView==='sel'?' on':'')+'" title="Seçilen partileri ayrı ekranda göster" onclick="lbSelOpen()">📋<span class="lb-bl"> Seçilenler</span><span class="lb-seln">'+(lbSel.size||'')+'</span></button>'
+        +'<button type="button" class="lb-exp lb-selo'+(lbView==='sel'?' on':'')+'" title="Seçilen partileri ayrı ekranda göster" onclick="lbSelOpen()">📋<span class="lb-bl"> Seçilenler</span><span class="lb-seln">'+(lbSel.size||'')+'</span>'+(lbSelUnseen?'<span class="lb-selev" title="Görülmemiş hareket">🔔'+lbSelUnseen+'</span>':'')+'</button>'
         +'<button type="button" class="lb-exp" style="background:#1565C0" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
         +'<button type="button" class="lb-exp" style="background:#C62828" title="PDF indir" onclick="lbExport(&quot;pdf&quot;)">📄<span class="lb-bl"> PDF</span></button>'
         +'<button type="button" class="lb-exp" style="background:#25D366" title="WhatsApp ile paylaş (PNG)" onclick="lbExport(&quot;wa&quot;)">📱<span class="lb-bl"> WhatsApp PNG</span></button>'
@@ -5518,7 +5625,7 @@ function lbRender(){
         prodSets[R.key]=new Set(prod.map(r=>r.parti));prodCount[R.key]=prod.length;
         const key=(p,col)=>{let k=R.key+'|'+p;if(keys.has(k))k+='|'+col;keys.set(k,1);return k};
         const tip=lbTip;
-        if(showG)lbCells[R.key+'g']={cls:'g',items:coming.map(k=>({k,key:key(String(k.parti).trim(),'g'),tip:tip(k,'▶ şu an: '+(k._asama||'-'))}))};
+        if(showG)lbCells[R.key+'g']={cls:'g',items:coming.map(k=>({k,key:key(String(k.parti).trim(),'g'),tip:lbGelTip(k)}))};
         // aşamada alışılmış süreden uzun bekleyenler
         const norm=lbStageNorm(R),thr=norm&&norm.thr,stuckN=thr!=null?on.filter(k=>lbIsStuck(k,thr)).length:0;
         if(showU)lbCells[R.key+'u']={cls:'u',thr,items:on.map(k=>({k,key:key(String(k.parti).trim(),'u'),tip:tip(k,'← '+(k.son_asama||'-'))+(lbIsStuck(k,thr)?'\n⏳ Bu aşamada alışılmış süre '+paHours(thr)+'; bu parti '+paHours(lbWaitH(k))+' bekliyor':'')}))};
@@ -5531,7 +5638,7 @@ function lbRender(){
             +(hA.length||hP.length?'<b class="a">'+hA.length+'<span class="lb-hm"> geldi</span><span class="lb-ph">↓</span></b><span class="lb-hm"> ·</span> <b class="p">'+hP.length+'<span class="lb-hm"> geçti</span><span class="lb-ph">↑</span></b>':'<span class="lb-hm">hareket </span>yok')+'</button>'
             // kayıt güncel değilken de yeri belli olsun (sessizce kaybolmasın)
             :'<button type="button" class="lb-hour none" onclick="showToast(&quot;Son 1 saatin hareketi sunucudaki üretim kaydından gelir; kayıt 45 dakikadan eski olduğu için gösterilemiyor&quot;,&quot;warning&quot;)" title="Sunucudaki üretim kaydı 45 dakikadan eski; saatler güvenilir olmadığı için sayı gösterilmiyor"><span class="lb-hm">son </span>1 sa: kayıt <span class="lb-hm">güncel değil</span><span class="lb-ph">eski</span></button>';
-        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5'):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',hour+stuck):'')+(showP?lbProdCellHtml(R,prod):'');
+        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',hour+lbTrendChip(R)+stuck):'')+(showP?lbProdCellHtml(R,prod):'');
     });
     g+='</div>';
     }
@@ -5540,7 +5647,7 @@ function lbRender(){
     h+=lbCycleBarHtml();
     const stale=lbStaleInfo();
     h+='<div id="lbStale" class="lb-stale'+(stale?' on':'')+'">'+stale+'</div>';
-    if(lbSelMode||lbView==='sel')h+='<div id="lbSelBar" class="lb-selbar">'+lbSelBarInner()+'</div>';
+    if(lbSelMode||lbView==='sel')h+='<div id="lbSelBar" class="lb-selbar">'+lbSelBarInner()+'</div>'+(lbView==='sel'?lbSelEvHtml():'');
     if(lbSearchOpen||lbQuery)h+='<div class="lb-search"><span class="lb-q-ic">🔍</span><input id="lbQ" type="search" value="'+esc(lbQuery)+'" placeholder="Müşteri, firma, parti no, kumaş…" autocomplete="off" oninput="lbSearchInput(this.value)"'
         +' onkeydown="if(event.key===&quot;Escape&quot;){event.stopPropagation();if(this.value)lbSearchClear();else lbSearchToggle()}">'
         +'<button type="button" id="lbQMic" title="Sesle ara" onclick="lbSearchVoice()">🎤</button><button type="button" title="Aramayı temizle" onclick="lbSearchClear()">✕</button>'
@@ -5550,7 +5657,7 @@ function lbRender(){
     // yeniden çizimde arama kutusundaki imleç kaybolmasın
     const ae=document.activeElement,qf=ae&&ae.id==='lbQ',qs=qf?[ae.selectionStart,ae.selectionEnd]:null;
     el.innerHTML=h;el.classList.toggle('cust',lbShowCust);el.classList.toggle('focus',!!lbFocus&&lbView!=='sel');
-    el.classList.toggle('colv',lbView==='g'||lbView==='u');el.classList.toggle('selv',lbView==='sel');el.classList.toggle('selmode',lbSelMode);el.classList.toggle('searching',!!lbQuery||lbStuckHi);
+    el.classList.toggle('colv',lbView==='g'||lbView==='u');el.classList.toggle('selv',lbView==='sel');el.classList.toggle('selmode',lbSelMode);el.classList.toggle('searching',!!lbQuery||lbStuckHi||lbEtaHi);
     if(qf){const q=document.getElementById('lbQ');if(q){q.focus();try{q.setSelectionRange(qs[0],qs[1])}catch(e){}}}
     {const m=el.querySelector('.lb-meta');if(m)m.classList.toggle('stale',!!stale)}
     lbLayout();
@@ -5589,7 +5696,7 @@ function lbFit(){lbLayout()}
 // Çıktı: ekrandaki pano (odak seçiliyse yalnız o aşama) 1600 px masaüstü düzeninde yeniden yerleştirilir — telefondan alınsa da okunaklı
 function lbExportEl(){
     const FR=lbView!=='sel'&&lbFocus&&SW_ROWS.find(R=>R.key===lbFocus),VL=LB_VIEW_L[lbView];
-    const wrap=document.createElement('div');wrap.className='lb lb-export'+(lbShowCust?' cust':'')+(FR?' focus':'')+(lbQuery||lbStuckHi?' searching':'')+(lbView==='g'||lbView==='u'?' colv':'')+(lbView==='sel'?' selv':'');
+    const wrap=document.createElement('div');wrap.className='lb lb-export'+(lbShowCust?' cust':'')+(FR?' focus':'')+(lbQuery||lbStuckHi||lbEtaHi?' searching':'')+(lbView==='g'||lbView==='u'?' colv':'')+(lbView==='sel'?' selv':'');
     wrap.style.width='1600px';wrap.style.height=(lbFocus?860:1000)+'px';
     wrap.innerHTML='<div class="lb-exp-h"><b>📺 Canlı Hareket İzleme'+(VL?' — '+VL:'')+(FR?' — '+esc(FR.name):'')+'</b><span>'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))
         +'</span>'+(lbQuery?'<span class="lb-exp-q">🔍 '+esc(lbQuery)+'</span>':'')
@@ -5637,6 +5744,13 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-selbar button{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;height:30px;padding:0 10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}.lb-selbar button:hover{background:#533b88}'
         +'.lb-selbar button.on,.lb-selbar .lb-sel-go,.lb-selbar .lb-sel-back{background:#33691E;border-color:#C6FF00}.lb-selbar button:disabled{opacity:.4;cursor:default}.lb-sel-gone button{height:22px;padding:0 6px;font-size:11px;margin-left:6px}'
         +'.lb-top button.lb-selb.on,.lb-top button.lb-selo.on{background:#558B2F;border-color:#C6FF00}.lb-top button.lb-selo{background:#33691E}.lb-seln{font-size:11px;font-weight:900;margin-left:3px;color:#C6FF00}.lb-top button.on .lb-seln{color:#fff}'
+        // ⏩ tahmini geliş, ▲▼ birikiyor / eriyor, seçilenlerin hareketleri
+        +'.lb-eta b{color:#81D4FA}.lb-eta.on{background:#0277BD;border-color:#4FC3F7;color:#fff}.lb-eta.on b{color:#fff}.lb-trend.up b,.lb-trend.up{color:#FF8A80}.lb-trend.dn b,.lb-trend.dn{color:#69F0AE}.lb-trend.eq{color:#B0BEC5}.lb-cell-h .lb-trend b{font-size:12.5px;font-weight:900}'
+        +'.lb-selev{display:inline-block;margin-left:3px;background:#D32F2F;color:#fff;border-radius:8px;font-size:10.5px;font-weight:900;padding:0 4px;line-height:15px;animation:lbHit 1.6s ease-in-out infinite}'
+        +'.lb-selevs{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:5px 12px;overflow-x:auto;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.08);font-size:12.5px;color:#CFD8DC}.lb-selevs>b{color:#FFD54F;flex:0 0 auto}.lb-selevs .lb-na{color:#78909C}'
+        +'.lb-sev{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#CFD8DC;font-size:12px;padding:3px 8px;cursor:pointer;font-family:inherit}.lb-sev:hover{background:rgba(255,255,255,.16)}.lb-sev b{color:#fff}.lb-sev i{font-style:normal;color:#C6FF00;font-weight:700}'
+        +'.lb-sev-x{flex:0 0 auto;background:transparent;border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#90A4AE;font-size:11.5px;padding:3px 8px;cursor:pointer;font-family:inherit}'
+        +'.lb.focus .lb-cell-h .lb-trend b{font-size:16px}'
         +'.lb-top button.lb-back{width:auto;padding:0 10px;background:#33691E;border-color:#C6FF00;font-weight:800;white-space:nowrap}'
         +'.lb-exp .lb-bl{font-size:13px;font-weight:800}.lb-top button.lb-exp{width:auto;padding:0 10px;white-space:nowrap}'
         // Çıktı kopyası: ekran dışında sabit boyutlu (masaüstü düzeni); html2canvas iç gölgeyi çizmediği için ayırıcılar kenarlıkla
@@ -5756,7 +5870,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'#liveBoard.focus .lb-cell-h{font-size:11px}#liveBoard.focus .lb-cell-h b{font-size:18px}#liveBoard.focus .lb-prod-n b{font-size:28px}#liveBoard.focus .lb-prod-kg{font-size:10px}#liveBoard.focus .lb-colh{font-size:12px}'
         +'#liveBoard.colv .lb-grid{grid-template-columns:24px minmax(0,1fr)}#liveBoard.colv.focus .lb-grid{grid-template-columns:30px minmax(0,1fr)}#liveBoard.selv .lb-grid{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr)}'
         +'#liveBoard .lb-selbar{padding:4px 6px;gap:4px 6px;font-size:11px}#liveBoard .lb-sel-h{display:none}#liveBoard .lb-selbar button{height:26px;padding:0 6px;font-size:11px}#liveBoard .lb-sel-t{font-size:12px}'
-        +'#liveBoard .lb-top button.lb-back,#liveBoard .lb-top button.lb-selo{width:auto;min-width:25px;padding:0 2px}#liveBoard .lb-seln{font-size:9px;margin-left:1px}#liveBoard .lb-fs{display:none}'
+        +'#liveBoard .lb-top button.lb-back,#liveBoard .lb-top button.lb-selo{width:auto;min-width:25px;padding:0 2px}#liveBoard .lb-seln{font-size:9px;margin-left:1px}#liveBoard .lb-top button.lb-selo{position:relative;overflow:visible}#liveBoard .lb-selev{position:absolute;top:-5px;right:-4px;font-size:8px;padding:0 2px;margin:0;line-height:12px;z-index:1}#liveBoard .lb-selevs{padding:3px 6px;font-size:11px}#liveBoard .lb-sev{font-size:10.5px;padding:2px 6px}#liveBoard .lb-cell-h .lb-trend b{font-size:10px}#liveBoard .lb-fs{display:none}'
         // telefonda tek sütun / seçilenler ekranında ↩ Geri düğmesine yer açılsın: saat gizlenir
         +'#liveBoard.colv .lb-clock,#liveBoard.selv .lb-clock{display:none}#liveBoard.colv .lb-top .lb-back,#liveBoard.selv .lb-top .lb-back{margin-right:auto}}';
     document.head.appendChild(style);
@@ -5778,7 +5892,7 @@ function lbPvShow(tile){
     // tarayıcının kendi ipucu kartla üst üste binmesin
     if(tile.title){tile.dataset.tip=tile.title;tile.removeAttribute('title')}
     // panoya özgü satırlar: geldiği / şu anki aşama ve varsa uzun bekleme notu
-    const lines=String(it.tip||tile.dataset.tip||'').split('\n'),extra=[lines[1]].concat(lines.filter(l=>l.startsWith('⏳'))).filter(Boolean);
+    const lines=String(it.tip||tile.dataset.tip||'').split('\n'),extra=[lines[1]].concat(lines.filter(l=>l.startsWith('⏳')||l.startsWith('⏩'))).filter(Boolean);
     const d=lbPvEl();d.classList.remove('show');
     d.innerHTML=(extra.length?'<div class="lb-pv-x">'+extra.map(esc).join('<br>')+'</div>':'')+flashCardHtml(it.k,true);
     // konum: kutunun sağına, sığmazsa soluna; ekrandan taşmaz. Kart, kutunun olduğu kenardan dönerek açılır.
@@ -7585,6 +7699,7 @@ function afterDataLoaded(isExcel){
     saveDataSnapshot();updateInsightStrip();
     ntfySyncSnapshot();
     try{mapsAfterData()}catch(e){console.warn('harita durumu',e)}
+    try{lbSelWatch()}catch(e){console.warn('seçim takibi',e)}
 }
 function cardCurrentStage(k){return k._asama||k.asama||k.son_asama||''}
 function cardStageIndex(k){

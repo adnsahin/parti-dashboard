@@ -9,6 +9,10 @@ Uretilenler:
   shifts  : Son N vardiyanin (08:00-08:00) gercek uretimi. Son KK ve Sarim1 icin gelen/uretim,
             FZK ve SEVK icin cikis; parti sayisi + kg.
   norms   : Her asamaya girmeden once partinin gecmiste ne kadar beklediginin dagilimi (saat).
+  dwell   : Partinin bir asamada kaldigi sure (onceki asamadan cikis -> bu asamadan cikis), saat; ondalik dilimler
+            (q[0..10]). Canli panoda "Gelecek" partilerin ne zaman gelecegi bundan tahmin edilir.
+            norms ve dwell'de asama basina daha cok ornege dayanan sonuc tutulur: kucuk (gunluk) bir rapor, onceki
+            genis raporun degerlerini silmez.
   wet     : Islak bolge (BOYAMA cikisi -> ilk RAM girisi) gercek bekleme dagilimlari, adim ve vardiya bazinda.
   history : Aktif partilerin (partiler.json) asama gecmisi.
   personel: KK / Sarim1 / Sarim2 ekibinin is kayitlari, kisi KODUYLA (adlar yayimlanmaz); pano bunlardan kayip
@@ -124,6 +128,7 @@ def build(rows, waiting):
 
     events = defaultdict(lambda: defaultdict(dict))  # shift -> metric -> {parti: kg}
     waits = defaultdict(list)                        # stage -> [saat]
+    dwell = defaultdict(list)                        # stage -> [saat] (onceki cikis -> bu cikis)
 
     def add(metric, when, parti, kg):
         events[shift_key(when)][metric].setdefault(parti, kg)
@@ -141,6 +146,8 @@ def build(rows, waiting):
                 waits[nxt["stage"]].append(w)
 
             arrive = prev["cik"] if prev is not None and prev["cik"] <= r["gir"] else r["gir"]
+            if prev is not None:
+                dwell[st].append(max(0.0, (r["cik"] - arrive).total_seconds() / 3600))
 
             if st == KK:
                 kk_visit += 1
@@ -194,7 +201,22 @@ def build(rows, waiting):
             continue
         s = sorted(vals)
         norms[stage] = {"n": len(s), "med": round(pct(s, .5), 2), "p75": round(pct(s, .75), 2), "p90": round(pct(s, .9), 2)}
-    return by, shifts, norms
+    dwells = {}
+    for stage, vals in dwell.items():
+        if len(vals) < MIN_NORM_N:
+            continue
+        s = sorted(vals)
+        dwells[stage] = {"n": len(s), "q": [round(pct(s, i / 10), 2) for i in range(11)]}
+    return by, shifts, norms, dwells
+
+
+def keep_larger(prev, new):
+    """Asama basina daha cok ornege (n) dayanan degeri tutar."""
+    out = dict(new or {})
+    for stage, v in (prev or {}).items():
+        if isinstance(v, dict) and (stage not in out or out[stage].get("n", 0) < v.get("n", 0)):
+            out[stage] = v
+    return out
 
 
 def norm_obj(vals):
@@ -418,7 +440,8 @@ def main():
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "zaman_ozet.json")
     partiler = sys.argv[3] if len(sys.argv) > 3 else os.path.join("data", "partiler.json")
     pers_folder = sys.argv[4] if len(sys.argv) > 4 else ".."
-    prev_personel = load_json(out, {}).get("personel")
+    prev_all = load_json(out, {})
+    prev_personel = prev_all.get("personel")
 
     rows = load_rows(src)
     cards = []
@@ -426,7 +449,9 @@ def main():
         with open(partiler, encoding="utf-8") as f:
             cards = json.load(f).get("cards", [])
     waiting = {clean(c.get("parti")): clean(c.get("stage")) for c in cards}
-    by, shifts, norms = build(rows, waiting)
+    by, shifts, norms, dwells = build(rows, waiting)
+    norms = keep_larger(prev_all.get("norms"), norms)
+    dwells = keep_larger(prev_all.get("dwell"), dwells)
 
     history = {}
     if cards:
@@ -443,6 +468,7 @@ def main():
         "shiftStartHour": SHIFT_START_HOUR,
         "shifts": shifts,
         "norms": norms,
+        "dwell": dwells,
         "wet": wet_stats(by),
         "history": history,
     }

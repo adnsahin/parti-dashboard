@@ -11,9 +11,13 @@ Uretilenler:
   norms   : Her asamaya girmeden once partinin gecmiste ne kadar beklediginin dagilimi (saat).
   wet     : Islak bolge (BOYAMA cikisi -> ilk RAM girisi) gercek bekleme dagilimlari, adim ve vardiya bazinda.
   history : Aktif partilerin (partiler.json) asama gecmisi.
+  personel: KK / Sarim1 / Sarim2 ekibinin is kayitlari, kisi KODUYLA (adlar yayimlanmaz); pano bunlardan kayip
+            zamani (yavas is, bosluk, gec baslama, Fizik Lab bekleyisi) hesaplar. Ad -> kod eslemesi ve kayit gecmisi
+            depo DISINDA tutulur (varsayilan: ..\\personel_kodlari.json, ..\\personel_durum.json); boylece kodlar
+            sabit kalir, adlar GitHub'a gitmez.
 
 Kullanim:
-  python update_zaman_json.py <zaman.xlsx> [zaman_ozet.json] [partiler.json]
+  python update_zaman_json.py <zaman.xlsx> [zaman_ozet.json] [partiler.json] [personel_klasoru]
 
 Ornek:
   python update_zaman_json.py "zaman (1).Xlsx" .\\data\\zaman_ozet.json .\\data\\partiler.json
@@ -261,6 +265,147 @@ def wet_stats(by):
     }
 
 
+# ── Personel: KK / Sarim ekibinin is kayitlari (kisi adlari KODLA yayimlanir) ──
+# Pano bu kayitlardan "kayip zaman" cikarir (yavas is, bosluk, gec baslama, Fizik Lab bekleyisi, kayit duzeni).
+# Kural (kullaniciyla kararlastirildi): partiyi GIRIS kaydini yapan kisi uretir; is, kisi KK kaydini kendisi kapattiysa
+# cikista, kapatmadiysa ayni kisinin bir sonraki girisinde biter (hesap panoda). Bu yuzden izlenen kisilerin BASKA
+# asamalardaki giris anlari da tutulur. Birden fazla rapor birlestirilir; son 35 gun tutulur.
+#   jobs: [asama, parti, kod, giris_sn, kg, metre, cikis_sn|None, kapatan]   kapatan: kod | "LAB" | "" (baskasi) | None
+#   acts: {kod: [giris_sn, ...]}  (izlenen kisilerin baska asama girisleri)
+#   cov : [[bas_sn, son_sn], ...] raporlarin kapsadigi zaman (her raporun en erken - en gec cikisi); pano yalniz bu
+#         araliktaki isleri degerlendirir (rapor cikis tarihine gore alindigi icin daha oncesi eksiktir).
+#   *_sn: PERS_EPOCH'tan bu yana saniye. metre: rapordaki Metre, yoksa kg / (gramaj x en) ile yaklasik.
+PERS_STAGES = {"KALİTE KONTROL": "kk", "SARIM 1": "sr1", "SARIM 2": "sr2"}
+PERS_KEEP_DAYS = 35
+PERS_EPOCH = datetime(2026, 1, 1)
+
+
+def tr_upper(s):
+    return " ".join(str(s).replace("i", "İ").replace("ı", "I").upper().split())
+
+
+def load_person_rows(path):
+    """Giris personeli olan satirlar; kolon yoksa None (eski rapor bicimi)."""
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb.worksheets[0]
+    it = ws.iter_rows(values_only=True)
+    head = [clean(h) for h in next(it)]
+    ix = {h: i for i, h in enumerate(head)}
+    need = ("Parti / İş Emri", "Aşama Adı", "Giriş Tarihi", "Giriş Personel Adı")
+    if any(n not in ix for n in need):
+        return None
+
+    def get(r, name):
+        i = ix.get(name)
+        return r[i] if i is not None and i < len(r) else None
+
+    out = []
+    for r in it:
+        if not r:
+            continue
+        parti, gir, who = clean(get(r, "Parti / İş Emri")), to_dt(get(r, "Giriş Tarihi")), clean(get(r, "Giriş Personel Adı"))
+        if not parti or not gir or not who:
+            continue
+        kg = to_num(get(r, "Aşama Çıkış Kilo")) or to_num(get(r, "Kilo"))
+        metre = to_num(get(r, "Metre")) or to_num(get(r, "Aşama Çıkış Metre"))
+        if not metre:
+            en, gr = to_num(get(r, "En İstenen")), to_num(get(r, "Gramaj İstenen"))
+            if kg and en > 0 and gr > 0:
+                metre = kg * 1000.0 / (gr * en / 100.0)
+        out.append({"parti": parti, "stage": tr_upper(clean(get(r, "Aşama Adı"))), "gir": gir, "who": tr_upper(who),
+                    "cik": to_dt(get(r, "Çıkış Tarihi")), "cwho": tr_upper(clean(get(r, "Çıkış Personel Adı"))),
+                    "kg": kg, "metre": metre})
+    return out
+
+
+def load_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def build_personel(rows, folder, prev):
+    codes_path = os.path.join(folder, "personel_kodlari.json")
+    state_path = os.path.join(folder, "personel_durum.json")
+    codes = load_json(codes_path, {}).get("codes", {})
+    state = load_json(state_path, {})
+    if state.get("v") != 2:
+        state = {"v": 2, "rows": {}, "acts": {}, "cov": []}
+    srows, sacts = state.setdefault("rows", {}), state.setdefault("acts", {})
+    sec = lambda dt: int((dt - PERS_EPOCH).total_seconds())
+    ciks = [sec(r["cik"]) for r in rows if r["cik"]]
+    cov = state.setdefault("cov", [])
+    if ciks:
+        cov.append([min(ciks), max(ciks)])
+    merged = []
+    for a, b in sorted(cov):
+        if merged and a <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], b)
+        else:
+            merged.append([a, b])
+    state["cov"] = cov = merged
+
+    def code_of(name):
+        if name not in codes:
+            codes[name] = "P%d" % (len(codes) + 1)
+        return codes[name]
+
+    tracked = set(codes) | {r["who"] for r in rows if r["stage"] in PERS_STAGES}
+
+    def closer(name):
+        if not name:
+            return ""
+        if name in tracked:
+            return code_of(name)
+        return "LAB" if "LAB" in name else ""
+
+    for r in rows:
+        g = sec(r["gir"])
+        if r["stage"] in PERS_STAGES:
+            c = sec(r["cik"]) if r["cik"] else None
+            key = "%s|%s|%d|%.2f" % (r["parti"], r["stage"], g, r["kg"])
+            srows[key] = [PERS_STAGES[r["stage"]], r["parti"], code_of(r["who"]), g, round(r["kg"], 2), int(round(r["metre"])),
+                          c, closer(r["cwho"]) if c is not None else None]
+        elif r["who"] in tracked:
+            lst = sacts.setdefault(code_of(r["who"]), [])
+            if g not in lst:
+                lst.append(g)
+
+    cutoff = sec(datetime.now() - timedelta(days=PERS_KEEP_DAYS))
+    for k in list(srows):
+        e = srows[k]
+        if max(e[3], e[6] or 0) < cutoff:
+            del srows[k]
+    for c in list(sacts):
+        sacts[c] = sorted(s for s in sacts[c] if s >= cutoff)
+        if not sacts[c]:
+            del sacts[c]
+    state["cov"] = cov = [[max(a, cutoff), b] for a, b in cov if b >= cutoff]
+
+    jobs = sorted(srows.values(), key=lambda e: (e[3], e[2], e[1]))
+    os.makedirs(folder, exist_ok=True)
+    with open(codes_path, "w", encoding="utf-8") as f:
+        json.dump({"note": "Ad -> kod eslemesi. GitHub'a GONDERMEYIN.", "codes": codes}, f, ensure_ascii=False, indent=1)
+    with open(state_path, "w", encoding="utf-8") as f:
+        json.dump(state, f, separators=(",", ":"))
+    if not jobs:
+        return prev
+    t = lambda s: (PERS_EPOCH + timedelta(seconds=s)).strftime("%Y-%m-%dT%H:%M")
+    return {
+        "v": 2,
+        "updatedAt": datetime.now().isoformat(timespec="seconds"),
+        "epoch": PERS_EPOCH.strftime("%Y-%m-%dT%H:%M:%S"),
+        "keepDays": PERS_KEEP_DAYS,
+        "from": t(cov[0][0]) if cov else "",
+        "to": t(cov[-1][1]) if cov else "",
+        "cov": cov,
+        "jobs": jobs,
+        "acts": {c: sacts[c] for c in sorted(sacts)},
+    }
+
+
 def fmt(dt):
     return dt.strftime("%Y-%m-%dT%H:%M")
 
@@ -272,6 +417,8 @@ def main():
     src = sys.argv[1]
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "zaman_ozet.json")
     partiler = sys.argv[3] if len(sys.argv) > 3 else os.path.join("data", "partiler.json")
+    pers_folder = sys.argv[4] if len(sys.argv) > 4 else ".."
+    prev_personel = load_json(out, {}).get("personel")
 
     rows = load_rows(src)
     cards = []
@@ -299,6 +446,15 @@ def main():
         "wet": wet_stats(by),
         "history": history,
     }
+    # personel bolumu ayri hata yakalanir: sorun olursa ozetin geri kalani yine yazilir
+    try:
+        prow = load_person_rows(src)
+        personel = build_personel(prow, pers_folder, prev_personel) if prow else prev_personel
+    except Exception as e:  # noqa: BLE001
+        print("UYARI: personel bolumu islenemedi:", e)
+        personel = prev_personel
+    if personel:
+        payload["personel"] = personel
     with open(out, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     print("Yazildi:", out, "|", len(rows), "satir |", len(shifts), "vardiya |", len(norms), "norm |", len(history), "parti gecmisi |",

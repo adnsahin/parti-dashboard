@@ -5881,7 +5881,7 @@ function lbAnnItems(){
         const moved=m?' <i>🆕 '+esc(m.from||'—')+' → '+esc(m.to||'veride yok')+' '+lbHmTxt(m.t)+'</i>':'';
         if(!k)return '<button type="button" class="lb-ann-p gone" data-p="'+esc(p)+'" onclick="lbAnnPOpen(event,this)">📌 <b>'+esc(sh(p))+'</b> güncel veride yok'+moved+(nt?' • <em>📝 '+esc(nt)+'</em>':'')+'</button>';
         const kg=ks.reduce((t,c)=>t+num(c.kilo),0),nx=cardNextText(k);
-        return '<button type="button" class="lb-ann-p" data-p="'+esc(p)+'" onclick="lbAnnPOpen(event,this)">📌 <b>'+esc(sh(p))+'</b> '+lbShortKg(kg)+' kg • '+esc(k._asama||k.asama||'-')+(nx?' → '+esc(nx):'')+' • ⏱ '+esc(lbAgeTxt(lbWaitH(k)))+(()=>{const x=lbEtaTarget(k);return!x?'':x.late?' • <i class="eta late">⏰ '+esc(x.T.dat)+' gecikti • yeni tahmin '+esc(lbEtaRange(x))+'</i>':' • <i class="eta">⏩ '+esc(x.T.dat)+' '+esc(lbEtaRange(x))+'</i>'})()+moved+(nt?' • <em>📝 '+esc(nt)+'</em>':'')+'</button>';
+        return '<button type="button" class="lb-ann-p" data-p="'+esc(p)+'" onclick="lbAnnPOpen(event,this)">📌 <b>'+esc(sh(p))+'</b> '+(lbAnnKC(lbAnn).length===1?'':'<span class="lb-ev-cu">👤 '+esc(lbGroupName(k))+'</span> ')+lbShortKg(kg)+' kg • '+esc(k._asama||k.asama||'-')+(nx?' → '+esc(nx):'')+' • ⏱ '+esc(lbAgeTxt(lbWaitH(k)))+(()=>{const x=lbEtaTarget(k);return!x?'':x.late?' • <i class="eta late">⏰ '+esc(x.T.dat)+' gecikti • yeni tahmin '+esc(lbEtaRange(x))+'</i>':' • <i class="eta">⏩ '+esc(x.T.dat)+' '+esc(lbEtaRange(x))+'</i>'})()+moved+(nt?' • <em>📝 '+esc(nt)+'</em>':'')+'</button>';
     });
 }
 function lbAnnPOpen(e,el){
@@ -6404,10 +6404,12 @@ function lbEventsHtml(stats){
     });
     ev.sort((a,b)=>b.ts-a.ts);
     if(!ev.length)return'<span class="lb-ev">Bugün henüz kayıtlı hareket yok</span>';
+    const shp=p=>String(p).replace(/^\s*\(\d{4}\)\s*/,''),byP=new Map();getAllCards().forEach(k=>byP.set(shp(k.parti),k));
     return ev.slice(0,24).map(e=>{
         const t=new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),p=String(e.pn).replace(/^\s*\(\d{4}\)\s*/,'');
         lbEvReg.push(e);
-        return '<span class="lb-ev lb-ev-c" onclick="lbEvOpen('+(lbEvReg.length-1)+')" title="Partinin kartını aç"><b>'+t+'</b> '+(e.kind==='a'?'📥':'✅')+' <i style="color:'+e.R.color+'">'+esc(p)+'</i> · '+lbShortKg(e.kg)+' kg '
+        const ck=byP.get(p);
+        return '<span class="lb-ev lb-ev-c" onclick="lbEvOpen('+(lbEvReg.length-1)+')" title="Partinin kartını aç"><b>'+t+'</b> '+(e.kind==='a'?'📥':'✅')+' <i style="color:'+e.R.color+'">'+esc(p)+'</i>'+(ck?' <span class="lb-ev-cu">👤 '+esc(lbGroupName(ck))+'</span>':'')+' · '+lbShortKg(e.kg)+' kg '
             +(e.kind==='a'?esc(LB_DAT[e.R.key])+' geldi'+(e.a?' (← '+esc(e.a)+')':''):esc(LB_ABL[e.R.key])+' geçti'+(e.a?' → '+esc(e.a):''))+'</span>';
     }).join('<span class="lb-sep">•</span>');
 }
@@ -6649,6 +6651,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         // seçilenler: süzgeç şeridi (kutu görünümünde ızgaranın üstünde), Excel
         +'.lb-cf small{opacity:.75;font-size:.85em;margin-left:3px}.lb-cf-t{flex:0 0 auto;padding:6px 10px 2px;margin:0}.lb-selbar button.lb-xlb{background:rgba(33,115,70,.25);border-color:rgba(76,175,80,.7)}'
         // müşteri süzgeci ve gruplama düğmesi
+        +'.lb-ev-cu{color:#FFD54F;font-weight:700}'
         +'.lb-cc-x .eta b,.lb-lt .c-eta .eta b{color:#C6FF00}.lb-cc-x .eta small,.lb-lt .c-eta .eta small{opacity:.75}.lb-cc-x .eta.late,.lb-lt .c-eta .eta.late{color:#FF8A80}.lb-cc-x .eta.late b,.lb-lt .c-eta .eta.late b{color:#FFCDD2}'
         +'.lb-t .lb-tx{display:block;max-width:94%;font-style:normal;font-size:max(9px,.42em);font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}.lb-t .lb-tx.e{color:#C6FF00;margin-top:.1em}.lb-t .lb-tx.e.late{color:#FFCDD2}.lb-t.lb-x.uyari::after,.lb-t.lb-x.kritik::after{bottom:auto;top:1px}.lb-t.lb-x.in{flex-wrap:wrap;align-content:center;column-gap:.35em}.lb-t.lb-x.in .lb-tx{flex:0 0 100%;text-align:center}'
         +'.lb-t.lb-ss{box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),inset -1px -1px 0 rgba(0,0,0,.45)}.lb-ss-t{position:absolute;top:2px;right:3px;font-size:max(9px,.42em);font-weight:900;text-decoration:none;line-height:1;padding:1px 3px;border-radius:3px;background:rgba(0,0,0,.28);color:#fff}.lb-ss-lg{display:inline-flex;align-items:center;gap:3px;font-size:.85em;font-weight:700;margin:0 4px}.lb-ss-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-left:5px}'

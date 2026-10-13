@@ -11,6 +11,7 @@ Uretilenler:
   norms   : Her asamaya girmeden once partinin gecmiste ne kadar beklediginin dagilimi (saat).
   dwell   : Partinin bir asamada kaldigi sure (onceki asamadan cikis -> bu asamadan cikis), saat; ondalik dilimler
             (q[0..10]). Canli panoda "Gelecek" partilerin ne zaman gelecegi bundan tahmin edilir.
+  dwellw  : Ayni sure CALISMA SAATIYLE: fabrika 08:00-24:00 calisir, 24:00-08:00 sayilmaz. Panodaki tahminler bunu kullanir.
             norms ve dwell'de asama basina daha cok ornege dayanan sonuc tutulur: kucuk (gunluk) bir rapor, onceki
             genis raporun degerlerini silmez.
   wet     : Islak bolge (BOYAMA cikisi -> ilk RAM girisi) gercek bekleme dagilimlari, adim ve vardiya bazinda.
@@ -43,6 +44,7 @@ SARIM2 = "SARIM 2"
 FZK = "FİZİKSEL KONTROL"
 SEVK = "SEVK TESLİM"
 MIN_NORM_N = 10
+WORK_START, WORK_END = 8, 24   # fabrika calisma saatleri (24:00-08:00 bos)
 WET_PAINT = ("BOYAMA", "ÇİFT BOYAMA")
 WET_STOP = (KK, FZK, SEVK)
 
@@ -119,6 +121,21 @@ def load_rows(path):
     return rows
 
 
+def work_hours(a, b):
+    """a -> b arasindaki calisma saati (her gun WORK_START-WORK_END; gece sayilmaz)."""
+    if b <= a:
+        return 0.0
+    total = 0.0
+    day = datetime(a.year, a.month, a.day)
+    while day < b:
+        s = max(a, day + timedelta(hours=WORK_START))
+        e = min(b, day + timedelta(hours=WORK_END))
+        if e > s:
+            total += (e - s).total_seconds()
+        day += timedelta(days=1)
+    return total / 3600
+
+
 def build(rows, waiting):
     by = defaultdict(list)
     for r in rows:
@@ -129,6 +146,7 @@ def build(rows, waiting):
     events = defaultdict(lambda: defaultdict(dict))  # shift -> metric -> {parti: kg}
     waits = defaultdict(list)                        # stage -> [saat]
     dwell = defaultdict(list)                        # stage -> [saat] (onceki cikis -> bu cikis)
+    dwellw = defaultdict(list)                       # ayni sure, calisma saatiyle (08:00-24:00)
 
     def add(metric, when, parti, kg):
         events[shift_key(when)][metric].setdefault(parti, kg)
@@ -148,6 +166,7 @@ def build(rows, waiting):
             arrive = prev["cik"] if prev is not None and prev["cik"] <= r["gir"] else r["gir"]
             if prev is not None:
                 dwell[st].append(max(0.0, (r["cik"] - arrive).total_seconds() / 3600))
+                dwellw[st].append(work_hours(arrive, r["cik"]))
 
             if st == KK:
                 kk_visit += 1
@@ -201,13 +220,15 @@ def build(rows, waiting):
             continue
         s = sorted(vals)
         norms[stage] = {"n": len(s), "med": round(pct(s, .5), 2), "p75": round(pct(s, .75), 2), "p90": round(pct(s, .9), 2)}
-    dwells = {}
-    for stage, vals in dwell.items():
-        if len(vals) < MIN_NORM_N:
-            continue
-        s = sorted(vals)
-        dwells[stage] = {"n": len(s), "q": [round(pct(s, i / 10), 2) for i in range(11)]}
-    return by, shifts, norms, dwells
+    def deciles(src):
+        out = {}
+        for stage, vals in src.items():
+            if len(vals) < MIN_NORM_N:
+                continue
+            s = sorted(vals)
+            out[stage] = {"n": len(s), "q": [round(pct(s, i / 10), 2) for i in range(11)]}
+        return out
+    return by, shifts, norms, deciles(dwell), deciles(dwellw)
 
 
 def keep_larger(prev, new):
@@ -449,9 +470,10 @@ def main():
         with open(partiler, encoding="utf-8") as f:
             cards = json.load(f).get("cards", [])
     waiting = {clean(c.get("parti")): clean(c.get("stage")) for c in cards}
-    by, shifts, norms, dwells = build(rows, waiting)
+    by, shifts, norms, dwells, dwellws = build(rows, waiting)
     norms = keep_larger(prev_all.get("norms"), norms)
     dwells = keep_larger(prev_all.get("dwell"), dwells)
+    dwellws = keep_larger(prev_all.get("dwellw"), dwellws)
 
     history = {}
     if cards:
@@ -469,6 +491,8 @@ def main():
         "shifts": shifts,
         "norms": norms,
         "dwell": dwells,
+        "dwellw": dwellws,
+        "workHours": [WORK_START, WORK_END],
         "wet": wet_stats(by),
         "history": history,
     }

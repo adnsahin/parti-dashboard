@@ -5118,6 +5118,8 @@ function lbSelCardsHtml(sel,selAll){
         else{const om=new Map();oth.forEach(k=>{const g=lbOthGroup(k);if(!om.has(g))om.set(g,[]);om.get(g).push(k)});
             [...om.entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],'tr')).forEach(([g,l])=>secs.push({id:'oth',t:'🏭 '+g,list:l}))}
     }}
+    // kutu görünümüyle aynı sıra: önce KK / Sarım'dan önceki aşamalar, sonra gelecekler, en son üzerindekiler
+    const rank=S=>S.id==='oth'?0:S.g?1:2;secs.sort((a,b)=>rank(a)-rank(b));
     const ord=(a,b)=>(!!lbSelNoteOf(b)-!!lbSelNoteOf(a))||((lbWaitH(b)||0)-(lbWaitH(a)||0));
     const chip=(on,l,js,t)=>'<button type="button" class="'+(on?'on':'')+'" onclick="'+js+'" title="'+esc(t)+'">'+l+'</button>';
     // gruplar yan yana akar: her grup kartları kadar yer kaplar, sığdığı kadar aynı satırda (liste görünümünde alt alta)
@@ -5153,15 +5155,13 @@ function lbCardFlow(k){
     for(let i=a;i<b;i++)seg.push(i<r.idx?'<s>'+esc(r.parts[i])+'</s>':i===r.idx?'<b>'+esc(r.parts[i])+'</b>':i===r.idx+1?'<em>'+esc(r.parts[i])+'</em>':esc(r.parts[i]));
     return '<div class="lb-cc-f" title="'+esc(r.parts.join(' › '))+'">'+(r.idx+1)+'/'+r.parts.length+' '+(a>0?'… ':'')+seg.join(' › ')+(b<r.parts.length?' …':'')+'</div>';
 }
+// kart / liste: tahmini KK / Sarım varışı kutudaki kısa biçimle (ayrıntı ve aşama aşama süreler ipucunda)
 function lbCardInfo(k,S){
-    if(S.g){const x=lbEta(k),y=lbEtaTarget(k),yt=y?' title="'+esc(lbEtaHops(y)+'\n'+LB_ETA_NOTE)+'"':'';
-        if(y&&y.late)return '<span class="late"'+yt+'>'+esc(lbEtaLine(y))+'</span>';
-        if(x&&x.over)return '⏩ '+esc(x.st)+'\'de normalden uzun: '+paHours(x.e);
-        if(y)return '<span'+yt+'>⏩ '+esc(lbEtaTxt(y.h))+' • '+esc(lbEtaRange(y))+'</span>'+(x?' • 4 sa içinde %'+Math.round(x.p*100):'');
-        if(!x)return'';
-        const at=new Date(Date.now()+x.rem*3600000);return '⏩ '+lbEtaTxt(x.rem)+(x.rem>=0.25?' ('+(x.rem>=20?String(at.getDate()).padStart(2,'0')+'.'+String(at.getMonth()+1).padStart(2,'0')+' ':'')+at.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+')':'')+' • 4 sa içinde %'+Math.round(x.p*100)}
     if(S.thr!=null&&lbIsStuck(k,S.thr))return '<span title="Çalışma saatiyle (08:00–24:00; gece sayılmaz). Takvimle '+esc(paHours(lbWaitH(k)))+'">⏳ '+paHours(lbWaitWH(k))+' çalışma saatidir bekliyor (alışılmış ≤ '+paHours(S.thr)+')</span>';
-    if(S.id==='oth'){const x=lbEtaTarget(k);if(x)return '<span'+(x.late?' class="late"':'')+' title="'+esc(lbEtaHops(x)+'\n'+LB_ETA_NOTE)+'">'+esc(lbEtaLine(x))+'</span>'}
+    const y=S.g||S.id==='oth'?lbEtaTarget(k):null;
+    if(y)return '<span class="eta'+(y.late?' late':'')+'" title="'+esc(lbEtaLine(y)+'\n'+lbEtaHops(y)+'\n'+LB_ETA_NOTE)+'">'+(y.late?'⏰ ':'⏩ ')+esc(y.T.dat.replace(/'.*$/,''))+' <b>'+esc(lbEtaRangeShort(y))+'</b> <small>('+(y.late?'yeni tahmin, ':'')+esc(lbEtaTxt(y.h))+')</small></span>';
+    if(S.g){const x=lbEta(k);if(x&&x.over)return '⏩ '+esc(x.st)+'\'de normalden uzun: '+paHours(x.e);
+        if(x){const at=new Date(Date.now()+x.rem*3600000);return '⏩ '+lbEtaTxt(x.rem)+(x.rem>=0.25?' ('+(x.rem>=20?String(at.getDate()).padStart(2,'0')+'.'+String(at.getMonth()+1).padStart(2,'0')+' ':'')+at.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+')':'')+' • 4 sa içinde %'+Math.round(x.p*100)}}
     return'';
 }
 function lbCardBodyHtml(k,S){
@@ -5171,13 +5171,13 @@ function lbCardBodyHtml(k,S){
     return '<div class="lb-cc '+sev+(lt?' late':'')+'">'
         +'<div class="lb-cc-h"><b class="no">'+(m?'<small>('+m[1]+')</small>'+esc(m[2]):esc(pn))+'</b><span class="bd">'+(lt?'<i class="lt" title="'+esc(lbEtaLine(lt))+'">⏰</i>':'')+(tn?'🛠'+tn:'')+(al?' 🔔'+al:'')+(fl?' 🔥'+fl:'')+'</span><span class="kg">'+lbShortKg(k.kilo)+'<small> kg</small></span></div>'
         +'<div class="lb-cc-st"><span class="cur">'+esc(k._asama||k.asama||'-')+'</span>'+(nx?'<span class="nx">→ '+esc(nx)+'</span>':'')+'<span class="w '+sev+'" title="Son hareketten beri">⏱ '+esc(lbAgeTxt(lbWaitH(k)))+'</span></div>'
+        +(info?'<div class="lb-cc-x">'+info+'</div>':'')
         +(nt?'<div class="lb-cc-nt">📝 '+esc(nt)+'</div>':'')
         +'<div class="lb-cc-r lb-cc-cu"><span class="c">👤 <b>'+esc(cust)+'</b>'+(firm&&firm!==cust?' <small>'+esc(firm)+'</small>':'')+'</span>'+(term?'<span class="tm">'+term+'</span>':'')+'</div>'
         +'<div class="lb-cc-r kum" title="Kumaş">🧵 '+esc(k.ham_adi||'-')+'</div>'
         +(k.recete_adi||k.son_asama?'<div class="lb-cc-r lb-cc-cu">'+(k.recete_adi?'<span class="c">🎨 '+esc(k.recete_adi)+'</span>':'<span class="c"></span>')+(k.son_asama?'<span class="tm" title="Geldiği aşama">↩ '+esc(k.son_asama)+'</span>':'')+'</div>':'')
         +(tn?'<div class="lb-cc-r tmr">🛠 '+esc(tamirShort(k))+'</div>':'')
         +(lbSelHist(lbPn(k)).length>1?'<div class="lb-cc-h2" title="Seçildiğinden beri aşamalar">🕘 '+lbSelHistHtml(lbPn(k),3)+'</div>':'')
-        +(info?'<div class="lb-cc-x">'+info+'</div>':'')
         +lbCardFlow(k)+'</div>';
 }
 // bölüm değiştiren parti 15 dk işaretli (kart ve liste satırı)
@@ -6649,6 +6649,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         // seçilenler: süzgeç şeridi (kutu görünümünde ızgaranın üstünde), Excel
         +'.lb-cf small{opacity:.75;font-size:.85em;margin-left:3px}.lb-cf-t{flex:0 0 auto;padding:6px 10px 2px;margin:0}.lb-selbar button.lb-xlb{background:rgba(33,115,70,.25);border-color:rgba(76,175,80,.7)}'
         // müşteri süzgeci ve gruplama düğmesi
+        +'.lb-cc-x .eta b,.lb-lt .c-eta .eta b{color:#C6FF00}.lb-cc-x .eta small,.lb-lt .c-eta .eta small{opacity:.75}.lb-cc-x .eta.late,.lb-lt .c-eta .eta.late{color:#FF8A80}.lb-cc-x .eta.late b,.lb-lt .c-eta .eta.late b{color:#FFCDD2}'
         +'.lb-t .lb-tx{display:block;max-width:94%;font-style:normal;font-size:max(9px,.42em);font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}.lb-t .lb-tx.e{color:#C6FF00;margin-top:.1em}.lb-t .lb-tx.e.late{color:#FFCDD2}.lb-t.lb-x.uyari::after,.lb-t.lb-x.kritik::after{bottom:auto;top:1px}.lb-t.lb-x.in{flex-wrap:wrap;align-content:center;column-gap:.35em}.lb-t.lb-x.in .lb-tx{flex:0 0 100%;text-align:center}'
         +'.lb-t.lb-ss{box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),inset -1px -1px 0 rgba(0,0,0,.45)}.lb-ss-t{position:absolute;top:2px;right:3px;font-size:max(9px,.42em);font-weight:900;text-decoration:none;line-height:1;padding:1px 3px;border-radius:3px;background:rgba(0,0,0,.28);color:#fff}.lb-ss-lg{display:inline-flex;align-items:center;gap:3px;font-size:.85em;font-weight:700;margin:0 4px}.lb-ss-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-left:5px}'
         +'.lb-cf{flex-direction:column;flex-wrap:nowrap!important;gap:3px!important;overflow:visible!important}.lb-cf-r{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;padding-bottom:2px}.lb-cf-r::-webkit-scrollbar{height:4px}.lb-cf-r::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}.lb-cf-r button{flex:0 0 auto;white-space:nowrap;padding:2px 8px!important;font-size:11.5px!important;line-height:1.35}.lb-cf-r .lb-cf-grp{position:sticky;right:0;z-index:1;margin-left:auto;background:#1f3b63!important;box-shadow:-6px 0 6px -2px rgba(0,0,0,.45)}.lb-cf-div{flex:0 0 1px;align-self:stretch;margin:2px 3px;background:rgba(255,255,255,.3)}'

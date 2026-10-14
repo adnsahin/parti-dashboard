@@ -761,7 +761,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="modal-box" style="width:min(400px,calc(100vw - 36px));text-align:center;background:#1a1a2e">
 <button class="modal-close" onclick="closeNumpad()">×</button>
 <h2 style="margin-bottom:15px;color:#FFD700">🔢 Parti No Gir</h2>
-<input type="text" id="numpadDisplay" readonly placeholder="Rakamları tuşlayın" style="width:100%;font-size:36px;font-weight:bold;letter-spacing:2px;text-align:center;padding:15px;border-radius:10px;margin-bottom:15px;background:#0f0c29;color:#fff;border:2px solid #E91E63;outline:none">
+<input type="text" id="numpadDisplay" inputmode="numeric" autocomplete="off" enterkeyhint="search" placeholder="Rakamları yazın ya da tuşlayın" onkeydown="if(event.key==='Enter'){event.preventDefault();numpadSearch()}else if(event.key==='Escape'){event.preventDefault();closeNumpad()}" style="width:100%;font-size:36px;font-weight:bold;letter-spacing:2px;text-align:center;padding:15px;border-radius:10px;margin-bottom:15px;background:#0f0c29;color:#fff;border:2px solid #E91E63;outline:none">
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
 <button class="num-btn" onclick="np('1')">1</button><button class="num-btn" onclick="np('2')">2</button><button class="num-btn" onclick="np('3')">3</button>
 <button class="num-btn" onclick="np('4')">4</button><button class="num-btn" onclick="np('5')">5</button><button class="num-btn" onclick="np('6')">6</button>
@@ -1651,7 +1651,18 @@ async function shareWhatsApp(){
 
 /* ── NUMPAD / SESLİ ARAMA ── */
 function playBeep(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.setValueAtTime(800,ctx.currentTime);g.gain.setValueAtTime(.1,ctx.currentTime);o.start();o.stop(ctx.currentTime+.1)}catch(e){}}
-function openNumpad(){document.getElementById('numpadModal').classList.add('show');document.getElementById('numpadDisplay').value=''}
+function openNumpad(){
+    document.getElementById('numpadModal').classList.add('show');const d=document.getElementById('numpadDisplay');d.value='';
+    // bilgisayarda (fare / klavye) doğrudan yazılsın; telefonda odaklanmaz (sistem klavyesi ekrandaki tuşları kapatmasın)
+    if(window.matchMedia&&matchMedia('(pointer:fine)').matches)setTimeout(()=>{try{d.focus()}catch(e){}},50);
+}
+// pencere açıkken kutuya tıklamadan da klavye: rakamlar, ⌫, Delete (temizle), Enter (ara), Esc (kapat)
+document.addEventListener('keydown',e=>{
+    const m=document.getElementById('numpadModal');if(!m||!m.classList.contains('show')||e.ctrlKey||e.metaKey||e.altKey)return;
+    const d=document.getElementById('numpadDisplay');if(document.activeElement===d)return;
+    if(/^[0-9]$/.test(e.key))np(e.key);else if(e.key==='Backspace')np('<');else if(e.key==='Delete')np('C');else if(e.key==='Enter')numpadSearch();else if(e.key==='Escape')closeNumpad();else return;
+    e.preventDefault();e.stopPropagation();
+},true);
 function closeNumpad(){document.getElementById('numpadModal').classList.remove('show')}
 document.getElementById('numpadModal').addEventListener('click',function(e){if(e.target===this)closeNumpad()});
 function np(v){const d=document.getElementById('numpadDisplay');if(v==='C')d.value='';else if(v==='<')d.value=d.value.slice(0,-1);else d.value+=v}
@@ -5015,7 +5026,7 @@ function lbSelFilterReset(){lbSelCol='';lbFocus=null;lbSelStage='';lbSelCust=[];
 let lbSelStage='';
 // Seçilenlerde müşteri süzgeci (diğer süzgeçlerle birlikte) ve kart gruplaması: aşama · müşteri · tahmini geliş (cihaz başına)
 let lbSelCust=[];
-const LB_SEL_GRP={asama:'Aşama',musteri:'Müşteri',gelis:'Geliş'},LB_SEL_GRP_DAT={asama:'aşamaya',musteri:'müşteriye',gelis:'tahmini KK / Sarım gelişine'};
+const LB_SEL_GRP={asama:'Aşama',musteri:'Müşteri',gelis:'Geliş',makine:'Makine'},LB_SEL_GRP_DAT={asama:'aşamaya',musteri:'müşteriye',gelis:'tahmini KK / Sarım gelişine',makine:'KK makinesine'};
 let lbSelGrp=mapLoadPref('lbSelGrp9',v=>v in LB_SEL_GRP,'asama');
 // ── Seçilenler grup başlığından toplu işlem: toplu not, hepsini seçimden çıkarma, yalnız bu grubu paylaşma / Excel'e aktarma
 function lbSecMenuBtn(cards,title){
@@ -5067,7 +5078,7 @@ function lbSelChipsHtml(sel,inCards){
 
         +(()=>{const cm=new Map();sel.forEach(k=>{const c=lbGroupName(k);cm.set(c,(cm.get(c)||0)+1)});if(cm.size<2&&!lbSelCust.length)return'';
             return '<span class="lb-cf-div"></span>'+[...cm.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).map(([c,n])=>chip(lbSelCust.includes(c),'👤 '+esc(c)+' <small>'+n+'</small>','lbSelCustSet(this.dataset.s)',c+' — ekle / çıkar (birden çok müşteri seçilebilir)',c).replace('<button ','<button data-cu="1" ')).join('')})()
-        +'<button type="button" class="lb-cf-grp" onclick="lbSelGrpNext()" title="Grupla (tıkla: Aşama → Müşteri → Tahmini geliş) — kart, liste ve kutu görünümünde">🗂 Grup: '+LB_SEL_GRP[lbSelGrp]+'</button>'
+        +'<button type="button" class="lb-cf-grp" onclick="lbSelGrpNext()" title="Grupla (tıkla: Aşama → Müşteri → Tahmini geliş → Makine) — kart, liste ve kutu görünümünde">🗂 Grup: '+LB_SEL_GRP[lbSelGrp]+'</button>'
         +'</div></div>';
 }
 // ── 3) Seçilenleri Excel'e aktar: parti, kg, bölüm, aşamalar, bekleme, müşteri, kumaş, reçete, termin, tamir, not, seçildiği an, aşama geçmişi
@@ -5081,11 +5092,11 @@ function lbSelExcel(parts){
     const tgt=k=>{const x=lbEtaTarget(k);if(x)return x.T.dat.replace(/'.*$/,'');const R=SW_ROWS.find(R=>R.is(k));return R?R.name+' (üzerinde)':''};
     const left=k=>{if(SW_ROWS.some(R=>R.is(k)))return 0;const r=cardFlowIdx(k);if(r.idx<0)return'';for(let j=r.idx+1;j<r.parts.length;j++)if(LB_ETA_TGT.some(t=>t.is(r.parts[j])))return j-r.idx;return''};
     const sec=k=>{for(const R of SW_ROWS){if(R.is(k))return R.name+' üzerinde';if(R.coming(k))return R.name+'\'e gelecek'}return 'Diğer aşama'};
-    const cols=['Parti','Kilo','Bölüm','Şu anki aşama','Sonraki aşama','Geldiği aşama','Bekleme (saat)','Hedef','Hedefe kalan aşama','Ekrandaki tahmin','Tahmini KK / Sarım geliş','Tahmin durumu','Müşteri','Firma','Kumaş','Reçete','Termin','Tamir','Not','Seçildi','Aşama geçmişi','Son hareket'];
+    const cols=['Parti','Kilo','Makine','Makine sırası','Bölüm','Şu anki aşama','Sonraki aşama','Geldiği aşama','Bekleme (saat)','Hedef','Hedefe kalan aşama','Ekrandaki tahmin','Tahmini KK / Sarım geliş','Tahmin durumu','Müşteri','Firma','Kumaş','Reçete','Termin','Tamir','Not','Seçildi','Aşama geçmişi','Son hareket'];
     const row=o=>{const r={};cols.forEach(c=>r[c]=o[c]===undefined?'':o[c]);return r};
     LIST.forEach(p=>{
         const ks=all.filter(k=>lbPn(k)===p),si=lbSelSince[p],m=lbSelEv.find(e=>e.p===p);
-        const base={'Not':lbSelNotes[p]||'','Seçildi':si?dt(si.t):'','Aşama geçmişi':lbSelHist(p).map(x=>x.st+(x.t?' ('+dt(x.t)+')':'')).join(' › '),'Son hareket':m?(m.from||'—')+' → '+(m.to||'veride yok')+' '+dt(m.t):''};
+        const base={'Makine':lbSelMach[p]||'','Makine sırası':lbSelMach[p]?lbMachPos(p):'','Not':lbSelNotes[p]||'','Seçildi':si?dt(si.t):'','Aşama geçmişi':lbSelHist(p).map(x=>x.st+(x.t?' ('+dt(x.t)+')':'')).join(' › '),'Son hareket':m?(m.from||'—')+' → '+(m.to||'veride yok')+' '+dt(m.t):''};
         if(!ks.length){rows.push(row(Object.assign({'Parti':p,'Bölüm':'Güncel veride yok (sevk edilmiş olabilir)'},base)));return}
         ks.forEach(k=>{const w=lbWaitH(k);rows.push(row(Object.assign({'Parti':k.parti,'Kilo':Math.round(num(k.kilo)),'Bölüm':sec(k),'Şu anki aşama':k._asama||k.asama||'','Sonraki aşama':cardNextText(k)||'','Geldiği aşama':k.son_asama||'',
             'Bekleme (saat)':w!=null?Math.round(w*10)/10:'','Hedef':tgt(k),'Hedefe kalan aşama':left(k),'Ekrandaki tahmin':(()=>{const x=lbEtaTarget(k);if(x)return(x.late?'⏰ gecikti • yeni tahmin ':'')+lbEtaRangeShort(x)+' ('+lbEtaTxt(x.h)+')';const R=SW_ROWS.find(R=>R.is(k));return R&&w!=null?paHours(w)+' orada':''})(),'Tahmini KK / Sarım geliş':(()=>{const x=lbEtaTarget(k);return x?x.T.dat.replace(/'.*$/,'')+': '+dt(x.lo)+' – '+dt(x.hi)+' (en olası '+dt(x.at)+', '+lbEtaTxt(x.h)+')':''})(),
@@ -5131,7 +5142,7 @@ function lbSelCardsHtml(sel,selAll){
     const nv=n=>';--n:'+Math.min(n,12);
     let h='<div class="lb-cards'+(lbCardBig?' big':'')+(lbQuery?' searching':'')+'">'+lbSelChipsHtml(selAll,true)+'<div class="lb-csw'+(lbSelCardMode==='liste'?' list':'')+'">';
     if(lbSelGrp!=='asama'&&secs.length){
-        const m=new Map();secs.forEach(S=>S.list.forEach(k=>{const b=lbSelGrp==='musteri'?[0,'👤 '+lbGroupName(k),LB_CS_PAL[lbHash(lbGroupName(k))%LB_CS_PAL.length]]:lbEtaBucket(k),key=b[0]+'|'+b[1];if(!m.has(key))m.set(key,{o:b[0],t:b[1],c:b[2],cu:lbSelGrp==='musteri'?lbGroupName(k):null,late:0,pairs:[]});const G=m.get(key);G.pairs.push([k,S]);if(lbEtaLate(k))G.late++}));
+        const m=new Map();secs.forEach(S=>S.list.forEach(k=>{const b=lbSelGrp==='musteri'?[0,'👤 '+lbGroupName(k),LB_CS_PAL[lbHash(lbGroupName(k))%LB_CS_PAL.length]]:lbSelGrp==='makine'?lbMachBucket(k):lbEtaBucket(k),key=b[0]+'|'+b[1];if(!m.has(key))m.set(key,{o:b[0],t:b[1],c:b[2],cu:lbSelGrp==='musteri'?lbGroupName(k):null,late:0,pairs:[]});const G=m.get(key);G.pairs.push([k,S]);if(lbEtaLate(k))G.late++}));
         const esort=(a,b)=>{const x=lbEtaKey(a[0]),y=lbEtaKey(b[0]);return(x===y?0:x===Infinity?1:y===Infinity?-1:x-y)||ord(a[0],b[0])};
         [...m.values()].sort((a,b)=>lbSelGrp!=='musteri'?a.o-b.o:b.late-a.late||b.pairs.length-a.pairs.length||a.t.localeCompare(b.t,'tr')).forEach(G=>{
             const kg=G.pairs.reduce((t,x)=>t+num(x[0].kilo),0);
@@ -5177,6 +5188,7 @@ function lbCardBodyHtml(k,S){
         +'<div class="lb-cc-h"><b class="no">'+(m?'<small>('+m[1]+')</small>'+esc(m[2]):esc(pn))+'</b><span class="bd">'+(lt?'<i class="lt" title="'+esc(lbEtaLine(lt))+'">⏰</i>':'')+(tn?'🛠'+tn:'')+(al?' 🔔'+al:'')+(fl?' 🔥'+fl:'')+'</span><span class="kg">'+lbShortKg(k.kilo)+'<small> kg</small></span></div>'
         +'<div class="lb-cc-st"><span class="cur">'+esc(k._asama||k.asama||'-')+'</span>'+(nx?'<span class="nx">→ '+esc(nx)+'</span>':'')+'<span class="w '+sev+'" title="Son hareketten beri">⏱ '+esc(lbAgeTxt(lbWaitH(k)))+'</span></div>'
         +(info?'<div class="lb-cc-x">'+info+'</div>':'')
+        +(lbSel.has(lbPn(k))?'<div class="lb-cc-mk" title="KK makinesi (bütün cihazlarda görünür)">🛠 '+lbMachBtns(lbPn(k))+'</div>':'')
         +(nt?'<div class="lb-cc-nt">📝 '+esc(nt)+'</div>':'')
         +'<div class="lb-cc-r lb-cc-cu"><span class="c">👤 <b>'+esc(cust)+'</b>'+(firm&&firm!==cust?' <small>'+esc(firm)+'</small>':'')+'</span>'+(term?'<span class="tm">'+term+'</span>':'')+'</div>'
         +'<div class="lb-cc-r kum" title="Kumaş">🧵 '+esc(k.ham_adi||'-')+'</div>'
@@ -5194,6 +5206,7 @@ function lbCardMark(k,S){
 const LB_LS_COLS=[
     {c:'p',l:'Parti',v:k=>+(lbPn(k).replace(/^\s*\(\d{4}\)\s*/,'').replace(/\D/g,''))||0},
     {c:'kg',l:'kg',v:k=>num(k.kilo)},
+    {c:'mk',l:'🛠 Makine • sıra',v:k=>{const m=lbSelMachOf(k);return m?m+String(lbMachPos(lbPn(k))).padStart(3,'0'):''},s:1},
     {c:'st',l:'Aşama → sonraki',v:k=>String(k._asama||k.asama||''),s:1},
     {c:'w',l:'⏱ Bekleme',v:k=>lbWaitH(k)||0},
     {c:'eta',l:'⏩ Tahmini KK / Sarım • durum',v:lbEtaKey},
@@ -5218,6 +5231,7 @@ function lbRowHtml(k,S){
     return '<tr class="lb-lr '+sev+(recent?' recent':'')+(hit?' hit':'')+(late?' late':'')+'" data-p="'+esc(p)+'" onclick="lbCardClick(event,this,&quot;'+esc(k.id)+'&quot;)" oncontextmenu="return lbCardNote(event,this)" title="Tık: ayrıntı • sağ tık: not">'
         +'<td class="c-p"><b>'+(m?'<small>('+m[1]+')</small>'+esc(m[2]):esc(p))+'</b>'+(late?' <i title="Gecikti">⏰</i>':'')+(tn?' <i title="Tamir">🛠'+tn+'</i>':'')+'</td>'
         +'<td class="c-kg">'+lbShortKg(k.kilo)+'</td>'
+        +'<td class="c-mk">'+(lbSel.has(p)&&lbSelMach[p]?'<i class="rk" title="'+esc(lbSelMach[p])+' makinesinde sırası">'+lbMachPos(p)+'</i>':'')+lbMachBtns(p,'sm')+(lbSelMach[p]?'<span class="mv" onclick="event.stopPropagation()"><button type="button" data-p="'+esc(p)+'" onclick="lbMachMove(this.dataset.p,-1)" title="Öne al">▲</button><button type="button" data-p="'+esc(p)+'" onclick="lbMachMove(this.dataset.p,1)" title="Arkaya al">▼</button></span>':'')+'</td>'
         +'<td class="c-st"><b>'+esc(k._asama||k.asama||'-')+'</b>'+(nx?' <span>→ '+esc(nx)+'</span>':'')+'</td>'
         +'<td class="c-w '+sev+'">'+esc(lbAgeTxt(lbWaitH(k)))+'</td>'
         +'<td class="c-eta">'+(info||'<span class="na">—</span>')+'</td>'
@@ -5241,7 +5255,7 @@ function lbCardBigBtn(){return lbSelCardEff?'<button type="button" class="lb-car
 function lbSelText(parts){
     const ps=new Set(Array.isArray(parts)&&parts.length?parts:[...lbSel]),all=getAllCards(),sel=all.filter(k=>ps.has(lbPn(k))),present=new Set(all.map(lbPn)),gone=[...ps].filter(p=>!present.has(p));
     const kg=sel.reduce((t,k)=>t+num(k.kilo),0),sh=p=>String(p).replace(/^\s*\(\d{4}\)\s*/,'');
-    const line=(k,cur)=>{const nt=lbSelNoteOf(k);return '• '+sh(k.parti)+' — '+lbShortKg(k.kilo)+' kg — '+lbGroupName(k)+(k.ham_adi?' — 🧵 '+k.ham_adi:'')+(cur?' — şu an '+(k._asama||k.asama||'-'):'')+' — ⏱ '+lbAgeTxt(lbWaitH(k))+(x=>x?'\n   '+lbEtaLine(x):'')(lbEtaTarget(k))+(nt?'\n   📝 '+nt:'')};
+    const line=(k,cur)=>{const nt=lbSelNoteOf(k),mk=lbSelMachOf(k);return '• '+sh(k.parti)+(mk?' ['+mk+' #'+lbMachPos(lbPn(k))+']':'')+' — '+lbShortKg(k.kilo)+' kg — '+lbGroupName(k)+(k.ham_adi?' — 🧵 '+k.ham_adi:'')+(cur?' — şu an '+(k._asama||k.asama||'-'):'')+' — ⏱ '+lbAgeTxt(lbWaitH(k))+(x=>x?'\n   '+lbEtaLine(x):'')(lbEtaTarget(k))+(nt?'\n   📝 '+nt:'')};
     let t='📋 Seçilen partiler — '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'\n'+sel.length+' parti • '+lbShortKg(kg)+' kg\n';
     const placed=new Set();
     SW_ROWS.forEach(R=>{
@@ -5281,6 +5295,63 @@ let lbSel=new Set((()=>{try{const a=JSON.parse(mapLoadPref('lbSel9',v=>true,'[]'
 const LB_NOTE_MAX=80;
 let lbSelNotes=safeParse('lbSelNotes9','{}');if(!lbSelNotes||typeof lbSelNotes!=='object'||Array.isArray(lbSelNotes))lbSelNotes={};
 function lbSelNotesSave(){try{localStorage.setItem('lbSelNotes9',JSON.stringify(lbSelNotes))}catch(e){}}
+// ── Seçilenlerde KK makinesi: parti → K1 / K2 / K3 / D1 / D2 / D3. Seçim ve notlarla birlikte bütün cihazlarda eşitlenir
+//    (ntfy kanalındaki mesajda "mk"); partiyi seçimden çıkarınca makinesi de silinir.
+const LB_MACH=['K1','K2','K3','D1','D2','D3'],LB_MACH_C={K1:'#26A69A',K2:'#00897B',K3:'#00695C',D1:'#42A5F5',D2:'#1E88E5',D3:'#1565C0'};
+let lbSelMach=safeParse('lbSelMach9','{}');if(!lbSelMach||typeof lbSelMach!=='object'||Array.isArray(lbSelMach))lbSelMach={};
+// makinedeki öncelik sırası: parti → 1, 2, 3 … (makine başına); makine koduyla birlikte eşitlenir ("K1.2")
+let lbSelMachRank=safeParse('lbSelMachRk9','{}');if(!lbSelMachRank||typeof lbSelMachRank!=='object'||Array.isArray(lbSelMachRank))lbSelMachRank={};
+function lbSelMachSave(){try{localStorage.setItem('lbSelMach9',JSON.stringify(lbSelMach));localStorage.setItem('lbSelMachRk9',JSON.stringify(lbSelMachRank))}catch(e){}lbMachPosCache.m=null}
+let lbMachPosCache={t:0,m:null};
+// makinedeki seçili partiler sırasıyla: sıra numarası olanlar numarasına göre, olmayanlar (eski atama) sonra: üzerinde olan önce, sonra tahmini varışı yakın
+function lbMachColParts(code){
+    const byP=new Map(getAllCards().map(k=>[lbPn(k),k])),ps=[...lbSel].filter(p=>lbSelMach[p]===code);
+    const rk=k=>!k?3:SW_ROWS.some(R=>R.is(k))?0:SW_ROWS.some(R=>R.coming(k))?1:2,ek=k=>{const v=k?lbEtaKey(k):Infinity;return v===Infinity?9e15:v};
+    return ps.sort((a,b)=>{const x=lbSelMachRank[a],y=lbSelMachRank[b];if(x&&y)return x-y;if(x)return -1;if(y)return 1;const A=byP.get(a),B=byP.get(b);return rk(A)-rk(B)||ek(A)-ek(B)});
+}
+// partinin makinedeki sırası (1'den); makinesi yoksa 0
+function lbMachPos(p){
+    if(!lbMachPosCache.m||Date.now()-lbMachPosCache.t>1500){const m=new Map();LB_MACH.forEach(c=>lbMachColParts(c).forEach((x,i)=>m.set(x,i+1)));lbMachPosCache={t:Date.now(),m}}
+    return lbMachPosCache.m.get(p)||0;
+}
+function lbMachRenum(code){lbMachColParts(code).forEach((x,i)=>{lbSelMachRank[x]=i+1})}
+function lbMachSetOrder(ps){ps.forEach((x,i)=>{lbSelMachRank[x]=i+1})}
+function lbMachCommit(msg){
+    lbSelMachSave();lbSyncLocalEdit();
+    document.querySelectorAll('.lb-mk button[data-p]').forEach(b=>b.classList.toggle('on',lbSelMach[b.dataset.p]===b.dataset.m));
+    document.querySelectorAll('.lbsel-mk[data-p]').forEach(el=>{el.innerHTML=lbMachRowInner(el.dataset.p)});
+    if(typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}
+    if(msg)showToast(msg);
+}
+const lbPnShort=p=>String(p).replace(/^\s*\(\d{4}\)\s*/,'');
+// sırada yukarı / aşağı (d = -1 / +1)
+function lbMachMove(p,d){
+    const code=lbSelMach[p];if(!code)return;const ps=lbMachColParts(code),i=ps.indexOf(p),j=i+d;if(i<0||j<0||j>=ps.length)return;
+    ps.splice(i,1);ps.splice(j,0,p);lbMachSetOrder(ps);lbMachCommit('🛠 '+code+' • '+lbPnShort(p)+' → '+(j+1)+'. sıra');
+}
+// makineye yerleştir: before verilirse onun önüne, yoksa sona; code '' = makineden çıkar
+function lbMachPlace(p,code,before){
+    if(!lbSel.has(p))return;const was=lbSelMach[p]||'';
+    if(!code){if(was){delete lbSelMach[p];delete lbSelMachRank[p];lbMachRenum(was);lbMachCommit('🛠 '+lbPnShort(p)+' makinesi kaldırıldı')}return}
+    lbSelMach[p]=code;delete lbSelMachRank[p];if(was&&was!==code)lbMachRenum(was);
+    const ps=lbMachColParts(code).filter(x=>x!==p),i=before?ps.indexOf(before):-1;if(i<0)ps.push(p);else ps.splice(i,0,p);
+    lbMachSetOrder(ps);lbMachCommit('🛠 '+lbPnShort(p)+' → '+code+' • '+(ps.indexOf(p)+1)+'. sıra');
+}
+// ayrıntı penceresindeki makine + sıra satırı
+function lbMachRowInner(p){
+    const code=lbSelMach[p]||'',n=code?lbMachColParts(code).length:0,pos=code?lbMachPos(p):0;
+    return '🛠 <b>KK makinesi:</b> '+lbMachBtns(p)+(code?' <span class="lb-mkord">Sıra: <b>'+pos+'</b> / '+n+' <button type="button" '+(pos<=1?'disabled ':'')+'data-p="'+esc(p)+'" onclick="event.stopPropagation();lbMachMove(this.dataset.p,-1)" title="Öne al">▲</button><button type="button" '+(pos>=n?'disabled ':'')+'data-p="'+esc(p)+'" onclick="event.stopPropagation();lbMachMove(this.dataset.p,1)" title="Arkaya al">▼</button></span>':'')+' <small>tekrar bas: kaldır • bütün cihazlarda görünür</small>';
+}
+// wire biçimi: {parti: "K1" ya da "K1.2"} → makine + sıra
+function lbMkParse(raw){const mach={},rank={};Object.keys(raw||{}).forEach(p=>{const a=String(raw[p]).split('.');if(LB_MACH.includes(a[0])){mach[p]=a[0];if(+a[1]>0)rank[p]=Math.floor(+a[1])}});return{mach,rank}}
+function lbSelMachOf(k){const m=lbSelMach[lbPn(k)];return LB_MACH.includes(m)?m:''}
+function lbSelMachSet(p,code){
+    if(!lbSel.has(p)){showToast('Makine yalnız seçili partiye atanır','warning');return}
+    lbMachPlace(p,!code||lbSelMach[p]===code?'':code,null);
+}
+function lbMachBtns(p,cls){const cur=lbSelMach[p]||'';return '<span class="lb-mk'+(cls?' '+cls:'')+'" onclick="event.stopPropagation()">'+LB_MACH.map(c=>'<button type="button" class="'+(cur===c?'on':'')+'" style="--mc:'+LB_MACH_C[c]+'" data-p="'+esc(p)+'" data-m="'+c+'" onclick="event.stopPropagation();lbSelMachSet(this.dataset.p,this.dataset.m)" title="'+(cur===c?c+' — tekrar bas: kaldır':'KK makinesi: '+c)+'">'+c+'</button>').join('')+'</span>'}
+// gruplama: makine sırası, atanmamışlar en sonda
+function lbMachBucket(k){const m=lbSelMachOf(k);return m?[LB_MACH.indexOf(m),'🛠 '+m,LB_MACH_C[m]]:[9,'🛠 Makine atanmamış','#90A4AE']}
 function lbSelNoteOf(k){try{const p=lbPn(k);return lbSel.has(p)&&lbSelNotes[p]||''}catch(e){return''}}
 function lbNoteBtn(){const n=lbSel.size,nn=[...lbSel].filter(p=>lbSelNotes[p]).length;return n?'<button type="button" class="lb-ntb" onclick="lbNoteOpen()" title="Seçilenlere not ekle / düzenle (kutuya sağ tık ya da uzun basma: o partinin notu)">📝<span class="lb-bt"> Notlar</span>'+(nn?' ('+nn+')':'')+'</button>':''}
 // not penceresi: verilen partiler (yoksa bütün seçilenler); seçili olmayan partiye not yazılırsa seçime de eklenir
@@ -5340,6 +5411,7 @@ function lbDetailSelHtml(k){
             +'<button type="button" class="lbsel-open" onclick="lbOpenSel()">📺 Seçilenleri aç ('+lbSel.size+')</button></div>';
         if(on){const ex=lbEtaTarget(k);if(ex)h+='<div class="lbsel-hist'+(ex.late?' late':'')+'">'+(ex.late?'⏰ <b>'+esc(ex.T.dat)+' gecikti:</b> en geç '+esc(lbEtaWhen(ex.due))+' bekleniyordu • <b>yeni tahmin:</b> '+esc(lbEtaRange(ex))
             :'⏩ <b>Tahmini '+esc(ex.T.dat)+' geliş:</b> '+esc(lbEtaRange(ex))+' ('+esc(lbEtaTxt(ex.h))+')')+'<br><small>'+esc(lbEtaHops(ex))+'<br>'+esc(LB_ETA_NOTE)+'</small></div>'}
+        if(on)h+='<div class="lbsel-hist lbsel-mk" data-p="'+esc(p)+'">'+lbMachRowInner(p)+'</div>';
         if(on){const hh=lbSelHistHtml(p);h+='<div class="lbsel-hist">🕘 <b>Seçildiğinden beri:</b> '+(hh||'—')+(lbSelHist(p).length<2?' <small>• henüz aşama değişmedi</small>':'')+'</div>'}
         if(on)h+='<div class="lb-nt-list lbsel-nt"><div class="lb-nt-r"><span class="lb-nt-p"><b>📝 Seçim notu</b><small>panoda ve kayan yazıda görünür</small></span>'
             +'<input type="text" maxlength="'+LB_NOTE_MAX+'" data-p="'+esc(p)+'" value="'+esc(lbSelNotes[p]||'')+'" placeholder="not ekle…" autocomplete="off" onkeydown="if(event.key===&quot;Enter&quot;)lbNoteSave(this.closest(&quot;.lb-nt-list&quot;))">'+lbNoteQuickHtml()+'</div>'
@@ -5354,10 +5426,10 @@ function lbSelOpen(){if(!lbSel.size&&lbView!=='sel'){showToast('Seçili parti yo
 function lbSelToggle(parts,on){
     parts=[...new Set(parts.filter(Boolean))];if(!parts.length)return;
     if(on===undefined)on=!parts.every(p=>lbSel.has(p));
-    parts.forEach(p=>on?lbSel.add(p):lbSel.delete(p));lbSelSave();lbSelSnapSync(parts,on);if(!on){parts.forEach(p=>delete lbSelNotes[p]);lbSelNotesSave()}lbSyncLocalEdit();lbSelRefresh();
+    parts.forEach(p=>on?lbSel.add(p):lbSel.delete(p));lbSelSave();lbSelSnapSync(parts,on);if(!on){const ms=new Set();parts.forEach(p=>{delete lbSelNotes[p];if(lbSelMach[p])ms.add(lbSelMach[p]);delete lbSelMach[p];delete lbSelMachRank[p]});ms.forEach(lbMachRenum);lbSelNotesSave();lbSelMachSave()}lbSyncLocalEdit();lbSelRefresh();
     if(parts.length>1)showToast((on?'☑ ':'☐ ')+parts.length+' parti '+(on?'seçildi':'seçimden çıkarıldı'));
 }
-function lbSelClear(){if(!lbSel.size||!confirm(lbSel.size+' partilik seçim temizlensin mi?'))return;lbSel.clear();lbSelSave();lbSelSnap={};lbSelEvSave();lbSelNotes={};lbSelNotesSave();lbSyncLocalEdit();lbSelRefresh()}
+function lbSelClear(){if(!lbSel.size||!confirm(lbSel.size+' partilik seçim temizlensin mi?'))return;lbSel.clear();lbSelSave();lbSelSnap={};lbSelEvSave();lbSelNotes={};lbSelNotesSave();lbSelMach={};lbSelMachRank={};lbSelMachSave();lbSyncLocalEdit();lbSelRefresh()}
 function lbSelDropGone(){const present=new Set(getAllCards().map(lbPn));lbSelToggle([...lbSel].filter(p=>!present.has(p)),false)}
 // ekrandaki kutuları ve sayaçları baştan çizmeden güncelle (seçilenler ekranında baştan çizilir)
 function lbSelRefresh(){
@@ -5382,6 +5454,102 @@ function lbGrpClick(h,e){
 }
 // ekranda aramayla bulunan partiler
 function lbSelHits(){const s=new Set();Object.values(lbCells).forEach(d=>(d.items||[]).forEach(x=>{if(lbMatch(x.k))s.add(lbPn(x.k))}));return[...s]}
+// ── 📷 Fotoğraftan parti no: önce yapay zekâ (Gemini, Google Apps Script üzerinden — fotoğraf Google'a gider);
+//    olmazsa Tesseract.js ile bu cihazda (ilk kullanımda ~10 MB indirilir).
+//    Okunan sayılar panodaki parti numaralarıyla eşleştirilir — listede olmayan numara eklenemez; tek rakamı farklı olanlar
+//    "bunu mu demek istediniz" önerisi olarak (işaretsiz) gelir. Onaylananlar Seçilenlere eklenir.
+const LB_OCR_JS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let lbOcrWorker=null,lbOcrRes=null;
+function lbOcrBtn(){return '<button type="button" class="lb-ocrb" onclick="lbOcrPick()" title="Fotoğraftaki (etiket, liste, ekran, el yazısı) parti numaralarını oku ve seçilenlere ekle — yapay zekâ (Gemini) ile okunur; olmazsa bu cihazda">📷<span class="lb-bt"> Fotoğraftan ekle</span></button>'}
+function lbOcrPick(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{if(i.files&&i.files[0])lbOcrRun(i.files[0])};i.click()}
+function lbOcrLoad(){return window.Tesseract?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=LB_OCR_JS;sc.onload=ok;sc.onerror=()=>no(new Error('okuma kütüphanesi yüklenemedi (internet bağlantısı?)'));document.head.appendChild(sc)})}
+function lbOcrMsg(t,pct){const e=document.getElementById('lbOcrSt');if(e)e.innerHTML=esc(t)+(pct!=null?' <b>%'+Math.round(pct*100)+'</b>':'')}
+// görüntü: en uzun kenar ~1800 px, gri ton + kontrast germe (rakamlar belirginleşsin)
+function lbOcrPrep(img){
+    const sc=Math.min(2.5,1800/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+    const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);const d=x.getImageData(0,0,c.width,c.height),a=d.data;let mn=255,mx=0;
+    for(let i=0;i<a.length;i+=4){const g=.299*a[i]+.587*a[i+1]+.114*a[i+2];a[i]=g;if(g<mn)mn=g;if(g>mx)mx=g}
+    const r=mx-mn||1;for(let i=0;i<a.length;i+=4){const g=Math.max(0,Math.min(255,(a[i]-mn)*255/r));a[i]=a[i+1]=a[i+2]=g}
+    x.putImageData(d,0,0);return c;
+}
+async function lbOcrRun(file){
+    const url=URL.createObjectURL(file);
+    hmModalShow('<div class="hm-card-title">📷 Fotoğraftan parti no<small id="lbOcrSt">hazırlanıyor…</small></div><div class="lb-ocr"><img src="'+url+'" alt=""></div>');
+    try{
+        const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('görüntü açılamadı'));i.src=url});
+        // önce yapay zekâ (el yazısında çok daha iyi); olmazsa bu cihazda okuma
+        lbOcrMsg('Yapay zekâ ile okunuyor…');
+        const ai=await lbOcrAI(img);
+        if(ai.ok){const R=lbOcrMatch(ai.found.concat(ai.other).join(' '));R.url=url;R.via='🤖 Gemini ('+ai.model+')';lbOcrShow(R);return}
+        lbOcrMsg((ai.why?ai.why+' — ':'')+'bu cihazda okunuyor (ilk seferde kütüphane yüklenir)…');await lbOcrLoad();
+        if(!lbOcrWorker)lbOcrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')lbOcrMsg('Okunuyor…',m.progress);else if(m.progress!=null)lbOcrMsg('Hazırlanıyor: '+m.status,m.progress)}});
+        const c=lbOcrPrep(img),txt=[];
+        // iki düzen: dağınık yazı (etiket, el yazısı) ve tek blok (liste / tablo)
+        for(const psm of['11','6']){await lbOcrWorker.setParameters({tessedit_char_whitelist:'0123456789()/.- ',tessedit_pageseg_mode:psm});txt.push((await lbOcrWorker.recognize(c)).data.text||'')}
+        const R=lbOcrMatch(txt.join('\n'));R.url=url;R.via='📱 cihazda okuma'+(ai.why?' — '+ai.why:'');lbOcrShow(R);
+    }catch(e){lbOcrMsg('Okunamadı: '+(e&&e.message||e))}
+}
+// Gemini, Google Apps Script üzerinden (apps-script/OcrCode.gs; anahtar scriptin gizli ayarında, burada yalnız adres):
+// fotoğraf ~1600 px JPEG + geçerli parti numaraları. Adres yoksa / anahtar yoksa / kota dolduysa {ok:false, why} —
+// çağıran cihazda okumaya döner. text/plain: Apps Script ön kontrol (CORS preflight) istemesin.
+const LB_OCR_URL='https://script.google.com/macros/s/AKfycbwQjUPwfNXo0ulbTrxcxMUBqsFNVhb-Acq4XCiKnKAhkSI4gIAC-N8NOgUUpHmACAj8/exec';
+async function lbOcrAI(img){
+    try{
+        if(!LB_OCR_URL)return{ok:false,why:''};
+        const sc=Math.min(1,1600/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const image=c.toDataURL('image/jpeg',0.85).split(',')[1],candidates=[...new Set(getAllCards().map(k=>heatmapShortParti(k).replace(/\D/g,'')).filter(Boolean))];
+        const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),45000);
+        let r;try{r=await fetch(LB_OCR_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({image,mime:'image/jpeg',candidates}),signal:ctrl.signal})}finally{clearTimeout(t)}
+        const j=await r.json().catch(()=>({}));
+        if(j.ok&&Array.isArray(j.found))return{ok:true,found:j.found,other:j.other||[],model:j.model||'Gemini'};
+        return{ok:false,why:j.error==='no_key'?'yapay zekâ anahtarı tanımlı değil':j.error==='quota'?'yapay zekâ kotası doldu':('yapay zekâ cevap vermedi'+(j.error?' ('+String(j.error).slice(0,80)+')':''))};
+    }catch(e){return{ok:false,why:e&&e.name==='AbortError'?'yapay zekâ zaman aşımı':''}}
+}
+// okunan metinden 3–6 haneli sayılar → panodaki parti numaraları (tam eşleşme; yoksa tek rakam farkı = öneri)
+function lbOcrMatch(txt){
+    const byNo=new Map();getAllCards().forEach(k=>{const n=heatmapShortParti(k).replace(/\D/g,'');if(n){if(!byNo.has(n))byNo.set(n,[]);byNo.get(n).push(k)}});
+    const nums=[...new Set(String(txt).replace(/\(\s*20\d\d\s*\)/g,' ').match(/\d{3,6}/g)||[])];
+    const near=n=>{const out=[];byNo.forEach((ks,no)=>{if(no===n)return;let ok=false;
+        if(no.length===n.length){let d=0;for(let i=0;i<n.length;i++)if(no[i]!==n[i])d++;ok=d===1}
+        else if(Math.abs(no.length-n.length)===1){const sh=no.length<n.length?no:n,lg=no.length<n.length?n:no;for(let i=0;i<lg.length&&!ok;i++)ok=lg.slice(0,i)+lg.slice(i+1)===sh}
+        if(ok)out.push(no)});return out};
+    const found=[],sugg=[],miss=[],seen=new Set();
+    nums.forEach(n=>{if(byNo.has(n)){if(!seen.has(n)){seen.add(n);found.push({n,read:n,ks:byNo.get(n)})}return}
+        const c=near(n).filter(x=>!seen.has(x));if(c.length&&c.length<=3)c.forEach(x=>{seen.add(x);sugg.push({n:x,read:n,ks:byNo.get(x)})});else if(!c.length)miss.push(n)});
+    return{found,sugg,miss};
+}
+function lbOcrShow(R){
+    lbOcrRes=R;
+    const row=(x,on,isS)=>{const k=x.ks[0],p=lbPn(k),sel=lbSel.has(p);
+        return '<label class="lb-ocr-r'+(sel?' sel':'')+(isS?' sg':'')+'"><input type="checkbox" data-p="'+esc(p)+'"'+(on&&!sel?' checked':'')+(sel?' disabled':'')+'><b>'+esc(x.n)+'</b>'
+            +(isS?'<small class="rd">okunan: '+esc(x.read)+'</small>':'')+'<span>👤 '+esc(lbGroupName(k))+' • '+esc(cardCurrentStage(k)||'-')+' • '+lbShortKg(k.kilo)+' kg</span>'+(sel?'<em>zaten seçili</em>':'')+'</label>'};
+    const nNew=R.found.filter(x=>!lbSel.has(lbPn(x.ks[0]))).length;
+    let h='<div class="hm-card-title">📷 Fotoğraftan parti no<small id="lbOcrSt">'+(R.via?esc(R.via)+' • ':'')+R.found.length+' bulundu'+(R.sugg.length?' • '+R.sugg.length+' öneri':'')+(R.miss.length?' • '+R.miss.length+' eşleşmeyen':'')+'</small></div>'
+        +(R.url?'<div class="lb-ocr"><img src="'+R.url+'" alt=""></div>':'')+'<div class="lb-ocr-l">';
+    if(R.found.length)h+='<div class="lb-ocr-h">✅ Panoda bulunanlar</div>'+R.found.map(x=>row(x,true)).join('');
+    if(R.sugg.length)h+='<div class="lb-ocr-h">❓ Bunu mu demek istediniz? <small>(okunan numara panoda yok; tek rakamı farklı olan)</small></div>'+R.sugg.map(x=>row(x,false,true)).join('');
+    if(R.miss.length)h+='<div class="lb-ocr-h">✖ Panoda olmayan sayılar <small>(eklenmez)</small></div><div class="lb-ocr-miss">'+R.miss.map(esc).join(', ')+'</div>';
+    if(!R.found.length&&!R.sugg.length)h+='<div class="lb-ocr-h">Parti numarası okunamadı — daha yakından, düz ve iyi ışıkta çekmeyi deneyin ya da aşağıya elle yazın.</div>';
+    h+='</div><div class="lb-ocr-add"><input id="lbOcrAdd" type="text" inputmode="numeric" autocomplete="off" placeholder="eksik varsa elle yazın: 10104 9962" onkeydown="if(event.key===&quot;Enter&quot;)lbOcrAddManual()"><button type="button" onclick="lbOcrAddManual()">＋ Listeye ekle</button></div>'
+        +'<div class="lb-gl-btns"><button type="button" class="view-action-btn" style="background:#2E7D32" onclick="lbOcrConfirm()">☑ Seçilenlere ekle</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="lbOcrPick()">📷 Başka fotoğraf</button></div>';
+    hmModalShow(h);
+}
+function lbOcrAddManual(){
+    const e=document.getElementById('lbOcrAdd'),v=e&&e.value.trim();if(!v||!lbOcrRes)return;
+    const R=lbOcrMatch(v.replace(/[^\d]+/g,' ')),have=new Set(lbOcrRes.found.concat(lbOcrRes.sugg).map(x=>x.n));
+    R.found.forEach(x=>{if(!have.has(x.n))lbOcrRes.found.push(x)});R.sugg.forEach(x=>{if(!have.has(x.n))lbOcrRes.sugg.push(x)});
+    R.miss.forEach(x=>{if(!lbOcrRes.miss.includes(x))lbOcrRes.miss.push(x)});
+    // ekranda işaretli olanlar korunur
+    const on=new Set([...document.querySelectorAll('.lb-ocr-r input:checked')].map(i=>i.dataset.p));lbOcrShow(lbOcrRes);
+    document.querySelectorAll('.lb-ocr-r input[data-p]').forEach(i=>{if(on.has(i.dataset.p)||R.found.some(x=>lbPn(x.ks[0])===i.dataset.p))i.checked=!i.disabled});
+}
+function lbOcrConfirm(){
+    const ps=[...new Set([...document.querySelectorAll('.lb-ocr-r input:checked')].map(i=>i.dataset.p))];
+    if(!ps.length){showToast('İşaretli parti yok','warning');return}
+    lbSelToggle(ps,true);hmCardPopupClose();showToast('📷 '+ps.length+' parti fotoğraftan seçilenlere eklendi','success');
+    if(typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}
+}
 function lbSelBarInner(){
     const n=lbSel.size,hits=lbQuery?lbSelHits():[];
     const find=hits.length?'<button type="button" onclick="lbSelToggle(lbSelHits(),true)" title="Aramada bulunan partilerin hepsini seçime ekle">🔍 Bulunanları seç ('+hits.length+')</button>':'';
@@ -5389,19 +5557,78 @@ function lbSelBarInner(){
         const all=getAllCards(),present=new Set(all.map(lbPn)),gone=[...lbSel].filter(p=>!present.has(p)),kg=all.filter(k=>lbSel.has(lbPn(k))).reduce((s,k)=>s+num(k.kilo),0);
         return '<b class="lb-sel-t">☑ Seçilen partiler</b><span class="lb-sel-n">'+(n-gone.length)+' parti • '+lbShortKg(kg)+' kg</span>'
             +(gone.length?'<span class="lb-sel-gone" title="'+esc(gone.join(', '))+'">'+gone.length+' parti güncel veride yok (sevk edilmiş olabilir)<button type="button" onclick="lbSelDropGone()">kaldır</button></span>':'')
-            +(lbSelMode?'<span class="lb-sel-h">kutuya tıkla: seçimden çıkar</span>':'')+find+lbSyncChip()+lbNoteBtn()+lbEtaAccBtn()+'<button type="button" class="lb-xlb" onclick="lbSelExcel()" title="Seçilenleri Excel\'e aktar: parti, kg, aşamalar, müşteri, kumaş, not, aşama geçmişi">📊<span class="lb-bt"> Excel</span></button>'+'<button type="button" class="lb-shb" onclick="lbSelShare()" title="Seçilenleri yazı olarak paylaş (WhatsApp vb.): parti, kg, müşteri, kumaş, not">📱<span class="lb-bt"> Listeyi paylaş</span></button>'+lbCardBigBtn()+lbSelCardBtn()+'<span class="lb-sp"></span>'
+            +(lbSelMode?'<span class="lb-sel-h">kutuya tıkla: seçimden çıkar</span>':'')+find+lbOcrBtn()+lbSyncChip()+lbNoteBtn()+lbEtaAccBtn()+'<button type="button" class="lb-xlb" onclick="lbSelExcel()" title="Seçilenleri Excel\'e aktar: parti, kg, aşamalar, müşteri, kumaş, not, aşama geçmişi">📊<span class="lb-bt"> Excel</span></button>'+'<button type="button" class="lb-shb" onclick="lbSelShare()" title="Seçilenleri yazı olarak paylaş (WhatsApp vb.): parti, kg, müşteri, kumaş, not">📱<span class="lb-bt"> Listeyi paylaş</span></button>'+lbCardBigBtn()+lbSelCardBtn()+'<span class="lb-sp"></span>'
             +'<button type="button" class="'+(lbSelMode?'on':'')+'" onclick="lbSelModeSet()">'+(lbSelMode?'✓ Düzenlemeyi bitir':'☑ Düzenle')+'</button>'
             +(document.fullscreenEnabled?'<button type="button" onclick="lbFullToggle()" title="Tarayıcıyı tam ekran yap (telefonda adres çubuğu da gizlenir)">'+(document.fullscreenElement?'✕<span class="lb-bt"> Tam ekrandan çık</span>':'⛶<span class="lb-bt"> Tam ekran</span>')+'</button>':'')
             +'<button type="button" onclick="lbKioskCopy()" title="Bu görünümü doğrudan açan adresi kopyala (telefonda ana ekrana eklemek ya da TV için)">🔗<span class="lb-bt"> Adres</span></button>'
             +'<button type="button" onclick="lbSelClear()">🗑<span class="lb-bt"> Temizle</span></button><button type="button" class="lb-sel-back" onclick="lbSetView(&quot;all&quot;)" title="Panoya dön (Esc)">↩<span class="lb-bt"> Panoya dön</span></button>';
     }
-    return '<b class="lb-sel-t">☑ Seçim</b><span class="lb-sel-h">kutuya tıkla: seç / kaldır • başlığa tıkla: bloğun hepsi</span><span class="lb-sel-n">'+n+' seçili</span>'+find+lbSyncChip()+lbNoteBtn()+'<span class="lb-sp"></span>'
+    return '<b class="lb-sel-t">☑ Seçim</b><span class="lb-sel-h">kutuya tıkla: seç / kaldır • başlığa tıkla: bloğun hepsi</span><span class="lb-sel-n">'+n+' seçili</span>'+find+lbOcrBtn()+lbSyncChip()+lbNoteBtn()+'<span class="lb-sp"></span>'
         +'<button type="button" class="lb-sel-go" onclick="lbSetView(&quot;sel&quot;)"'+(n?'':' disabled')+'>📋 Seçilenleri göster</button>'
         +'<button type="button" onclick="lbSelClear()"'+(n?'':' disabled')+'>🗑<span class="lb-bt"> Temizle</span></button><button type="button" class="on" onclick="lbSelModeSet(false)">✓ Bitti</button>';
 }
 // Seçilenlerde şu an KK / Sarım'da olan partiler grubundan bağımsız kendi renginde (tek bakışta ayrılsın)
 const LB_SEL_STAGE_C={kk:{c:'#E65100',t:'KK'},sr1:{c:'#AD1457',t:'S1'},sr2:{c:'#8E24AA',t:'S2'}};
 function lbSelStageTag(k){for(const R of SW_ROWS)if(R.is(k))return LB_SEL_STAGE_C[R.key]||null;return null}
+// ── Makine kanbanı (Seçilenler › 🗂 Grup: Makine; kart ve kutu görünümünde): K1 … D3 + Atanmamış sütunları yan yana, ekranı
+//    doldurur. Kart: parti no, kg, müşteri, proses, tahmini varış / orada geçen süre, not. Kartı başka sütuna sürükle = o makine;
+//    telefonda karttaki küçük makine düğmeleri.
+function lbSelSubFilter(sel){
+    return lbSelCustFilter(sel).filter(k=>{
+        if(lbSelStage&&lbOthGroup(k)!==lbSelStage)return false;
+        if(lbFocus){const R=SW_ROWS.find(R=>R.key===lbFocus);if(R&&!(R.coming(k)||R.is(k)))return false}
+        if(lbSelCol==='g'&&!SW_ROWS.some(R=>R.coming(k)))return false;
+        if(lbSelCol==='u'&&!SW_ROWS.some(R=>R.is(k)))return false;
+        return true;
+    });
+}
+function lbMkDrop(e,code){
+    e.preventDefault();const col=e.currentTarget;col.classList.remove('ov');
+    const p=e.dataTransfer.getData('text/plain');if(!p||!lbSel.has(p))return;
+    lbMachPlace(p,code,null);   // sütunun boşluğuna: o makinenin sonuna (Atanmamış: makineden çıkar)
+}
+// kartın üstüne bırakınca: o kartın önüne (aynı ya da başka makine)
+function lbMkDropCard(e,el){
+    e.preventDefault();e.stopPropagation();el.classList.remove('ovc');const col=el.closest('.lb-mkcol');if(col)col.classList.remove('ov');
+    const p=e.dataTransfer.getData('text/plain'),t=el.dataset.p;if(!p||!lbSel.has(p)||p===t)return;
+    lbMachPlace(p,col?col.dataset.m||'':'',t);
+}
+// kutu görünümündeki renk anlamları: bekleme modu açıksa bekleme rengi; yoksa KK'da turuncu, Sarım1 pembe, Sarım2 mor,
+// KK / Sarım'a gelecek mavi, diğer aşama gri
+function lbMkTone(k){
+    const wc=lbWaitMode?lbWaitColor(k):'';if(wc)return wc;
+    const ss=lbSelStageTag(k);if(ss)return ss.c;
+    return SW_ROWS.some(R=>R.coming(k))?LB_TONES.g[0]:LB_TONES.o[0];
+}
+function lbMkCardHtml(k,tile,no,n){
+    const p=lbPn(k),onR=SW_ROWS.find(R=>R.is(k)),on=!!onR,ex=lbSelTileEx({k,cls:on?'u':'g'}),ss=lbSelStageTag(k),nt=lbSelNoteOf(k),late=lbEtaLate(k);
+    const proc=ex.p.replace(/^🛠 \S+ • /,''),sev=k.seviye==='kritik'?' kritik':k.seviye==='uyari'?' uyari':'',tn=lbTamirN(k);
+    const norm=onR&&lbStageNorm(onR),stk=!!(norm&&lbIsStuck(k,norm.thr)),rec=[...lbRecent.entries()].some(([key,t])=>key.includes(p)&&Date.now()-t<LB_RECENT_MS);
+    return '<div class="lb-mkc'+(tile?' t':'')+(late?' late':'')+(stk?' stk':'')+(rec?' recent':'')+(tn?' tmr':'')+sev+'" draggable="true" data-p="'+esc(p)+'" style="--sc:'+(ss?ss.c:'#455A64')+(tile?';--bg:'+lbMkTone(k):'')+'" ondragstart="event.dataTransfer.setData(&quot;text/plain&quot;,this.dataset.p);this.classList.add(&quot;drag&quot;)" ondragend="this.classList.remove(&quot;drag&quot;)" ondragover="event.preventDefault();this.classList.add(&quot;ovc&quot;)" ondragleave="this.classList.remove(&quot;ovc&quot;)" ondrop="lbMkDropCard(event,this)" onclick="openDetailModalByParti(this.dataset.p)" title="'+esc(lbTip(k,'▶ şu an: '+(cardCurrentStage(k)||'-'))+lbEtaTip(k)+'\nSürükle: başka makineye ya da bir kartın önüne taşı • tıkla: ayrıntı')+'">'
+        +(no?'<span class="mv" onclick="event.stopPropagation()"><button type="button" '+(no<=1?'disabled ':'')+'data-p="'+esc(p)+'" onclick="lbMachMove(this.dataset.p,-1)" title="Öne al">▲</button><button type="button" '+(no>=n?'disabled ':'')+'data-p="'+esc(p)+'" onclick="lbMachMove(this.dataset.p,1)" title="Arkaya al">▼</button></span>':'')
+        +'<div class="h">'+(no?'<i class="rk" title="Bu makinedeki öncelik sırası">'+no+'</i>':'')+'<b>'+esc(heatmapShortParti(k))+'</b>'+(ss&&!tile?'<s>'+ss.t+'</s>':'')+(stk?'<u title="Bu aşamada alışılmıştan uzun bekliyor">⏳</u>':'')+(late?'<u title="Tahmini geliş aralığı geçti">⏰</u>':'')+(tn?'<u title="Tamir kaydı">🛠'+tn+'</u>':'')+'<span>'+lbShortKg(k.kilo)+' kg</span></div>'
+        +'<div class="cu">👤 '+esc(lbGroupName(k))+'</div>'
+        +'<div class="pr">'+esc(proc)+'</div>'+(ex.e?'<div class="e'+(ex.late?' late':'')+'">'+esc(ex.e)+'</div>':'')
+        +(nt?'<div class="nt">📝 '+esc(nt)+'</div>':'')+lbMachBtns(p,'sm')+'</div>';
+}
+function lbSelMachKanbanHtml(selAll,tile){
+    const sel=lbSelSubFilter(selAll),cols=LB_MACH.map(m=>({m,t:m,c:LB_MACH_C[m],list:[]})).concat([{m:'',t:'Atanmamış',c:'#78909C',list:[]}]);
+    sel.forEach(k=>{const m=lbSelMachOf(k);(cols.find(c=>c.m===m)||cols[cols.length-1]).list.push(k)});
+    // sütun içinde: üzerinde olanlar (işlenen) önce, sonra tahmini varışı yakın olan
+    const rk=k=>SW_ROWS.some(R=>R.is(k))?0:SW_ROWS.some(R=>R.coming(k))?1:2,ek=k=>{const v=lbEtaKey(k);return v===Infinity?9e15:v};
+    cols.forEach(C=>{if(C.m){const o=new Map(lbMachColParts(C.m).map((x,i)=>[x,i]));C.list.sort((a,b)=>(o.get(lbPn(a))??999)-(o.get(lbPn(b))??999))}else C.list.sort((a,b)=>rk(a)-rk(b)||ek(a)-ek(b)||num(b.kilo)-num(a.kilo))});
+    const lg=tile?'<div class="lb-mklg">'+(lbWaitMode?'⏱ Renk: son hareketten beri'+LB_WAIT_BANDS.map(b=>'<span><i style="background:'+b.c+'"></i>'+b.l+'</span>').join(''):[['#E65100','KK\'da'],['#AD1457','Sarım1\'de'],['#8E24AA','Sarım2\'de'],[LB_TONES.g[0],'KK / Sarım\'a gelecek'],[LB_TONES.o[0],'diğer aşama']].map(([c,l])=>'<span><i style="background:'+c+'"></i>'+l+'</span>').join(''))+'<span><i class="lt"></i>⏰ gecikti</span><span>⏳ uzun bekliyor</span><span>🛠 tamir</span></div>':'';
+    const phone=window.matchMedia&&matchMedia('(max-width:700px)').matches;
+    // kalabalık sütun geniş (içinde kartlar alt sütunlara yayılır), boş sütun dar
+    let h=lg+'<div class="lb-mkb'+(phone?'':' fit')+'" style="grid-template-columns:'+cols.map(C=>C.list.length?'minmax(9.9em,'+Math.sqrt(C.list.length).toFixed(2)+'fr)':(C.m?'minmax(3.4em,.35fr)':'minmax(5.6em,.45fr)')).join(' ')+'">';
+    cols.forEach(C=>{
+        const kg=C.list.reduce((a,k)=>a+num(k.kilo),0);
+        h+='<div class="lb-mkcol'+(C.m?'':' una')+'" data-m="'+C.m+'" style="--mc:'+C.c+'" ondragover="event.preventDefault();this.classList.add(&quot;ov&quot;)" ondragleave="this.classList.remove(&quot;ov&quot;)" ondrop="lbMkDrop(event,&quot;'+C.m+'&quot;)">'
+            +'<div class="lb-mkh"><b>'+esc(C.t)+'</b><span>'+C.list.length+' p • '+lbShortKg(kg)+' kg</span>'+(C.list.length?lbSecMenuBtn(C.list,C.t):'')+'</div>'
+            +'<div class="lb-mkl">'+(C.list.length?C.list.map((k,i)=>lbMkCardHtml(k,tile,C.m?i+1:0,C.list.length)).join(''):'<div class="lb-mk-empty">'+(C.m?'boş — kartı buraya sürükle':'hepsi atanmış ✅')+'</div>')+'</div></div>';
+    });
+    return h+'</div>';
+}
 function lbOthGroup(k){return normalizeStageName(k._asama||k.asama)||'Aşama yok'}
 // Seçilenler ekranı: satır = aşama (yalnız seçilen partisi olanlar), sütun = Gelecek / Üzerinde; üç aşamanın dışındaki
 // seçilenler "Diğer aşamalar" satırında şu anki aşamasına göre
@@ -5434,14 +5661,14 @@ function lbSelGridHtml(all,units,keys){
     // gruplama: Müşteri (en çok geciken müşteri önde, sonra kalabalık) · Geliş (gecikenler, bugün, yarın…)
     if(lbSelGrp!=='asama'){
         const info=new Map();gOf.clear();ord.length=0;Object.keys(gcls).forEach(g=>delete gcls[g]);
-        items.forEach(x=>{const b=lbSelGrp==='musteri'?[0,lbGroupName(x.k)]:lbEtaBucket(x.k),g=b[1];if(!gOf.has(x.k))gOf.set(x.k,g);
-            if(!info.has(g))info.set(g,{o:b[0],c:lbSelGrp==='musteri'?'c':b[0]===0?'r':'g',n:0,late:0});const I=info.get(g);I.n++;if(lbEtaLate(x.k))I.late++});
+        items.forEach(x=>{const b=lbSelGrp==='musteri'?[0,lbGroupName(x.k)]:lbSelGrp==='makine'?lbMachBucket(x.k):lbEtaBucket(x.k),g=b[1];if(!gOf.has(x.k))gOf.set(x.k,g);
+            if(!info.has(g))info.set(g,{o:b[0],c:lbSelGrp==='musteri'?'c':lbSelGrp==='makine'?(b[0]<9?'c':'o'):b[0]===0?'r':'g',n:0,late:0});const I=info.get(g);I.n++;if(lbEtaLate(x.k))I.late++});
         [...info.entries()].sort((a,b)=>lbSelGrp==='musteri'?b[1].late-a[1].late||b[1].n-a[1].n||a[0].localeCompare(b[0],'tr'):a[1].o-b[1].o).forEach(([g,I])=>{ord.push(g);gcls[g]=I.c});
     }
     lbSelOne=true;
     lbCells.Swall={cls:'o',groupBy:k=>gOf.get(k)||'',ord,gcls,items,cust:lbSelGrp==='musteri'};
     const ks=items.map(x=>x.k);
-    return '<div class="lb-grid lb-wall">'+lbCellHtml('Swall','☑ Seçilenler • '+(lbSelGrp==='musteri'?'müşteriye göre (en çok geciken önde) • müşteri adına tıkla: panodaki bütün partileri':lbSelGrp==='gelis'?'tahmini KK / Sarım gelişine göre':'şu anki yerine göre'),ks,'#9CCC65',(ks.some(lbSelStageTag)?'<span class="lb-ss-lg"><i style="background:#E65100"></i>KK&#39;da <i style="background:#AD1457"></i>Sarım1&#39;de <i style="background:#8E24AA"></i>Sarım2&#39;de</span>':'')+lbSecMenuBtn(ks,'Seçilenler'))+'</div>';
+    return '<div class="lb-grid lb-wall">'+lbCellHtml('Swall','☑ Seçilenler • '+(lbSelGrp==='makine'?'KK makinesine göre (K1 … D3, atanmamışlar en sonda) • kutuya tıkla: makine seç':lbSelGrp==='musteri'?'müşteriye göre (en çok geciken önde) • müşteri adına tıkla: panodaki bütün partileri':lbSelGrp==='gelis'?'tahmini KK / Sarım gelişine göre':'şu anki yerine göre'),ks,'#9CCC65',(ks.some(lbSelStageTag)?'<span class="lb-ss-lg"><i style="background:#E65100"></i>KK&#39;da <i style="background:#AD1457"></i>Sarım1&#39;de <i style="background:#8E24AA"></i>Sarım2&#39;de</span>':'')+lbSecMenuBtn(ks,'Seçilenler'))+'</div>';
 }
 // ── Seçilenlerin hareketi: veri her yenilendiğinde seçili partilerin aşaması önceki hâliyle karşılaştırılır; değişen
 //    olursa ekranda bildirim çıkar (pano kapalıyken de) ve Seçilenler ekranında "son hareketler" şeridinde görünür.
@@ -5761,13 +5988,13 @@ async function lbSyncRead(){
     (await r.text()).split('\n').forEach(line=>{
         if(!line.trim())return;
         try{const m=JSON.parse(line);if(m.event!=='message')return;const d=JSON.parse(m.message);if(!d||typeof d.t!=='number'||!d.s||typeof d.s!=='object')return;
-            if(!best||d.t>best.t||(d.t===best.t&&m.time*1000>best.time))best={t:d.t,sel:lbSyncDec(d.s),notes:d.n&&typeof d.n==='object'&&!Array.isArray(d.n)?d.n:{},ann:d.d&&typeof d.d==='object'&&(d.d.x||d.d.k)?{x:String(d.d.x||''),t:+d.d.t||0,u:+d.d.u||0,k:d.d.k?1:0,kn:d.d.kn?1:0,km:d.d.km?1:0,kl:d.d.kl?1:0,kc:lbAnnKC(d.d)}:null,time:m.time*1000}}catch(e){}
+            if(!best||d.t>best.t||(d.t===best.t&&m.time*1000>best.time))best={t:d.t,sel:lbSyncDec(d.s),notes:d.n&&typeof d.n==='object'&&!Array.isArray(d.n)?d.n:{},mach:d.mk&&typeof d.mk==='object'&&!Array.isArray(d.mk)?d.mk:{},ann:d.d&&typeof d.d==='object'&&(d.d.x||d.d.k)?{x:String(d.d.x||''),t:+d.d.t||0,u:+d.d.u||0,k:d.d.k?1:0,kn:d.d.kn?1:0,km:d.d.km?1:0,kl:d.d.kl?1:0,kc:lbAnnKC(d.d)}:null,time:m.time*1000}}catch(e){}
     });
     return best;
 }
-async function lbSyncWrite(t,list,notes,ann){
-    notes=notes||lbSelNotes;ann=ann===undefined?lbAnn:ann;const n={};list.forEach(p=>{if(notes[p])n[p]=String(notes[p]).slice(0,LB_NOTE_MAX)});
-    const o={v:2,t,s:lbSyncEnc(list),n};if(ann&&(ann.x||ann.k))o.d={x:String(ann.x||'').slice(0,LB_ANN_MAX),t:ann.t||0,u:ann.u||0,k:ann.k?1:0,kn:ann.kn?1:0,km:ann.km?1:0,kl:ann.kl?1:0,kc:lbAnnKC(ann).map(x=>x.slice(0,40)).slice(0,20)};
+async function lbSyncWrite(t,list,notes,ann,mach,rank){
+    const loc=!mach;notes=notes||lbSelNotes;ann=ann===undefined?lbAnn:ann;mach=mach||lbSelMach;rank=rank||(loc?lbSelMachRank:{});const n={},mk={};list.forEach(p=>{if(notes[p])n[p]=String(notes[p]).slice(0,LB_NOTE_MAX);if(LB_MACH.includes(mach[p]))mk[p]=mach[p]+(rank[p]?'.'+rank[p]:'')});
+    const o={v:2,t,s:lbSyncEnc(list),n};if(Object.keys(mk).length)o.mk=mk;if(ann&&(ann.x||ann.k))o.d={x:String(ann.x||'').slice(0,LB_ANN_MAX),t:ann.t||0,u:ann.u||0,k:ann.k?1:0,kn:ann.kn?1:0,km:ann.km?1:0,kl:ann.kl?1:0,kc:lbAnnKC(ann).map(x=>x.slice(0,40)).slice(0,20)};
     const body=JSON.stringify(o);
     if(new Blob([body]).size>LB_SYNC.maxBytes)throw new Error('liste ve notlar çok uzun ('+list.length+' parti) — bazı notları kısaltın');
     const r=await fetch(LB_SYNC.url+'?priority=1',{method:'POST',body});
@@ -5778,12 +6005,12 @@ function lbSyncApply(R){
     if(!R||R.t<=lbSyncAt)return;
     const next=new Set(R.sel),add=[...next].filter(p=>!lbSel.has(p)),del=[...lbSel].filter(p=>!next.has(p));
     const sig=(o,l)=>JSON.stringify([...l].sort().filter(p=>o[p]).map(p=>[p,o[p]])),notes=R.notes||{},nch=sig(notes,next)!==sig(lbSelNotes,lbSel);
-    const ach=lbAnnSig(R.ann)!==lbAnnSig(lbAnn);
-    lbSyncAt=R.t;lbSyncSaveAt();if(!add.length&&!del.length&&!nch&&!ach)return;
+    const ach=lbAnnSig(R.ann)!==lbAnnSig(lbAnn),MP=lbMkParse(R.mach),mch=sig(MP.mach,next)!==sig(lbSelMach,lbSel)||sig(MP.rank,next)!==sig(lbSelMachRank,lbSel);
+    lbSyncAt=R.t;lbSyncSaveAt();if(!add.length&&!del.length&&!nch&&!ach&&!mch)return;
     lbSel=next;lbSelSave();if(add.length)lbSelSnapSync(add,true);if(del.length)lbSelSnapSync(del,false);
-    lbSelNotes=Object.assign({},notes);lbSelNotesSave();lbAnn=R.ann||null;lbAnnSaveLocal();lbMainSelSyncAll();
-    if(typeof lbVisible==='function'&&lbVisible()){if(nch||ach||lbView==='sel'){lbLastKeys=null;lbRender()}else lbSelRefresh()}
-    if(add.length||del.length||nch)showToast('☁ Seçim başka cihazdan güncellendi'+(add.length?' • +'+add.length:'')+(del.length?' • −'+del.length:'')+(nch?' • notlar':''));
+    lbSelNotes=Object.assign({},notes);lbSelNotesSave();lbSelMach=Object.assign({},MP.mach);lbSelMachRank=Object.assign({},MP.rank);lbSelMachSave();lbAnn=R.ann||null;lbAnnSaveLocal();lbMainSelSyncAll();
+    if(typeof lbVisible==='function'&&lbVisible()){if(nch||ach||mch||lbView==='sel'){lbLastKeys=null;lbRender()}else lbSelRefresh()}
+    if(add.length||del.length||nch||mch)showToast('☁ Seçim başka cihazdan güncellendi'+(add.length?' • +'+add.length:'')+(del.length?' • −'+del.length:'')+(nch?' • notlar':'')+(mch?' • makineler':''));
     if(ach&&lbAnnActive())setTimeout(()=>showToast('📢 '+(lbAnn.x||'Seçilenler kayan yazısı açıldı'),'warning'),add.length||del.length||nch?1500:0);
 }
 async function lbSyncPull(){
@@ -5795,7 +6022,7 @@ async function lbSyncPull(){
         if(!R){if(lbSyncAt)await lbSyncWrite(lbSyncAt,[...lbSel])}                 // kanal boşalmış (12 saat): elindekini yaz
         else if(R.t>lbSyncAt)lbSyncApply(R);
         else if(R.t<lbSyncAt)await lbSyncWrite(lbSyncAt,[...lbSel]);              // bu cihazdaki daha yeni ama gönderilememiş
-        else if(Date.now()-R.time>LB_SYNC.refreshMs)await lbSyncWrite(R.t,R.sel,R.notes,R.ann); // aynı liste: süresi dolmasın diye yenile
+        else if(Date.now()-R.time>LB_SYNC.refreshMs){const MP=lbMkParse(R.mach);await lbSyncWrite(R.t,R.sel,R.notes,R.ann,MP.mach,MP.rank)} // aynı liste: süresi dolmasın diye yenile
         lbSyncSet('ok');
     }catch(e){lbSyncSet('err',e.message)}
     finally{lbSyncPulling=false}
@@ -6225,10 +6452,10 @@ function lbCellModel(d){
 }
 const LB_TX_S=0.42;
 function lbSelTileEx(it){
-    const k=it.k,cur=normalizeStageName(cardCurrentStage(k))||'?',p=cur.replace('KALİTE KONTROL','KK');
-    if(it.cls==='u'){const w=lbWaitH(k);return{p:'📍 '+p,e:w!=null?'⌛ '+paHours(w)+' orada':''}}
-    const x=lbEtaTarget(k);if(!x)return{p:'🏭 '+p,e:''};
-    return{p:'🏭 '+p,e:(x.late?'⏰ ':'⏩ ')+x.T.dat.replace(/'.*$/,'')+' '+lbEtaRangeShort(x),late:x.late};
+    const k=it.k,mk=lbView==='sel'?lbSelMachOf(k):'',cur=normalizeStageName(cardCurrentStage(k))||'?',p=cur.replace('KALİTE KONTROL','KK'),mp=mk?'🛠 '+mk+' • ':'';
+    if(it.cls==='u'){const w=lbWaitH(k);return{p:mp+'📍 '+p,e:w!=null?'⌛ '+paHours(w)+' orada':''}}
+    const x=lbEtaTarget(k);if(!x)return{p:mp+'🏭 '+p,e:''};
+    return{p:mp+'🏭 '+p,e:(x.late?'⏰ ':'⏩ ')+x.T.dat.replace(/'.*$/,'')+' '+lbEtaRangeShort(x),late:x.late};
 }
 // kutu için kısa tahmin aralığı (kartla aynı aralık, gün adı yok): 'bugün 14:10–19:30', 'yarın 18:10 – 15.10 15:46'
 function lbEtaRangeShort(x){
@@ -6256,6 +6483,8 @@ function lbPlan(M,W,H,f,mode,force){
     const lines=multi.map(b=>({items:[b],h:b.h}));
     const sl=[];for(const b of single){let L=sl.find(L=>L.used+GAP+b.w<=W);if(!L){L={items:[],h:b.h,used:-GAP};sl.push(L)}L.items.push(b);L.used+=GAP+b.w}
     lines.push(...sl);
+    // satırlar grup sırasıyla (büyük blok en üste kaçmasın): her satır içindeki ilk grubun sırasına göre
+    const gi=new Map(M.groups.map((g,i)=>[g,i]));lines.sort((a,b)=>Math.min(...a.items.map(x=>gi.get(x.g)))-Math.min(...b.items.map(x=>gi.get(x.g))));
     const total=lines.reduce((s,L)=>s+L.h,0)+GAP*(lines.length-1);
     return total<=H||force?{lines,total,f,hf,headH,mode}:null;
 }
@@ -6330,8 +6559,18 @@ function lbLayoutCell(body,root){
     });
     body.innerHTML=h+'</div>';
 }
+// makine kanbanı: kaydırma olmadan tek bakışta — bütün sütunlar sığana kadar yazı boyu (kartlar em ile ölçeklenir)
+function lbMkFit(root){
+    const b=root&&root.querySelector('.lb-mkb.fit');if(!b)return;
+    const ok=()=>[...b.querySelectorAll('.lb-mkl')].every(l=>l.scrollHeight<=l.clientHeight+1&&(!l.querySelector('.lb-mkc')||l.scrollWidth<=l.clientWidth+1))&&b.scrollWidth<=b.clientWidth+1;   // yükseklik ve genişlik (dar sütunda kart kesilmesin)
+    let lo=6,hi=root.classList.contains('lb-export')?26:22;
+    b.style.fontSize=hi+'px';if(ok())return;
+    for(let i=0;i<9;i++){const m=(lo+hi)/2;b.style.fontSize=m+'px';if(ok())lo=m;else hi=m}
+    b.style.fontSize=lo+'px';if(!ok())b.classList.remove('fit');   // 6 px'e de sığmıyorsa kaydırma
+}
 function lbLayout(root){
     root=root||document.getElementById('liveBoard');if(!root)return;
+    lbMkFit(root);
     lbBalanceRows(root);root.querySelectorAll('.lb-body[data-cell]').forEach(b=>lbLayoutCell(b,root));
     // Üretim hücresi yüksekliğine göre ne kadar bilgi gösterileceği (kısa satırda yalnız sayı)
     root.querySelectorAll('.lb-prod').forEach(c=>{const h=c.clientHeight,z=lbFocus?1.35:1;c.dataset.sz=h<92*z?'xs':h<150*z?'s':h<232*z?'m':h<312*z?'l':'xl'});
@@ -6459,7 +6698,7 @@ function lbRender(){
     if(lbView==='sel'){
         const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
         if(eff!==lbSelCardEff){lbSelCardEff=eff;lbLastKeys=null}
-        if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
+        if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
     }
     else{
     // Gelecek / Üzerinde başlığına tıklayınca o sütun tam ekran (tekrar tıklayınca ya da ↩ ile pano)
@@ -6660,6 +6899,25 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-cf small{opacity:.75;font-size:.85em;margin-left:3px}.lb-cf-t{flex:0 0 auto;padding:6px 10px 2px;margin:0}.lb-selbar button.lb-xlb{background:rgba(33,115,70,.25);border-color:rgba(76,175,80,.7)}'
         // müşteri süzgeci ve gruplama düğmesi
         +'.lb-ev-cu{color:#FFD54F;font-weight:700}'
+        +'.lb-selbar button.lb-ocrb{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.7)}.lb-ocr img{display:block;max-width:100%;max-height:200px;margin:6px auto;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.2)}'
+        +'.lb-ocr-l{max-height:46vh;overflow-y:auto;margin:6px 0}.lb-ocr-h{margin:8px 0 3px;font-weight:800;color:#C6FF00;font-size:13px}.lb-ocr-h small{color:#90A4AE;font-weight:500}.lb-ocr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:13px}.lb-ocr-r input{width:20px;height:20px}.lb-ocr-r b{font-size:18px;color:#fff;min-width:60px}.lb-ocr-r span{color:#B0BEC5}.lb-ocr-r .rd{color:#FFB74D}.lb-ocr-r em{color:#90A4AE;font-size:11px}.lb-ocr-r.sel{opacity:.55}.lb-ocr-r.sg{background:rgba(255,183,77,.07)}'
+        +'.lb-ocr-miss{color:#EF9A9A;font-size:13px;padding:2px 6px}.lb-ocr-add{display:flex;gap:6px;margin:8px 0}.lb-ocr-add input{flex:1;min-width:0;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.25);background:#0f0c29;color:#fff;font-size:15px}.lb-ocr-add button{padding:6px 10px;border-radius:6px;border:0;background:#1565C0;color:#fff;font-weight:700;cursor:pointer}'
+        +'.lb-mkb{flex:1 1 auto;min-height:0;display:grid;gap:6px;padding:4px 8px 8px;font-size:12px;overflow-x:auto}.lb-mkb.fit{overflow:hidden}'
+        +'.lb-mkcol{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;border:2px solid var(--mc);border-radius:9px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(0,0,0,.4);transition:background .12s}.lb-mkcol.una{border-style:dashed}.lb-mkcol.ov{background:color-mix(in srgb,var(--mc) 22%,transparent)}'
+        +'.lb-mkh{flex:0 0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px;padding:3px 7px;background:var(--mc);border-radius:6px 6px 0 0;color:#fff}.lb-mkh b{font-size:15px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%}.lb-mkh span{white-space:nowrap}.lb-mkh span{font-size:11px;opacity:.9}.lb-mkh .lb-cs-m{margin-left:auto}.lb-mkcol.una .lb-mkh{background:rgba(120,144,156,.35)}'
+        +'.lb-mkl{flex:1 1 auto;min-height:0;overflow-y:auto;padding:.4em;display:grid;grid-template-columns:repeat(auto-fill,minmax(8.8em,1fr));align-content:start;gap:.4em}.lb-mkb.fit .lb-mkl{overflow:hidden}.lb-mk-empty{grid-column:1/-1;min-width:0;overflow:hidden;word-break:break-word;color:#78909C;font-size:11px;text-align:center;padding:14px 4px;border:1px dashed rgba(255,255,255,.15);border-radius:6px}'
+        +'.lb-mkc{position:relative;min-width:0;background:#221d45;border:1px solid rgba(255,255,255,.18);border-left:.4em solid var(--sc);border-radius:.45em;padding:.3em .45em .35em;cursor:grab;line-height:1.25}.lb-mkc:hover{border-color:rgba(255,255,255,.4);border-left-color:var(--sc)}.lb-mkc.drag{opacity:.4}.lb-mkc.kritik{background:#3a1d2a}'
+        +'.lb-mkc .h{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 .35em;min-width:0}.lb-mkc .h b{font-size:1.45em;font-weight:900;color:#fff}.lb-mkc .h s{text-decoration:none;font-size:.75em;font-weight:900;background:var(--sc);border-radius:.25em;padding:0 .25em}.lb-mkc .h u{text-decoration:none;font-size:.9em}.lb-mkc .h span{margin-left:auto;font-weight:800;color:#FFD54F;white-space:nowrap;font-size:.92em}'
+        +'.lb-mkc .cu{color:#FFD54F;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lb-mkc .pr{color:#B2DFDB;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lb-mkc .e{color:#C6FF00;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lb-mkc .e.late{color:#FF8A80}.lb-mkc .nt{color:#FFF59D;font-size:.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lb-mkc .lb-mk{margin-top:.25em;flex-wrap:wrap}.lb-mkc .lb-mk button{font-size:.85em}'
+        +'.lb-mkc.t{background:var(--bg);border:1px solid rgba(0,0,0,.45);color:#fff}.lb-mkc.t:hover{border-color:#fff}.lb-mkc.t .h span{color:#fff}.lb-mkc.t .cu{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}.lb-mkc.t .pr{color:rgba(255,255,255,.9)}.lb-mkc.t .e{color:#F4FF81;text-shadow:0 1px 2px rgba(0,0,0,.5)}.lb-mkc.t .e.late{color:#FFEBEE}.lb-mkc.t .nt{color:#FFF59D;background:rgba(0,0,0,.25);border-radius:3px;padding:0 3px}.lb-mkc.t .lb-mk{display:none}'
+        +'.lb-mkc.late{box-shadow:0 0 0 2px #FF5252}.lb-mkc.t.late{box-shadow:inset 0 0 0 2px #FF5252,0 0 0 1px #FF5252}.lb-mkc.recent{box-shadow:inset 0 0 0 3px #FFD700}.lb-mkc.tmr{border-left:.35em solid #FF7043}.lb-mkc.uyari:after,.lb-mkc.kritik:after{content:"";position:absolute;left:10%;right:10%;top:1px;height:3px;border-radius:2px;background:#FFB74D}.lb-mkc.kritik:after{background:#EF5350}.lb-mkc.t.kritik{background:var(--bg)}'
+        +'.lb-mkc .h .rk,.lb-lt .c-mk .rk{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:1.35em;height:1.35em;padding:0 .2em;box-sizing:border-box;border-radius:50%;background:#FFD700;color:#1a1a2e;font-style:normal;font-weight:900;font-size:1em;box-shadow:0 0 0 2px rgba(0,0,0,.35)}.lb-lt .c-mk .rk{margin-right:4px;font-size:11px}'
+        +'.lb-mkc .mv{position:absolute;right:2px;bottom:2px;display:none;gap:2px;z-index:2}.lb-mkc:hover .mv{display:inline-flex}.lb-mkc .mv button,.lb-lt .c-mk .mv button,.lb-mkord button{border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.55);color:#fff;border-radius:3px;font-size:.85em;line-height:1;padding:.15em .35em;cursor:pointer}.lb-mkc .mv button:disabled,.lb-lt .c-mk .mv button:disabled,.lb-mkord button:disabled{opacity:.3;cursor:default}.lb-mkc.ovc{box-shadow:0 -4px 0 0 #FFD700!important}@media(hover:none){.lb-mkc .mv{display:inline-flex}}'
+        +'.lb-lt .c-mk .mv{display:inline-flex;gap:2px;margin-left:4px}.lb-mkord{display:inline-flex;align-items:center;gap:4px;margin-left:6px;color:#FFD54F}.lb-mkord b{font-size:16px;color:#FFD700}.lb-mkord button{font-size:12px;padding:2px 7px}'
+        +'.lb-mklg{display:flex;flex-wrap:wrap;gap:3px 10px;align-items:center;padding:2px 10px 4px;font-size:11px;color:#B0BEC5}.lb-mklg span{display:inline-flex;align-items:center;gap:3px}.lb-mklg i{display:inline-block;width:11px;height:11px;border-radius:2px}.lb-mklg i.lt{background:transparent;box-shadow:inset 0 0 0 2px #FF5252}'
+        +'@media(max-width:700px){.lb-mkb{grid-template-columns:repeat(7,minmax(150px,78vw))!important;scroll-snap-type:x mandatory;font-size:12px!important}.lb-mkcol{scroll-snap-align:start}.lb-mkl{grid-template-columns:1fr}.lb-mkc.t .lb-mk{display:inline-flex}}'
+        +'.lb-mk{display:inline-flex;gap:2px;vertical-align:middle}.lb-mk button{border:1px solid var(--mc);background:transparent;color:#ECEFF1;border-radius:4px;padding:1px 6px;font:inherit;font-size:11px;font-weight:800;line-height:1.3;cursor:pointer}.lb-mk button:hover{background:rgba(255,255,255,.1)}.lb-mk button.on{background:var(--mc);color:#fff;box-shadow:0 0 0 1px #fff}.lb-mk.sm button{padding:0 4px;font-size:10px}'
+        +'.lb-cc-mk{display:flex;align-items:center;gap:4px;margin:3px 0;font-size:11px}.lbsel-mk{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.lb-lt td.c-mk{white-space:nowrap}'
         +'.lb-cc-x .eta b,.lb-lt .c-eta .eta b{color:#C6FF00}.lb-cc-x .eta small,.lb-lt .c-eta .eta small{opacity:.75}.lb-cc-x .eta.late,.lb-lt .c-eta .eta.late{color:#FF8A80}.lb-cc-x .eta.late b,.lb-lt .c-eta .eta.late b{color:#FFCDD2}'
         +'.lb-t .lb-tx{display:block;max-width:94%;font-style:normal;font-size:max(9px,.42em);font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}.lb-t .lb-tx.e{color:#C6FF00;margin-top:.1em}.lb-t .lb-tx.e.late{color:#FFCDD2}.lb-t.lb-x.uyari::after,.lb-t.lb-x.kritik::after{bottom:auto;top:1px}.lb-t.lb-x.in{flex-wrap:wrap;align-content:center;column-gap:.35em}.lb-t.lb-x.in .lb-tx{flex:0 0 100%;text-align:center}'
         +'.lb-t.lb-ss{box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),inset -1px -1px 0 rgba(0,0,0,.45)}.lb-ss-t{position:absolute;top:2px;right:3px;font-size:max(9px,.42em);font-weight:900;text-decoration:none;line-height:1;padding:1px 3px;border-radius:3px;background:rgba(0,0,0,.28);color:#fff}.lb-ss-lg{display:inline-flex;align-items:center;gap:3px;font-size:.85em;font-weight:700;margin:0 4px}.lb-ss-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-left:5px}'

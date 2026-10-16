@@ -5080,14 +5080,13 @@ function lbSelChipsHtml(sel,inCards){
     const oc=new Map();sel.forEach(k=>{if(!placed.has(k)){const g=lbOthGroup(k);oc.set(g,(oc.get(g)||0)+1)}});
     const wh='onwheel="if(Math.abs(event.deltaY)>Math.abs(event.deltaX)&&this.scrollWidth>this.clientWidth){this.scrollLeft+=event.deltaY;event.preventDefault()}"';
     return '<div class="lb-cf'+(inCards?'':' lb-cf-t')+'"><div class="lb-cf-r" '+wh+'>'
-        +chip(!lbSelCol&&!lbFocus&&!lbSelStage&&!lbSelCust.length,'Tümü','lbSelFilterReset()','Bütün seçilenler (bütün süzgeçleri kaldırır)')
+        +chip(!lbSelCol&&!lbFocus&&!lbSelStage&&!lbSelCust.length,'Tümü','lbSelFilterReset()','Bütün seçilenler (bütün süzgeçleri kaldırır)')+'<button type="button" class="lb-cf-info" onclick="lbLegendShow()" title="Kutu renklerinin ve işaretlerin anlamı">ⓘ Renkler</button>'
         +chip(lbSelCol==='g','⏳ Gelecek','lbSelColSet(&quot;g&quot;)','Yalnız KK / Sarım\'a gelecek olanlar')+chip(lbSelCol==='u','📍 Üzerinde','lbSelColSet(&quot;u&quot;)','Yalnız KK / Sarım\'da olanlar')
         +SW_ROWS.map(R=>{const n=sel.filter(k=>R.coming(k)||R.is(k)).length;return n?chip(lbFocus===R.key,R.icon+' '+esc(R.name)+' <small>'+n+'</small>','lbSelFocusSet(&quot;'+R.key+'&quot;)','Yalnız '+R.name):''}).join('')
         +[...oc.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).map(([g,n])=>chip(lbSelStage===g,'🏭 '+esc(g)+' <small>'+n+'</small>','lbSelStageSet(this.dataset.s)','Yalnız şu an '+g+' aşamasındakiler',g)).join('')
 
         +(()=>{const cm=new Map();sel.forEach(k=>{const c=lbGroupName(k);cm.set(c,(cm.get(c)||0)+1)});if(cm.size<2&&!lbSelCust.length)return'';
             return '<span class="lb-cf-div"></span>'+[...cm.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).map(([c,n])=>chip(lbSelCust.includes(c),'👤 '+esc(c)+' <small>'+n+'</small>','lbSelCustSet(this.dataset.s)',c+' — ekle / çıkar (birden çok müşteri seçilebilir)',c).replace('<button ','<button data-cu="1" ')).join('')})()
-        +'<button type="button" class="lb-cf-info" onclick="lbLegendShow()" title="Kutu renklerinin ve işaretlerin anlamı">ⓘ<span class="lb-bt"> Renkler</span></button>'
         +'<button type="button" class="lb-cf-grp" onclick="lbSelGrpNext()" title="Grupla (tıkla: Aşama → Müşteri → Tahmini geliş → Makine) — kart, liste ve kutu görünümünde">🗂 Grup: '+LB_SEL_GRP[lbSelGrp]+'</button>'
         +'</div></div>';
 }

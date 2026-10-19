@@ -4990,24 +4990,67 @@ const LB_RECENT_MS=15*60000;
 // Aynı müşteri her yerde aynı ton (Gelecek mavi, Üzerinde mor tonları)
 const LB_TONES={g:['#1565C0','#0D47A1','#1E6FB8','#12508F'],u:['#5E35B1','#4527A0','#6A3FB5','#512DA8'],o:['#455A64','#37474F','#4E6470','#3B4D57'],c:['#00695C','#2E7D32','#00838F','#558B2F'],r:['#B71C1C','#C62828','#A31515','#8E1B1B']};
 // Gruplama: müşteriye göre · geldiği aşamaya göre (Gelecek: şu an bulunduğu aşama → "RAM'dan gelecek"; Üzerinde: son geçtiği aşama → "RAM'dan gelen") · yok
-const LB_GRP=['cust','from','none'],LB_GRP_LABEL={cust:'müşteriye göre',from:'geldiği aşamaya göre',none:'yok'},LB_GRP_ICON={cust:'👤',from:'🏭',none:'▦'};
+const LB_GRP=['cust','from','wait','none'],LB_GRP_LABEL={cust:'müşteriye göre',from:'geldiği aşamaya göre',wait:'geçiş beklemesine göre (önceki aşama + süre)',none:'yok'},LB_GRP_ICON={cust:'👤',from:'🏭',wait:'⏱',none:'▦'};
 let lbGroupMode=mapLoadPref('lbGrp9',v=>LB_GRP.includes(v),mapLoadPref('lbCust9',v=>v==='1'||v==='0','1')==='0'?'none':'cust'),lbShowCust=lbGroupMode!=='none';
 function lbToggleCust(){
     lbGroupMode=LB_GRP[(LB_GRP.indexOf(lbGroupMode)+1)%LB_GRP.length];lbShowCust=lbGroupMode!=='none';mapSavePref('lbGrp9',lbGroupMode);
     lbLastKeys=null;lbRender();showToast(LB_GRP_ICON[lbGroupMode]+' Gruplama: '+LB_GRP_LABEL[lbGroupMode]);
 }
 function lbFromStage(k,cls){return normalizeStageName(cls==='g'?(k._asama||k.asama):k.son_asama)||'?'}
-function lbGroupOf(k,cls){return lbGroupMode==='from'?lbFromStage(k,cls):lbGroupName(k)}
+// ⏱ geçiş beklemesi: Üzerinde → önceki aşamadan çıkıp bu aşamaya geldiğinden beri; Gelecek → önceki proseste (şu an
+//    bulunduğu aşamada) geçen süre. Gruplar önceki aşamaya göre, en uzun bekleyen önde; kutuda süre, renk süreye göre.
+function lbWaitShort(h){return h==null?'?':h<1?Math.max(1,Math.round(h*60))+' dk':h<48?Math.round(h)+' sa':Math.round(h/24)+' g'}
+function lbGroupOf(k,cls){if((lbGroupMode==='from'||lbGroupMode==='wait')&&k&&k._tvFrom)return k._tvFrom;return lbGroupMode==='from'||lbGroupMode==='wait'?lbFromStage(k,cls):lbGroupName(k)}
 // Birim: parti adedi ya da kg (başlıklar, sıralama, üretim hücresi ve grafikler seçilen birime göre)
 let lbUnit=mapLoadPref('lbUnit9',v=>v==='n'||v==='kg','n');
 function lbToggleUnit(){lbUnit=lbUnit==='n'?'kg':'n';mapSavePref('lbUnit9',lbUnit);lbLastKeys=null;lbRender();showToast(lbUnit==='kg'?'⚖ Kg görünümü':'# Parti adedi görünümü')}
 // Odak: soldaki aşama adına tıklayınca yalnız o aşama tüm ekranı kaplar (yazı ve kutular orantılı büyür); tekrar tıklayınca üçü birden
 let lbFocus=null,lbGridHtml='';
 function lbSetFocus(key){lbFocus=lbFocus===key?null:key;lbLastKeys=null;lbRender()}
-function lbRows(){return lbFocus?SW_ROWS.filter(R=>R.key===lbFocus):SW_ROWS}
+// ── 🧩 Pano düzeni (cihaz başına): hangi aşamalar (satır) ve sütunlar (Gelecek / Üzerinde / Üretim). Varsayılan: KK, Sarım1,
+//    Sarım2 ve üç sütun (değiştirilmezse pano eskisi gibi). KK / Sarım dışındaki aşama satırları: o aşamaya gelecek (sonraki
+//    aşaması bu) ve üzerindeki (şu an bu aşamada) partiler; üretim kaydı yalnız KK / Sarım'da olduğundan Üretim hücresi "—".
+const LB_LAY_DEF={rows:['kk','sr1','sr2'],g:1,u:1,p:1};
+let lbLay=(()=>{try{const o=JSON.parse(localStorage.getItem('lbLay9')||'null');if(o&&Array.isArray(o.rows)&&o.rows.length)return{rows:o.rows.map(String),g:o.g?1:0,u:o.u?1:0,p:o.p?1:0}}catch(e){}return JSON.parse(JSON.stringify(LB_LAY_DEF))})();
+function lbLaySave(){try{localStorage.setItem('lbLay9',JSON.stringify(lbLay))}catch(e){}}
+function lbLayIsDef(){return JSON.stringify(lbLay)===JSON.stringify(LB_LAY_DEF)}
+let lbStRowCache=new Map();
+function lbStageRow(name){
+    if(lbStRowCache.has(name))return lbStRowCache.get(name);
+    const key='st_'+stageKey(name),nk=stageKey(name);
+    const is=k=>stageKey(cardCurrentStage(k))===nk;
+    const R={key,name,icon:'🏭',color:'#90A4AE',custom:true,is,coming:k=>{if(is(k))return false;const n=cardNextStage(k);return!!n&&(stageKey(n)===nk||swFlowIs(n,name))},
+        gel:name+' — gelecek',on:name+' — üzerinde',prod:name,log:null,arr:null};
+    lbStRowCache.set(name,R);return R;
+}
+function lbAllRows(){return lbLay.rows.map(r=>SW_ROWS.find(R=>R.key===r)||(r.startsWith('st:')?lbStageRow(r.slice(3)):null)).filter(Boolean)}
+function lbRows(){const rs=lbAllRows();return lbFocus?rs.filter(R=>R.key===lbFocus):rs}
+function lbLayOpen(){
+    const all=getAllCards(),cnt=new Map();all.forEach(k=>{const s=normalizeStageName(cardCurrentStage(k));if(s)cnt.set(s,(cnt.get(s)||0)+1)});
+    const std=SW_ROWS.map(R=>({id:R.key,l:R.icon+' '+R.name,n:all.filter(R.is).length}));
+    const swNames=new Set();all.forEach(k=>{const c=normalizeStageName(cardCurrentStage(k));if(SW_ROWS.some(R=>R.is(k)))swNames.add(c)});
+    const oth=[...cnt.entries()].filter(([s])=>!swNames.has(s)&&!/SEVK/.test(s)).sort((a,b)=>b[1]-a[1]).map(([s,n])=>({id:'st:'+s,l:'🏭 '+s,n}));
+    const on=id=>lbLay.rows.includes(id),cb=(id,l,n,c)=>'<label class="lb-lay-i"><input type="checkbox" data-r="'+esc(id)+'"'+(c?' checked':'')+'><span>'+esc(l)+'</span><small>'+n+' üzerinde</small></label>';
+    hmModalShow('<div class="hm-card-title">🧩 Pano düzeni<small>bu cihazda • hangi aşamalar ve sütunlar görünsün</small></div>'
+        +'<div class="lb-lay-h">Sütunlar</div><div class="lb-lay-cols">'
+        +[['g','⏳ Gelecek'],['u','📍 Üzerinde'],['p','✅ Üretim (yalnız KK / Sarım)']].map(([c,l])=>'<label class="lb-lay-i"><input type="checkbox" data-c="'+c+'"'+(lbLay[c]?' checked':'')+'><span>'+l+'</span></label>').join('')+'</div>'
+        +'<div class="lb-lay-h">Aşamalar <small>(işaretlenenler yukarıdan aşağı bu sırayla)</small></div><div class="lb-lay-l">'
+        +std.map(x=>cb(x.id,x.l,x.n,on(x.id))).join('')+'<div class="lb-lay-sep">Diğer aşamalar (şu an veride)</div>'+oth.map(x=>cb(x.id,x.l,x.n,on(x.id))).join('')+'</div>'
+        +'<div class="lb-gl-btns"><button type="button" class="view-action-btn" style="background:#2E7D32" onclick="lbLayApply()">✓ Uygula</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="lbLayReset()">↺ Varsayılan (KK, Sarım1, Sarım2)</button></div>');
+}
+function lbLayApply(){
+    const m=document.getElementById('hmCardModal');if(!m)return;
+    const rows=[...m.querySelectorAll('input[data-r]')].filter(i=>i.checked).map(i=>i.dataset.r),c=x=>m.querySelector('input[data-c="'+x+'"]').checked?1:0;
+    if(!rows.length){showToast('En az bir aşama seçin','warning');return}
+    if(!c('g')&&!c('u')){showToast('Gelecek ya da Üzerinde sütunlarından en az biri açık olmalı','warning');return}
+    // standart üçü kendi sırasında önde, diğerleri seçildiği (listedeki) sırada
+    lbLay={rows:SW_ROWS.map(R=>R.key).filter(k=>rows.includes(k)).concat(rows.filter(r=>r.startsWith('st:'))),g:c('g'),u:c('u'),p:c('p')};
+    lbLaySave();lbFocus=null;hmCardPopupClose();lbLastKeys=null;lbRender();showToast('🧩 Pano düzeni: '+lbLay.rows.length+' aşama');
+}
+function lbLayReset(){lbLay=JSON.parse(JSON.stringify(LB_LAY_DEF));lbLaySave();lbFocus=null;hmCardPopupClose();lbLastKeys=null;lbRender();showToast('🧩 Pano varsayılan düzende')}
 // Görünüm: 'all' pano · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (sütun tam ekran) · 'sel' seçilen partiler (ayrı ekran)
 let lbView='all';
-const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler'};
+const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler',p:'✅ Üretim',t:'🛠 Tamirler'};
 // Seçilenler ekranında sütun: '' iki sütun · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (tam ekran)
 let lbSelCol='',lbSelOne=false;
 // Seçilenler ekranının görünümü: 'oto' (24 partiye kadar kart, fazlası kutu) · 'kart' · 'liste' (satır satır tablo) · 'kutu'; cihaz başına hatırlanır
@@ -5451,6 +5494,7 @@ function lbSelRefresh(){
 }
 function lbTileClick(e,el,id){
     if(lbSelMode||e.ctrlKey||e.metaKey||e.shiftKey){e.preventDefault();lbSelToggle([el.dataset.k.split('|')[1]]);return}
+    if(!id){showToast('Bu parti güncel veride yok (sevk edilmiş / bitmiş olabilir) — ayrıntı kutunun ipucunda','warning');return}
     openDetailModal(id);
 }
 // blok başlığı: seçim kipinde (ya da Ctrl / Shift ile) bloğun hepsini seç / kaldır; değilse müşteri özeti (müşteriye göre gruplamada)
@@ -5770,6 +5814,59 @@ function lbSelMachKanbanHtml(selAll,tile){
     });
     if(phone){const em=cols.filter(C=>C.m&&!C.list.length).map(C=>'<i style="--mc:'+C.c+'">'+C.m+'</i>').join('');if(em)h+='<div class="lb-mk-emrow">Boş makine: '+em+'</div>'}
     return h+'</div>';
+}
+// ── ✅ Üretim ve 🛠 Tamirler görünümleri (pano tablosu biçiminde, en yeni önde) ──
+// kutu için kart: güncel veride varsa o (tıklayınca ayrıntı), yoksa kayıttaki bilgilerle (sevk edilmiş / bitmiş)
+function lbTvCard(pn,o){
+    const p=String(pn||'').trim(),k=getAllCards().find(c=>String(c.parti).trim()===p);
+    return Object.assign({},k||{id:'',parti:p,kilo:num(o.kg),firma:o.firma||o.line1||'',line1:o.firma||o.line1||'',musteri_siparis:o.siparis||'',_asama:'güncel veride yok'},o.extra||{});
+}
+function lbTvTs(t){const m=String(t||'').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})/);return m?new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5]).getTime():0}
+function lbTvHm(ts){if(!ts)return'';const d=new Date(ts);return(d.toDateString()===new Date().toDateString()?'':String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+' ')+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}
+// bir hücre: kayıtlar en yeniden eskiye, gruplar ilk (en yeni) görülme sırasıyla
+function lbTvCell(key,recs,cls,age){
+    const ord=lbShowCust&&lbGroupMode!=='wait'?[...new Set(recs.map(r=>lbGroupOf(r.k,cls)))]:null;
+    lbCells[key]={cls,tv:true,ord,age:!!age,items:recs.map((r,i)=>({k:r.k,key:key+'|'+String(r.k.parti).trim()+'|'+i,tip:r.tip,tag:r.tag||null}))};
+}
+function lbTvGrid(rows,cols){
+    // rows: [{R:{key,name,icon,color}, cells:[{key,title,recs,cls,color}]}]; cols: sütun başlıkları
+    const units=rows.map(r=>Math.max(4,...r.cells.map(c=>c.recs.length+(lbShowCust?1.3*new Set(c.recs.map(x=>lbGroupOf(x.k,c.cls))).size:0))+2));
+    const nh=rows.every(r=>!r.R);   // satır başlığı yok (tek tablo)
+    let g='<div class="lb-grid'+(nh?' lb-tv1':'')+'" style="grid-template-columns:'+(nh?'':'clamp(24px,7vw,100px)')+' minmax(0,1fr)'.repeat(Math.max(1,cols.length))+';grid-template-rows:'+(cols.length?'auto ':'')+units.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'">'+(nh||!cols.length?'':'<div></div>')
+        +cols.map(c=>'<div class="lb-colh">'+c+'</div>').join('');
+    rows.forEach(r=>{
+        if(r.R)g+='<div class="lb-rowh" style="--c:'+r.R.color+'"><span class="lb-row-icon">'+r.R.icon+'</span><span class="lb-row-name">'+esc(r.R.name)+'</span></div>';
+        r.cells.forEach(c=>{lbTvCell(c.key,c.recs,c.cls,c.age);g+=lbCellHtml(c.key,c.title,c.recs.map(x=>x.k),c.color,c.extra||'')});
+    });
+    return g+'</div>';
+}
+function lbTvBtns(){
+    const fm=lbFocusMode;
+    return '<span class="lb-tv-btns"><button type="button" onclick="event.stopPropagation();lbFocusModeSet(!lbFocusMode)" title="'+(fm?'Küçült: üst çubukları geri getir (Esc)':'Büyüt: üst çubukları gizle, tablo ekranı kaplasın')+'">'+(fm?'⤡ Küçült':'⤢ Büyüt')+'</button>'
+        +(document.fullscreenEnabled?'<button type="button" onclick="event.stopPropagation();lbToggleFull()" title="Tarayıcı tam ekran">'+(document.fullscreenElement?'✕ Tam ekrandan çık':'⛶ Tam ekran')+'</button>':'')+'</span>';
+}
+// ✅ Üretim: bugün KK / Sarım1 / Sarım2'den GEÇEN partiler (şimdi nerede olursa olsun), nereye gittiğine göre gruplu
+function lbProdViewHtml(stats){
+    // tek tablo: üç aşamadan geçenler birlikte, en son geçen önde; köşede KK / S1 / S2 (kutu o aşamanın renginde);
+    // gruplama düğmesiyle: müşteri / gittiği aşama / geçeli süre / yok
+    const now=Date.now(),recs=[],cnt={};
+    SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{},tag=LB_SEL_STAGE_C[R.key];cnt[R.key]=Object.keys(o).length;
+        Object.keys(o).forEach(pn=>{const e=o[pn],k=lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_tvFrom:'→ '+(e.a||'?'),_tvAgeH:e.ts?(now-e.ts)/3600000:null}});
+            recs.push({k,ts:e.ts||0,tag,tip:String(pn).trim()+' • '+lbShortKg(e.kg)+' kg\n'+LB_ABL[R.key]+' geçti '+lbTvHm(e.ts)+(e.a?' → '+e.a:'')+'\n👤 '+lbGroupName(k)+(k.id?'\n▶ şu an: '+(k._asama||k.asama||'-'):'\n(güncel veride yok — sevk edilmiş / bitmiş olabilir)')})})});
+    recs.sort((a,b)=>b.ts-a.ts);
+    if(!recs.length)return '<div class="lb-grid lb-sel-empty"><div>Bugün KK / Sarım\'dan geçen parti yok (ya da üretim kaydı okunamadı).</div></div>';
+    const lab='✅ Bugün geçenler — KK '+cnt.kk+' • S1 '+cnt.sr1+' • S2 '+cnt.sr2+' • en son geçen önde • gruplama: '+LB_GRP_LABEL[lbGroupMode].replace('geldiği aşamaya','gittiği aşamaya').replace('geçiş beklemesine göre (önceki aşama + süre)','gittiği aşama + geçeli süre');
+    return lbTvGrid([{R:null,cells:[{key:'Pallg',title:lab,recs,cls:'c',color:'#66BB6A',extra:lbTvBtns()}]}],[]);
+}
+// 🛠 Tamirler: yalnız DEVAM EDEN tamirler (durumu boş), tek tablo; en yeni tamir önde; panonun gruplamasıyla (müşteri /
+//    partinin şu an bulunduğu aşama / geçiş beklemesi / yok). Başlıkta ⤢ büyüt (odak) ve ⛶ tam ekran.
+const LB_TAMIR_MAX=300;
+function lbTamirViewHtml(){
+    const all=(window.TAMIR_ALL||[]).filter(t=>!String(t.durum||'').trim()).map(t=>({t,ts:lbTvTs(t.tarih)})).sort((a,b)=>b.ts-a.ts).slice(0,LB_TAMIR_MAX);
+    if(!all.length)return '<div class="lb-grid lb-sel-empty"><div>Devam eden tamir yok ✅</div></div>';
+    const now=Date.now(),rec=x=>{const t=x.t,k=lbTvCard(t.parti,{kg:t.kg,firma:t.firma,extra:{}});k._tvFrom='şu an '+(k.id?normalizeStageName(k._asama||k.asama)||'?':'veride yok');k._tvAgeH=x.ts?(now-x.ts)/3600000:null;
+        return{k,ts:x.ts,tip:String(t.parti).trim()+' • '+lbShortKg(t.kg)+' kg • '+(t.tip||'')+'\n🛠 '+(t.tarih||'')+' • tamir aşaması: '+(t.stage||'-')+' • neden: '+(t.neden||'-')+(t.not?'\n📝 '+t.not:'')+'\n🔧 '+lbWaitShort(k._tvAgeH)+'dir açık • ▶ '+k._tvFrom+'\n👤 '+lbGroupName(k)}};
+    return lbTvGrid([{R:null,cells:[{key:'Tallg',title:'🔧 Devam eden tamirler • kutuda: tamirin açık olduğu süre • en yeni önde • gruplama: '+LB_GRP_LABEL[lbGroupMode].replace('geldiği aşamaya','partinin şu an bulunduğu aşamaya').replace('geçiş beklemesine göre (önceki aşama + süre)','şu anki aşama + tamir yaşı'),recs:all.map(rec),cls:'r',color:'#FF7043',age:true,extra:lbTvBtns()}]}],[]);
 }
 function lbOthGroup(k){return normalizeStageName(k._asama||k.asama)||'Aşama yok'}
 // Seçilenler ekranı: satır = aşama (yalnız seçilen partisi olanlar), sütun = Gelecek / Üzerinde; üç aşamanın dışındaki
@@ -6389,7 +6486,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)lbSyncPull
 // Bekleme renkleri: kutu, son hareketten beri geçen süreye göre yeşilden kırmızıya (nerede takıldığı tek bakışta)
 let lbWaitMode=mapLoadPref('lbWait9',v=>v==='1'||v==='0','0')==='1';
 const LB_WAIT_BANDS=[{h:8,c:'#2E7D32',l:'8 sa altı'},{h:24,c:'#558B2F',l:'8–24 sa'},{h:72,c:'#B7791F',l:'1–3 gün'},{h:168,c:'#D84315',l:'3–7 gün'},{h:Infinity,c:'#B71C1C',l:'7 gün +'}];
-function lbWaitColor(k){const d=fifoAgeDays(k);if(d===null||!Number.isFinite(d))return'';const h=d*24;return(LB_WAIT_BANDS.find(b=>h<b.h)||LB_WAIT_BANDS[LB_WAIT_BANDS.length-1]).c}
+function lbWaitColor(k){const h=lbWaitH(k);if(h===null||!Number.isFinite(h))return'';return(LB_WAIT_BANDS.find(b=>h<b.h)||LB_WAIT_BANDS[LB_WAIT_BANDS.length-1]).c}
 function lbToggleWait(){lbWaitMode=!lbWaitMode;mapSavePref('lbWait9',lbWaitMode?'1':'0');lbRender()}
 // Arama: müşteri / firma / parti no / kumaş / reçete; eşleşen kutular parlar, diğerleri soluklaşır (sesle de yazılır)
 let lbQuery='',lbSearchOpen=false,lbRec=null,lbSearchT=null;
@@ -6569,7 +6666,7 @@ function lbToggleFull(){
     try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const a=document.getElementById('lbArrOv');if(a&&a.classList.contains('show')){lbArrClose();return}}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lbVisible()&&!document.querySelector('.modal-overlay.show')&&!document.fullscreenElement){if(lbFocusMode&&lbView==='sel')lbFocusModeSet(false);else if(lbSelMode)lbSelModeSet(false);else if(lbView==='sel'&&lbSelCust.length){lbSelCust=[];lbLastKeys=null;lbRender()}else if(lbView==='sel'&&lbSelStage)lbSelStageSet(lbSelStage);else if(lbView==='sel'&&lbSelCol)lbSelColSet(lbSelCol);else if(lbView!=='all')lbSetView('all');else if(lbFocus)lbSetFocus(lbFocus);else lbClose()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lbVisible()&&!document.querySelector('.modal-overlay.show')&&!document.fullscreenElement){if(lbFocusMode&&(lbView==='sel'||lbView==='t'||lbView==='p'))lbFocusModeSet(false);else if(lbSelMode)lbSelModeSet(false);else if(lbView==='sel'&&lbSelCust.length){lbSelCust=[];lbLastKeys=null;lbRender()}else if(lbView==='sel'&&lbSelStage)lbSelStageSet(lbSelStage);else if(lbView==='sel'&&lbSelCol)lbSelColSet(lbSelCol);else if(lbView!=='all')lbSetView('all');else if(lbFocus)lbSetFocus(lbFocus);else lbClose()}});
 function lbShortKg(v){return Math.round(num(v)).toLocaleString('tr-TR')}
 function lbCellHtml(key,title,items,color,extra,cls){
     const kg=items.reduce((s,x)=>s+num(x.kilo),0);
@@ -6621,22 +6718,25 @@ function lbMw(t){lbMeasureCtx.font='900 100px "Segoe UI",Arial,sans-serif';retur
 const LB_GAP=3;
 // Yazı tavanı: odakta (tek aşama) daha büyük; çıktı her zaman masaüstü düzeninde
 function lbFmax(root){const exp=!!(root&&root.classList.contains('lb-export')),phone=!exp&&window.matchMedia&&matchMedia('(max-width:700px)').matches;
-    if(lbView==='sel')return exp?50:phone?21:40;if(lbFocus)return phone?26:44;return lbView==='all'?(phone?15:22):(phone?20:32)}
+    if(lbView==='sel')return exp?50:phone?21:40;
+    // Tamirler / Üretim tek tablo: büyütünce (odak) daha büyük yazı
+    if(lbView==='t'||lbView==='p')return exp?50:phone?(lbFocusMode?28:22):(lbFocusMode?60:40);if(lbFocus)return phone?26:44;return lbView==='all'?(phone?15:22):(phone?20:32)}
 // Hücre içeriği: müşteri grupları (büyükten küçüğe) + en geniş parti no / kg (1 px yazı başına)
+function lbWaitTone(h){return h==null?'#546E7A':(LB_WAIT_BANDS.find(b=>h<b.h)||LB_WAIT_BANDS[LB_WAIT_BANDS.length-1]).c}
 function lbCellModel(d){
-    const kgv=lbUnit==='kg',from=lbGroupMode==='from'&&!d.groupBy,kgS=kgv?0.92:0.74,head=lbShowCust||!!d.groupBy;
+    const kgv=lbUnit==='kg',wg=lbGroupMode==='wait'&&!d.groupBy,from=(lbGroupMode==='from'||wg)&&!d.groupBy&&!d.tv,kgS=kgv?0.92:0.74,head=lbShowCust||!!d.groupBy;
     const m=new Map();d.items.forEach(x=>{const n=lbGrpKey(d,x.k);if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
     // başlık: ad (ya da "RAM'dan") + adet ya da toplam kg; kg görünümünde gruplar ve partiler kg'a göre sıralı
     const groups=[...m.entries()].map(([name,list])=>{
-        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),lab=d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):name,t=title+' '+lab;
-        if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
-        return{name,title,lab,kg,list,nm:head?lbMw(t):0,nl:t.length};
-    }).sort((a,b)=>d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
+        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):name,t=title+' '+lab;
+        if(wg)list=list.slice().sort((a,b)=>(lbWaitH(b.k)||0)-(lbWaitH(a.k)||0));else if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
+        return{name,title,lab,kg,mw,list,nm:head?lbMw(t):0,nl:t.length};
+    }).sort((a,b)=>d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):wg?b.mw-a.mw:(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
     const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*(kgS+0.06):0;
     // Seçilenler kutusu: parti no / kg altında şu anki proses ve tahmini KK / Sarım varışı (iki küçük satır, yazının %42'si)
     const sx=lbView==='sel'&&!!d.groupBy,mx=!sx&&d.cls==='g'&&!d.groupBy;d.items.forEach(x=>{x.ex=sx||mx?lbSelTileEx(x):null});
     const exW=(sx||mx)&&d.items.length?Math.max(...d.items.map(x=>Math.max(lbMw(x.ex.p),lbMw(x.ex.e||''))))*LB_TX_S*0.9:0;
-    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
+    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,keep:wg,xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
 }
 const LB_TX_S=0.42;
 function lbSelTileEx(it){
@@ -6668,9 +6768,21 @@ function lbPlan(M,W,H,f,mode,force){
         if(w0<=W)single.push({g,w:w0,h:headH+th,rows:1,cols:n});
         else{const cols=Math.max(1,Math.floor(W/tw)),rows=Math.ceil(n/cols);multi.push({g,w:W,h:headH+rows*th,rows,cols})}
     }
-    const lines=multi.map(b=>({items:[b],h:b.h}));
-    const sl=[];for(const b of single){let L=sl.find(L=>L.used+GAP+b.w<=W);if(!L){L={items:[],h:b.h,used:-GAP};sl.push(L)}L.items.push(b);L.used+=GAP+b.w}
-    lines.push(...sl);
+    let lines;
+    if(M.keep){
+        // sıra korunur (geçiş beklemesi: en uzun bekleyen grup önde): bloklar grup sırasıyla, sığdıkça aynı satıra
+        const blocks=multi.concat(single),gi0=new Map(M.groups.map((g,i)=>[g,i]));blocks.sort((x,y)=>gi0.get(x.g)-gi0.get(y.g));
+        lines=[];let cur=null;
+        for(const b of blocks){
+            if(b.rows>1||b.w>=W){lines.push({items:[b],h:b.h});cur=null;continue}
+            if(!cur||cur.used+GAP+b.w>W){cur={items:[],h:b.h,used:-GAP};lines.push(cur)}
+            cur.items.push(b);cur.used+=GAP+b.w;
+        }
+    }else{
+        lines=multi.map(b=>({items:[b],h:b.h}));
+        const sl=[];for(const b of single){let L=sl.find(L=>L.used+GAP+b.w<=W);if(!L){L={items:[],h:b.h,used:-GAP};sl.push(L)}L.items.push(b);L.used+=GAP+b.w}
+        lines.push(...sl);
+    }
     // satırlar grup sırasıyla (büyük blok en üste kaçmasın): her satır içindeki ilk grubun sırasına göre
     const gi=new Map(M.groups.map((g,i)=>[g,i]));lines.sort((a,b)=>Math.min(...a.items.map(x=>gi.get(x.g)))-Math.min(...b.items.map(x=>gi.get(x.g))));
     const total=lines.reduce((s,L)=>s+L.h,0)+GAP*(lines.length-1);
@@ -6687,7 +6799,7 @@ function lbCellNeed(M,W,f){
 function lbBalanceRows(root){
     const grid=root.querySelector('.lb-grid');if(!grid)return;
     const bodies=[...grid.querySelectorAll('.lb-body[data-row]')],order=[...new Set(bodies.map(b=>b.dataset.row))];
-    if(order.length<2){grid.style.gridTemplateRows='auto minmax(0,1fr)';return}
+    if(order.length<2){grid.style.gridTemplateRows=grid.classList.contains('lb-tv1')?'minmax(0,1fr)':'auto minmax(0,1fr)';return}
     const rows=order.map(rk=>{
         const cs=bodies.filter(b=>b.dataset.row===rk).map(b=>{const d=lbCells[b.dataset.cell];if(!d)return null;const cell=b.closest('.lb-cell');return{h:cell.offsetHeight,o:cell.offsetHeight-b.clientHeight,W:b.clientWidth,M:lbCellModel(d)}});
         return cs.some(c=>!c)?null:{h:Math.max(...cs.map(c=>c.h)),cs};
@@ -6725,7 +6837,7 @@ function lbLayoutCell(body,root){
         const LH=L.h+(tileSum?exH*(L.h-P.headH)/tileSum:0),sumW=L.items.reduce((s,b)=>s+b.w,0),exW=Math.max(0,W-sumW-GAP*(L.items.length-1));
         let x=0;
         L.items.forEach(b=>{
-            const g=b.g,n=g.list.length,bw=b.w+(sumW?exW*b.w/sumW:0),tone=LB_TONES[(d.gcls&&d.gcls[g.name])||d.cls][lbHash(g.name)%4],th=(LH-P.headH)/b.rows;
+            const g=b.g,n=g.list.length,bw=b.w+(sumW?exW*b.w/sumW:0),tone=lbGroupMode==='wait'&&!d.groupBy?lbWaitTone(g.mw):LB_TONES[(d.gcls&&d.gcls[g.name])||d.cls][lbHash(g.name)%4],th=(LH-P.headH)/b.rows;
             const hits=lbQuery||lbStuckHi||lbEtaHi?g.list.map(it=>(!lbQuery||lbMatch(it.k))&&(!lbStuckHi||lbIsStuck(it.k,it.thr!==undefined?it.thr:d.thr))&&(!lbEtaHi||(it.cls||d.cls)==='g'&&lbEtaSoon(it.k))):null;
             h+='<div class="lb-grpbox'+(hits&&hits.some(Boolean)?' hit':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px;width:'+bw.toFixed(1)+'px;height:'+LH.toFixed(1)+'px;--tc:'+tone+'">';
             if(M.head){
@@ -6737,9 +6849,9 @@ function lbLayoutCell(body,root){
             g.list.forEach((it,i)=>{
                 const r=Math.floor(i/b.cols),inLast=r===b.rows-1,lastCount=n-(b.rows-1)*b.cols,cw=bw/(inLast?lastCount:b.cols),c=inLast?i-(b.rows-1)*b.cols:i%b.cols;
                 const k=it.k,rec=lbRecent.get(it.key),recent=rec&&Date.now()-rec<LB_RECENT_MS,sev=k.seviye==='kritik'?' kritik':k.seviye==='uyari'?' uyari':'';
-                const lt=lbView==='sel'&&lbEtaLate(k),wc=lbWaitMode?lbWaitColor(k):'',ss=lbView==='sel'?lbSelStageTag(k):null,hit=hits&&hits[i]?' hit':'',sl=lbSel.has(lbPn(k)),nt=sl?lbSelNotes[lbPn(k)]||'':'',roomy=(cw-lbMw(heatmapShortParti(k))*P.f*1.06)/2>=P.f*0.78,stk=lbIsStuck(k,it.thr!==undefined?it.thr:d.thr);
+                const lt=lbView==='sel'&&lbEtaLate(k),wg=(lbGroupMode==='wait'&&!d.groupBy)||!!d.age,wc=lbWaitMode||wg?lbWaitColor(k):'',ss=it.tag||(lbView==='sel'?lbSelStageTag(k):null),hit=hits&&hits[i]?' hit':'',sl=lbSel.has(lbPn(k)),nt=sl?lbSelNotes[lbPn(k)]||'':'',roomy=(cw-lbMw(heatmapShortParti(k))*P.f*1.06)/2>=P.f*0.78,stk=lbIsStuck(k,it.thr!==undefined?it.thr:d.thr);
                 h+='<div class="lb-t'+(P.mode==='i'?' in':'')+(lbUnit==='kg'?' kgv':'')+(lbTamirN(k)?' tmr'+(roomy?' tmri':''):'')+(stk?' stk':'')+(lt?' lt':'')+sev+(recent?' recent':'')+hit+(sl?' sel':'')+(ss?' lb-ss':'')+(it.ex?' lb-x':'')+'" data-k="'+esc(it.key)+'" data-c="'+body.dataset.cell+'" onclick="lbTileClick(event,this,&quot;'+esc(k.id)+'&quot;)" oncontextmenu="return lbTileNote(event,this)" title="'+esc(it.tip)+'" style="left:'+(c*cw).toFixed(1)+'px;top:'+(P.headH+r*th).toFixed(1)+'px;width:'+cw.toFixed(1)+'px;height:'+th.toFixed(1)+'px;font-size:'+P.f.toFixed(1)+'px'+(wc?';background:'+wc:ss?';background:'+ss.c:'')+'">'+(ss?'<s class="lb-ss-t">'+ss.t+'</s>':'')
-                    +(stk&&roomy?'<u class="lb-stk-i">⏳</u>':'')+(lt?'<u class="lb-lt-i">⏰</u>':'')+'<b>'+esc(heatmapShortParti(k))+'</b><span>'+lbShortKg(k.kilo)+'</span>'+(it.ex?'<em class="lb-tx">'+esc(it.ex.p)+'</em>'+(it.ex.e?'<em class="lb-tx e'+(it.ex.late?' late':'')+'">'+esc(it.ex.e)+'</em>':''):'')+(sl?'<i class="lb-ck">✓</i>':'')+(nt?(lbView==='sel'&&!it.ex&&th>=P.f*3?'<em class="lb-tn">'+esc(nt)+'</em>':'<u class="lb-nt-i">📝</u>'):'')+'</div>';
+                    +(stk&&roomy?'<u class="lb-stk-i">⏳</u>':'')+(lt?'<u class="lb-lt-i">⏰</u>':'')+'<b>'+esc(heatmapShortParti(k))+'</b><span>'+(wg?lbWaitShort(lbWaitH(k)):lbShortKg(k.kilo))+'</span>'+(it.ex?'<em class="lb-tx">'+esc(it.ex.p)+'</em>'+(it.ex.e?'<em class="lb-tx e'+(it.ex.late?' late':'')+'">'+esc(it.ex.e)+'</em>':''):'')+(sl?'<i class="lb-ck">✓</i>':'')+(nt?(lbView==='sel'&&!it.ex&&th>=P.f*3?'<em class="lb-tn">'+esc(nt)+'</em>':'<u class="lb-nt-i">📝</u>'):'')+'</div>';
             });
             h+='</div>';x+=bw+GAP;
         });
@@ -6782,7 +6894,7 @@ function lbStageNorm(R){
     hs.sort((a,b)=>a-b);
     return lbNormCache.v[R.key]=hs.length>=8?{n:hs.length,thr:Math.max(4,hs[Math.min(hs.length-1,Math.floor(hs.length*0.75))])}:{n:hs.length,thr:null};
 }
-function lbWaitH(k){const d=fifoAgeDays(k);return d==null||!Number.isFinite(d)?null:d*24}
+function lbWaitH(k){if(k&&k._tvAgeH!=null)return k._tvAgeH;const d=fifoAgeDays(k);return d==null||!Number.isFinite(d)?null:d*24}
 // aşamada geçen ÇALIŞMA saati (08:00–24:00; gece sayılmaz) — alışılmış süre de böyle ölçülür
 function lbWaitWH(k){const w=lbWaitH(k);if(w==null)return null;const now=Date.now();return lbWorkH(now-w*3600000,now)}
 function lbIsStuck(k,thr){const w=thr!=null?lbWaitWH(k):null;return w!=null&&w>thr}
@@ -6866,7 +6978,10 @@ function lbRender(){
         +'<span class="lb-legend"><i class="g"></i>Gelecek <i class="u"></i>Üzerinde <i class="rc"></i>son 15 dk hareket <i class="tm"></i>🛠️ tamir kaydı</span>'
         +'<span id="lbClock" class="lb-clock">'+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</span>'
         +'<button type="button" class="lb-rf" title="Yenile" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>lbRender())}else{lbRender()}">🔄</button>'
-        +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Gruplama (şu an: '+LB_GRP_LABEL[lbGroupMode]+') — tıkla: müşteri → geldiği aşama → yok" onclick="lbToggleCust()">'+LB_GRP_ICON[lbGroupMode]+'</button>'
+        +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Gruplama (şu an: '+LB_GRP_LABEL[lbGroupMode]+') — tıkla: müşteri → geldiği aşama → bekleme süresi → yok" onclick="lbToggleCust()">'+LB_GRP_ICON[lbGroupMode]+'</button>'
+        +'<button type="button" class="'+(lbLayIsDef()?'':'on')+'" title="Pano düzeni: hangi aşamalar ve Gelecek / Üzerinde / Üretim sütunları görünsün" onclick="lbLayOpen()">🧩</button>'
+        +'<button type="button" class="'+(lbView==='p'?'on':'')+'" title="✅ Üretim: bugün KK / Sarım\'dan geçen partiler kutu tablosunda, en son geçen önde (tekrar tıkla: pano)" onclick="lbSetView(&quot;p&quot;)">✅</button>'
+        +'<button type="button" class="'+(lbView==='t'?'on':'')+'" title="🛠 Tamirler: devam eden tamirler kutu tablosunda, en yeni önde; gruplama düğmesiyle müşteri / aşama / bekleme (tekrar tıkla: pano)" onclick="lbSetView(&quot;t&quot;)">🛠</button>'
         +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
         +'<button type="button" class="'+(lbSearchOpen||lbQuery?'on':'')+'" title="Müşteri / parti ara ve vurgula" onclick="lbSearchToggle()">🔍</button>'
         +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" onclick="lbToggleWait()">⏱</button>'
@@ -6883,17 +6998,21 @@ function lbRender(){
     // az partili aşama boşuna yer kaplamaz, kalabalık aşama sıkışmaz
     const units=(list,cls)=>list.length+(lbShowCust?1.3*new Set(list.map(k=>lbGroupOf(k,cls))).size:0);
     let g='';
-    if(lbView==='sel'){
+    if(lbView==='p')g=lbProdViewHtml(stats);
+    else if(lbView==='t')g=lbTamirViewHtml();
+    else if(lbView==='sel'){
         const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
         if(eff!==lbSelCardEff){lbSelCardEff=eff;lbLastKeys=null}
         if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
     }
     else{
     // Gelecek / Üzerinde başlığına tıklayınca o sütun tam ekran (tekrar tıklayınca ya da ↩ ile pano)
-    const showG=lbView!=='u',showU=lbView!=='g',showP=lbView==='all';
+    const showG=lbView!=='u'&&(lbView==='g'||!!lbLay.g),showU=lbView!=='g'&&(lbView==='u'||!!lbLay.u),showP=lbView==='all'&&!!lbLay.p;
+    // düzen varsayılandan farklıysa sütun sayısı değişir: ızgara sütunları burada (varsayılanda CSS'teki gibi)
+    const gcols=lbLayIsDef()||lbView!=='all'?'':'grid-template-columns:clamp(24px,7vw,100px)'+(showG?' minmax(0,1fr)':'')+(showU?' minmax(0,1fr)':'')+(showP?' clamp(42px,8vw,128px)':'')+';';
     const rowW=lbRows().map(R=>{const c=showG?all.filter(R.coming):[],o=showU?all.filter(R.is):[];return Math.max(5,Math.max(units(c,'g'),units(o,'u'))+3)});
     const colh=(v,l,n)=>'<div class="lb-colh lb-colh-b" onclick="lbSetView(&quot;'+v+'&quot;)" title="'+(lbView===v?'Panoya dön':'Yalnız '+n+' — tam ekran')+'">'+l+'<span class="lb-colh-i">'+(lbView===v?'↩ geri':'⛶')+'</span></div>';
-    g='<div class="lb-grid" style="grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div>'+(showG?colh('g','⏳ Gelecek','Gelecek'):'')+(showU?colh('u','📍 Üzerinde','Üzerinde'):'')+(showP?'<div class="lb-colh">✅ Üretim</div>':'');
+    g='<div class="lb-grid" style="'+gcols+'grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div>'+(showG?colh('g','⏳ Gelecek','Gelecek'):'')+(showU?colh('u','📍 Üzerinde','Üzerinde'):'')+(showP?'<div class="lb-colh lb-colh-b" onclick="lbSetView(&quot;p&quot;)" title="Bugün KK / Sarım\'dan geçen partiler kutu tablosunda (şu an nerede olursa olsun) — tam ekran">✅ Üretim<span class="lb-colh-i">⛶</span></div>':'');
     lbRows().forEach(R=>{
         const coming=all.filter(R.coming).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
         const prodObj=stats.log[R.log]||{},prod=Object.keys(prodObj).map(pn=>Object.assign({parti:pn},prodObj[pn])).sort((a,b)=>(b.ts||0)-(a.ts||0));
@@ -6905,15 +7024,15 @@ function lbRender(){
         const norm=lbStageNorm(R),thr=norm&&norm.thr,stuckN=thr!=null?on.filter(k=>lbIsStuck(k,thr)).length:0;
         if(showU)lbCells[R.key+'u']={cls:'u',thr,items:on.map(k=>({k,key:key(String(k.parti).trim(),'u'),tip:tip(k,'← '+(k.son_asama||'-'))+(lbIsStuck(k,thr)?'\n⏳ Bu aşamada alışılmış süre '+paHours(thr)+' (çalışma saati); bu parti '+paHours(lbWaitWH(k))+' çalışma saatidir bekliyor (takvimle '+paHours(lbWaitH(k))+')':'')}))};
         const stuck=thr!=null?'<button type="button" class="lb-hour lb-stuck'+(lbStuckHi?' on':'')+(stuckN?'':' none')+'" onclick="lbStuckToggle()" title="'+esc(R.name+'\'de alışılmış süre '+paHours(thr)+' çalışma saati (üretim kaydında geçen '+norm.n+' partinin 4\'te 3\'ü bu sürede çıkmış; fabrika 08:00–24:00, gece sayılmaz). Bundan uzun bekleyen parti sayısı. Tıkla: vurgula')+'">⏳ <b>'+stuckN+'</b><span class="lb-hm"> uzun bekleyen</span></button>':'';
-        g+='<div class="lb-rowh" style="--c:'+R.color+'" onclick="lbSetFocus(&quot;'+R.key+'&quot;)" title="'+(lbFocus?'Üç aşamayı birden göster':'Yalnız '+esc(R.name)+' — tam ekran, büyük yazı')+'">'
-            +'<span class="lb-row-icon">'+R.icon+'</span><span class="lb-row-name">'+esc(R.name)+'</span><span class="lb-row-back">'+(lbFocus?'↩ 3 aşama':'🔍')+'</span></div>';
+        g+='<div class="lb-rowh" style="--c:'+R.color+'" onclick="lbSetFocus(&quot;'+R.key+'&quot;)" title="'+(lbFocus?'Bütün aşamaları göster':'Yalnız '+esc(R.name)+' — tam ekran, büyük yazı')+'">'
+            +'<span class="lb-row-icon">'+R.icon+'</span><span class="lb-row-name">'+esc(R.name)+'</span><span class="lb-row-back">'+(lbFocus?'↩ hepsi':'🔍')+'</span></div>';
         // son 1 saatin hareketi (yalnız sunucu kaydı güncelken: saatler oradan gelir)
         const hA=lbLastHour(stats.log[R.arr]),hP=lbLastHour(stats.log[R.log]);lbHourReg[R.key]={R,arr:hA,pas:hP};
         const hour=stats.log.server?'<button type="button" class="lb-hour'+(hA.length||hP.length?'':' none')+'" onclick="lbHourOpen(&quot;'+R.key+'&quot;)" title="Son 1 saatte bu aşamaya gelen ve buradan geçen partiler (tıkla: liste)"><span class="lb-hm">son </span>1 sa: '
             +(hA.length||hP.length?'<b class="a">'+hA.length+'<span class="lb-hm"> geldi</span><span class="lb-ph">↓</span></b><span class="lb-hm"> ·</span> <b class="p">'+hP.length+'<span class="lb-hm"> geçti</span><span class="lb-ph">↑</span></b>':'<span class="lb-hm">hareket </span>yok')+'</button>'
             // kayıt güncel değilken de yeri belli olsun (sessizce kaybolmasın)
             :'<button type="button" class="lb-hour none" onclick="showToast(&quot;Son 1 saatin hareketi sunucudaki üretim kaydından gelir; kayıt 45 dakikadan eski olduğu için gösterilemiyor&quot;,&quot;warning&quot;)" title="Sunucudaki üretim kaydı 45 dakikadan eski; saatler güvenilir olmadığı için sayı gösterilmiyor"><span class="lb-hm">son </span>1 sa: kayıt <span class="lb-hm">güncel değil</span><span class="lb-ph">eski</span></button>';
-        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',hour+lbTrendChip(R)+stuck):'')+(showP?lbProdCellHtml(R,prod):'');
+        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
     });
     g+='</div>';
     }
@@ -6927,8 +7046,8 @@ function lbRender(){
         +' onkeydown="if(event.key===&quot;Escape&quot;){event.stopPropagation();if(this.value)lbSearchClear();else lbSearchToggle()}">'
         +'<button type="button" id="lbQMic" title="Sesle ara" onclick="lbSearchVoice()">🎤</button><button type="button" title="Aramayı temizle" onclick="lbSearchClear()">✕</button>'
         +'<span id="lbQRes" class="lb-q-res">'+lbSearchSummary()+'</span></div>';
-    if(lbWaitMode)h+='<div class="lb-waitleg">⏱ <b>Son hareketten beri:</b>'+LB_WAIT_BANDS.map(b=>'<span><i style="background:'+b.c+'"></i>'+b.l+'</span>').join('')+'</div>';
-    const fm=lbFocusMode&&lbView==='sel';
+    if(lbWaitMode||(lbGroupMode==='wait'&&lbView!=='sel'))h+='<div class="lb-waitleg">⏱ <b>'+(lbGroupMode==='wait'?'Geçiş beklemesi — Üzerinde: önceki aşamadan çıktıktan beri • Gelecek: önceki proseste; gruplar önceki aşamaya göre, kutuda süre:':'Son hareketten beri:')+'</b>'+LB_WAIT_BANDS.map(b=>'<span><i style="background:'+b.c+'"></i>'+b.l+'</span>').join('')+'</div>';
+    const fm=lbFocusMode&&(lbView==='sel'||lbView==='t'||lbView==='p');
     h+=g+'<div class="lb-ticker"><div class="lb-ticker-in">'+lbEventsHtml(stats)+'</div></div>'+(fm?'<button type="button" class="lb-fm-x" onclick="lbFocusModeSet(false)" title="Odak modundan çık (Esc)">⤡</button>':'');
     // yeniden çizimde arama kutusundaki imleç kaybolmasın
     const ae=document.activeElement,qf=ae&&ae.id==='lbQ',qs=qf?[ae.selectionStart,ae.selectionEnd]:null;
@@ -7093,6 +7212,9 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-selbar{flex-wrap:nowrap!important;overflow:visible}.lb-selm-w{position:relative;flex:0 0 auto}.lb-selm-b{position:relative}.lb-selm-b.on{background:#FFD700!important;color:#1a1a2e!important}.lb-selm-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#FF5252}'+'.lb-selm{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:50;min-width:230px;max-width:min(92vw,360px);padding:8px;border-radius:10px;background:#1d1a3a;border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.6);flex-direction:column;align-items:stretch;gap:5px}.lb-selm.open{display:flex}.lb-selm>*{width:100%;justify-content:flex-start;text-align:left}.lb-selm .lb-bt{display:inline!important}.lb-selm .lb-sel-gone{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}'+'.lb-sel-t,.lb-sel-n{white-space:nowrap}@media(max-width:700px){.lb-selbar .lb-sel-t{display:none}.lb-selbar{gap:4px!important}}'+'.lb.fm .lb-top,.lb.fm .lb-ann,.lb.fm .lb-selbar,.lb.fm .lb-cf,.lb.fm .lb-night,.lb.fm .lb-mklg,.lb.fm .lb-ticker,.lb.fm .lb-cell-h{display:none!important}.lb-fm-x{position:absolute;top:4px;right:6px;z-index:60;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.55);color:#fff;font-size:18px;font-weight:900;cursor:pointer;opacity:.55}.lb-fm-x:hover{opacity:1}'+'.lb-cf .lb-cf-info{background:rgba(255,255,255,.08)}.lb-lgl{display:flex;flex-direction:column;gap:6px;font-size:13px}.lb-lgh{font-weight:800;color:#FFD54F;margin-top:6px}.lb-lgi{display:flex;align-items:center;gap:8px}.lb-lgi i{display:inline-block;width:16px;height:16px;border-radius:3px;flex:0 0 auto}.lb-lgi i.lt{box-shadow:inset 0 0 0 3px #FF5252}'
         +'.lb-arr-ov{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:12px}.lb-arr-ov.show{display:flex}'+'.lb-arr-box{width:min(520px,100%);max-height:90vh;display:flex;flex-direction:column;background:#1a1638;border:3px solid #FF9800;border-radius:16px;box-shadow:0 0 0 6px rgba(255,152,0,.25),0 20px 60px rgba(0,0,0,.7);animation:lbArrP 1.2s ease-in-out infinite;overflow:hidden}@keyframes lbArrP{50%{box-shadow:0 0 0 12px rgba(255,152,0,.08),0 20px 60px rgba(0,0,0,.7)}}'+'.lb-arr-top{padding:12px 16px;background:#E65100;color:#fff;font-size:20px;font-weight:900;display:flex;align-items:baseline;gap:10px}.lb-arr-top small{font-size:13px;opacity:.9}.lb-arr-l{overflow-y:auto;overflow-x:hidden;padding:8px 12px;display:flex;flex-direction:column;gap:8px}'+'.lb-arr-r{border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.06);border-left:6px solid #E65100}.lb-arr-r.sr1{border-left-color:#AD1457}.lb-arr-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.lb-arr-h b{font-size:28px;color:#fff;font-weight:900}.lb-arr-t{font-size:16px;font-weight:800;color:#FFB74D}.lb-arr-r.sr1 .lb-arr-t{color:#F48FB1}.lb-arr-h small{margin-left:auto;color:#90A4AE}'+'.lb-arr-i{color:#E0E0E0;font-size:14px;margin-top:2px}.lb-arr-i b{color:#FFD54F}.lb-arr-n{color:#FFF59D;font-size:13px;margin-top:3px}.lb-arr-b{margin-top:6px}.lb-arr-b button{border:1px solid rgba(255,255,255,.4);background:#1565C0;color:#fff;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer}'+'.lb-arr-ok{margin:8px 12px 12px;padding:12px;border:0;border-radius:10px;background:#2E7D32;color:#fff;font-size:18px;font-weight:900;cursor:pointer}'
         +'.lb-cf .lb-cf-ai{background:rgba(156,39,176,.3);border-color:#CE93D8;color:#fff}.lb-mkp-wait{font-size:40px;text-align:center;padding:20px;animation:lbStaleP 1.6s ease-in-out infinite}.lb-mkp-ac{color:#E1BEE7;font-size:13px;margin:4px 0 8px}'+'.lb-mkp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;max-height:58vh;overflow-y:auto}.lb-mkp-c{border:2px solid var(--mc);border-radius:8px;overflow:hidden}.lb-mkp-h{display:flex;align-items:baseline;gap:8px;padding:4px 8px;background:var(--mc);color:#fff}.lb-mkp-h b{font-size:16px}.lb-mkp-h span{font-size:11px;opacity:.9}'+'.lb-mkp-r{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;padding:4px 8px;border-top:1px solid rgba(255,255,255,.08);font-size:12px}.lb-mkp-r i{font-style:normal;font-weight:900;color:#1a1a2e;background:#FFD700;border-radius:50%;min-width:18px;text-align:center}.lb-mkp-r b{color:#fff;font-size:14px}.lb-mkp-r span{color:#B0BEC5}.lb-mkp-r em{font-style:normal;font-weight:800;color:#FFB74D}.lb-mkp-r small{flex-basis:100%;color:#90A4AE;font-size:11px}.lb-mkp-r.ch{background:rgba(255,152,0,.14)}.lb-mkp-r.mv{background:rgba(100,181,246,.1)}.lb-mkp-e{padding:6px 8px;color:#78909C;font-size:12px}'+'.lb-mkp-lg{font-size:11px;color:#90A4AE;margin:6px 0}.lb-mkp-lg .ch{color:#FFB74D}.lb-mkp-lg .mv{color:#64B5F6}.lb-sh-t{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:rgba(255,255,255,.05);border-radius:8px;padding:10px;max-height:58vh;overflow-y:auto;color:#ECEFF1}'
+        +'.lb-lay-h{margin:8px 0 4px;font-weight:800;color:#FFD54F}.lb-lay-h small{color:#90A4AE;font-weight:500}.lb-lay-cols{display:flex;flex-wrap:wrap;gap:6px 14px}.lb-lay-l{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 10px;max-height:45vh;overflow-y:auto}.lb-lay-i{display:flex;align-items:center;gap:6px;padding:3px 2px;cursor:pointer;font-size:13px}.lb-lay-i input{width:18px;height:18px}.lb-lay-i small{margin-left:auto;color:#90A4AE;font-size:11px}.lb-lay-sep{grid-column:1/-1;margin-top:6px;color:#B0BEC5;font-size:12px;font-weight:700;border-top:1px solid rgba(255,255,255,.12);padding-top:4px}.lb-prod-na{display:flex;align-items:center;justify-content:center;color:#607D8B;font-size:18px}'
+        +'.lb-tv-btns{display:inline-flex;gap:4px;margin-left:8px}.lb-tv-btns button{border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700;cursor:pointer}.lb-tv-btns button:hover{background:#FF7043}.lb-grid.lb-tv1{gap:0}'
+        +'.lb-cyc span.off{opacity:.4}'
         +'.lb-ev-cu{color:#FFD54F;font-weight:700}html.lb-open,html.lb-open body{overflow:hidden}'
         +'.lb-selbar button.lb-ocrb{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.7)}.lb-ocr img{display:block;max-width:100%;max-height:200px;margin:6px auto;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.2)}'
         +'.lb-ocr-l{max-height:46vh;overflow-y:auto;margin:6px 0}.lb-ocr-h{margin:8px 0 3px;font-weight:800;color:#C6FF00;font-size:13px}.lb-ocr-h small{color:#90A4AE;font-weight:500}.lb-ocr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:13px}.lb-ocr-r input{width:20px;height:20px}.lb-ocr-r b{font-size:18px;color:#fff;min-width:60px}.lb-ocr-r span{color:#B0BEC5}.lb-ocr-r .rd{color:#FFB74D}.lb-ocr-r em{color:#90A4AE;font-size:11px}.lb-ocr-r.sel{opacity:.55}.lb-ocr-r.sg{background:rgba(255,183,77,.07)}'
@@ -7355,14 +7477,22 @@ document.addEventListener('pointerover',e=>{
 document.addEventListener('pointerdown',()=>{if(lbPvTile||lbPvT)lbPvHide()},true);
 document.addEventListener('wheel',()=>{if(lbPvTile||lbPvT)lbPvHide()},{passive:true,capture:true});
 document.documentElement.addEventListener('mouseleave',()=>{if(lbPvTile||lbPvT)lbPvHide()});
-// ── Otomatik döngü: Kalite Kontrol → Sarım1 → Sarım2 → üçü birden, her biri "sec" saniye. Üst çubuktaki 🔁 ile ya da
+// ── Otomatik döngü: Kalite Kontrol → Sarım1 → Sarım2 → üçü birden → 🛠 Tamirler → ✅ Üretim → ☑ Seçilenler, her biri "sec" saniye. Üst çubuktaki 🔁 ile ya da
 //    adresle (?pano=canli&dongu=30) açılır. Ekrana dokunulursa / tıklanırsa 2 dk bekler, sonra kendiliğinden devam eder;
 //    partisi olmayan aşama atlanır. Düğmeyle açılan döngü kalıcı değildir (sayfa yenilenince kapanır); kalıcı olan adrestir.
-const LB_CYC_SEQ=['kk','sr1','sr2',null],LB_CYC_OPTS=[0,20,30,60],LB_CYC_PAUSE=120000;
+const LB_CYC_SEQ=[{f:'kk'},{f:'sr1'},{f:'sr2'},{f:null},{v:'t',l:'🛠 Tamirler'},{v:'p',l:'✅ Üretim'},{v:'sel',l:'☑ Seçilenler'}],LB_CYC_OPTS=[0,20,30,60],LB_CYC_PAUSE=120000;
 let lbCycle={on:false,sec:30,idx:3,nextAt:0,pausedUntil:0,timer:null},lbKiosk=false,lbKioskAt=0,lbWake=null;
-function lbCycleHasWork(key){if(key===null)return true;const R=SW_ROWS.find(r=>r.key===key),all=getAllCards();return!!R&&(all.some(R.is)||all.some(R.coming))}
+function lbCycleHasWork(S){
+    if(!S)return false;
+    if(S.v==='t')return(window.TAMIR_ALL||[]).some(t=>!String(t.durum||'').trim());
+    if(S.v==='p'){try{const st=liveProdStats();return SW_ROWS.some(R=>Object.keys(st.log[R.log]||{}).length)}catch(e){return false}}
+    if(S.v==='sel')return lbSel.size>0;
+    if(S.f===null)return true;const R=SW_ROWS.find(r=>r.key===S.f),all=getAllCards();return!!R&&(all.some(R.is)||all.some(R.coming))
+}
+// döngüde şu an hangi adım (görünüm ya da aşama odağı)
+function lbCycleCur(){const i=LB_CYC_SEQ.findIndex(S=>S.v?lbView===S.v:lbView==='all'&&S.f===lbFocus);return i<0?3:i}
 function lbCycleShow(idx){
-    lbCycle.idx=idx;lbCycle.nextAt=Date.now()+lbCycle.sec*1000;lbFocus=LB_CYC_SEQ[idx];lbLastKeys=null;
+    lbCycle.idx=idx;lbCycle.nextAt=Date.now()+lbCycle.sec*1000;const S=LB_CYC_SEQ[idx];if(S.v){lbView=S.v;lbFocus=null}else{lbView='all';lbFocus=S.f}lbLastKeys=null;
     const el=document.getElementById('liveBoard');if(el)el.classList.remove('cyc-paused');
     lbRender();
 }
@@ -7372,24 +7502,24 @@ function lbCycleTick(){
     if(!lbCycle.on||!lbVisible())return;
     const now=Date.now(),el=document.getElementById('liveBoard'),ae=document.activeElement;
     // açık pencere ya da arama kutusu varken bekle
-    if(document.querySelector('.modal-overlay.show')||(ae&&ae.id==='lbQ')||lbSelMode||lbView==='sel')lbCycle.pausedUntil=Math.max(lbCycle.pausedUntil,now+15000);
+    if(document.querySelector('.modal-overlay.show')||(ae&&ae.id==='lbQ')||lbSelMode)lbCycle.pausedUntil=Math.max(lbCycle.pausedUntil,now+15000);
     if(now<lbCycle.pausedUntil){if(el)el.classList.add('cyc-paused');return}
     if(el&&el.classList.contains('cyc-paused')){
         // beklemeden çıkış: ekranda ne varsa oradan, tam süreyle devam
-        const i=LB_CYC_SEQ.indexOf(lbFocus);lbCycleShow(i<0?3:i);return;
+        lbCycleShow(lbCycleCur());return;
     }
     if(now>=lbCycle.nextAt)lbCycleStep();
 }
 function lbCycleSet(sec){
     sec=Math.max(0,Math.round(+sec||0));if(sec&&sec<5)sec=5;
     lbCycle.on=sec>0;if(sec)lbCycle.sec=sec;lbCycle.pausedUntil=0;
-    if(lbCycle.on){if(!lbCycle.timer)lbCycle.timer=setInterval(lbCycleTick,1000);const i=LB_CYC_SEQ.indexOf(lbFocus);lbCycle.idx=i<0?3:i;lbCycle.nextAt=Date.now()+sec*1000;lbWakeLock()}
+    if(lbCycle.on){if(!lbCycle.timer)lbCycle.timer=setInterval(lbCycleTick,1000);lbCycle.idx=lbCycleCur();lbCycle.nextAt=Date.now()+sec*1000;lbWakeLock()}
     else{if(lbCycle.timer){clearInterval(lbCycle.timer);lbCycle.timer=null}if(!lbKiosk)lbWakeRelease()}
     const el=document.getElementById('liveBoard');if(el)el.classList.remove('cyc-paused');
 }
 function lbCycleToggle(){
     const i=LB_CYC_OPTS.indexOf(lbCycle.on?lbCycle.sec:0),next=i<0?0:LB_CYC_OPTS[(i+1)%LB_CYC_OPTS.length];
-    lbCycleSet(next);lbRender();showToast(next?'🔁 Otomatik döngü: her aşama '+next+' sn':'🔁 Otomatik döngü kapalı');
+    lbCycleSet(next);lbRender();showToast(next?'🔁 Otomatik döngü: KK → Sarım1 → Sarım2 → üçü → Tamirler → Üretim → Seçilenler, her adım '+next+' sn':'🔁 Otomatik döngü kapalı');
 }
 // ekrana dokunma / tıklama / tuş: döngü bekler (döngü şeridi ve 🔁 düğmesi hariç)
 ['pointerdown','keydown','wheel'].forEach(ev=>document.addEventListener(ev,e=>{
@@ -7400,14 +7530,14 @@ function lbCycleToggle(){
 function lbCycleBarHtml(){
     if(!lbCycle.on)return'';
     const el=Math.max(0,Math.min(lbCycle.sec,(Date.now()-(lbCycle.nextAt-lbCycle.sec*1000))/1000));
-    const steps=SW_ROWS.map(R=>[R.key,R.icon+' '+R.name]).concat([[null,'▦ Üçü birden']]);
-    return '<div class="lb-cyc" title="Otomatik döngü: her aşama '+lbCycle.sec+' sn • bir adıma tıkla: oraya geç">'+steps.map(([k,l],i)=>'<span class="'+(lbFocus===k?'on':'')+'" onclick="lbCycleGo('+i+')"><em>'+esc(l)+'</em>'
-        +(lbFocus===k?'<b style="animation-duration:'+lbCycle.sec+'s;animation-delay:-'+el.toFixed(1)+'s"></b>':'')+'</span>').join('')
+    const cur=lbCycleCur(),steps=LB_CYC_SEQ.map(S=>S.v?S.l:S.f===null?'▦ Üçü birden':(R=>R.icon+' '+R.name)(SW_ROWS.find(R=>R.key===S.f)));
+    return '<div class="lb-cyc" title="Otomatik döngü: her adım '+lbCycle.sec+' sn • bir adıma tıkla: oraya geç • boş adım (tamir / üretim / seçili parti yoksa) atlanır">'+steps.map((l,i)=>'<span class="'+(cur===i?'on':'')+(lbCycleHasWork(LB_CYC_SEQ[i])?'':' off')+'" onclick="lbCycleGo('+i+')"><em>'+esc(l)+'</em>'
+        +(cur===i?'<b style="animation-duration:'+lbCycle.sec+'s;animation-delay:-'+el.toFixed(1)+'s"></b>':'')+'</span>').join('')
         +'<i class="lb-cyc-p">⏸ dokunuldu, az sonra devam eder</i><button type="button" class="lb-cyc-url" onclick="lbKioskCopy()" title="Bu görünümü TV\'de kendiliğinden açan adresi kopyala">🔗 adres</button></div>';
 }
 // Bu görünümü (döngü, birim, gruplama, bekleme renkleri) doğrudan açan adres
 function lbKioskUrl(){
-    return location.origin+location.pathname+'?pano=canli'+(lbView!=='all'?'&gorunum='+({g:'gelecek',u:'uzerinde',sel:'secilen'}[lbView]):'')+(lbView==='sel'&&lbSelCol?'&sutun='+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(lbView==='sel'&&lbSelCardMode!=='oto'?'&kart='+lbSelCardMode:'')+(lbView==='sel'&&lbCardBig?'&kartyazi=buyuk':'')+(lbView==='sel'&&lbSelStage?'&asama='+encodeURIComponent(lbSelStage):'')+(lbView==='sel'&&lbSelCust.length?'&musteri='+encodeURIComponent(lbSelCust.join('|')):'')+(lbView==='sel'&&lbSelGrp!=='asama'?'&secgrup='+lbSelGrp:'')+(lbCycle.on?'&dongu='+lbCycle.sec:lbFocus?'&odak='+lbFocus:'')+(lbUnit==='kg'?'&birim=kg':'')+(lbGroupMode==='from'?'&grup=asama':lbGroupMode==='none'?'&grup=yok':'')+(lbWaitMode?'&bekleme=1':'');
+    return location.origin+location.pathname+'?pano=canli'+(lbView!=='all'?'&gorunum='+({g:'gelecek',u:'uzerinde',sel:'secilen',t:'tamir',p:'uretim'}[lbView]):'')+(lbView==='sel'&&lbSelCol?'&sutun='+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(lbView==='sel'&&lbSelCardMode!=='oto'?'&kart='+lbSelCardMode:'')+(lbView==='sel'&&lbCardBig?'&kartyazi=buyuk':'')+(lbView==='sel'&&lbSelStage?'&asama='+encodeURIComponent(lbSelStage):'')+(lbView==='sel'&&lbSelCust.length?'&musteri='+encodeURIComponent(lbSelCust.join('|')):'')+(lbView==='sel'&&lbSelGrp!=='asama'?'&secgrup='+lbSelGrp:'')+(lbCycle.on?'&dongu='+lbCycle.sec:lbFocus?'&odak='+lbFocus:'')+(lbUnit==='kg'?'&birim=kg':'')+(lbGroupMode==='from'?'&grup=asama':lbGroupMode==='none'?'&grup=yok':'')+(lbWaitMode?'&bekleme=1':'');
 }
 function lbKioskCopy(){
     const u=lbKioskUrl(),fb=()=>{try{window.prompt('Kiosk adresi (kopyalayın):',u)}catch(e){}};
@@ -7434,7 +7564,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
         lbOpen();
         if(['kk','sr1','sr2'].includes(odak))lbFocus=odak;
         const gor=norm(q.get('gorunum')),sut=norm(q.get('sutun'));
-        if(gor==='gelecek')lbView='g';else if(gor==='uzerinde'||gor==='üzerinde')lbView='u';else if(gor==='secilen'||gor==='seçilen'){lbView='sel';lbSelCol=sut==='gelecek'?'g':sut==='uzerinde'||sut==='üzerinde'?'u':'';const kart=norm(q.get('kart'));if(kart in LB_CARD_MODES)lbSelCardMode=kart;const ky=norm(q.get('kartyazi'));if(ky==='buyuk'||ky==='büyük')lbCardBig=true;else if(ky==='normal')lbCardBig=false;const asm=q.get('asama');if(asm)lbSelStage=normalizeStageName(asm);const mu=q.get('musteri');if(mu)lbSelCust=String(mu).split('|').map(x=>x.trim()).filter(Boolean);const sg=norm(q.get('secgrup'));if(sg in LB_SEL_GRP)lbSelGrp=sg}
+        if(gor==='gelecek')lbView='g';else if(gor==='uzerinde'||gor==='üzerinde')lbView='u';else if(gor==='tamir')lbView='t';else if(gor==='uretim'||gor==='üretim')lbView='p';else if(gor==='secilen'||gor==='seçilen'){lbView='sel';lbSelCol=sut==='gelecek'?'g':sut==='uzerinde'||sut==='üzerinde'?'u':'';const kart=norm(q.get('kart'));if(kart in LB_CARD_MODES)lbSelCardMode=kart;const ky=norm(q.get('kartyazi'));if(ky==='buyuk'||ky==='büyük')lbCardBig=true;else if(ky==='normal')lbCardBig=false;const asm=q.get('asama');if(asm)lbSelStage=normalizeStageName(asm);const mu=q.get('musteri');if(mu)lbSelCust=String(mu).split('|').map(x=>x.trim()).filter(Boolean);const sg=norm(q.get('secgrup'));if(sg in LB_SEL_GRP)lbSelGrp=sg}
         if(dongu>0)lbCycleSet(dongu);
         lbLastKeys=null;lbRender();if(!app)lbWakeLock();
         // yeni sürümü almak için günde bir kez (vardiya başlamadan, 07:50–07:59) sayfa kendini yeniler; site erişilemiyorsa yenilemez

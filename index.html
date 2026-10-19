@@ -5726,7 +5726,7 @@ function lbSelBarInner(){
         const all=getAllCards(),present=new Set(all.map(lbPn)),gone=[...lbSel].filter(p=>!present.has(p)),kg=all.filter(k=>lbSel.has(lbPn(k))).reduce((s,k)=>s+num(k.kilo),0);
         // tek satır: sayaç, sık kullanılanlar; geri kalanı ⋯ Menü'de (açık kalır, dışarı tıklayınca kapanır)
         const menu=(gone.length?'<span class="lb-sel-gone" title="'+esc(gone.join(', '))+'">'+gone.length+' parti güncel veride yok (sevk edilmiş olabilir)<button type="button" onclick="lbSelDropGone()">kaldır</button></span>':'')
-            +lbSyncChip()+'<button type="button" onclick="lbShiftSummary()" title="Yapay zekâ ile vardiya özeti: göster, kopyala, WhatsApp, telefona gönder">📋<span class="lb-bt"> Vardiya özeti</span></button>'+lbArrBtn()+lbNoteBtn()+lbEtaAccBtn()+'<button type="button" class="lb-xlb" onclick="lbSelExcel()" title="Seçilenleri Excel\'e aktar: parti, kg, aşamalar, müşteri, kumaş, not, aşama geçmişi">📊<span class="lb-bt"> Excel</span></button>'+'<button type="button" class="lb-shb" onclick="lbSelShare()" title="Seçilenleri yazı olarak paylaş (WhatsApp vb.): parti, kg, müşteri, kumaş, not">📱<span class="lb-bt"> Listeyi paylaş</span></button>'+lbCardBigBtn()
+            +lbSyncChip()+'<button type="button" onclick="lbShiftSummary()" title="Yapay zekâ ile vardiya özeti: göster, kopyala, WhatsApp, telefona gönder">📋<span class="lb-bt"> Vardiya özeti</span></button>'+lbArrBtn()+lbTamBtn()+lbNoteBtn()+lbEtaAccBtn()+'<button type="button" class="lb-xlb" onclick="lbSelExcel()" title="Seçilenleri Excel\'e aktar: parti, kg, aşamalar, müşteri, kumaş, not, aşama geçmişi">📊<span class="lb-bt"> Excel</span></button>'+'<button type="button" class="lb-shb" onclick="lbSelShare()" title="Seçilenleri yazı olarak paylaş (WhatsApp vb.): parti, kg, müşteri, kumaş, not">📱<span class="lb-bt"> Listeyi paylaş</span></button>'+lbCardBigBtn()
             +(document.fullscreenEnabled?'<button type="button" onclick="lbFullToggle()" title="Tarayıcıyı tam ekran yap (telefonda adres çubuğu da gizlenir)">'+(document.fullscreenElement?'✕<span class="lb-bt"> Tam ekrandan çık</span>':'⛶<span class="lb-bt"> Tam ekran</span>')+'</button>':'')
             +'<button type="button" onclick="lbKioskCopy()" title="Bu görünümü doğrudan açan adresi kopyala (telefonda ana ekrana eklemek ya da TV için)">🔗<span class="lb-bt"> Adres</span></button>'
             +'<button type="button" onclick="lbSelClear()">🗑<span class="lb-bt"> Temizle</span></button>';
@@ -5963,11 +5963,11 @@ function lbArrShow(){
     let ov=document.getElementById('lbArrOv');
     if(!ov){ov=document.createElement('div');ov.id='lbArrOv';ov.className='lb-arr-ov';document.body.appendChild(ov)}
     const row=h=>{const k=h.k,m=lbSelMach[h.p],pos=m?lbMachPos(h.p):0,nt=lbSelNotes[h.p];
-        return '<div class="lb-arr-r '+h.T.k+'"><div class="lb-arr-h"><b>'+esc(lbPnShort(h.p))+'</b><span class="lb-arr-t">'+(h.T.k==='kk'?'🔵':'🟣')+' '+esc(h.T.n)+'\'e geldi</span><small>'+new Date(h.t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</small></div>'
+        return '<div class="lb-arr-r '+h.T.k+(h.msg?' tm':'')+'"><div class="lb-arr-h"><b>'+esc(lbPnShort(h.p))+'</b><span class="lb-arr-t">'+(h.msg?esc(h.msg):(h.T.k==='kk'?'🔵':'🟣')+' '+esc(h.T.n)+'\'e geldi')+'</span><small>'+new Date(h.t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</small></div>'
             +(k?'<div class="lb-arr-i">👤 <b>'+esc(lbGroupName(k))+'</b>'+(k.recete_adi?' • 🎨 '+esc(k.recete_adi):'')+' • '+lbShortKg(k.kilo)+' kg</div>':'')
-            +'<div class="lb-arr-i">↩ '+esc(h.from||'—')+' → '+esc(h.T.n)+(m?' • 🛠 '+esc(m)+(pos?' #'+pos:''):'')+'</div>'+(nt?'<div class="lb-arr-n">📝 '+esc(nt)+'</div>':'')
+            +'<div class="lb-arr-i">'+(h.msg?esc(h.from||''):'↩ '+esc(h.from||'—')+' → '+esc(h.T.n))+(m?' • 🛠 '+esc(m)+(pos?' #'+pos:''):'')+'</div>'+(nt?'<div class="lb-arr-n">📝 '+esc(nt)+'</div>':'')
             +'<div class="lb-arr-b"><button type="button" data-p="'+esc(h.p)+'" onclick="lbArrOpen(this.dataset.p)">Kartı aç</button></div></div>'};
-    ov.innerHTML='<div class="lb-arr-box"><div class="lb-arr-top">🚨 Seçilen parti geldi<small>'+(lbArrList.some(h=>h.test)?'DENEME — gerçek bir varış değil':lbArrList.length+' parti')+'</small></div><div class="lb-arr-l">'+lbArrList.map(row).join('')+'</div>'
+    ov.innerHTML='<div class="lb-arr-box"><div class="lb-arr-top">'+(lbArrList.some(h=>h.msg)?'🚨 Uyarı':'🚨 Seçilen parti geldi')+'<small>'+(lbArrList.some(h=>h.test)?'DENEME — gerçek bir varış değil':lbArrList.length+' parti')+'</small></div><div class="lb-arr-l">'+lbArrList.map(row).join('')+'</div>'
         +'<button type="button" class="lb-arr-ok" onclick="lbArrClose()">✓ Tamam</button></div>';
     ov.classList.add('show');
 }
@@ -5979,6 +5979,32 @@ function lbArrTest(){
     lbArrList=[{p,T:LB_ARR_T[0],from:lbSelStageOf(p,all)||'—',k,t:Date.now(),test:true}];lbArrShow();
     try{playKkSarimAlertSound();setTimeout(()=>{try{playKkSarimAlertSound()}catch(e){}},1400)}catch(e){}
     try{speakText('Deneme. '+lbPnShort(p)+' partisi Kalite Kontrol\'e geldi')}catch(e){}
+}
+// ── 🛠 Tamir uyarısı (cihaz başına; ⋯ Menü'den aç / kapat): yeni açılan tamir ve açık tamiri olan partinin KK'ya gelmesi →
+//    varış alarmıyla aynı pencere + ses. İlk açılışta mevcut tamirler "görülmüş" sayılır (toplu uyarı yok).
+let lbTamOn=mapLoadPref('lbTamAl9',v=>v==='1'||v==='0','1')==='1';
+let lbTamSeen=safeParse('lbTamSeen9','null'),lbTamSnap=safeParse('lbTamSnap9','{}');if(!lbTamSnap||typeof lbTamSnap!=='object')lbTamSnap={};
+function lbTamSave(){try{localStorage.setItem('lbTamSeen9',JSON.stringify(lbTamSeen||[]));localStorage.setItem('lbTamSnap9',JSON.stringify(lbTamSnap))}catch(e){}}
+function lbTamToggle(){lbTamOn=!lbTamOn;mapSavePref('lbTamAl9',lbTamOn?'1':'0');const b=document.getElementById('lbSelBar');if(b)b.innerHTML=lbSelBarInner();showToast(lbTamOn?'🛠 Tamir uyarısı açık: yeni tamir ve tamirdeki parti KK\'ya gelince pencere + ses':'🛠 Tamir uyarısı bu cihazda kapalı')}
+function lbTamBtn(){return '<button type="button" onclick="lbTamToggle()" title="Yeni tamir açılınca ve açık tamiri olan parti KK\'ya gelince uyarı penceresi + ses (bu cihazda)">🛠<span class="lb-bt"> Tamir uyarısı: '+(lbTamOn?'Açık':'Kapalı')+'</span></button>'}
+function lbTamirWatch(){
+    const T=window.TAMIR_ALL;if(!Array.isArray(T)||!T.length)return;
+    const open=T.filter(t=>!String(t.durum||'').trim()),id=t=>String(t.uid||(t.parti+'|'+t.tarih+'|'+t.tip)),first=!Array.isArray(lbTamSeen);
+    const seen=new Set(first?[]:lbTamSeen),hits=[],all=getAllCards(),kkR=SW_ROWS.find(R=>R.key==='kk');
+    // yeni açılan tamirler
+    open.forEach(t=>{if(!seen.has(id(t))&&!first){const p=String(t.parti||'').trim(),k=all.find(c=>String(c.parti).trim()===p);
+        hits.push({p,k,t:lbTvTs(t.tarih)||Date.now(),T:{k:'tm',n:'tamir'},msg:'🛠 Yeni tamir: '+(t.tip||'tamir'),from:'tamir aşaması: '+(t.stage||'-')+' • neden: '+(t.neden||'-')+(t.not?' • '+t.not:'')})}});
+    // açık tamiri olan parti KK'ya geldi
+    const tp=new Map();open.forEach(t=>{const p=String(t.parti||'').trim();if(!tp.has(p))tp.set(p,t)});
+    const snap={};
+    tp.forEach((t,p)=>{const k=all.find(c=>String(c.parti).trim()===p);if(!k)return;const onKK=!!(kkR&&kkR.is(k)),prev=lbTamSnap[p];snap[p]=onKK?1:0;
+        if(!first&&prev===0&&onKK)hits.push({p,k,t:Date.now(),T:{k:'kk',n:'Kalite Kontrol'},msg:'🛠 Tamirdeki parti KK\'ya geldi',from:(t.tip||'tamir')+' • '+(t.tarih||'')+' açıldı • tamir aşaması: '+(t.stage||'-')})});
+    lbTamSeen=open.map(id);lbTamSnap=snap;lbTamSave();
+    if(!lbTamOn||!hits.length)return;
+    hits.forEach(h=>{if(!lbArrList.some(o=>o.p===h.p&&o.msg===h.msg))lbArrList.unshift(h)});
+    lbArrShow();
+    try{playKkSarimAlertSound();setTimeout(()=>{try{playKkSarimAlertSound()}catch(e){}},1400)}catch(e){}
+    try{speakText(hits.slice(0,3).map(h=>lbPnShort(h.p)+(h.T.k==='kk'?' tamirdeki parti Kalite Kontrole geldi':' partisine yeni tamir açıldı')).join('. '))}catch(e){}
 }
 function lbArrClose(){const ov=document.getElementById('lbArrOv');if(ov)ov.classList.remove('show');lbArrList=[]}
 function lbArrOpen(p){lbArrClose();openDetailModalByParti(p)}
@@ -7215,6 +7241,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-lay-h{margin:8px 0 4px;font-weight:800;color:#FFD54F}.lb-lay-h small{color:#90A4AE;font-weight:500}.lb-lay-cols{display:flex;flex-wrap:wrap;gap:6px 14px}.lb-lay-l{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 10px;max-height:45vh;overflow-y:auto}.lb-lay-i{display:flex;align-items:center;gap:6px;padding:3px 2px;cursor:pointer;font-size:13px}.lb-lay-i input{width:18px;height:18px}.lb-lay-i small{margin-left:auto;color:#90A4AE;font-size:11px}.lb-lay-sep{grid-column:1/-1;margin-top:6px;color:#B0BEC5;font-size:12px;font-weight:700;border-top:1px solid rgba(255,255,255,.12);padding-top:4px}.lb-prod-na{display:flex;align-items:center;justify-content:center;color:#607D8B;font-size:18px}'
         +'.lb-tv-btns{display:inline-flex;gap:4px;margin-left:8px}.lb-tv-btns button{border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700;cursor:pointer}.lb-tv-btns button:hover{background:#FF7043}.lb-grid.lb-tv1{gap:0}'
         +'.lb-cyc span.off{opacity:.4}'
+        +'.lb-arr-r.tm{border-left-color:#FF7043}.lb-arr-r.tm .lb-arr-t{color:#FFAB91}'
         +'.lb-ev-cu{color:#FFD54F;font-weight:700}html.lb-open,html.lb-open body{overflow:hidden}'
         +'.lb-selbar button.lb-ocrb{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.7)}.lb-ocr img{display:block;max-width:100%;max-height:200px;margin:6px auto;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.2)}'
         +'.lb-ocr-l{max-height:46vh;overflow-y:auto;margin:6px 0}.lb-ocr-h{margin:8px 0 3px;font-weight:800;color:#C6FF00;font-size:13px}.lb-ocr-h small{color:#90A4AE;font-weight:500}.lb-ocr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:13px}.lb-ocr-r input{width:20px;height:20px}.lb-ocr-r b{font-size:18px;color:#fff;min-width:60px}.lb-ocr-r span{color:#B0BEC5}.lb-ocr-r .rd{color:#FFB74D}.lb-ocr-r em{color:#90A4AE;font-size:11px}.lb-ocr-r.sel{opacity:.55}.lb-ocr-r.sg{background:rgba(255,183,77,.07)}'
@@ -7537,7 +7564,8 @@ function lbCycleBarHtml(){
 }
 // Bu görünümü (döngü, birim, gruplama, bekleme renkleri) doğrudan açan adres
 function lbKioskUrl(){
-    return location.origin+location.pathname+'?pano=canli'+(lbView!=='all'?'&gorunum='+({g:'gelecek',u:'uzerinde',sel:'secilen',t:'tamir',p:'uretim'}[lbView]):'')+(lbView==='sel'&&lbSelCol?'&sutun='+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(lbView==='sel'&&lbSelCardMode!=='oto'?'&kart='+lbSelCardMode:'')+(lbView==='sel'&&lbCardBig?'&kartyazi=buyuk':'')+(lbView==='sel'&&lbSelStage?'&asama='+encodeURIComponent(lbSelStage):'')+(lbView==='sel'&&lbSelCust.length?'&musteri='+encodeURIComponent(lbSelCust.join('|')):'')+(lbView==='sel'&&lbSelGrp!=='asama'?'&secgrup='+lbSelGrp:'')+(lbCycle.on?'&dongu='+lbCycle.sec:lbFocus?'&odak='+lbFocus:'')+(lbUnit==='kg'?'&birim=kg':'')+(lbGroupMode==='from'?'&grup=asama':lbGroupMode==='none'?'&grup=yok':'')+(lbWaitMode?'&bekleme=1':'');
+    return location.origin+location.pathname+'?pano=canli'+(lbView!=='all'?'&gorunum='+({g:'gelecek',u:'uzerinde',sel:'secilen',t:'tamir',p:'uretim'}[lbView]):'')+(lbView==='sel'&&lbSelCol?'&sutun='+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(lbView==='sel'&&lbSelCardMode!=='oto'?'&kart='+lbSelCardMode:'')+(lbView==='sel'&&lbCardBig?'&kartyazi=buyuk':'')+(lbView==='sel'&&lbSelStage?'&asama='+encodeURIComponent(lbSelStage):'')+(lbView==='sel'&&lbSelCust.length?'&musteri='+encodeURIComponent(lbSelCust.join('|')):'')+(lbView==='sel'&&lbSelGrp!=='asama'?'&secgrup='+lbSelGrp:'')+(lbCycle.on?'&dongu='+lbCycle.sec:lbFocus?'&odak='+lbFocus:'')+(lbUnit==='kg'?'&birim=kg':'')+(lbGroupMode==='from'?'&grup=asama':lbGroupMode==='wait'?'&grup=bekleme':lbGroupMode==='none'?'&grup=yok':'')+(lbWaitMode?'&bekleme=1':'')
+        +(lbLayIsDef()?'':'&duzen='+encodeURIComponent(lbLay.rows.join('|'))+'&sutunlar='+['g','u','p'].filter(c=>lbLay[c]).join(''))+(lbFocusMode&&['sel','t','p'].includes(lbView)?'&buyut=1':'');
 }
 function lbKioskCopy(){
     const u=lbKioskUrl(),fb=()=>{try{window.prompt('Kiosk adresi (kopyalayın):',u)}catch(e){}};
@@ -7558,11 +7586,15 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
         const app=norm(q.get('uygulama'))==='1';lbKiosk=!app;lbKioskAt=Date.now();
         const birim=norm(q.get('birim')),grup=norm(q.get('grup')),bek=norm(q.get('bekleme')),odak=norm(q.get('odak')),dongu=parseInt(q.get('dongu'),10);
         if(birim==='kg')lbUnit='kg';else if(birim==='adet'||birim==='parti')lbUnit='n';
-        if(grup==='asama'||grup==='aşama')lbGroupMode='from';else if(grup==='yok')lbGroupMode='none';else if(grup==='musteri'||grup==='müşteri')lbGroupMode='cust';
+        if(grup==='asama'||grup==='aşama')lbGroupMode='from';else if(grup==='bekleme')lbGroupMode='wait';else if(grup==='yok')lbGroupMode='none';else if(grup==='musteri'||grup==='müşteri')lbGroupMode='cust';
         lbShowCust=lbGroupMode!=='none';
         if(bek==='1')lbWaitMode=true;else if(bek==='0')lbWaitMode=false;
+        // pano düzeni adresten (bu açılış için; cihazdaki kayıt değişmez)
+        const dz=String(q.get('duzen')||'').split('|').map(x=>x.trim()).filter(x=>['kk','sr1','sr2'].includes(x)||/^st:./.test(x)),sc=norm(q.get('sutunlar'));
+        if(dz.length||sc){lbLay={rows:dz.length?dz.map(x=>x.startsWith('st:')?'st:'+normalizeStageName(x.slice(3)):x):lbLay.rows.slice(),g:sc?(sc.includes('g')?1:0):lbLay.g,u:sc?(sc.includes('u')?1:0):lbLay.u,p:sc?(sc.includes('p')?1:0):lbLay.p};if(!lbLay.g&&!lbLay.u)lbLay.g=lbLay.u=1}
+        if(norm(q.get('buyut'))==='1')lbFocusMode=true;
         lbOpen();
-        if(['kk','sr1','sr2'].includes(odak))lbFocus=odak;
+        {const odRaw=String(q.get('odak')||'').trim();if(['kk','sr1','sr2'].includes(odak))lbFocus=odak;else if(/^st_./.test(odRaw))lbFocus=odRaw}
         const gor=norm(q.get('gorunum')),sut=norm(q.get('sutun'));
         if(gor==='gelecek')lbView='g';else if(gor==='uzerinde'||gor==='üzerinde')lbView='u';else if(gor==='tamir')lbView='t';else if(gor==='uretim'||gor==='üretim')lbView='p';else if(gor==='secilen'||gor==='seçilen'){lbView='sel';lbSelCol=sut==='gelecek'?'g':sut==='uzerinde'||sut==='üzerinde'?'u':'';const kart=norm(q.get('kart'));if(kart in LB_CARD_MODES)lbSelCardMode=kart;const ky=norm(q.get('kartyazi'));if(ky==='buyuk'||ky==='büyük')lbCardBig=true;else if(ky==='normal')lbCardBig=false;const asm=q.get('asama');if(asm)lbSelStage=normalizeStageName(asm);const mu=q.get('musteri');if(mu)lbSelCust=String(mu).split('|').map(x=>x.trim()).filter(Boolean);const sg=norm(q.get('secgrup'));if(sg in LB_SEL_GRP)lbSelGrp=sg}
         if(dongu>0)lbCycleSet(dongu);
@@ -9274,6 +9306,7 @@ function afterDataLoaded(isExcel){
     ntfySyncSnapshot();
     try{mapsAfterData()}catch(e){console.warn('harita durumu',e)}
     try{lbSelWatch()}catch(e){console.warn('seçim takibi',e)}
+    try{lbTamirWatch()}catch(e){console.warn('tamir uyarısı',e)}
     try{lbEtaLateCheck()}catch(e){console.warn('gecikme denetimi',e)}
     try{lbMainSelSyncAll()}catch(e){}
 }

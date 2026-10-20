@@ -6006,6 +6006,13 @@ function lbTamirWatch(){
     try{playKkSarimAlertSound();setTimeout(()=>{try{playKkSarimAlertSound()}catch(e){}},1400)}catch(e){}
     try{speakText(hits.slice(0,3).map(h=>lbPnShort(h.p)+(h.T.k==='kk'?' tamirdeki parti Kalite Kontrole geldi':' partisine yeni tamir açıldı')).join('. '))}catch(e){}
 }
+// ── ⋯ üst çubuk menüsü: telefonda az kullanılan düğmeler burada toplanır (geniş ekranda hepsi çubukta görünür)
+let lbMoreOpen=false;
+function lbMoreActive(){return !lbLayIsDef()||lbWaitMode||lbAnnActive()||lbUnit==='kg'||!!lbCycle.on}
+function lbMoreSet(v){lbMoreOpen=v;const m=document.querySelector('#liveBoard .lb-more'),b=document.querySelector('#liveBoard .lb-more-b');if(m)m.classList.toggle('open',v);if(b)b.classList.toggle('on',v)}
+function lbMoreToggle(e){if(e)e.stopPropagation();lbMoreSet(!lbMoreOpen)}
+function lbMoreAfter(e){if(e.target.closest('button'))setTimeout(()=>lbMoreSet(false),0)}
+document.addEventListener('click',e=>{if(lbMoreOpen&&!e.target.closest('.lb-more,.lb-more-b'))lbMoreSet(false)},true);
 function lbArrClose(){const ov=document.getElementById('lbArrOv');if(ov)ov.classList.remove('show');lbArrList=[]}
 function lbArrOpen(p){lbArrClose();openDetailModalByParti(p)}
 function lbSelEvSeen(){if(lbSelUnseen){lbSelUnseen=0;lbSelEvSave()}}
@@ -7005,21 +7012,22 @@ function lbRender(){
         +'<span id="lbClock" class="lb-clock">'+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</span>'
         +'<button type="button" class="lb-rf" title="Yenile" onclick="if(typeof loadGithubJsonDashboard===&quot;function&quot;){loadGithubJsonDashboard().then(()=>lbRender())}else{lbRender()}">🔄</button>'
         +'<button type="button" class="'+(lbShowCust?'on':'')+'" title="Gruplama (şu an: '+LB_GRP_LABEL[lbGroupMode]+') — tıkla: müşteri → geldiği aşama → bekleme süresi → yok" onclick="lbToggleCust()">'+LB_GRP_ICON[lbGroupMode]+'</button>'
-        +'<button type="button" class="'+(lbLayIsDef()?'':'on')+'" title="Pano düzeni: hangi aşamalar ve Gelecek / Üzerinde / Üretim sütunları görünsün" onclick="lbLayOpen()">🧩</button>'
         +'<button type="button" class="'+(lbView==='p'?'on':'')+'" title="✅ Üretim: bugün KK / Sarım\'dan geçen partiler kutu tablosunda, en son geçen önde (tekrar tıkla: pano)" onclick="lbSetView(&quot;p&quot;)">✅</button>'
         +'<button type="button" class="'+(lbView==='t'?'on':'')+'" title="🛠 Tamirler: devam eden tamirler kutu tablosunda, en yeni önde; gruplama düğmesiyle müşteri / aşama / bekleme (tekrar tıkla: pano)" onclick="lbSetView(&quot;t&quot;)">🛠</button>'
-        +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
         +'<button type="button" class="'+(lbSearchOpen||lbQuery?'on':'')+'" title="Müşteri / parti ara ve vurgula" onclick="lbSearchToggle()">🔍</button>'
-        +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" onclick="lbToggleWait()">⏱</button>'
-        +'<button type="button" class="lb-annb'+(lbAnnActive()?' on':'')+'" title="Pano duyurusu: bütün ekranlarda üst şeritte görünen mesaj" onclick="lbAnnOpen()">📢</button>'
         +'<button type="button" class="lb-selb'+(lbSelMode?' on':'')+'" title="Seç: parti kutularına tıklayarak seç (Ctrl + tık her zaman seçer)" onclick="lbSelModeSet()">☑</button>'
         +'<button type="button" class="lb-exp lb-selo'+(lbView==='sel'?' on':'')+'" title="Seçilen partileri ayrı ekranda göster (seçim telefon dahil tüm cihazlarda aynı)" onclick="lbSelOpen()">📋<span class="lb-bl"> Seçilenler</span><span class="lb-seln">'+(lbSel.size||'')+'</span>'+(lbSelUnseen?'<span class="lb-selev" title="Görülmemiş hareket">🔔'+lbSelUnseen+'</span>':'')+'</button>'
-        +'<button type="button" class="lb-exp" style="background:#1565C0" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
-        +'<button type="button" class="lb-exp lb-exp-pdf" style="background:#C62828" title="PDF indir" onclick="lbExport(&quot;pdf&quot;)">📄<span class="lb-bl"> PDF</span></button>'
-        +'<button type="button" class="lb-exp" style="background:#25D366" title="WhatsApp ile paylaş (PNG)" onclick="lbExport(&quot;wa&quot;)">📱<span class="lb-bl"> WhatsApp PNG</span></button>'
-        +'<button type="button" class="lb-exp lb-ori" style="background:#37474F" title="PNG / PDF yönü — '+(lbExpOri==='dikey'?'şu an dikey (telefonda paylaşmak için)':'şu an yatay (TV / bilgisayar için)')+'. Tıkla: değiştir" onclick="lbExpOriToggle()">'+(lbExpOri==='dikey'?'▯':'▭')+'<span class="lb-bl"> '+(lbExpOri==='dikey'?'Dikey':'Yatay')+'</span></button>'
-        +'<button type="button" class="lb-cy-btn'+(lbCycle.on?' on':'')+'" title="Otomatik döngü: aşamaları sırayla büyük göster (tıkla: kapalı → 20 → 30 → 60 sn)" onclick="lbCycleToggle()">🔁'+(lbCycle.on?'<span class="lb-cy-n">'+lbCycle.sec+'</span>':'')+'</button>'
-        +'<button type="button" class="lb-fs" title="Tam ekran" onclick="lbToggleFull()">⛶</button><button type="button" class="lb-x" title="Kapat (Esc)" onclick="lbClose()">✕</button></div>';
+        +'<button type="button" class="lb-more-b'+(lbMoreOpen?' on':'')+(lbMoreActive()?' dot':'')+'" title="Diğer düğmeler" onclick="lbMoreToggle(event)">⋯</button><span class="lb-more'+(lbMoreOpen?' open':'')+'" onclick="lbMoreAfter(event)">'
+        +'<button type="button" class="'+(lbLayIsDef()?'':'on')+'" title="Pano düzeni: hangi aşamalar ve Gelecek / Üzerinde / Üretim sütunları görünsün" data-l="Pano düzeni" onclick="lbLayOpen()">🧩</button>'
+        +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" data-l="Parti adedi / kg" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
+        +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" data-l="Bekleme renkleri" onclick="lbToggleWait()">⏱</button>'
+        +'<button type="button" class="lb-annb'+(lbAnnActive()?' on':'')+'" title="Pano duyurusu: bütün ekranlarda üst şeritte görünen mesaj" data-l="Pano duyurusu" onclick="lbAnnOpen()">📢</button>'
+        +'<button type="button" class="lb-exp" style="background:#1565C0" data-l="PNG indir" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
+        +'<button type="button" class="lb-exp lb-exp-pdf" style="background:#C62828" data-l="PDF indir" title="PDF indir" onclick="lbExport(&quot;pdf&quot;)">📄<span class="lb-bl"> PDF</span></button>'
+        +'<button type="button" class="lb-exp" style="background:#25D366" data-l="WhatsApp ile paylaş" title="WhatsApp ile paylaş (PNG)" onclick="lbExport(&quot;wa&quot;)">📱<span class="lb-bl"> WhatsApp PNG</span></button>'
+        +'<button type="button" class="lb-exp lb-ori" style="background:#37474F" data-l="PNG / PDF yönü" title="PNG / PDF yönü — '+(lbExpOri==='dikey'?'şu an dikey (telefonda paylaşmak için)':'şu an yatay (TV / bilgisayar için)')+'. Tıkla: değiştir" onclick="lbExpOriToggle()">'+(lbExpOri==='dikey'?'▯':'▭')+'<span class="lb-bl"> '+(lbExpOri==='dikey'?'Dikey':'Yatay')+'</span></button>'
+        +'<button type="button" class="lb-cy-btn'+(lbCycle.on?' on':'')+'" data-l="Otomatik döngü" title="Otomatik döngü: aşamaları sırayla büyük göster (tıkla: kapalı → 20 → 30 → 60 sn)" onclick="lbCycleToggle()">🔁'+(lbCycle.on?'<span class="lb-cy-n">'+lbCycle.sec+'</span>':'')+'</button>'
+        +'<button type="button" class="lb-fs" data-l="Tam ekran" title="Tam ekran" onclick="lbToggleFull()">⛶</button></span><button type="button" class="lb-x" title="Kapat (Esc)" onclick="lbClose()">✕</button></div>';
     // Satır yükseklikleri içerikle orantılı (parti + müşteri başlığı): böylece üç aşamada yazılar aynı büyüklüğe yakın olur,
     // az partili aşama boşuna yer kaplamaz, kalabalık aşama sıkışmaz
     const units=(list,cls)=>list.length+(lbShowCust?1.3*new Set(list.map(k=>lbGroupOf(k,cls))).size:0);
@@ -7242,6 +7250,9 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-tv-btns{display:inline-flex;gap:4px;margin-left:8px}.lb-tv-btns button{border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700;cursor:pointer}.lb-tv-btns button:hover{background:#FF7043}.lb-grid.lb-tv1{gap:0}'
         +'.lb-cyc span.off{opacity:.4}'
         +'.lb-arr-r.tm{border-left-color:#FF7043}.lb-arr-r.tm .lb-arr-t{color:#FFAB91}'
+        +'.lb-top{position:relative}.lb-more{display:contents}.lb-top button.lb-more-b{display:none;position:relative}.lb-top button.lb-more-b.dot::after{content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#FFD54F}'
+        +'@media(max-width:700px){#liveBoard .lb-top button.lb-more-b{display:inline-block;font-weight:900}#liveBoard .lb-more{display:none;position:absolute;right:6px;top:calc(100% + 2px);z-index:80;flex-direction:column;gap:5px;min-width:210px;padding:8px;border-radius:10px;background:#1d1a3a;border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.6)}#liveBoard .lb-more.open{display:flex}'
+        +'#liveBoard .lb-top .lb-more button,#liveBoard .lb-top .lb-more button.lb-exp{width:100%!important;height:36px!important;font-size:15px!important;padding:0 10px!important;text-align:left;display:flex;align-items:center;gap:8px}#liveBoard .lb-top .lb-more button::after{content:attr(data-l);font-size:13px;font-weight:700}#liveBoard .lb-more .lb-cy-n{font-size:11px;order:2}#liveBoard .lb-more .lb-cy-btn::after{order:1}}'
         +'.lb-ev-cu{color:#FFD54F;font-weight:700}html.lb-open,html.lb-open body{overflow:hidden}'
         +'.lb-selbar button.lb-ocrb{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.7)}.lb-ocr img{display:block;max-width:100%;max-height:200px;margin:6px auto;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.2)}'
         +'.lb-ocr-l{max-height:46vh;overflow-y:auto;margin:6px 0}.lb-ocr-h{margin:8px 0 3px;font-weight:800;color:#C6FF00;font-size:13px}.lb-ocr-h small{color:#90A4AE;font-weight:500}.lb-ocr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:13px}.lb-ocr-r input{width:20px;height:20px}.lb-ocr-r b{font-size:18px;color:#fff;min-width:60px}.lb-ocr-r span{color:#B0BEC5}.lb-ocr-r .rd{color:#FFB74D}.lb-ocr-r em{color:#90A4AE;font-size:11px}.lb-ocr-r.sel{opacity:.55}.lb-ocr-r.sg{background:rgba(255,183,77,.07)}'

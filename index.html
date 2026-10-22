@@ -3956,7 +3956,9 @@ function hmA4Prep(n,d,branch){
     n.w=(hmA4Measure(n.lab,n.bold)+(n.vt?0.45+hmA4Measure(n.vt,false)*0.8:0))*n.fs+2*pad*n.fs+dot*n.fs;n.h=n.fs*(d<=1?1.75:1.45);n.pad=pad;n.dot=dot;
     n.children.forEach(c=>hmA4Prep(c,d+1,n.branch));
 }
-const HM_A4_GX=1.5,HM_A4_GY=0.22,HM_A4_GB=0.7,HM_A4_GC=0.9;
+let HM_A4_GX=1.5,HM_A4_GY=0.22,HM_A4_GB=0.7,HM_A4_GC=0.9;
+// Aralık: normal / sıkı (sıkıda dallar arası boşluk az → aynı sayfada yazı büyür)
+function hmA4Gap(g){const t=g==='tight';HM_A4_GX=t?1.0:1.5;HM_A4_GY=t?0.08:0.22;HM_A4_GB=t?0.32:0.7;HM_A4_GC=t?0.6:0.9}
 function hmA4Lay(n,cols){
     n.grid=null;
     if(!n.children.length){n.sw=n.w;n.sh=n.h;return}
@@ -4007,26 +4009,63 @@ function hmA4Layout(root,cols,mode){
 function hmA4Fit(box,ori){const[pw,ph]=HM_A4_PAGE[ori];return Math.min((pw-2*HM_A4_M)/box.W,(ph-2*HM_A4_M-HM_A4_HEAD)/box.H)}
 // En iyi yerleşimi seç (otomatik) — seçili olanlar sabit
 function hmA4Plan(){
-    const maxD=Math.max(1,hmA4MaxDepth()),dp=hmA4Src?hmA4Src.depth:hmA4.depth;let depth=dp?Math.min(dp,maxD):maxD,best=null,note='';
+    hmA4Gap(hmA4.gap);
+    const maxD=Math.max(1,hmA4MaxDepth()),dp=hmA4Src?hmA4Src.depth:hmA4.depth,fix=+hmA4.font||0;
+    const oris=hmA4.ori==='auto'?['land','port']:[hmA4.ori];
+    const modes=hmA4.side==='auto'?['two','one','g2','g3','g4']:hmA4.side==='grid'?['g2','g3','g4','g5']:[hmA4.side];
+    const colsL=hmA4.cols?[hmA4.cols]:[1,2,3,4];
+    const minFsOf=root=>{let m=9;hmA4Walk(root,n=>{if(n.d>0)m=Math.min(m,n.fs)});return m===9?1:m};
+    // en iyi yerleşim (yazıyı en büyük yapan); eşit yazıda daha az sütun, iki yana ve yatay öncelikli (küçük pay)
+    const best=(root,os,minFs)=>{let b=null;
+        for(const ori of os)for(const mode of modes)for(const cols of colsL){
+            const box=hmA4Layout(root,cols,mode),s=hmA4Fit(box,ori),eff=Math.min(s,HM_A4_MAXPT/minFs),score=eff*(1-0.012*(cols-1))*(mode==='two'?1:mode==='one'?0.985:0.99);
+            if(!b||score>b.score+1e-9)b={score,s:eff,ori,mode,two:mode==='two',cols};
+        }return b};
+    let depth=dp?Math.min(dp,maxD):maxD,note='',root,minFs,b;
     for(;;){
-        const root=hmA4Tree(depth);hmA4Prep(root,0,'#546E7A');
-        const minFs=(()=>{let m=9;hmA4Walk(root,n=>{if(n.d>0)m=Math.min(m,n.fs)});return m===9?1:m})();
-        let b=null;
-        for(const ori of hmA4.ori==='auto'?['land','port']:[hmA4.ori])
-            for(const mode of hmA4.side==='auto'?['two','one','g2','g3']:hmA4.side==='grid'?['g2','g3','g4']:[hmA4.side])
-                for(const cols of hmA4.cols?[hmA4.cols]:[1,2,3,4]){
-                    const box=hmA4Layout(root,cols,mode),s=hmA4Fit(box,ori),eff=Math.min(s,HM_A4_MAXPT/minFs);
-                    // eşit yazıda: daha az sütun, iki yana ve yatay öncelikli (küçük pay)
-                    const score=eff*(1-0.012*(cols-1))*(mode==='two'?1:mode==='one'?0.985:0.99);
-                    if(!b||score>b.score+1e-9)b={score,s:eff,ori,mode,two:mode==='two',cols};
-                }
-        const pt=b.s*minFs;
-        if(dp||pt>=HM_A4_MINPT||depth<=1){best=Object.assign(b,{depth,pt,minFs});break}
+        root=hmA4Tree(depth);hmA4Prep(root,0,'#546E7A');minFs=minFsOf(root);b=best(root,oris,minFs);
+        if(fix||dp||b.s*minFs>=HM_A4_MINPT||depth<=1)break;
         note='Okunurluk için '+(maxD-depth+1)+' alt seviye çıkarıldı (derinliği elle seçebilirsin)';depth--;
     }
-    const root=hmA4Tree(best.depth);hmA4Prep(root,0,'#546E7A');const box=hmA4Layout(root,best.cols,best.mode);
+    let pages=[{root,b}];
+    // 🔠 "en az N pt": tek sayfaya o boyutta sığmıyorsa sayfalara bölünür — önce 1. seviye dallar, o da yetmezse
+    //    2. seviye dallar (1. seviye dal adı her sayfada "⋯ devam" ile tekrarlanır); sıra bozulmaz, sayfalar dengeli,
+    //    bütün sayfalarda aynı yazı boyu (en küçüğü)
+    if(fix&&b.s*minFs<fix-1e-6&&root.children.length){
+        const L1=root.children;L1.forEach(c=>hmA4Lay(c,2));
+        const items1=L1.map(c=>({l1:c,sub:null,w:c.sh+HM_A4_GB}));
+        const items2=[];L1.forEach(c=>{if(c.children.length)c.children.forEach(g=>items2.push({l1:c,sub:g,w:g.sh+HM_A4_GY}));else items2.push({l1:c,sub:null,w:c.sh+HM_A4_GB})});
+        const pageRoot=ch=>{const kids=[];
+            ch.forEach(it=>{let last=kids[kids.length-1];
+                if(!it.sub){kids.push(Object.assign({},it.l1));return}
+                if(!last||last._src!==it.l1){last=Object.assign({},it.l1,{children:[],_src:it.l1});
+                    if(it.l1.children[0]!==it.sub){last.lab=it.l1.lab+' ⋯';last.w=it.l1.w+hmA4Measure(' ⋯',it.l1.bold)*it.l1.fs}kids.push(last)}
+                last.children.push(it.sub)});
+            return Object.assign({},root,{children:kids})};
+        const tryK=(items,k)=>{let f=null;const chunks=hmA4Chunks(items,items.map(x=>x.w),k);
+            for(const ori of oris){const pg=chunks.map(ch=>{const r=pageRoot(ch);return{root:r,b:best(r,[ori],minFs)}}),smin=Math.min(...pg.map(x=>x.b.s));if(!f||smin>f.smin)f={pages:pg,smin}}
+            return f};
+        // en çok sayfayla ulaşılabilecek yazı: istenen boyuta varılamıyorsa (sayfa GENİŞLİĞİ yetmiyor: seviye sayısı / ad
+        // uzunluğu) gereksiz sayfa üretme — o boyuta en az sayfayla ulaş; sayfa sayısı ikili aramayla bulunur
+        let list=null,top=null;
+        for(const items of L1.length>1?[items1,items2]:[items2]){const f=tryK(items,Math.min(40,items.length));if(!top||f.smin>top.smin*1.001){top=f;list=items}if(f.smin*minFs>=fix-1e-6)break}
+        const reach=top.smin*minFs>=fix-1e-6,target=reach?fix/minFs:top.smin*0.97;
+        let lo=2,hi=Math.min(40,list.length),found=top;
+        while(lo<=hi){const k=(lo+hi)>>1,f=tryK(list,k);if(f.smin>=target-1e-9){found=f;hi=k-1}else lo=k+1}
+        if(!reach)note=(note?note+' • ':'')+'Yazı en çok '+(top.smin*minFs).toFixed(1)+' pt olabiliyor (sayfa genişliği yetmiyor) — derinliği, ad uzunluğunu ya da değeri azaltınca büyür';
+        pages=found.pages;pages.forEach((x,i)=>{x.b.s=found.smin;x.root.pg=(i+1)+'/'+pages.length});
+    }
+    // son yerleşim (denemeler düğüm konumlarını değiştirdi)
+    const out=pages.map(x=>Object.assign({},x.b,{root:x.root,box:hmA4Layout(x.root,x.b.cols,x.b.mode),depth,minFs,src:hmA4Src}));
+    out.forEach(o=>{o.pt=o.s*minFs});
     let nodes=0;hmA4Walk(root,()=>nodes++);
-    return Object.assign(best,{root,box,note,nodes:nodes-1,maxD,src:hmA4Src});
+    return Object.assign({},out[0],{pages:out,note,nodes:nodes-1,maxD});
+}
+// sırayı bozmadan, yükseklikleri dengeli k parça
+function hmA4Chunks(kids,w,k){
+    const tot=w.reduce((a,b)=>a+b,0),out=[[]];let acc=0;
+    kids.forEach((c,i)=>{const need=k-out.length;if(out[out.length-1].length&&need>0&&acc+w[i]/2>tot/k*out.length&&kids.length-i>=need)out.push([]);out[out.length-1].push(c);acc+=w[i]});
+    return out;
 }
 function hmA4Col(c,dark){if(!hmA4.color)return dark?'#333':'#666';try{return dark?heatmapMindDarkColor(c):c}catch(e){return c}}
 function hmA4Svg(P,pxW){
@@ -4056,7 +4095,7 @@ function hmA4Svg(P,pxW){
             +(n.vt?'<tspan dx="'+(0.45*fs).toFixed(2)+'" font-size="'+(fs*0.8).toFixed(2)+'" font-weight="500" fill="'+(n.d===0?'#CFD8DC':'#666')+'">'+esc(n.vt)+'</tspan>':'')+'</text>';
     });
     const lv=heatmapMindLevelKeys().map(k=>(HEATMAP_DIMENSIONS[k]||{}).label).filter(Boolean),from=P.root.isAll?0:1;
-    const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+16)+'" '+F+' font-size="16" font-weight="800" fill="#111">'+esc(P.src?P.src.title:'Isı Haritası — '+P.root.name)+'</text>'
+    const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+16)+'" '+F+' font-size="16" font-weight="800" fill="#111">'+esc((P.src?P.src.title:'Isı Haritası — '+P.root.name)+(P.root.pg?'  •  sayfa '+P.root.pg:''))+'</text>'
         +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+31)+'" '+F+' font-size="9" fill="#555">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
         +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+16)+'" text-anchor="end" '+F+' font-size="9" fill="#555">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
         +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+37)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+37)+'" stroke="#ccc" stroke-width="0.8"/>';
@@ -4086,11 +4125,13 @@ function hmA4Render(){
         +'<label>Yerleşim'+sel('side',[['auto','Otomatik ('+(P.mode==='two'?'iki yana':P.mode==='one'?'tek yana':P.mode.slice(1)+' sütunlu ağaç')+')'],['two','İki yana (mind map)'],['one','Tek yana (ağaç)'],['grid','Sütunlu ağaç (kök üstte)']],hmA4.side)+'</label>'
         +'<label>Son seviye sütunu'+sel('cols',[[0,'Otomatik ('+P.cols+')'],[1,'1'],[2,'2'],[3,'3'],[4,'4']],hmA4.cols)+'</label>'
         +'<label>Değer'+sel('val',[['both','Parti + kg'],['kg','Yalnız kg'],['count','Yalnız parti'],['none','Yok']],hmA4.val)+'</label>'
+        +'<label>Yazı boyutu'+sel('font',[['fit','Sığdır (tek sayfa, en büyük yazı)'],['8','En az 8 pt'],['9','En az 9 pt'],['10','En az 10 pt'],['11','En az 11 pt'],['12','En az 12 pt'],['14','En az 14 pt']],String(hmA4.font||'fit'))+'</label>'
+        +'<label>Aralık'+sel('gap',[['normal','Normal'],['tight','Sıkı (daha büyük yazı)']],hmA4.gap||'normal')+'</label>'
         +'<label>Ad uzunluğu'+sel('maxCh',[[22,'Kısa (22)'],[30,'Orta (30)'],[40,'Uzun (40)'],[70,'Tam']],hmA4.maxCh)+'</label>'
         +'<label>Renk'+sel('color',[['1','Renkli'],['0','Siyah-beyaz']],hmA4.color?'1':'0')+'</label>'
-        +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
+        +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4'+(P.pages.length>1?' • <b>'+P.pages.length+' sayfa</b>':'')+'</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
         +'<div class="hm-a4-btns"><button type="button" class="pdf" onclick="hmA4Export(&quot;pdf&quot;)">📄 PDF indir</button><button type="button" onclick="hmA4Export(&quot;png&quot;)">🖼️ PNG indir</button><button type="button" onclick="hmA4Export(&quot;print&quot;)">🖨️ Yazdır</button><button type="button" class="x" onclick="hmA4Close()">Kapat</button></div></div>';
-    m.innerHTML='<div class="hm-a4-box">'+opt+'<div class="hm-a4-prev"><div class="hm-a4-page '+P.ori+'">'+hmA4Svg(P)+'</div></div></div>';
+    m.innerHTML='<div class="hm-a4-box">'+opt+'<div class="hm-a4-prev'+(P.pages.length>1?' multi':'')+'">'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
 }
 function hmA4Canvas(P){
     return new Promise((res,rej)=>{
@@ -4100,18 +4141,37 @@ function hmA4Canvas(P){
     });
 }
 async function hmA4Export(mode){
-    const P=hmA4Last||hmA4Plan(),title=P.src?P.src.title:'Isı Haritası — '+P.root.name,name=(P.src?P.src.file:'isi_haritasi')+'_A4_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+    const P=hmA4Last||hmA4Plan(),pages=P.pages||[P],title=P.src?P.src.title:'Isı Haritası — '+P.root.name,name=(P.src?P.src.file:'isi_haritasi')+'_A4_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
     const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
-    showToast(mode==='pdf'?'📄 A4 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ A4 görseli hazırlanıyor...','warning');
-    let c;try{c=await hmA4Canvas(P)}catch(e){if(printWin)printWin.close();showToast('A4 görseli oluşturulamadı','error');return}
-    if(mode==='print'){tmapPrintCanvas(c,printWin,title);return}
+    showToast((mode==='pdf'?'📄 A4 PDF':mode==='print'?'🖨️ Yazdırma':'🖼️ A4 görseli')+' hazırlanıyor'+(pages.length>1?' ('+pages.length+' sayfa)':'')+'...','warning');
+    let cs=[];try{for(const pg of pages)cs.push(await hmA4Canvas(pg))}catch(e){if(printWin)printWin.close();showToast('A4 görseli oluşturulamadı','error');return}
+    if(mode==='print'){hmA4PrintPages(cs,P.ori,printWin,title);return}
     if(mode==='pdf'){
         // tuval tam A4 oranında; html2pdf genişliğe göre ölçekler — yanlarda az pay bırakınca yükseklik sayfaya sığar (tek sayfa)
-        html2pdf().set({margin:[0,1.2,0,1.2],filename:name+'.pdf',image:{type:'jpeg',quality:.95},jsPDF:{unit:'mm',format:'a4',orientation:P.ori==='land'?'landscape':'portrait'}})
-            .from(c,'canvas').save().then(()=>showToast('✅ A4 PDF indirildi')).catch(err=>showToast('PDF hatası: '+err,'error'));
+        const orientation=P.ori==='land'?'landscape':'portrait',w=html2pdf().set({margin:[0,1.2,0,1.2],filename:name+'.pdf',image:{type:'jpeg',quality:.95},jsPDF:{unit:'mm',format:'a4',orientation}}).from(cs[0],'canvas');
+        try{
+            if(cs.length===1)await w.save();
+            else{const pdf=await w.toPdf().get('pdf'),[W,H]=P.ori==='land'?[297,210]:[210,297];
+                cs.slice(1).forEach(c=>{pdf.addPage('a4',orientation);const iw=W-2.4,ih=iw*c.height/c.width;pdf.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',1.2,Math.max(0,(H-ih)/2),iw,ih)});
+                pdf.save(name+'.pdf')}
+            showToast('✅ A4 PDF indirildi'+(cs.length>1?' ('+cs.length+' sayfa)':''));
+        }catch(err){showToast('PDF hatası: '+err,'error')}
         return;
     }
-    c.toBlob(b=>{if(!b){showToast('PNG oluşturulamadı','error');return}fallbackDownload(b,name+'.png');showToast('✅ A4 PNG indirildi')});
+    // PNG: çok sayfa ise sayfalar alt alta tek görselde
+    let c=cs[0];
+    if(cs.length>1){const gap=40;c=document.createElement('canvas');c.width=cs[0].width;c.height=cs.reduce((a,x)=>a+x.height,0)+gap*(cs.length-1);const g=c.getContext('2d');g.fillStyle='#9E9E9E';g.fillRect(0,0,c.width,c.height);let y=0;cs.forEach(x=>{g.drawImage(x,0,y);y+=x.height+gap})}
+    c.toBlob(b=>{if(!b){showToast('PNG oluşturulamadı','error');return}fallbackDownload(b,name+'.png');showToast('✅ A4 PNG indirildi'+(cs.length>1?' ('+cs.length+' sayfa alt alta)':''))});
+}
+// her tuval ayrı A4 sayfası
+function hmA4PrintPages(cs,ori,win,title){
+    let target=win,frame=null;
+    if(!target||target.closed){frame=document.getElementById('tmapPrintFrame');if(!frame){frame=document.createElement('iframe');frame.id='tmapPrintFrame';frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(frame)}target=frame.contentWindow}
+    const land=ori==='land',doc=target.document;doc.open();
+    doc.write('<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>@page{size:A4 '+(land?'landscape':'portrait')+';margin:0}html,body{margin:0;background:#fff}img{display:block;width:'+(land?'296mm':'209mm')+';height:auto;margin:0 auto;page-break-after:always;break-after:page}img:last-child{page-break-after:auto;break-after:auto}</style></head><body>'+cs.map(c=>'<img src="'+c.toDataURL('image/png')+'">').join('')+'</body></html>');doc.close();
+    const imgs=[...doc.images];let n=0;const go=()=>{target.focus();target.print()},one=()=>{if(++n>=imgs.length)setTimeout(go,150)};
+    imgs.forEach(im=>{if(im.complete)one();else im.onload=one});
+    showToast('🖨️ Yazdırma ekranı açıldı'+(cs.length>1?' ('+cs.length+' sayfa)':''));
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex')hmA4Close()}});
 (function(){const st=document.createElement('style');st.textContent=
@@ -4129,6 +4189,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.ge
     +'.lb-mind-tb select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:2px 4px;font-size:12px;max-width:42vw}.lb-mind-tb button{background:#6A1B9A;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:800;cursor:pointer}'
     +'.lb-mind-info{padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.08);border-left:3px solid #888}.lb-mind-info.ok{border-color:#66BB6A}.lb-mind-info.mid{border-color:#FFCA28}.lb-mind-info.low{border-color:#EF5350}'
     +'.lb-mind-pre{display:inline-flex;gap:4px;flex-wrap:wrap}.lb-mind-pre button,.hm-a4-lv button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:2px 9px;font-size:12px;font-weight:700;cursor:pointer}.lb-mind-pre button.on,.hm-a4-lv button.on{background:#00897B;border-color:#80CBC4}'
+    +'.hm-a4-prev.multi,.lb-mind-area.multi{flex-direction:column;justify-content:flex-start;gap:14px;overflow:auto}'
     +'.lb-mind-area{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;container-type:size}.lb.fm .lb-mind-tb{display:none}'
     +'@media(max-width:760px){.hm-a4-box{flex-direction:column;height:96vh}.hm-a4-opt{flex:0 0 auto;max-height:42vh}.hm-a4-btns{flex-direction:row;flex-wrap:wrap;position:sticky;bottom:-1px;background:#1d1a3a;padding:6px 0 2px;margin-top:4px;order:-1;top:0}.hm-a4-btns button{flex:1 1 40%;padding:7px 4px}}';
     document.head.appendChild(st)})();
@@ -5344,15 +5405,17 @@ function lbSelMindSetLv(i,v){
 }
 function lbSelMindBoardRefresh(){if(lbView==='sel'&&lbSelCardMode==='mind'&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
 function lbSelMindOri(v){hmA4.ori=v;hmA4Save();lbSelMindBoardRefresh()}
+function lbSelMindFont(v){hmA4.font=v;hmA4Save();lbSelMindBoardRefresh()}
 function lbSelMindA4(){hmA4Open(lbSelMindSrc(lbSelMindCards()))}
 function lbSelMindHtml(cards){
     const prev=hmA4Src;hmA4Src=lbSelMindSrc(cards);let P;try{P=hmA4Plan()}finally{hmA4Src=prev}
     const ptc=P.pt>=9?'ok':P.pt>=HM_A4_MINPT?'mid':'low';
     return '<div class="lb-mindw"><div class="lb-mind-tb">'+lbSelMindPresetHtml()+lbSelMindLvHtml()
         +'<select title="Sayfa yönü: Otomatik = yazının en okunur olduğu yön" onchange="lbSelMindOri(this.value)">'+[['auto','Otomatik ('+(P.ori==='land'?'▭ yatay':'▯ dikey')+')'],['land','▭ Yatay A4'],['port','▯ Dikey A4']].map(([v,l])=>'<option value="'+v+'"'+(hmA4.ori===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
-        +'<span class="lb-mind-info '+ptc+'" title="'+esc(P.nodes+' dal'+(P.note?' • '+P.note:''))+'">en küçük yazı <b>'+P.pt.toFixed(1)+' pt</b>'+(P.note?' • ℹ️ alt seviye kısaltıldı':'')+'</span>'
+        +'<span class="lb-mind-info '+ptc+'" title="'+esc(P.nodes+' dal'+(P.note?' • '+P.note:''))+'">en küçük yazı <b>'+P.pt.toFixed(1)+' pt</b>'+(P.pages.length>1?' • '+P.pages.length+' sayfa':'')+(P.note?' • ℹ️':'')+'</span>'
+        +'<select title="Yazı boyutu: Sığdır = tek sayfa; En az N pt = yazı küçülmez, gerekirse sayfalara bölünür" onchange="lbSelMindFont(this.value)">'+[['fit','Yazı: sığdır'],['9','Yazı en az 9 pt'],['10','Yazı en az 10 pt'],['12','Yazı en az 12 pt'],['14','Yazı en az 14 pt']].map(([v,l])=>'<option value="'+v+'"'+(String(hmA4.font||'fit')===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
         +'<button type="button" onclick="lbSelMindA4()" title="A4 önizleme: yerleşim, derinlik, renk… → PDF / PNG / yazdır">📄 A4 / PDF</button></div>'
-        +'<div class="lb-mind-area"><div class="hm-a4-page '+P.ori+'">'+hmA4Svg(P)+'</div></div></div>';
+        +'<div class="lb-mind-area'+(P.pages.length>1?' multi':'')+'">'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
 }
 function lbSelFilterReset(){lbSelCol='';lbFocus=null;lbSelStage='';lbSelCust=[];lbLastKeys=null;lbPvHide();lbRender()}
 // Seçilenlerde aşama süzgeci: KK / Sarım dışındaki şu anki aşamalar (BOYAMA, RAM…) için de; '' = yok

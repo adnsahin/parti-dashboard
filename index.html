@@ -3217,7 +3217,7 @@ function heatmapLeafTableHtml(cards){
         +heatmapLeafSortTh('# / Parti','parti')+heatmapLeafSortTh('Mevcut aşama','asama')+heatmapLeafSortTh('Kilo','kilo')+heatmapLeafSortTh('Bekleme','bekleme')+heatmapLeafSortTh('Firma','firma')
         +'</tr></thead><tbody>';
     ordered.slice(0,180).forEach((k,i)=>{
-        h+='<tr><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td><b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
+        h+='<tr'+(lbMainSelOn(k)?' class="lbsel"':'')+'><td>'+heatmapChkHtml(heatmapLeafSelection.has(k.id),'toggleHeatmapLeafSelect(&quot;'+esc(k.id)+'&quot;)')+'</td><td>'+lbMainSelBtn(k,13)+' <b style="color:#FFD700;cursor:pointer" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)">#'+(i+1)+' • '+esc(k.parti)+'</b></td><td>'+esc(cardCurrentStage(k)||'-')+'</td><td style="text-align:right">'+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg</td><td>'+esc(fifoAgeLabel(k))+'</td><td>'+esc(k.line1||'-')+'</td></tr>';
     });
     return h+'</tbody></table></div>';
 }
@@ -3525,6 +3525,7 @@ function heatmapLeafViewSectionHtml(){
     h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPNG(true)">🖼️ PNG</button>';
     h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafPDF(true)">📄 PDF</button>';
     h+='<button type="button" class="btn-fire-export'+offCls+'" onclick="exportHeatmapLeafExcel(true)">📊 Excel</button>';
+    h+='<span style="font-size:11px;color:#C6FF00;font-weight:800;margin-left:10px">☑ İşaretlileri canlı Seçilenlere:</span>'+(selCount?lbBulkBtn(heatmapLeafView.cards.filter(k=>heatmapLeafSelection.has(k.id))):'<small style="color:#90A4AE">(önce listeden işaretle)</small>');
     h+='</div>';
     const chartHtml=heatmapLeafFirmaGridHtml(visible)||heatmapLeafBarChartHtml(visible);
     if(chartHtml)h+=heatmapChartWrapHtml(chartHtml);
@@ -3653,7 +3654,7 @@ function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels,namePrefix
         if(isLast){
             const checked=heatmapMindCheckedPaths.has(path);
             h+='<div class="'+wrapCls+'"><div class="tmap-node lvl'+level+' hm-leaf'+(checked&&!exp?' on':'')+'" data-p="'+path+'" style="--c:'+heatmapMindTextColor(heat)+';--cd:'+heatmapMindDarkColor(heat)+'" title="Tıkla: partileri listele" onclick="heatmapMindLeafClickPath(&quot;'+path+'&quot;)">'
-                +(exp?'':'<span class="hm-chk" onclick="event.stopPropagation()">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'</span>')+body+hide+'</div></div>';
+                +(exp?'':'<span class="hm-chk" onclick="event.stopPropagation()">'+heatmapChkHtml(checked,'heatmapMindToggleCheck(&quot;'+path+'&quot;)')+'</span>')+body+(exp?'':lbBulkMini(r.cards))+hide+'</div></div>';
         }else{
             const expanded=heatmapMindExpandedPaths.has(path);
             // Altında en az iki seviye varsa: ⊞ altındakilerin hepsini aç, ⊟ (açık alt dal varsa) alt dalları topluca kapat
@@ -3663,7 +3664,7 @@ function heatmapMindRenderBranches(cards,levelIndex,pathPrefix,levels,namePrefix
                 if(expanded&&heatmapMindHasOpenBelow(path))bulk+='<span class="hm-bulk" title="Alt dallarını topluca kapat (bu dal açık kalır)" onclick="event.stopPropagation();heatmapMindBulkClose(&quot;'+path+'&quot;)">⊟</span>';
             }
             h+='<div class="'+wrapCls+'"><div class="tmap-node lvl'+level+' hm-node" data-p="'+path+'" style="--c:'+heatmapMindTextColor(heat)+';--cd:'+heatmapMindDarkColor(heat)+'" title="Tıkla: alt dalları '+(expanded?'kapat':'aç')+'" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'
-                +(exp?'':'<span class="hm-caret">'+(expanded?'▾':'▸')+'</span>')+body+bulk+hide+'</div>'
+                +(exp?'':'<span class="hm-caret">'+(expanded?'▾':'▸')+'</span>')+body+(exp?'':lbBulkMini(r.cards))+bulk+hide+'</div>'
                 +(expanded?'<div class="tmap-children">'+heatmapMindRenderBranches(r.cards,levelIndex+1,path,levels,nameKey,exp)+'</div>':'')+'</div>';
         }
     });
@@ -3895,6 +3896,7 @@ function heatmapMindTreeToolbarHtml(){
 }
 function heatmapMindOutRowHtml(){
     return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
+        +'<button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="heatmapMindExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="heatmapMindExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="heatmapMindExport(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="heatmapMindExport(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button>'
         +'<small class="tmap-out-view">'+(heatmapMindVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
 }
@@ -3911,6 +3913,225 @@ function heatmapMindExport(mode){
     const th=hmMindThemeOf(heatmapMindTheme);
     return mapExportImage(mode,{title,file:'isi_haritasi_mindmap',bg:th.bg,build:(white,bg)=>mapBuildExportEl(white,title,(heatmapMetric==='count'?'Adete':'Kg\'a')+' göre • her dalda ilk '+heatmapTopN+(sc.filtered?' • '+sc.shown+'/'+sc.total+' '+sc.label+' seçili':''),heatmapMindTreeHtml(true,white?(th.k==='color'?'color':'light'):th.k),white?null:{bg,light:!!th.light})});
 }
+/* ══ 📄 A4 mindmap: ısı haritası ağacını tek A4 sayfaya sığan, okunur yazılı, akıllı yerleşimle çizer ══
+   • Kök varsayılan "Kalite Kontrol" (1. seviye aşama ise); ağacın seviyeleri, metrik, Top N, 🎯 seçim ve gizlenenler aynen
+   • Yerleşim: dallar kökün iki yanına yükseklikleri dengelenerek dağıtılır; son seviyedeki uzun listeler sütunlara bölünür
+   • Otomatik: yatay / dikey sayfa × iki yana / tek yana × 1–4 sütun denenir, yazıyı en büyük yapan seçilir (en çok 14 pt);
+     en küçük yazı 7 pt'nin altına düşerse en alt seviye çıkarılır. Önizlemede hepsi elle değiştirilebilir → PDF / PNG / Yazdır */
+let hmA4=(()=>{const d={root:null,depth:0,ori:'auto',side:'auto',cols:0,val:'both',color:true,open:false,maxCh:30};try{return Object.assign(d,JSON.parse(localStorage.getItem('hmA4v1')||'{}'))}catch(e){return d}})();
+function hmA4Save(){try{localStorage.setItem('hmA4v1',JSON.stringify(hmA4))}catch(e){}}
+const HM_A4_PAGE={land:[842,595],port:[595,842]},HM_A4_M=22,HM_A4_HEAD=44,HM_A4_MAXPT=14,HM_A4_MINPT=7,HM_A4_FS=[1.5,1.18,1.0,0.95,0.92,0.9];
+let hmA4Ctx=null,hmA4Last=null,hmA4Src=null;   // hmA4Src: başka veri kaynağı (ör. Seçilenler) — null = ısı haritası
+function hmA4Measure(t,bold){if(!hmA4Ctx)hmA4Ctx=document.createElement('canvas').getContext('2d');hmA4Ctx.font=(bold?'700 ':'500 ')+'100px "Segoe UI",Arial,sans-serif';return hmA4Ctx.measureText(String(t)).width/100}
+function hmA4Short(s,n){s=String(s||'').trim();return s.length>n?s.slice(0,n-1).trim()+'…':s}
+function hmA4ValTxt(n){if(hmA4.val==='none')return'';const kg=Math.round(n.kg).toLocaleString('tr-TR')+' kg',c=n.count.toLocaleString('tr-TR')+' p';return hmA4.val==='kg'?kg:hmA4.val==='count'?c:c+' · '+kg}
+function hmA4KKName(names){return names.find(n=>/KAL[İI]TE\s*KONTROL/i.test(n))||null}
+// Ağaç verisi (ekrandaki ağaçla aynı kurallar). depth: kökün altında gösterilecek seviye sayısı
+function hmA4Tree(depth){
+    if(hmA4Src)return hmA4Src.tree(depth);
+    const levels=heatmapMindLevelKeys(),all=heatmapMindCards(),top=heatmapMindRowsOf(all,0);
+    const build=(cards,li,prefix,nk,left)=>{
+        if(left<=0||li>=levels.length)return[];
+        const rows=heatmapMindRowsOf(cards,li);if(!rows.length)return[];
+        const sc=heatmapColorScale(heatmapMetric,Math.max.apply(null,rows.map(r=>r.value))||1),out=[];
+        rows.forEach((r,i)=>{
+            const path=prefix?prefix+'-'+i:String(i),k=nk+'›'+r.name;if(heatmapMindHidden.has(k))return;
+            const deeper=li<levels.length-1&&left>1&&(!hmA4.open||heatmapMindExpandedPaths.has(path));
+            out.push({name:r.name,count:r.count,kg:r.kg,heat:sc(r.value),children:deeper?build(r.cards,li+1,path,k,left-1):[]});
+        });
+        return out;
+    };
+    const ri=hmA4.root?top.findIndex(r=>r.name===hmA4.root):-1;
+    if(ri<0){const kids=build(all,0,'','',depth),cnt=kids.reduce((s,c)=>s+c.count,0),kg=kids.reduce((s,c)=>s+c.kg,0);
+        return{name:'Tümü ('+((HEATMAP_DIMENSIONS[levels[0]]||{}).label||'')+')',count:cnt,kg,heat:'#546E7A',children:kids,isAll:true}}
+    const r=top[ri];
+    return{name:r.name,count:r.count,kg:r.kg,heat:'#546E7A',children:build(r.cards,1,String(ri),'›'+r.name,depth)};
+}
+function hmA4MaxDepth(){if(hmA4Src)return hmA4Src.maxDepth();const n=heatmapMindLevelKeys().length;return hmA4.root&&heatmapMindRowsOf(heatmapMindCards(),0).some(r=>r.name===hmA4.root)?n-1:n}
+// Düğüm ölçüleri (yazı birimi: 1 = taban yazı boyu)
+function hmA4Prep(n,d,branch){
+    n.d=d;n.fs=HM_A4_FS[Math.min(d,HM_A4_FS.length-1)];n.bold=d<=1;n.lab=hmA4Short(n.name,d===0?48:hmA4.maxCh);n.vt=hmA4ValTxt(n);
+    n.branch=d===1?n.heat:branch;
+    const pad=d<=1?0.55:0.25,dot=d>=2?0.75:0;
+    n.w=(hmA4Measure(n.lab,n.bold)+(n.vt?0.45+hmA4Measure(n.vt,false)*0.8:0))*n.fs+2*pad*n.fs+dot*n.fs;n.h=n.fs*(d<=1?1.75:1.45);n.pad=pad;n.dot=dot;
+    n.children.forEach(c=>hmA4Prep(c,d+1,n.branch));
+}
+const HM_A4_GX=1.5,HM_A4_GY=0.22,HM_A4_GB=0.7,HM_A4_GC=0.9;
+function hmA4Lay(n,cols){
+    n.grid=null;
+    if(!n.children.length){n.sw=n.w;n.sh=n.h;return}
+    n.children.forEach(c=>hmA4Lay(c,cols));
+    const kids=n.children,leaves=kids.every(c=>!c.children.length);
+    if(leaves&&cols>1&&kids.length>=4){
+        const k=Math.min(cols,Math.ceil(kids.length/3)),rn=Math.ceil(kids.length/k),cw=[],rh=Math.max(...kids.map(c=>c.h))+HM_A4_GY;
+        kids.forEach((c,i)=>{const col=Math.floor(i/rn);cw[col]=Math.max(cw[col]||0,c.w)});
+        kids.forEach((c,i)=>{const col=Math.floor(i/rn),row=i%rn;c.rx=cw.slice(0,col).reduce((s,w)=>s+w,0)+col*HM_A4_GC;c.ry=row*rh});
+        n.grid={k,rn};n.cw=cw.reduce((s,w)=>s+w,0)+(cw.length-1)*HM_A4_GC;n.ch=rn*rh-HM_A4_GY;
+    }else{
+        let y=0;kids.forEach(c=>{c.rx=0;c.ry=y;y+=c.sh+HM_A4_GY});n.cw=Math.max(...kids.map(c=>c.sw));n.ch=y-HM_A4_GY;
+    }
+    n.sw=n.w+HM_A4_GX+n.cw;n.sh=Math.max(n.h,n.ch);
+}
+function hmA4Place(n,x,top,side){
+    n.x=x;n.y=top+(n.sh-n.h)/2;n.side=side;
+    const cx=x+n.w+HM_A4_GX,ct=top+(n.sh-n.ch)/2;
+    n.children.forEach(c=>hmA4Place(c,cx+c.rx,ct+c.ry,side));
+}
+function hmA4Mirror(n){n.x=-n.x-n.w;n.side=-1;n.children.forEach(hmA4Mirror)}
+function hmA4Walk(n,f){f(n);n.children.forEach(c=>hmA4Walk(c,f))}
+// Bir yerleşimi hesapla → kutu ölçüsü (birim)
+function hmA4Layout(root,cols,mode){
+    root.children.forEach(c=>hmA4Lay(c,cols));
+    root.x=-root.w/2;root.y=-root.h/2;root.side=0;root.gc=null;
+    const kids=root.children,two=mode==='two';let L=[],R=[];
+    if(mode[0]==='g'&&kids.length>1){
+        // sütunlu ağaç: dallar sırası bozulmadan k sütuna (yükseklikleri dengeli) bölünür; kök üstte, sütunlara dikey omurga
+        const k=Math.min(+mode.slice(1),kids.length),tot=kids.reduce((s,c)=>s+c.sh+HM_A4_GB,0),cols_=[[]];let h=0;
+        kids.forEach((c,i)=>{const left=kids.length-i,need=k-cols_.length;if(cols_[cols_.length-1].length&&h+c.sh/2>tot/k&&need>0&&left>need-1){cols_.push([]);h=0}cols_[cols_.length-1].push(c);h+=c.sh+HM_A4_GB});
+        let x=0;root.gc=[];
+        cols_.forEach(arr=>{let t=0;arr.forEach(c=>{hmA4Place(c,x+0.9,t,1);t+=c.sh+HM_A4_GB});root.gc.push({sx:x+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});x+=Math.max(...arr.map(c=>c.sw))+0.9+2.2});
+        const W=x-2.2;root.x=(W-root.w)/2;root.y=-root.h-1.6;root.busY=-0.8;
+    }else{
+    if(two&&kids.length>1){let hl=0,hr=0;kids.map((c,i)=>({c,i})).sort((a,b)=>b.c.sh-a.c.sh).forEach(o=>{if(hr<=hl){R.push(o);hr+=o.c.sh+HM_A4_GB}else{L.push(o);hl+=o.c.sh+HM_A4_GB}});
+        L=L.sort((a,b)=>a.i-b.i).map(o=>o.c);R=R.sort((a,b)=>a.i-b.i).map(o=>o.c)}
+    else{R=kids.slice();root.x=0}
+    const x0=root.x===0?root.w+HM_A4_GX:root.w/2+HM_A4_GX;   // tek yana: kök solda; iki yana: kök ortada (sol taraf aynalanır)
+    const col=(arr,mirror)=>{const H=arr.reduce((s,c)=>s+c.sh,0)+Math.max(0,arr.length-1)*HM_A4_GB;let t=-H/2;
+        arr.forEach(c=>{hmA4Place(c,x0,t,1);if(mirror)hmA4Mirror(c);t+=c.sh+HM_A4_GB})};
+    col(R,false);col(L,true);
+    }
+    let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
+    hmA4Walk(root,n=>{x1=Math.min(x1,n.x);y1=Math.min(y1,n.y);x2=Math.max(x2,n.x+n.w);y2=Math.max(y2,n.y+n.h)});
+    return{x1,y1,W:x2-x1,H:y2-y1};
+}
+function hmA4Fit(box,ori){const[pw,ph]=HM_A4_PAGE[ori];return Math.min((pw-2*HM_A4_M)/box.W,(ph-2*HM_A4_M-HM_A4_HEAD)/box.H)}
+// En iyi yerleşimi seç (otomatik) — seçili olanlar sabit
+function hmA4Plan(){
+    const maxD=Math.max(1,hmA4MaxDepth()),dp=hmA4Src?hmA4Src.depth:hmA4.depth;let depth=dp?Math.min(dp,maxD):maxD,best=null,note='';
+    for(;;){
+        const root=hmA4Tree(depth);hmA4Prep(root,0,'#546E7A');
+        const minFs=(()=>{let m=9;hmA4Walk(root,n=>{if(n.d>0)m=Math.min(m,n.fs)});return m===9?1:m})();
+        let b=null;
+        for(const ori of hmA4.ori==='auto'?['land','port']:[hmA4.ori])
+            for(const mode of hmA4.side==='auto'?['two','one','g2','g3']:hmA4.side==='grid'?['g2','g3','g4']:[hmA4.side])
+                for(const cols of hmA4.cols?[hmA4.cols]:[1,2,3,4]){
+                    const box=hmA4Layout(root,cols,mode),s=hmA4Fit(box,ori),eff=Math.min(s,HM_A4_MAXPT/minFs);
+                    // eşit yazıda: daha az sütun, iki yana ve yatay öncelikli (küçük pay)
+                    const score=eff*(1-0.012*(cols-1))*(mode==='two'?1:mode==='one'?0.985:0.99);
+                    if(!b||score>b.score+1e-9)b={score,s:eff,ori,mode,two:mode==='two',cols};
+                }
+        const pt=b.s*minFs;
+        if(dp||pt>=HM_A4_MINPT||depth<=1){best=Object.assign(b,{depth,pt,minFs});break}
+        note='Okunurluk için '+(maxD-depth+1)+' alt seviye çıkarıldı (derinliği elle seçebilirsin)';depth--;
+    }
+    const root=hmA4Tree(best.depth);hmA4Prep(root,0,'#546E7A');const box=hmA4Layout(root,best.cols,best.mode);
+    let nodes=0;hmA4Walk(root,()=>nodes++);
+    return Object.assign(best,{root,box,note,nodes:nodes-1,maxD,src:hmA4Src});
+}
+function hmA4Col(c,dark){if(!hmA4.color)return dark?'#333':'#666';try{return dark?heatmapMindDarkColor(c):c}catch(e){return c}}
+function hmA4Svg(P,pxW){
+    const[pw,ph]=HM_A4_PAGE[P.ori],s=P.s,box=P.box,cw=box.W*s,ch=box.H*s;
+    const ox=HM_A4_M+((pw-2*HM_A4_M)-cw)/2-box.x1*s,oy=HM_A4_M+HM_A4_HEAD+((ph-2*HM_A4_M-HM_A4_HEAD)-ch)/2-box.y1*s;
+    const X=v=>(ox+v*s).toFixed(2),Y=v=>(oy+v*s).toFixed(2),F='font-family="Segoe UI,Arial,sans-serif"';
+    let lines='',nodes='';
+    const curve=(x1,y1,x2,y2,col,wd)=>{const mx=(x1+x2)/2;lines+='<path d="M'+X(x1)+' '+Y(y1)+' C'+X(mx)+' '+Y(y1)+' '+X(mx)+' '+Y(y2)+' '+X(x2)+' '+Y(y2)+'" fill="none" stroke="'+col+'" stroke-width="'+wd+'" stroke-linecap="round"/>'};
+    hmA4Walk(P.root,n=>{
+        const my=n.y+n.h/2,out=n.side<0?n.x:n.x+n.w,bc=hmA4Col(n.branch,true),wd=(n.d===0?2.2:n.d===1?1.6:1).toFixed(1);
+        if(n.grid){
+            const kids=n.children,g0=Math.min(...kids.map(c=>c.y)),g1=Math.max(...kids.map(c=>c.y+c.h)),gx=n.side<0?Math.max(...kids.map(c=>c.x+c.w))+0.35:Math.min(...kids.map(c=>c.x))-0.35;
+            curve(out,my,gx,(g0+g1)/2,bc,wd);lines+='<line x1="'+X(gx)+'" y1="'+Y(g0+0.15)+'" x2="'+X(gx)+'" y2="'+Y(g1-0.15)+'" stroke="'+bc+'" stroke-width="'+wd+'" stroke-linecap="round"/>';
+        }else if(n.d===0&&n.gc){
+            const rc='#607D8B',bx=n.gc.map(g=>g.sx);
+            lines+='<line x1="'+X(n.x+n.w/2)+'" y1="'+Y(n.y+n.h)+'" x2="'+X(n.x+n.w/2)+'" y2="'+Y(n.busY)+'" stroke="'+rc+'" stroke-width="2.2"/>'
+                +'<line x1="'+X(Math.min(...bx,n.x+n.w/2))+'" y1="'+Y(n.busY)+'" x2="'+X(Math.max(...bx,n.x+n.w/2))+'" y2="'+Y(n.busY)+'" stroke="'+rc+'" stroke-width="2.2" stroke-linecap="round"/>';
+            n.gc.forEach(g=>{lines+='<line x1="'+X(g.sx)+'" y1="'+Y(n.busY)+'" x2="'+X(g.sx)+'" y2="'+Y(g.y2)+'" stroke="'+rc+'" stroke-width="2"/>'});
+            n.children.forEach(c=>{const sx=n.gc.reduce((a,g)=>g.sx<=c.x&&g.sx>a?g.sx:a,-Infinity);lines+='<line x1="'+X(sx)+'" y1="'+Y(c.y+c.h/2)+'" x2="'+X(c.x)+'" y2="'+Y(c.y+c.h/2)+'" stroke="'+hmA4Col(c.branch,true)+'" stroke-width="2"/>'});
+        }else n.children.forEach(c=>{const side=c.side<0?-1:1;curve(n.d===0?(side<0?n.x:n.x+n.w):out,my,side<0?c.x+c.w:c.x,c.y+c.h/2,n.d===0?hmA4Col(c.branch,true):bc,n.d===0?'2.2':wd)});
+        const fs=n.fs*s,tx=n.x+n.pad*n.fs+n.dot*n.fs,ty=n.y+n.h/2+n.fs*0.36;
+        if(n.d===0)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.32).toFixed(2)+'" fill="#263238"/>';
+        else if(n.d===1)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.3).toFixed(2)+'" fill="'+(hmA4.color?hmA4Col(n.heat,false):'#fff')+'" fill-opacity="'+(hmA4.color?0.16:1)+'" stroke="'+bc+'" stroke-width="1.2"/>';
+        else nodes+='<circle cx="'+X(n.x+(n.pad+n.dot*0.42)*n.fs)+'" cy="'+Y(n.y+n.h/2)+'" r="'+(n.fs*0.27*s).toFixed(2)+'" fill="'+(hmA4.color?n.heat:'#888')+'"/>';
+        const tc=n.d===0?'#fff':n.d===1?(hmA4.color?bc:'#111'):'#1a1a1a';
+        nodes+='<text x="'+X(tx)+'" y="'+Y(ty)+'" '+F+' font-size="'+fs.toFixed(2)+'" font-weight="'+(n.bold?700:500)+'" fill="'+tc+'">'+esc(n.lab)
+            +(n.vt?'<tspan dx="'+(0.45*fs).toFixed(2)+'" font-size="'+(fs*0.8).toFixed(2)+'" font-weight="500" fill="'+(n.d===0?'#CFD8DC':'#666')+'">'+esc(n.vt)+'</tspan>':'')+'</text>';
+    });
+    const lv=heatmapMindLevelKeys().map(k=>(HEATMAP_DIMENSIONS[k]||{}).label).filter(Boolean),from=P.root.isAll?0:1;
+    const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+16)+'" '+F+' font-size="16" font-weight="800" fill="#111">'+esc(P.src?P.src.title:'Isı Haritası — '+P.root.name)+'</text>'
+        +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+31)+'" '+F+' font-size="9" fill="#555">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
+        +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+16)+'" text-anchor="end" '+F+' font-size="9" fill="#555">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
+        +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+37)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+37)+'" stroke="#ccc" stroke-width="0.8"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pw+' '+ph+'"'+(pxW?' width="'+pxW+'" height="'+Math.round(pxW*ph/pw)+'"':'')+'><rect width="'+pw+'" height="'+ph+'" fill="#fff"/>'+head+lines+nodes+'</svg>';
+}
+function hmA4Set(k,v){if(k==='depth'&&hmA4Src)hmA4Src.setDepth(v);else{hmA4[k]=v;hmA4Save()}hmA4Render();if(hmA4Src&&hmA4Src.changed)hmA4Src.changed()}
+function hmA4Open(src){
+    hmA4Src=src||null;
+    const names=src?[]:heatmapMindRowsOf(heatmapMindCards(),0).map(r=>r.name);
+    if(!src&&hmA4.root===null||(hmA4.root&&!names.includes(hmA4.root)))hmA4.root=heatmapTopGroup==='asama'?(hmA4KKName(names)||''):'';
+    let m=document.getElementById('hmA4Modal');
+    if(!m){m=document.createElement('div');m.id='hmA4Modal';m.className='hm-a4-ov';m.onclick=e=>{if(e.target===m)hmA4Close()};document.body.appendChild(m)}
+    m.style.display='flex';hmA4Render();
+}
+function hmA4Close(){const m=document.getElementById('hmA4Modal');if(m)m.style.display='none';hmA4Src=null}
+function hmA4Render(){
+    const m=document.getElementById('hmA4Modal');if(!m)return;
+    const names=hmA4Src?[]:heatmapMindRowsOf(heatmapMindCards(),0).map(r=>r.name),P=hmA4Plan();hmA4Last=P;
+    const sel=(k,opts,cur)=>'<select onchange="hmA4Set(&quot;'+k+'&quot;,'+(typeof cur==='number'?'+this.value':k==='color'||k==='open'?'this.value===&quot;1&quot;':'this.value')+')">'+opts.map(([v,l])=>'<option value="'+esc(String(v))+'"'+(String(v)===String(cur)?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select>';
+    const auto=(v,l)=>v==='auto'||v===0?'Otomatik ('+l+')':null;
+    const ptc=P.pt>=9?'ok':P.pt>=HM_A4_MINPT?'mid':'low';
+    const opt='<div class="hm-a4-opt"><b class="hm-a4-t">📄 A4 mindmap</b>'
+        +(hmA4Src?hmA4Src.optHtml(P):'<label>Kök'+sel('root',[['','Tüm harita']].concat(names.map(n=>[n,n])),hmA4.root||'')+'</label>'
+        +'<label>Dallar'+sel('open',[['0','Tüm dallar'],['1','Yalnız ekranda açık olanlar']],hmA4.open?'1':'0')+'</label>')
+        +'<label>Derinlik'+sel('depth',[[0,'Otomatik ('+P.depth+' seviye)']].concat(Array.from({length:P.maxD},(_,i)=>[i+1,(i+1)+' seviye'])),hmA4Src?hmA4Src.depth:hmA4.depth)+'</label>'
+        +'<label>Kağıt'+sel('ori',[['auto','Otomatik ('+(P.ori==='land'?'yatay':'dikey')+')'],['land','Yatay A4'],['port','Dikey A4']],hmA4.ori)+'</label>'
+        +'<label>Yerleşim'+sel('side',[['auto','Otomatik ('+(P.mode==='two'?'iki yana':P.mode==='one'?'tek yana':P.mode.slice(1)+' sütunlu ağaç')+')'],['two','İki yana (mind map)'],['one','Tek yana (ağaç)'],['grid','Sütunlu ağaç (kök üstte)']],hmA4.side)+'</label>'
+        +'<label>Son seviye sütunu'+sel('cols',[[0,'Otomatik ('+P.cols+')'],[1,'1'],[2,'2'],[3,'3'],[4,'4']],hmA4.cols)+'</label>'
+        +'<label>Değer'+sel('val',[['both','Parti + kg'],['kg','Yalnız kg'],['count','Yalnız parti'],['none','Yok']],hmA4.val)+'</label>'
+        +'<label>Ad uzunluğu'+sel('maxCh',[[22,'Kısa (22)'],[30,'Orta (30)'],[40,'Uzun (40)'],[70,'Tam']],hmA4.maxCh)+'</label>'
+        +'<label>Renk'+sel('color',[['1','Renkli'],['0','Siyah-beyaz']],hmA4.color?'1':'0')+'</label>'
+        +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
+        +'<div class="hm-a4-btns"><button type="button" class="pdf" onclick="hmA4Export(&quot;pdf&quot;)">📄 PDF indir</button><button type="button" onclick="hmA4Export(&quot;png&quot;)">🖼️ PNG indir</button><button type="button" onclick="hmA4Export(&quot;print&quot;)">🖨️ Yazdır</button><button type="button" class="x" onclick="hmA4Close()">Kapat</button></div></div>';
+    m.innerHTML='<div class="hm-a4-box">'+opt+'<div class="hm-a4-prev"><div class="hm-a4-page '+P.ori+'">'+hmA4Svg(P)+'</div></div></div>';
+}
+function hmA4Canvas(P){
+    return new Promise((res,rej)=>{
+        const[pw,ph]=HM_A4_PAGE[P.ori],W=pw*3,img=new Image(),url=URL.createObjectURL(new Blob([hmA4Svg(P,W)],{type:'image/svg+xml;charset=utf-8'}));
+        img.onload=()=>{const c=document.createElement('canvas');c.width=W;c.height=Math.round(W*ph/pw);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
+        img.onerror=e=>{URL.revokeObjectURL(url);rej(e)};img.src=url;
+    });
+}
+async function hmA4Export(mode){
+    const P=hmA4Last||hmA4Plan(),title=P.src?P.src.title:'Isı Haritası — '+P.root.name,name=(P.src?P.src.file:'isi_haritasi')+'_A4_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+    const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
+    showToast(mode==='pdf'?'📄 A4 PDF hazırlanıyor...':mode==='print'?'🖨️ Yazdırma hazırlanıyor...':'🖼️ A4 görseli hazırlanıyor...','warning');
+    let c;try{c=await hmA4Canvas(P)}catch(e){if(printWin)printWin.close();showToast('A4 görseli oluşturulamadı','error');return}
+    if(mode==='print'){tmapPrintCanvas(c,printWin,title);return}
+    if(mode==='pdf'){
+        // tuval tam A4 oranında; html2pdf genişliğe göre ölçekler — yanlarda az pay bırakınca yükseklik sayfaya sığar (tek sayfa)
+        html2pdf().set({margin:[0,1.2,0,1.2],filename:name+'.pdf',image:{type:'jpeg',quality:.95},jsPDF:{unit:'mm',format:'a4',orientation:P.ori==='land'?'landscape':'portrait'}})
+            .from(c,'canvas').save().then(()=>showToast('✅ A4 PDF indirildi')).catch(err=>showToast('PDF hatası: '+err,'error'));
+        return;
+    }
+    c.toBlob(b=>{if(!b){showToast('PNG oluşturulamadı','error');return}fallbackDownload(b,name+'.png');showToast('✅ A4 PNG indirildi')});
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex')hmA4Close()}});
+(function(){const st=document.createElement('style');st.textContent=
+    '.hm-a4-ov{position:fixed;inset:0;z-index:10060;background:rgba(10,10,25,.82);display:none;align-items:center;justify-content:center;padding:10px}'
+    +'.hm-a4-box{display:flex;gap:12px;width:min(1600px,100%);height:min(96vh,100%);background:#1d1a3a;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px;color:#fff;box-sizing:border-box}'
+    +'.hm-a4-opt{flex:0 0 230px;display:flex;flex-direction:column;gap:7px;overflow:auto;font-size:12px}.hm-a4-t{font-size:15px;color:#fff}'
+    +'.hm-a4-opt label{display:flex;flex-direction:column;gap:2px;color:#FFD54F;font-weight:700}.hm-a4-opt select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px;font-size:13px;max-width:100%}'
+    +'.hm-a4-info{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.08);line-height:1.45;border-left:4px solid #888}.hm-a4-info.ok{border-color:#66BB6A}.hm-a4-info.mid{border-color:#FFCA28}.hm-a4-info.low{border-color:#EF5350}.hm-a4-info small{opacity:.8}'
+    +'.hm-a4-btns{display:flex;flex-direction:column;gap:5px;margin-top:auto}.hm-a4-btns button{border:0;border-radius:8px;padding:8px;font-weight:800;font-size:13px;cursor:pointer;background:#1565C0;color:#fff}.hm-a4-btns button.pdf{background:#C62828}.hm-a4-btns button.x{background:#455A64}'
+    +'.hm-a4-prev{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;background:#3a3a4a;border-radius:8px;padding:10px;container-type:size}'
+    +'.hm-a4-page{background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.6);flex:0 0 auto}.hm-a4-page svg{display:block;width:100%;height:100%}'
+    +'.hm-a4-page.land{width:min(100cqw,100cqh*1.4142);height:min(100cqh,100cqw/1.4142)}.hm-a4-page.port{height:min(100cqh,100cqw*1.4142);width:min(100cqw,100cqh/1.4142)}'
+    +'.lbsel-bulk.mini{padding:0 6px;font-size:11px;line-height:17px;border-radius:9px;margin-left:5px;vertical-align:middle;white-space:nowrap;font-family:inherit}.tmap-export .lbsel-bulk{display:none}.hm-a4-lv{display:flex;flex-wrap:wrap;gap:3px}'
+    +'.lb-mindw{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:5px;padding:4px 8px 6px}.lb-mind-tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#fff}'
+    +'.lb-mind-tb select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:2px 4px;font-size:12px;max-width:42vw}.lb-mind-tb button{background:#6A1B9A;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:800;cursor:pointer}'
+    +'.lb-mind-info{padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.08);border-left:3px solid #888}.lb-mind-info.ok{border-color:#66BB6A}.lb-mind-info.mid{border-color:#FFCA28}.lb-mind-info.low{border-color:#EF5350}'
+    +'.lb-mind-pre{display:inline-flex;gap:4px;flex-wrap:wrap}.lb-mind-pre button,.hm-a4-lv button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:2px 9px;font-size:12px;font-weight:700;cursor:pointer}.lb-mind-pre button.on,.hm-a4-lv button.on{background:#00897B;border-color:#80CBC4}'
+    +'.lb-mind-area{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;container-type:size}.lb.fm .lb-mind-tb{display:none}'
+    +'@media(max-width:760px){.hm-a4-box{flex-direction:column;height:96vh}.hm-a4-opt{flex:0 0 auto;max-height:42vh}.hm-a4-btns{flex-direction:row;flex-wrap:wrap;position:sticky;bottom:-1px;background:#1d1a3a;padding:6px 0 2px;margin-top:4px;order:-1;top:0}.hm-a4-btns button{flex:1 1 40%;padding:7px 4px}}';
+    document.head.appendChild(st)})();
 /* ── 1. seviyede (ör. aşamalar) görünecekleri toplu seçme — bu cihazda saklanır ──
    mode 'hide': list = gizlenenler (sonradan gelen yeni değerler görünür)
    mode 'only': list = yalnızca görünenler ("Hiçbiri" ile başlanır; yeni gelenler gizli kalır) */
@@ -4112,7 +4333,7 @@ function heatmapMindCompactHtml(all,levels){
             h+='<div class="kkview-crow" style="padding-left:'+(depth*18+6)+'px">';
             h+=isLast?'<span class="tw"></span>':'<span class="tw" onclick="toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)">'+(exp?'▾':'▸')+'</span>';
             h+='<span class="dot" style="background:'+bg+'"></span><span class="nm" title="'+esc(r.name)+'" onclick="'+(isLast?'heatmapMindViewClick('+idx+')':'toggleHeatmapMindExpandPath(&quot;'+path+'&quot;)')+'">'+esc(r.name)+'</span>';
-            h+='<span class="bar" onclick="heatmapMindViewClick('+idx+')"><i style="width:'+Math.max(2,r.value/max*100)+'%;background:'+bg+'"></i></span><span class="val">'+heatmapMindFmt(r.value)+'</span><span class="n">'+r.cards.length+' parti</span></div>';
+            h+=lbBulkMini(r.cards)+'<span class="bar" onclick="heatmapMindViewClick('+idx+')"><i style="width:'+Math.max(2,r.value/max*100)+'%;background:'+bg+'"></i></span><span class="val">'+heatmapMindFmt(r.value)+'</span><span class="n">'+r.cards.length+' parti</span></div>';
             heatmapMindCompactNames.set(path,r.name);
             if(!isLast&&exp)h+=rowsHtml(r.cards,depth+1,path);
         });
@@ -4419,9 +4640,18 @@ function uretimLogEntries(day,catKey){
     return out;
 }
 function uretimLogFresh(){const t=URETIM_LOG&&uretimLogParseTs(URETIM_LOG.snapshotAt);return!!t&&Date.now()-t<45*60000}
+// Sunucu kaydı kullanılabilir mi: bugünkü vardiyaya ait ve kart verisinin gerisinde değil (ikisi aynı güncellemeyle gelir).
+// Veri bir süredir gelmiyorsa da doğru kaynak budur — bu cihazın kendi kaydı yalnız açık kaldığı sürede gördüklerini,
+// sayfanın açıldığı saatle tutar.
+function uretimLogUsable(){
+    const t=URETIM_LOG&&URETIM_LOG.days&&uretimLogParseTs(URETIM_LOG.snapshotAt);if(!t)return false;
+    if(uretimLogFresh())return true;
+    const gen=window.DATA_GENERATED_AT?new Date(window.DATA_GENERATED_AT).getTime():0;
+    return t>=todayShiftWindow().start.getTime()&&(!gen||isNaN(gen)||gen-t<30*60000);
+}
 function liveProdStats(){
     let log=liveProdLogCapture();
-    if(uretimLogFresh()){
+    if(uretimLogUsable()){
         const day=liveProdLogKey(),srv={v:2,date:day,server:true};
         URETIM_CATS.forEach(c=>{srv[c.local]=uretimLogEntries(day,c.key)});
         log=srv;
@@ -5054,7 +5284,7 @@ const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler',
 // Seçilenler ekranında sütun: '' iki sütun · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (tam ekran)
 let lbSelCol='',lbSelOne=false;
 // Seçilenler ekranının görünümü: 'oto' (24 partiye kadar kart, fazlası kutu) · 'kart' · 'liste' (satır satır tablo) · 'kutu'; cihaz başına hatırlanır
-const LB_CARD_MAX=24,LB_CARD_MODES={oto:'Otomatik',kart:'Kart',liste:'Liste',kutu:'Kutu'};
+const LB_CARD_MAX=24,LB_CARD_MODES={oto:'Otomatik',kart:'Kart',liste:'Liste',kutu:'Kutu',mind:'Mindmap'};
 let lbSelCardMode=mapLoadPref('lbSelCard9',v=>v in LB_CARD_MODES,'oto'),lbSelCardEff=null,lbCardSec=new Map();
 // PNG / PDF yönü (cihaz başına): dikey = telefonda paylaşmak için (varsayılan) · yatay = TV / bilgisayar
 let lbExpOri=mapLoadPref('lbExpOri9',v=>v==='dikey'||v==='yatay','dikey');
@@ -5063,7 +5293,67 @@ function lbSelCardModeNext(){
     const ks=Object.keys(LB_CARD_MODES);lbSelCardMode=ks[(ks.indexOf(lbSelCardMode)+1)%ks.length];mapSavePref('lbSelCard9',lbSelCardMode);
     lbLastKeys=null;lbRender();showToast('🗂 Seçilenler görünümü: '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+LB_CARD_MAX+' partiye kadar kart, fazlası kutu)':''));
 }
-function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
+function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
+// ── 🧠 Seçilenler mindmap: seçili partiler kendi seviyeleriyle (varsayılan Aşama › Firma › Parti) A4 mindmap olarak;
+//    panoda sayfa okunurluğa göre otomatik yatay / dikey A4 (elle de seçilir), 📄 ile önizleme → PDF / PNG / yazdır
+let lbSelMind=(()=>{const d={lv:['asama','firma','parti'],depth:0};try{const v=JSON.parse(localStorage.getItem('lbSelMind9')||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)return Object.assign(d,v)}catch(e){}return d})();
+function lbSelMindSave(){try{localStorage.setItem('lbSelMind9',JSON.stringify(lbSelMind))}catch(e){}}
+// yalnız Seçilenler'de olan seviye: KK makinesi (K1…D3; makine sırasıyla, altındaki partiler makinedeki öncelik sırasıyla)
+const LB_SM_EXTRA={makine:{label:'KK Makinesi',get:k=>lbSelMach[lbPn(k)]||'Makine yok'}};
+const LB_SM_PRESETS=[['asama','🏭 Aşamaya göre',['asama','firma','parti']],['makine','🛠 KK makinesine göre',['makine','parti']],['makfir','🛠 Makine › Firma',['makine','firma','parti']]];
+function lbSelMindDim(k){return LB_SM_EXTRA[k]||HEATMAP_DIMENSIONS[k]}
+function lbSelMindLv(){const l=lbSelMind.lv.filter(k=>lbSelMindDim(k));return l.length?l:['asama']}
+function lbSelMindPreset(id){const pr=LB_SM_PRESETS.find(x=>x[0]===id);if(!pr)return;lbSelMind.lv=pr[2].slice();lbSelMind.depth=0;lbSelMindSave();
+    const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex'&&hmA4Src&&hmA4Src.kind==='sel'){hmA4Src=lbSelMindSrc(lbSelMindCards());hmA4Render()}lbSelMindBoardRefresh()}
+function lbSelMindPresetHtml(){const cur=lbSelMind.lv.join('|');return '<span class="lb-mind-pre">'+LB_SM_PRESETS.map(([id,l,lv])=>'<button type="button" class="'+(lv.join('|')===cur?'on':'')+'" onclick="lbSelMindPreset(&quot;'+id+'&quot;)">'+l+'</button>').join('')+'</span>'}
+// bir seviyede gruplama (makine seviyesi dahil); sıralama: makine K1→D3 (yoksa en sonda), makinenin altındaki partiler sıra numarasıyla
+function lbSelMindRows(cs,key,parentKey){
+    const dim=lbSelMindDim(key),m=new Map();
+    cs.forEach(k=>{const n=dim.get(k)||'Bilinmeyen';let c=m.get(n);if(!c){c={name:n,count:0,kg:0,cards:[]};m.set(n,c)}c.count++;c.kg+=num(k.kilo);c.cards.push(k)});
+    let rows=[...m.values()];rows.forEach(r=>r.value=r.kg);
+    if(key==='makine'){const o=c=>{const i=LB_MACH.indexOf(c);return i<0?99:i};rows.sort((a,b)=>o(a.name)-o(b.name))}
+    else if(parentKey==='makine'&&key==='parti'){const pos=r=>lbMachPos(lbPn(r.cards[0]))||999;rows.sort((a,b)=>pos(a)-pos(b)||b.kg-a.kg);rows.forEach(r=>{const n=lbMachPos(lbPn(r.cards[0]));if(n)r.name=n+'. '+r.name})}
+    else rows.sort((a,b)=>b.kg-a.kg);
+    return rows;
+}
+function lbSelMindCards(){return lbSelCustFilter(getAllCards().filter(k=>lbSel.has(lbPn(k))))}
+function lbSelMindSrc(cards){
+    const lv=lbSelMindLv(),kgOf=cs=>cs.reduce((s,k)=>s+num(k.kilo),0);
+    const build=(cs,li,left)=>{if(left<=0||li>=lv.length)return[];const rows=lbSelMindRows(cs,lv[li],li?lv[li-1]:'');if(!rows.length)return[];
+        const sc=heatmapColorScale('kg',Math.max(...rows.map(r=>r.value))||1);
+        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):sc(r.value),children:build(r.cards,li+1,left-1)}))};
+    const src={kind:'sel',depth:lbSelMind.depth,title:'Seçilen partiler',file:'secilenler_mindmap',
+        tree:d=>({name:'Seçilenler',count:cards.length,kg:kgOf(cards),heat:'#546E7A',isAll:true,children:build(cards,0,d)}),
+        maxDepth:()=>lv.length,
+        setDepth:v=>{lbSelMind.depth=v;src.depth=v;lbSelMindSave()},
+        changed:()=>lbSelMindBoardRefresh(),
+        sub:P=>lv.slice(0,P.depth).map(k=>lbSelMindDim(k).label).join(' › ')+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg',
+        optHtml:()=>'<label>Hazır düzen<span class="hm-a4-lv">'+lbSelMindPresetHtml()+'</span></label><label>Seviyeler<span class="hm-a4-lv">'+lbSelMindLvHtml()+'</span></label>'};
+    return src;
+}
+function lbSelMindLvHtml(){
+    const lv=lbSelMind.lv,ks=['makine'].concat(Object.keys(HEATMAP_DIMENSIONS));
+    return [0,1,2,3].map(i=>'<select title="'+(i+1)+'. seviye" onchange="lbSelMindSetLv('+i+',this.value)">'+(i?'<option value="">'+(i+1)+'. —</option>':'')
+        +ks.map(k=>'<option value="'+k+'"'+(lv[i]===k?' selected':'')+'>'+(i+1)+'. '+esc(lbSelMindDim(k).label)+'</option>').join('')+'</select>').filter((x,i)=>i<=lv.length).join('');
+}
+function lbSelMindSetLv(i,v){
+    const lv=lbSelMind.lv.slice(0,4);if(v)lv[i]=v;else lv.length=i;lbSelMind.lv=lv.filter(Boolean);if(!lbSelMind.lv.length)lbSelMind.lv=['asama'];
+    lbSelMind.depth=0;lbSelMindSave();
+    const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex'&&hmA4Src&&hmA4Src.kind==='sel'){hmA4Src=lbSelMindSrc(lbSelMindCards());hmA4Render()}
+    lbSelMindBoardRefresh();
+}
+function lbSelMindBoardRefresh(){if(lbView==='sel'&&lbSelCardMode==='mind'&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
+function lbSelMindOri(v){hmA4.ori=v;hmA4Save();lbSelMindBoardRefresh()}
+function lbSelMindA4(){hmA4Open(lbSelMindSrc(lbSelMindCards()))}
+function lbSelMindHtml(cards){
+    const prev=hmA4Src;hmA4Src=lbSelMindSrc(cards);let P;try{P=hmA4Plan()}finally{hmA4Src=prev}
+    const ptc=P.pt>=9?'ok':P.pt>=HM_A4_MINPT?'mid':'low';
+    return '<div class="lb-mindw"><div class="lb-mind-tb">'+lbSelMindPresetHtml()+lbSelMindLvHtml()
+        +'<select title="Sayfa yönü: Otomatik = yazının en okunur olduğu yön" onchange="lbSelMindOri(this.value)">'+[['auto','Otomatik ('+(P.ori==='land'?'▭ yatay':'▯ dikey')+')'],['land','▭ Yatay A4'],['port','▯ Dikey A4']].map(([v,l])=>'<option value="'+v+'"'+(hmA4.ori===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
+        +'<span class="lb-mind-info '+ptc+'" title="'+esc(P.nodes+' dal'+(P.note?' • '+P.note:''))+'">en küçük yazı <b>'+P.pt.toFixed(1)+' pt</b>'+(P.note?' • ℹ️ alt seviye kısaltıldı':'')+'</span>'
+        +'<button type="button" onclick="lbSelMindA4()" title="A4 önizleme: yerleşim, derinlik, renk… → PDF / PNG / yazdır">📄 A4 / PDF</button></div>'
+        +'<div class="lb-mind-area"><div class="hm-a4-page '+P.ori+'">'+hmA4Svg(P)+'</div></div></div>';
+}
 function lbSelFilterReset(){lbSelCol='';lbFocus=null;lbSelStage='';lbSelCust=[];lbLastKeys=null;lbPvHide();lbRender()}
 // Seçilenlerde aşama süzgeci: KK / Sarım dışındaki şu anki aşamalar (BOYAMA, RAM…) için de; '' = yok
 let lbSelStage='';
@@ -5449,7 +5739,7 @@ function lbMainSelToggle(e,el){
     if(el.dataset.kid&&el.closest('#detailModal'))openDetailModal(el.dataset.kid);
 }
 function lbMainSelSyncAll(){
-    document.querySelectorAll('[data-bulk]').forEach(b=>{const parts=lbBulkReg[+b.dataset.bulk];if(parts){b.innerHTML=lbBulkLabel(parts);b.classList.toggle('on',parts.every(p=>lbSel.has(p)))}});
+    document.querySelectorAll('[data-bulk]').forEach(b=>{const parts=lbBulkReg[+b.dataset.bulk];if(parts){b.innerHTML=b.dataset.mini?lbBulkMiniLabel(parts):lbBulkLabel(parts);b.classList.toggle('on',parts.every(p=>lbSel.has(p)))}});
     try{mainAnnRender()}catch(e){}
     document.querySelectorAll('[data-lbsel]').forEach(b=>{const on=lbSel.has(b.dataset.lbsel);b.classList.toggle('on',on);b.textContent=on?'✅':'☑';const c=b.closest('.flash-card,.mini-card,tr');if(c)c.classList.toggle('lbsel',on)});
     const b=document.getElementById('btnLbSelList');if(b)b.textContent='☑ Seçilenler ('+lbSel.size+')';
@@ -5825,7 +6115,7 @@ function lbTvTs(t){const m=String(t||'').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s
 function lbTvHm(ts){if(!ts)return'';const d=new Date(ts);return(d.toDateString()===new Date().toDateString()?'':String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+' ')+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}
 // bir hücre: kayıtlar en yeniden eskiye, gruplar ilk (en yeni) görülme sırasıyla
 function lbTvCell(key,recs,cls,age){
-    const ord=lbShowCust&&lbGroupMode!=='wait'?[...new Set(recs.map(r=>lbGroupOf(r.k,cls)))]:null;
+    const ord=null;   // sıra: kayıtlar en yeniden eskiye geliyor, gruplar ilk (en yeni) kaydın sırasıyla — yeniden sıralanmaz
     lbCells[key]={cls,tv:true,ord,age:!!age,items:recs.map((r,i)=>({k:r.k,key:key+'|'+String(r.k.parti).trim()+'|'+i,tip:r.tip,tag:r.tag||null}))};
 }
 function lbTvGrid(rows,cols){
@@ -5852,7 +6142,7 @@ function lbProdViewHtml(stats){
     const now=Date.now(),recs=[],cnt={};
     SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{},tag=LB_SEL_STAGE_C[R.key];cnt[R.key]=Object.keys(o).length;
         Object.keys(o).forEach(pn=>{const e=o[pn],k=lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_tvFrom:'→ '+(e.a||'?'),_tvAgeH:e.ts?(now-e.ts)/3600000:null}});
-            recs.push({k,ts:e.ts||0,tag,tip:String(pn).trim()+' • '+lbShortKg(e.kg)+' kg\n'+LB_ABL[R.key]+' geçti '+lbTvHm(e.ts)+(e.a?' → '+e.a:'')+'\n👤 '+lbGroupName(k)+(k.id?'\n▶ şu an: '+(k._asama||k.asama||'-'):'\n(güncel veride yok — sevk edilmiş / bitmiş olabilir)')})})});
+            recs.push({k,ts:e.ts||0,tag,tip:String(pn).trim()+' • '+lbShortKg(e.kg)+' kg\n'+LB_ABL[R.key]+' geçti '+(e.est?'~':'')+lbTvHm(e.ts)+(e.a?' → '+e.a:'')+(e.est?'\n(~ tahmini saat: o aralıkta işyeri PC’den veri gelmedi, ilk veriyle görüldü)':'')+'\n👤 '+lbGroupName(k)+(k.id?'\n▶ şu an: '+(k._asama||k.asama||'-'):'\n(güncel veride yok — sevk edilmiş / bitmiş olabilir)')})})});
     recs.sort((a,b)=>b.ts-a.ts);
     if(!recs.length)return '<div class="lb-grid lb-sel-empty"><div>Bugün KK / Sarım\'dan geçen parti yok (ya da üretim kaydı okunamadı).</div></div>';
     const lab='✅ Bugün geçenler — KK '+cnt.kk+' • S1 '+cnt.sr1+' • S2 '+cnt.sr2+' • en son geçen önde • gruplama: '+LB_GRP_LABEL[lbGroupMode].replace('geldiği aşamaya','gittiği aşamaya').replace('geçiş beklemesine göre (önceki aşama + süre)','gittiği aşama + geçeli süre');
@@ -5989,7 +6279,7 @@ function lbTamToggle(){lbTamOn=!lbTamOn;mapSavePref('lbTamAl9',lbTamOn?'1':'0');
 function lbTamBtn(){return '<button type="button" onclick="lbTamToggle()" title="Yeni tamir açılınca ve açık tamiri olan parti KK\'ya gelince uyarı penceresi + ses (bu cihazda)">🛠<span class="lb-bt"> Tamir uyarısı: '+(lbTamOn?'Açık':'Kapalı')+'</span></button>'}
 function lbTamirWatch(){
     const T=window.TAMIR_ALL;if(!Array.isArray(T)||!T.length)return;
-    const open=T.filter(t=>!String(t.durum||'').trim()),id=t=>String(t.uid||(t.parti+'|'+t.tarih+'|'+t.tip)),first=!Array.isArray(lbTamSeen);
+    const open=T.filter(t=>!String(t.durum||'').trim()),id=t=>String(t.uid||(t.parti+'|'+t.tarih+'|'+t.tip)),lastAt=+(localStorage.getItem('lbTamAt9')||0),first=!Array.isArray(lbTamSeen)||Date.now()-lastAt>3*3600000;   // 3 saatten uzun ara verdiyse birikenler için toplu uyarı yok
     const seen=new Set(first?[]:lbTamSeen),hits=[],all=getAllCards(),kkR=SW_ROWS.find(R=>R.key==='kk');
     // yeni açılan tamirler
     open.forEach(t=>{if(!seen.has(id(t))&&!first){const p=String(t.parti||'').trim(),k=all.find(c=>String(c.parti).trim()===p);
@@ -5999,13 +6289,27 @@ function lbTamirWatch(){
     const snap={};
     tp.forEach((t,p)=>{const k=all.find(c=>String(c.parti).trim()===p);if(!k)return;const onKK=!!(kkR&&kkR.is(k)),prev=lbTamSnap[p];snap[p]=onKK?1:0;
         if(!first&&prev===0&&onKK)hits.push({p,k,t:Date.now(),T:{k:'kk',n:'Kalite Kontrol'},msg:'🛠 Tamirdeki parti KK\'ya geldi',from:(t.tip||'tamir')+' • '+(t.tarih||'')+' açıldı • tamir aşaması: '+(t.stage||'-')})});
-    lbTamSeen=open.map(id);lbTamSnap=snap;lbTamSave();
+    lbTamSeen=open.map(id);lbTamSnap=snap;lbTamSave();try{localStorage.setItem('lbTamAt9',String(Date.now()))}catch(e){}
     if(!lbTamOn||!hits.length)return;
     hits.forEach(h=>{if(!lbArrList.some(o=>o.p===h.p&&o.msg===h.msg))lbArrList.unshift(h)});
     lbArrShow();
     try{playKkSarimAlertSound();setTimeout(()=>{try{playKkSarimAlertSound()}catch(e){}},1400)}catch(e){}
     try{speakText(hits.slice(0,3).map(h=>lbPnShort(h.p)+(h.T.k==='kk'?' tamirdeki parti Kalite Kontrole geldi':' partisine yeni tamir açıldı')).join('. '))}catch(e){}
 }
+// ── Üst çubuklar her ekranda sığsın: taşıyorsa kademe kademe sıkıştır (c1 açıklamalar gizli → c2 düğme yazıları gizli →
+//    c3 az kullanılanlar ⋯ menüsünde → c4 küçük düğmeler). Ekran genişliğine değil, çubuğun gerçek içeriğine bakar.
+function lbBarFits(b){if(b.scrollWidth>b.clientWidth+1)return false;const r=b.getBoundingClientRect().right;return ![...b.querySelectorAll(':scope > *')].some(k=>k.offsetWidth&&k.getBoundingClientRect().right>r+1)}
+function lbBarFit(b,n){if(!b||!b.offsetWidth)return;for(let i=1;i<=n;i++)b.classList.remove('c'+i);for(let i=1;i<=n&&!lbBarFits(b);i++)b.classList.add('c'+i)}
+function lbTopFit(){const el=document.getElementById('liveBoard');if(!el||!el.offsetWidth)return;lbBarFit(el.querySelector('.lb-top'),5);el.querySelectorAll('.lb-selbar').forEach(b=>lbBarFit(b,3))}
+let lbTopFitQ=0,lbTopFitEl=null;const lbTopFitObs=new MutationObserver(()=>lbTopFitSoon()),lbTopFitRo=typeof ResizeObserver==='function'?new ResizeObserver(()=>lbTopFitSoon()):null;
+function lbTopFitSoon(){
+    // pano öğesi yeniden oluşturulduysa izleyiciyi ona bağla (çubuk içeriği değişince — ör. Seçilenler çubuğu — yeniden ölç)
+    const el=document.getElementById('liveBoard');if(el&&el!==lbTopFitEl){lbTopFitObs.disconnect();lbTopFitObs.observe(el,{childList:true,subtree:true});if(lbTopFitRo){lbTopFitRo.disconnect();lbTopFitRo.observe(el)}lbTopFitEl=el}
+    if(lbTopFitQ)return;lbTopFitQ=setTimeout(()=>{lbTopFitQ=0;lbTopFit()},30);
+}
+window.addEventListener('resize',lbTopFitSoon);document.addEventListener('fullscreenchange',lbTopFitSoon);
+// her pano çiziminden sonra
+if(typeof lbRender==='function'){const lbRender0=lbRender;lbRender=function(){const r=lbRender0.apply(this,arguments);lbTopFitSoon();return r}}
 // ── ⋯ üst çubuk menüsü: telefonda az kullanılan düğmeler burada toplanır (geniş ekranda hepsi çubukta görünür)
 let lbMoreOpen=false;
 function lbMoreActive(){return !lbLayIsDef()||lbWaitMode||lbAnnActive()||lbUnit==='kg'||!!lbCycle.on}
@@ -6266,7 +6570,7 @@ function lbEtaChip(R,list){
 const LB_TREND_H=2;
 let lbTrendReg={};
 function lbTrend(R){
-    if(typeof URETIM_LOG==='undefined'||!URETIM_LOG||!URETIM_LOG.days||!uretimLogFresh())return null;
+    if(typeof URETIM_LOG==='undefined'||!URETIM_LOG||!URETIM_LOG.days||!uretimLogUsable())return null;
     const t0=Date.now()-LB_TREND_H*3600000,days=Object.keys(URETIM_LOG.days).sort().slice(-2);
     const get=key=>{const seen=new Set(),out=[];days.forEach(d=>{const e=uretimLogEntries(d,key);Object.keys(e).forEach(pn=>{if((e[pn].ts||0)>=t0&&!seen.has(pn)){seen.add(pn);out.push(Object.assign({parti:pn},e[pn]))}})});return out.sort((a,b)=>(b.ts||0)-(a.ts||0))};
     const arr=get(R.key+'Gelen'),pas=get(R.key+'Gecen'),kgv=lbUnit==='kg',v=l=>kgv?l.reduce((s,r)=>s+num(r.kg),0):l.length;
@@ -6396,11 +6700,18 @@ function lbBulkBtn(cards){
         if(lbBulkReg.length>3000)lbBulkReg=[];lbBulkReg.push(parts);const id=lbBulkReg.length-1,all=parts.every(p=>lbSel.has(p));
         return '<button type="button" class="lbsel-bulk'+(all?' on':'')+'" data-bulk="'+id+'" onclick="lbBulkSel(event,'+id+')" title="Bu gruptaki bütün partileri canlı izlemenin Seçilenler listesine ekle / çıkar (tüm cihazlarda)">'+lbBulkLabel(parts)+'</button>'}catch(e){return''}
 }
+// ağaçtaki dallar için küçük hali: ☑ n (hiçbiri) · ◐ k/n (bir kısmı) · ✅ n (hepsi Seçilenlerde)
+function lbBulkMiniLabel(parts){const n=parts.filter(p=>lbSel.has(p)).length,t=parts.length;return n===t?'✅'+(t>1?t:''):n?'◐'+n+'/'+t:'☑'+(t>1?t:'')}
+function lbBulkMini(cards){
+    try{const parts=[...new Set((cards||[]).map(lbPn).filter(Boolean))];if(!parts.length)return'';
+        if(lbBulkReg.length>3000)lbBulkReg=[];lbBulkReg.push(parts);const id=lbBulkReg.length-1,all=parts.every(p=>lbSel.has(p));
+        return '<button type="button" class="lbsel-bulk mini'+(all?' on':'')+'" data-bulk="'+id+'" data-mini="1" onclick="lbBulkSel(event,'+id+')" title="'+(parts.length>1?'Bu daldaki '+parts.length+' partiyi':'Bu partiyi')+' canlı izlemenin Seçilenler listesine ekle / çıkar (tüm cihazlarda)">'+lbBulkMiniLabel(parts)+'</button>'}catch(e){return''}
+}
 function lbBulkSel(e,id){
     e.stopPropagation();e.preventDefault();const parts=lbBulkReg[id];if(!parts){showToast('Liste yenilendi, tekrar deneyin','warning');return}
     if(parts.every(p=>lbSel.has(p))){
         const nn=parts.filter(p=>lbSelNotes[p]).length;
-        if(!confirm(parts.length+' parti Seçilenlerden çıkarılsın mı?'+(nn?'\n'+nn+' partinin notu da silinecek.':'')))return;
+        if((parts.length>1||nn)&&!confirm(parts.length+' parti Seçilenlerden çıkarılsın mı?'+(nn?'\n'+nn+' partinin notu da silinecek.':'')))return;
         lbSelToggle(parts,false);
     }else lbSelToggle(parts.filter(p=>!lbSel.has(p)),true);
     lbMainSelSyncAll();
@@ -6573,13 +6884,23 @@ function lbSearchVoice(){
     r.onend=()=>{if(lbRec===r)lbRec=null;set(false)};
     try{r.start();set(true)}catch(err){lbRec=null;set(false);showToast('Mikrofon başlatılamadı','warning')}
 }
+// ── 📲 İş PC'ye komut (is_pc_bekci.ps1): yalnız "durum" ve "yeniden-baslat", PIN'li; cevap telefona ntfy bildirimi olarak gelir
+const LB_PC_CMD='https://ntfy.sh/parti-pc-komut-eb81eaf0d66d5baeb187';
+function lbPcBtns(){return ' <span class="lb-pcb"><button type="button" onclick="event.stopPropagation();lbPcCmd(&quot;durum&quot;)" title="İş PC bekçisi adımların durumunu telefona göndersin (en geç ~2 dk)">📋 PC durumu</button><button type="button" onclick="event.stopPropagation();lbPcCmd(&quot;yeniden-baslat&quot;)" title="İş PC bekçisi takılan adımı (ERP → Excel / düzenleme / push) yeniden başlatsın">🔄 Yeniden başlat</button></span>'}
+function lbPcCmd(c){
+    let pin='';try{pin=localStorage.getItem('lbPcPin9')||''}catch(e){}
+    if(!pin){pin=(prompt('İş PC bekçisinin PIN\'i (is_pc_bekci.ps1 içindeki $PIN). Bu cihazda hatırlanır.')||'').trim();if(!pin)return;try{localStorage.setItem('lbPcPin9',pin)}catch(e){}}
+    if(c==='yeniden-baslat'&&!confirm('İş PC\'de takılan adım yeniden başlatılsın mı?\n(Hepsi çalışıyorsa bekçi bir şey yapmaz.)'))return;
+    fetch(LB_PC_CMD,{method:'POST',body:c+' '+pin}).then(r=>{if(!r.ok)throw 0;showToast('📲 Komut gönderildi — iş PC bekçisi en geç ~2 dk içinde alır, cevap telefona bildirim olarak gelir')}).catch(()=>showToast('Komut gönderilemedi (internet?)','warning'));
+}
+function lbPcPinReset(){try{localStorage.removeItem('lbPcPin9')}catch(e){}showToast('İş PC PIN\'i bu cihazdan silindi')}
 // Eski veri uyarısı: çalışma bilgisayarı ~12 dk'da bir veri gönderir; 25 dk'dan eskiyse panonun üstünde kırmızı şerit
 const LB_STALE_MIN=25;
 function lbStaleInfo(){
     const g=window.DATA_GENERATED_AT?new Date(window.DATA_GENERATED_AT):null;if(!g||isNaN(g))return'';
     const min=Math.floor((Date.now()-g.getTime())/60000);if(min<LB_STALE_MIN)return'';
     const age=min<60?min+' dk':min<1440?Math.floor(min/60)+' sa '+(min%60)+' dk':Math.floor(min/1440)+' gün';
-    return '⚠️ Veriler <b>'+age+'</b> önce güncellendi ('+esc(g.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+') — çalışma bilgisayarı veri göndermiyor olabilir, ekrandakiler güncel olmayabilir.';
+    return '⚠️ Veriler <b>'+age+'</b> önce güncellendi ('+esc(g.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+') — çalışma bilgisayarı veri göndermiyor olabilir, ekrandakiler güncel olmayabilir.'+lbPcBtns();
 }
 function lbStaleUpdate(){
     const s=document.getElementById('lbStale');if(!s)return;
@@ -6758,18 +7079,19 @@ function lbFmax(root){const exp=!!(root&&root.classList.contains('lb-export')),p
 function lbWaitTone(h){return h==null?'#546E7A':(LB_WAIT_BANDS.find(b=>h<b.h)||LB_WAIT_BANDS[LB_WAIT_BANDS.length-1]).c}
 function lbCellModel(d){
     const kgv=lbUnit==='kg',wg=lbGroupMode==='wait'&&!d.groupBy,from=(lbGroupMode==='from'||wg)&&!d.groupBy&&!d.tv,kgS=kgv?0.92:0.74,head=lbShowCust||!!d.groupBy;
-    const m=new Map();d.items.forEach(x=>{const n=lbGrpKey(d,x.k);if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
+    // Tamirler / Üretim (d.tv): sıra hep en yeniden eskiye — yalnız ART ARDA gelen aynı gruptakiler bir blokta birleşir
+    const m=new Map();let run=0,prev=null;d.items.forEach(x=>{let n=lbGrpKey(d,x.k);if(d.tv){if(n!==prev){run++;prev=n}n=n+'\u0001'+run}if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
     // başlık: ad (ya da "RAM'dan") + adet ya da toplam kg; kg görünümünde gruplar ve partiler kg'a göre sıralı
-    const groups=[...m.entries()].map(([name,list])=>{
+    const groups=[...m.entries()].map(([gid,list])=>{const name=String(gid).split('\u0001')[0];
         const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):name,t=title+' '+lab;
-        if(wg)list=list.slice().sort((a,b)=>(lbWaitH(b.k)||0)-(lbWaitH(a.k)||0));else if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
+        if(d.tv);else if(wg)list=list.slice().sort((a,b)=>(lbWaitH(b.k)||0)-(lbWaitH(a.k)||0));else if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
         return{name,title,lab,kg,mw,list,nm:head?lbMw(t):0,nl:t.length};
-    }).sort((a,b)=>d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):wg?b.mw-a.mw:(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
+    }).sort((a,b)=>d.tv?0:d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):wg?b.mw-a.mw:(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
     const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*(kgS+0.06):0;
     // Seçilenler kutusu: parti no / kg altında şu anki proses ve tahmini KK / Sarım varışı (iki küçük satır, yazının %42'si)
     const sx=lbView==='sel'&&!!d.groupBy,mx=!sx&&d.cls==='g'&&!d.groupBy;d.items.forEach(x=>{x.ex=sx||mx?lbSelTileEx(x):null});
     const exW=(sx||mx)&&d.items.length?Math.max(...d.items.map(x=>Math.max(lbMw(x.ex.p),lbMw(x.ex.e||''))))*LB_TX_S*0.9:0;
-    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,keep:wg,xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
+    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,keep:wg||!!d.tv,xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
 }
 const LB_TX_S=0.42;
 function lbSelTileEx(it){
@@ -7037,7 +7359,8 @@ function lbRender(){
     else if(lbView==='sel'){
         const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
         if(eff!==lbSelCardEff){lbSelCardEff=eff;lbLastKeys=null}
-        if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
+        if(lbSelCardMode==='mind'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMindHtml(lbSelCustFilter(sel))}
+        else if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
     }
     else{
     // Gelecek / Üzerinde başlığına tıklayınca o sütun tam ekran (tekrar tıklayınca ya da ↩ ile pano)
@@ -7253,6 +7576,14 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-top{position:relative}.lb-more{display:contents}.lb-top button.lb-more-b{display:none;position:relative}.lb-top button.lb-more-b.dot::after{content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#FFD54F}'
         +'@media(max-width:700px){#liveBoard .lb-top button.lb-more-b{display:inline-block;font-weight:900}#liveBoard .lb-more{display:none;position:absolute;right:6px;top:calc(100% + 2px);z-index:80;flex-direction:column;gap:5px;min-width:210px;padding:8px;border-radius:10px;background:#1d1a3a;border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.6)}#liveBoard .lb-more.open{display:flex}'
         +'#liveBoard .lb-top .lb-more button,#liveBoard .lb-top .lb-more button.lb-exp{width:100%!important;height:36px!important;font-size:15px!important;padding:0 10px!important;text-align:left;display:flex;align-items:center;gap:8px}#liveBoard .lb-top .lb-more button::after{content:attr(data-l);font-size:13px;font-weight:700}#liveBoard .lb-more .lb-cy-n{font-size:11px;order:2}#liveBoard .lb-more .lb-cy-btn::after{order:1}}'
+        +'#liveBoard .lb-top.c1 .lb-legend,#liveBoard .lb-top.c1 .lb-meta,#liveBoard .lb-top.c1 .lb-tt{display:none}'
+        +'#liveBoard .lb-top.c2 .lb-bl{display:none}#liveBoard .lb-top.c2 button.lb-exp{width:38px;padding:0}#liveBoard .lb-top.c2 button.lb-selo,#liveBoard .lb-top.c2 button.lb-back{width:auto;min-width:38px;padding:0 5px}'
+        +'#liveBoard .lb-top.c3 .lb-rf{display:none}'
+        +'#liveBoard .lb-top.c3 button.lb-more-b{display:inline-block;font-weight:900}#liveBoard .lb-top.c3 .lb-more{display:none;position:absolute;right:6px;top:calc(100% + 2px);z-index:80;flex-direction:column;gap:5px;min-width:210px;padding:8px;border-radius:10px;background:#1d1a3a;border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.6)}#liveBoard .lb-top.c3 .lb-more.open{display:flex}'
+        +'#liveBoard .lb-top.c3 .lb-more button,#liveBoard .lb-top.c3 .lb-more button.lb-exp{width:100%!important;height:36px!important;font-size:15px!important;padding:0 10px!important;text-align:left;display:flex;align-items:center;gap:8px}#liveBoard .lb-top.c3 .lb-more button::after{content:attr(data-l);font-size:13px;font-weight:700}#liveBoard .lb-top.c3 .lb-more .lb-cy-n{font-size:11px;order:2}#liveBoard .lb-top.c3 .lb-more .lb-cy-btn::after{order:1}'
+        +'#liveBoard .lb-top.c4{gap:3px;padding-left:6px;padding-right:6px}#liveBoard .lb-top.c4 > button,#liveBoard .lb-top.c4 > button.lb-exp{width:25px;height:30px;font-size:12px;padding:0}#liveBoard .lb-top.c4 > button.lb-selo,#liveBoard .lb-top.c4 > button.lb-back{width:auto;min-width:25px;padding:0 2px}#liveBoard .lb-top.c5 .lb-title,#liveBoard .lb-top.c5 .lb-clock{display:none}#liveBoard .lb-top.c4 .lb-clock{font-size:16px}'
+        +'#liveBoard .lb-selbar.c1 .lb-sel-t{display:none}#liveBoard .lb-selbar.c2 .lb-bt{display:none}#liveBoard .lb-selbar.c2{gap:4px!important}#liveBoard .lb-selbar.c3 .lb-sel-n small,#liveBoard .lb-selbar.c3 .lb-sel-kg{display:none}'
+        +'.lb-pcb{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}.lb-pcb button{border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.35);color:#fff;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.lb-pcb button:hover{background:#FFEB3B;color:#B71C1C}'
         +'.lb-ev-cu{color:#FFD54F;font-weight:700}html.lb-open,html.lb-open body{overflow:hidden}'
         +'.lb-selbar button.lb-ocrb{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.7)}.lb-ocr img{display:block;max-width:100%;max-height:200px;margin:6px auto;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.2)}'
         +'.lb-ocr-l{max-height:46vh;overflow-y:auto;margin:6px 0}.lb-ocr-h{margin:8px 0 3px;font-weight:800;color:#C6FF00;font-size:13px}.lb-ocr-h small{color:#90A4AE;font-weight:500}.lb-ocr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;font-size:13px}.lb-ocr-r input{width:20px;height:20px}.lb-ocr-r b{font-size:18px;color:#fff;min-width:60px}.lb-ocr-r span{color:#B0BEC5}.lb-ocr-r .rd{color:#FFB74D}.lb-ocr-r em{color:#90A4AE;font-size:11px}.lb-ocr-r.sel{opacity:.55}.lb-ocr-r.sg{background:rgba(255,183,77,.07)}'

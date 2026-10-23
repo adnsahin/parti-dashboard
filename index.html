@@ -20,6 +20,11 @@ if(!AP.flatMap)AP.flatMap=function(f,t){return this.map(f,t).reduce(function(a,x
 if(!Object.fromEntries)Object.fromEntries=function(it){var o={};Array.from(it).forEach(function(kv){o[kv[0]]=kv[1]});return o};
 if(window.Promise&&!Promise.prototype.finally)Promise.prototype.finally=function(f){var P=this.constructor||Promise;return this.then(function(v){return P.resolve(f()).then(function(){return v})},function(e){return P.resolve(f()).then(function(){throw e})})};
 if(window.HTMLCanvasElement&&!HTMLCanvasElement.prototype.toBlob)HTMLCanvasElement.prototype.toBlob=function(cb,type,q){var c=this;setTimeout(function(){try{var d=atob(c.toDataURL(type,q).split(',')[1]),n=d.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=d.charCodeAt(i);cb(new Blob([u],{type:type||'image/png'}))}catch(e){cb(null)}})};
+// localStorage kaydı başarısız olursa (Safari özel mod / dolu alan: QuotaExceeded) hata verme — o oturum için bellekte tut
+try{if(window.Storage){var SP=Storage.prototype,oS=SP.setItem,oG=SP.getItem,oR=SP.removeItem,mem={};
+ SP.setItem=function(k,v){try{oS.call(this,k,v);delete mem[k]}catch(e){mem[k]=String(v)}};
+ SP.getItem=function(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:oG.call(this,k)};
+ SP.removeItem=function(k){delete mem[k];try{oR.call(this,k)}catch(e){}}}}catch(e){}
 if(!window.AbortController){window.AbortController=function(){this.signal={aborted:false,addEventListener:function(){},removeEventListener:function(){}}};window.AbortController.prototype.abort=function(){this.signal.aborted=true}}
 })();
 </script>
@@ -27,7 +32,7 @@ if(!window.AbortController){window.AbortController=function(){this.signal={abort
 /* Eski tarayıcı hata şeridi (ES5): yakalanmayan ilk hatayı sayfanın altında gösterir — eski iPad / telefonlarda sorunu bildirmek için */
 (function(){var old=false;try{new Function('var a;return a?.b??1')}catch(e){old=true}if(!old&&!/[?&]hata=1/.test(location.search))return;   // yalnız eski tarayıcıda (ya da ?hata=1)
 var shown=0;function bar(msg){if(shown++>2)return;try{var d=document.getElementById('oldBrowserErr');if(!d){d=document.createElement('div');d.id='oldBrowserErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#B71C1C;color:#fff;font:12px/1.4 sans-serif;padding:6px 30px 6px 8px;max-height:30vh;overflow:auto';d.onclick=function(){d.parentNode.removeChild(d)};(document.body||document.documentElement).appendChild(d)}d.innerHTML+='<div>⚠️ '+String(msg).replace(/</g,'&lt;')+'</div>';if(shown===1)d.innerHTML+='<div style="opacity:.8">'+navigator.userAgent.replace(/</g,'&lt;')+' — kapatmak için dokunun</div>'}catch(e){}}
-window.addEventListener('error',function(e){bar((e.message||'Hata')+(e.lineno?' (satır '+e.lineno+')':''))});})();
+window.addEventListener('error',function(e){if(/declare a let variable twice/.test(e.message||''))return;bar((e.message||'Hata')+(e.lineno?' (satır '+e.lineno+')':''))});})();
 </script>
 <script>
 /* embedded: html2canvas.min.js */

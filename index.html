@@ -1715,7 +1715,16 @@ function getLatestGroupKey(k){
     if(stageEquals(latest,'SARIM1'))return'Son Güncelleme Sonu • Sarım1';
     return latest||'Son Güncelleme Sonu • Bilinmeyen';
 }
-function getGroupKey(k){if(currentGroupMode==='latest')return getLatestGroupKey(k);return currentGroupMode==='next'?(k.bir_sonraki||'(Son Aşama)'):k._asama}
+// Ana sayfada aşamaya göre: Kalite Kontrol yalnız SON KK (sonraki aşaması fiziksel kontrol / sevk); ara KK'dakiler (ör. zımpara /
+// mal açma sonrası, sonra yeniden PARTİ) yanında ayrı "ARA KALİTE KONTROL" kutucuğunda — canlı izleme ve ısı haritasıyla aynı kural
+const MAIN_ARA_KK='ARA KALİTE KONTROL',mainKkMemo=new WeakMap();
+function mainStageKey(k){
+    const a=k._asama;if(!a||!stageEquals(a,'KK'))return a;
+    const s=[a,k.son_asama,k.sonraki_asama,k.bir_sonraki,k.uretim_asamalari].join('|'),m=mainKkMemo.get(k);if(m&&m.s===s)return m.v;
+    let v=a;try{if(!liveIsFinalKk(k))v=MAIN_ARA_KK}catch(e){}
+    mainKkMemo.set(k,{s,v});return v;
+}
+function getGroupKey(k){if(currentGroupMode==='latest')return getLatestGroupKey(k);return currentGroupMode==='next'?(k.bir_sonraki||'(Son Aşama)'):mainStageKey(k)}
 function getGroupOrder(){
     if(currentGroupMode==='latest'){
         const preferred=['Son Güncelleme Sonu • Kalite Kontrol','Son Güncelleme Sonu • Sarım1'],seen=[];
@@ -1724,6 +1733,8 @@ function getGroupOrder(){
         return seen;
     }
     if(currentGroupMode==='next'){const seen=[];BSA_ORDER.forEach(a=>{if(!seen.includes(a))seen.push(a)});getAllCards().forEach(k=>{const gk=k.bir_sonraki||'(Son Aşama)';if(!seen.includes(gk))seen.push(gk)});return seen}
+    // ara KK partisi varsa kutucuğu Kalite Kontrol'ün hemen arkasında
+    if(getAllCards().some(k=>mainStageKey(k)===MAIN_ARA_KK)){const o=ASAMA_ORDER.filter(a=>a!==MAIN_ARA_KK),i=o.findIndex(a=>stageEquals(a,'KK'));o.splice(i<0?o.length:i+1,0,MAIN_ARA_KK);return o}
     return ASAMA_ORDER
 }
 
@@ -3107,8 +3118,11 @@ function heatmapAsamaOf(k){
     const s=[k._asama,k.asama,k.son_asama,k.sonraki_asama,k.bir_sonraki,k.uretim_asamalari].join('|'),m=heatmapAsamaMemo.get(k);
     if(m&&m.s===s)return m.v;
     let v;
-    if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))v='Kalite Kontrol\'e Gelecek';
+    // Kalite Kontrol yalnız SON KK (sonraki aşaması fiziksel kontrol / sevk): ara KK'dakiler (ör. mal açma sonrası) ayrı dalda,
+    // ara KK'ya gidecekler "Gelecek"e sayılmaz (canlı izleme ve üretim kaydıyla aynı kural)
+    if(!isCurrentlyStage(k,'KK')&&stageEquals(cardNextStage(k),'KK'))v=swKkComingFinal(k)?'Kalite Kontrol\'e Gelecek':(cardCurrentStage(k)||'Bilinmeyen');
     else if(!isCurrentlyStage(k,'SARIM1')&&stageEquals(cardNextStage(k),'SARIM1'))v='Sarım1\'e Gelecek';
+    else if(isCurrentlyStage(k,'KK')&&!liveIsFinalKk(k))v='ARA KALİTE KONTROL';
     else v=cardCurrentStage(k)||'Bilinmeyen';
     heatmapAsamaMemo.set(k,{s,v});return v;
 }
@@ -3920,12 +3934,16 @@ function heatmapMindExport(mode){
      en küçük yazı 7 pt'nin altına düşerse en alt seviye çıkarılır. Önizlemede hepsi elle değiştirilebilir → PDF / PNG / Yazdır */
 let hmA4=(()=>{const d={root:null,depth:0,ori:'auto',side:'auto',cols:0,val:'both',color:true,open:false,maxCh:30};try{return Object.assign(d,JSON.parse(localStorage.getItem('hmA4v1')||'{}'))}catch(e){return d}})();
 function hmA4Save(){try{localStorage.setItem('hmA4v1',JSON.stringify(hmA4))}catch(e){}}
-const HM_A4_PAGE={land:[842,595],port:[595,842]},HM_A4_M=22,HM_A4_HEAD=44,HM_A4_MAXPT=14,HM_A4_MINPT=7,HM_A4_FS=[1.5,1.18,1.0,0.95,0.92,0.9];
+const HM_A4_PAGE={land:[842,595],port:[595,842]},HM_A4_M=15,HM_A4_HEAD=36,HM_A4_MAXPT=14,HM_A4_MINPT=7,HM_A4_FS=[1.35,1.1,1.0,1.0,1.0,1.0];
 let hmA4Ctx=null,hmA4Last=null,hmA4Src=null;   // hmA4Src: başka veri kaynağı (ör. Seçilenler) — null = ısı haritası
-function hmA4Measure(t,bold){if(!hmA4Ctx)hmA4Ctx=document.createElement('canvas').getContext('2d');hmA4Ctx.font=(bold?'700 ':'500 ')+'100px "Segoe UI",Arial,sans-serif';return hmA4Ctx.measureText(String(t)).width/100}
+// Okunurluk ayarları (varsayılan: kalın + siyah yazı, değer adla aynı boyda): weight 'bold'|'normal', ink 'black'|'color',
+// vsize 'same'|'small', vpos 'auto'|'side'|'below' (değer adın yanında ya da altında — altında daha dar, yazı büyür)
+function hmA4W(bold){return hmA4.weight==='normal'?(bold?700:500):(bold?800:700)}
+function hmA4VF(){return hmA4.vsize==='small'?0.8:1}
+function hmA4Measure(t,bold){if(!hmA4Ctx)hmA4Ctx=document.createElement('canvas').getContext('2d');hmA4Ctx.font=hmA4W(bold)+' 100px "Segoe UI",Arial,sans-serif';return hmA4Ctx.measureText(String(t)).width/100}
 function hmA4Short(s,n){s=String(s||'').trim();return s.length>n?s.slice(0,n-1).trim()+'…':s}
-function hmA4ValTxt(n){if(hmA4.val==='none')return'';const kg=Math.round(n.kg).toLocaleString('tr-TR')+' kg',c=n.count.toLocaleString('tr-TR')+' p';return hmA4.val==='kg'?kg:hmA4.val==='count'?c:c+' · '+kg}
-function hmA4KKName(names){return names.find(n=>/KAL[İI]TE\s*KONTROL/i.test(n))||null}
+function hmA4ValTxt(n){if(hmA4.val==='none')return'';const kg=Math.round(n.kg).toLocaleString('tr-TR')+' kg',c=n.count.toLocaleString('tr-TR')+' p';return hmA4.val==='kg'?kg:hmA4.val==='count'?c:n.count===1?kg:c+' · '+kg}   // tek partide "1 p" yazılmaz
+function hmA4KKName(names){return names.find(n=>/^KAL[İI]TE\s*KONTROL$/i.test(String(n).trim()))||null}
 // Ağaç verisi (ekrandaki ağaçla aynı kurallar). depth: kökün altında gösterilecek seviye sayısı
 function hmA4Tree(depth){
     if(hmA4Src)return hmA4Src.tree(depth);
@@ -3949,34 +3967,85 @@ function hmA4Tree(depth){
 }
 function hmA4MaxDepth(){if(hmA4Src)return hmA4Src.maxDepth();const n=heatmapMindLevelKeys().length;return hmA4.root&&heatmapMindRowsOf(heatmapMindCards(),0).some(r=>r.name===hmA4.root)?n-1:n}
 // Düğüm ölçüleri (yazı birimi: 1 = taban yazı boyu)
+let hmA4VP='side';   // hesaplanan değer konumu (plan sırasında)
+// uzun adı kelime sınırından iki satıra böl (en geniş satır en kısa olacak biçimde)
+function hmA4Wrap(t,bold){
+    const w=String(t).split(' ');if(w.length<2||t.length<14)return[t];
+    let best=[t],bw=Infinity;
+    for(let i=1;i<w.length;i++){const a=w.slice(0,i).join(' '),b=w.slice(i).join(' '),m=Math.max(hmA4Measure(a,bold),hmA4Measure(b,bold));if(m<bw){bw=m;best=[a,b]}}
+    return bw<hmA4Measure(t,bold)*0.8?best:[t];
+}
+// değer konumu (hmA4VP): side = adın yanında · below = altında · mix = ara dallarda (firma, kumaş…) altında, yapraklarda yanında
+// (az sayıda ara dal uzar, kalabalık yapraklar alçak kalır) · mixw = mix + uzun ara dal adı iki satır
 function hmA4Prep(n,d,branch){
     n.d=d;n.fs=HM_A4_FS[Math.min(d,HM_A4_FS.length-1)];n.bold=d<=1;n.lab=hmA4Short(n.name,d===0?48:hmA4.maxCh);n.vt=hmA4ValTxt(n);
     n.branch=d===1?n.heat:branch;
-    const pad=d<=1?0.55:0.25,dot=d>=2?0.75:0;
-    n.w=(hmA4Measure(n.lab,n.bold)+(n.vt?0.45+hmA4Measure(n.vt,false)*0.8:0))*n.fs+2*pad*n.fs+dot*n.fs;n.h=n.fs*(d<=1?1.75:1.45);n.pad=pad;n.dot=dot;
+    const inner=n.children.length>0,vp=hmA4VP;
+    n.v2=!!n.vt&&(vp==='below'||((vp==='mix'||vp==='mixw')&&inner));
+    n.lines=vp==='mixw'&&inner&&d>0?hmA4Wrap(n.lab,n.bold):[n.lab];
+    const pad=d<=1?HM_A4_PAD[0]:HM_A4_PAD[1],dot=d>=2?HM_A4_DOT:0,lws=n.lines.map(l=>hmA4Measure(l,n.bold)),vw=n.vt?hmA4Measure(n.vt,false)*hmA4VF():0;
+    const last=lws[lws.length-1]+(n.vt&&!n.v2?0.45+vw:0),tw=Math.max(...lws.slice(0,-1),last,n.v2?vw:0);
+    n.w=tw*n.fs+2*pad*n.fs+dot*n.fs;
+    const L=n.lines.length+(n.v2?1:0);n.h=n.fs*((d<=1?HM_A4_LH[0]:HM_A4_LH[1])+(L-1)*1.0);n.pad=pad;n.dot=dot;
     n.children.forEach(c=>hmA4Prep(c,d+1,n.branch));
 }
 let HM_A4_GX=1.5,HM_A4_GY=0.22,HM_A4_GB=0.7,HM_A4_GC=0.9;
 // Aralık: normal / sıkı (sıkıda dallar arası boşluk az → aynı sayfada yazı büyür)
-function hmA4Gap(g){const t=g==='tight';HM_A4_GX=t?1.0:1.5;HM_A4_GY=t?0.08:0.22;HM_A4_GB=t?0.32:0.7;HM_A4_GC=t?0.6:0.9}
+// sıkı (varsayılan): satır aralığı baskıda normal ölçü (~1,3), iç paylar dar; normal: eski geniş aralık
+let HM_A4_LH=[1.55,1.22],HM_A4_PAD=[0.45,0.15],HM_A4_DOT=0.6;
+function hmA4Gap(g){const t=g!=='normal';HM_A4_GX=t?1.0:1.5;HM_A4_GY=t?0.08:0.22;HM_A4_GB=t?0.32:0.7;HM_A4_GC=t?0.6:0.9;HM_A4_LH=t?[1.55,1.22]:[1.75,1.45];HM_A4_PAD=t?[0.45,0.15]:[0.55,0.25];HM_A4_DOT=t?0.6:0.75}
+// ── Kontur (dış hat) ile sıkı yerleşim: her alt ağacın her yatay dilimdeki (0,5 birim) üst / alt sınırı tutulur; kardeş dallar
+//    dikdörtgenlerine göre değil bu sınırlara göre üst üste konur — kısa bir dal, üstündeki uzun listenin solundaki boşluğa girer.
+//    Düğümlerin sırası korunur (her düğüm bir öncekinin altında), bağlantı çizgilerinin alanı da korunur.
+const HM_A4_BR=2;
+function hmA4P(len){const nb=Math.max(2,Math.ceil(len*HM_A4_BR)+2);return{t:new Float64Array(nb).fill(Infinity),b:new Float64Array(nb).fill(-Infinity)}}
+function hmA4PRect(P,x0,x1,t,b){const i0=Math.max(0,Math.floor(x0*HM_A4_BR)),i1=Math.min(P.t.length-1,Math.ceil(x1*HM_A4_BR));for(let i=i0;i<=i1;i++){if(t<P.t[i])P.t[i]=t;if(b>P.b[i])P.b[i]=b}}
+function hmA4PMerge(P,Q,dx,dy){const o=Math.floor(dx*HM_A4_BR),n=P.t.length;
+    for(let i=0;i<Q.t.length;i++){const qt=Q.t[i];if(qt===Infinity)continue;const t=qt+dy,b=Q.b[i]+dy;
+        for(let j=i+o;j<=i+o+1;j++){if(j<0||j>=n)continue;if(t<P.t[j])P.t[j]=t;if(b>P.b[j])P.b[j]=b}}}
+function hmA4POff(A,Q,gap){let off=-Infinity;const n=Math.min(A.t.length,Q.t.length);for(let i=0;i<n;i++){const qt=Q.t[i],ab=A.b[i];if(qt===Infinity||ab===-Infinity)continue;const v=ab-qt+gap;if(v>off)off=v}return off}
+// sıralı alt ağaçları konturla üst üste koy → üstlerinin göreli y'leri ve toplam yükseklik
+function hmA4Stack(arr,gap){
+    const acc=hmA4P(Math.max(...arr.map(c=>c.sw))),ys=[];
+    arr.forEach((c,i)=>{let y=0;if(i){y=hmA4POff(acc,c.pf,gap);if(!isFinite(y))y=0;const p=arr[i-1];y=Math.max(y,ys[i-1]+p.ny+p.h+gap-c.ny)}ys.push(y);hmA4PMerge(acc,c.pf,0,y)});
+    const top=Math.min(0,...ys);for(let i=0;i<ys.length;i++)ys[i]-=top;
+    return{ys,H:Math.max(...arr.map((c,i)=>ys[i]+c.sh))};
+}
 function hmA4Lay(n,cols){
     n.grid=null;
-    if(!n.children.length){n.sw=n.w;n.sh=n.h;return}
+    if(!n.children.length){n.sw=n.w;n.sh=n.h;n.ny=0;n.cy0=0;n.pf=hmA4P(n.w);hmA4PRect(n.pf,0,n.w,0,n.h);return}
     n.children.forEach(c=>hmA4Lay(c,cols));
-    const kids=n.children,leaves=kids.every(c=>!c.children.length);
-    if(leaves&&cols>1&&kids.length>=4){
-        const k=Math.min(cols,Math.ceil(kids.length/3)),rn=Math.ceil(kids.length/k),cw=[],rh=Math.max(...kids.map(c=>c.h))+HM_A4_GY;
+    const kids=n.children,leaves=kids.every(c=>!c.children.length),lc=n.lc!=null?n.lc:(kids.length>=4?Math.min(cols,Math.ceil(kids.length/3)):1);
+    let m0,m1;
+    if(leaves&&lc>1&&kids.length>=2){
+        const k=Math.min(lc,kids.length),rn=Math.ceil(kids.length/k),cw=[],rh=Math.max(...kids.map(c=>c.h))+HM_A4_GY;
         kids.forEach((c,i)=>{const col=Math.floor(i/rn);cw[col]=Math.max(cw[col]||0,c.w)});
         kids.forEach((c,i)=>{const col=Math.floor(i/rn),row=i%rn;c.rx=cw.slice(0,col).reduce((s,w)=>s+w,0)+col*HM_A4_GC;c.ry=row*rh});
-        n.grid={k,rn};n.cw=cw.reduce((s,w)=>s+w,0)+(cw.length-1)*HM_A4_GC;n.ch=rn*rh-HM_A4_GY;
+        n.grid={k,rn};n.cw=cw.reduce((s,w)=>s+w,0)+(cw.length-1)*HM_A4_GC;n.ch=rn*rh-HM_A4_GY;m0=0;m1=n.ch;
     }else{
-        let y=0;kids.forEach(c=>{c.rx=0;c.ry=y;y+=c.sh+HM_A4_GY});n.cw=Math.max(...kids.map(c=>c.sw));n.ch=y-HM_A4_GY;
+        const st=hmA4Stack(kids,HM_A4_GY);kids.forEach((c,i)=>{c.rx=0;c.ry=st.ys[i]});
+        n.cw=Math.max(...kids.map(c=>c.sw));n.ch=st.H;
+        const f=kids[0],l=kids[kids.length-1];m0=f.ry+f.ny+f.h/2;m1=l.ry+l.ny+l.h/2;
     }
-    n.sw=n.w+HM_A4_GX+n.cw;n.sh=Math.max(n.h,n.ch);
+    // düğüm, ilk ve son çocuğunun ortasında
+    const mid=(m0+m1)/2,nt=mid-n.h/2,top=Math.min(0,nt),cx=n.w+HM_A4_GX;
+    n.ny=nt-top;n.cy0=-top;n.sh=Math.max(nt+n.h,n.ch)-top;n.sw=cx+n.cw;
+    const P=hmA4P(n.sw);hmA4PRect(P,0,n.w,n.ny,n.ny+n.h);
+    hmA4PRect(P,n.w,cx,n.cy0+Math.min(m0,mid),n.cy0+Math.max(m1,mid));   // bağlantı çizgilerinin alanı
+    if(n.grid)hmA4PRect(P,cx-0.4,cx+n.cw,n.cy0,n.cy0+n.ch);else kids.forEach(c=>hmA4PMerge(P,c.pf,cx,n.cy0+c.ry));
+    n.pf=P;
+}
+// sıralı ağırlıkları k ardışık parçaya böl: en ağır parça en hafif olsun → [[başlangıç, bitiş), …]
+function hmA4Partition(w,k){
+    const n=w.length,P=[0];w.forEach(x=>P.push(P[P.length-1]+x));k=Math.max(1,Math.min(k,n));
+    const D=[...Array(k+1)].map(()=>Array(n+1).fill(Infinity)),C=[...Array(k+1)].map(()=>Array(n+1).fill(0));D[0][0]=0;
+    for(let j=1;j<=k;j++)for(let i=j;i<=n;i++)for(let t=j-1;t<i;t++){const v=Math.max(D[j-1][t],P[i]-P[t]);if(v<D[j][i]){D[j][i]=v;C[j][i]=t}}
+    const out=[];let i=n;for(let j=k;j>=1;j--){const t=C[j][i];out.unshift([t,i]);i=t}
+    return out;
 }
 function hmA4Place(n,x,top,side){
-    n.x=x;n.y=top+(n.sh-n.h)/2;n.side=side;
-    const cx=x+n.w+HM_A4_GX,ct=top+(n.sh-n.ch)/2;
+    n.x=x;n.y=top+(n.ny||0);n.side=side;
+    const cx=x+n.w+HM_A4_GX,ct=top+(n.cy0||0);
     n.children.forEach(c=>hmA4Place(c,cx+c.rx,ct+c.ry,side));
 }
 function hmA4Mirror(n){n.x=-n.x-n.w;n.side=-1;n.children.forEach(hmA4Mirror)}
@@ -3988,18 +4057,17 @@ function hmA4Layout(root,cols,mode){
     const kids=root.children,two=mode==='two';let L=[],R=[];
     if(mode[0]==='g'&&kids.length>1){
         // sütunlu ağaç: dallar sırası bozulmadan k sütuna (yükseklikleri dengeli) bölünür; kök üstte, sütunlara dikey omurga
-        const k=Math.min(+mode.slice(1),kids.length),tot=kids.reduce((s,c)=>s+c.sh+HM_A4_GB,0),cols_=[[]];let h=0;
-        kids.forEach((c,i)=>{const left=kids.length-i,need=k-cols_.length;if(cols_[cols_.length-1].length&&h+c.sh/2>tot/k&&need>0&&left>need-1){cols_.push([]);h=0}cols_[cols_.length-1].push(c);h+=c.sh+HM_A4_GB});
+        const k=Math.min(+mode.slice(1),kids.length),cols_=hmA4Partition(kids.map(c=>c.sh+HM_A4_GB),k).map(r=>kids.slice(r[0],r[1]));
         let x=0;root.gc=[];
-        cols_.forEach(arr=>{let t=0;arr.forEach(c=>{hmA4Place(c,x+0.9,t,1);t+=c.sh+HM_A4_GB});root.gc.push({sx:x+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});x+=Math.max(...arr.map(c=>c.sw))+0.9+2.2});
+        cols_.forEach(arr=>{const st=hmA4Stack(arr,HM_A4_GB);arr.forEach((c,i)=>hmA4Place(c,x+0.9,st.ys[i],1));root.gc.push({sx:x+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});x+=Math.max(...arr.map(c=>c.sw))+0.9+2.2});
         const W=x-2.2;root.x=(W-root.w)/2;root.y=-root.h-1.6;root.busY=-0.8;
     }else{
     if(two&&kids.length>1){let hl=0,hr=0;kids.map((c,i)=>({c,i})).sort((a,b)=>b.c.sh-a.c.sh).forEach(o=>{if(hr<=hl){R.push(o);hr+=o.c.sh+HM_A4_GB}else{L.push(o);hl+=o.c.sh+HM_A4_GB}});
         L=L.sort((a,b)=>a.i-b.i).map(o=>o.c);R=R.sort((a,b)=>a.i-b.i).map(o=>o.c)}
     else{R=kids.slice();root.x=0}
     const x0=root.x===0?root.w+HM_A4_GX:root.w/2+HM_A4_GX;   // tek yana: kök solda; iki yana: kök ortada (sol taraf aynalanır)
-    const col=(arr,mirror)=>{const H=arr.reduce((s,c)=>s+c.sh,0)+Math.max(0,arr.length-1)*HM_A4_GB;let t=-H/2;
-        arr.forEach(c=>{hmA4Place(c,x0,t,1);if(mirror)hmA4Mirror(c);t+=c.sh+HM_A4_GB})};
+    const col=(arr,mirror)=>{if(!arr.length)return;const st=hmA4Stack(arr,HM_A4_GB);
+        arr.forEach((c,i)=>{hmA4Place(c,x0,-st.H/2+st.ys[i],1);if(mirror)hmA4Mirror(c)})};
     col(R,false);col(L,true);
     }
     let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
@@ -4015,23 +4083,43 @@ function hmA4Plan(){
     const modes=hmA4.side==='auto'?['two','one','g2','g3','g4']:hmA4.side==='grid'?['g2','g3','g4','g5']:[hmA4.side];
     const colsL=hmA4.cols?[hmA4.cols]:[1,2,3,4];
     const minFsOf=root=>{let m=9;hmA4Walk(root,n=>{if(n.d>0)m=Math.min(m,n.fs)});return m===9?1:m};
+    const cap=Math.max(HM_A4_MAXPT,fix),vps=hmA4.val==='none'?['side','mixw']:hmA4.vpos==='side'||hmA4.vpos==='below'?[hmA4.vpos]:['side','below','mix','mixw'];
     // en iyi yerleşim (yazıyı en büyük yapan); eşit yazıda daha az sütun, iki yana ve yatay öncelikli (küçük pay)
-    const best=(root,os,minFs)=>{let b=null;
+    const clearLc=root=>hmA4Walk(root,n=>{n.lc=null});
+    const best=(root,os,minFs)=>{let b=null;const all=[];clearLc(root);
         for(const ori of os)for(const mode of modes)for(const cols of colsL){
-            const box=hmA4Layout(root,cols,mode),s=hmA4Fit(box,ori),eff=Math.min(s,HM_A4_MAXPT/minFs),score=eff*(1-0.012*(cols-1))*(mode==='two'?1:mode==='one'?0.985:0.99);
-            if(!b||score>b.score+1e-9)b={score,s:eff,ori,mode,two:mode==='two',cols};
-        }return b};
-    let depth=dp?Math.min(dp,maxD):maxD,note='',root,minFs,b;
-    for(;;){
-        root=hmA4Tree(depth);hmA4Prep(root,0,'#546E7A');minFs=minFsOf(root);b=best(root,oris,minFs);
-        if(fix||dp||b.s*minFs>=HM_A4_MINPT||depth<=1)break;
-        note='Okunurluk için '+(maxD-depth+1)+' alt seviye çıkarıldı (derinliği elle seçebilirsin)';depth--;
-    }
-    let pages=[{root,b}];
+            const box=hmA4Layout(root,cols,mode),s=hmA4Fit(box,ori),eff=Math.min(s,cap/minFs),score=eff*(1-0.012*(cols-1))*(mode==='two'?1:mode==='one'?0.985:0.99);
+            const c={score,s:eff,raw:s,ori,mode,two:mode==='two',cols};all.push(c);
+            if(!b||score>b.score+1e-9)b=c;
+        }
+        b.alts=all.sort((x,y)=>y.score-x.score);return b};
+    // 🧠 akıllı yerleşim: her son seviye listesinin sütun sayısı ayrı ayrı (1–6) ayarlanır — sayfanın en boy oranını dolduracak
+    //    biçimde, her adımda yazıyı en çok büyüten değişiklik seçilir (genel "son seviye sütunu" elle seçildiyse yapılmaz)
+    const refine=(root,b,minFs)=>{
+        if(hmA4.cols)return b;
+        const groups=[];hmA4Walk(root,n=>{if(n.d>0&&n.children.length>=3&&n.children.every(c=>!c.children.length))groups.push(n)});
+        if(!groups.length)return b;
+        let win=null;const tried=new Set();
+        for(const c of b.alts){
+            const key=c.ori+c.mode;if(tried.has(key))continue;tried.add(key);if(tried.size>2)break;
+            groups.forEach(g=>{g.lc=g.children.length>=4?Math.min(c.cols,Math.ceil(g.children.length/3)):1});
+            const[pw,ph]=HM_A4_PAGE[c.ori],aw=pw-2*HM_A4_M,ah=ph-2*HM_A4_M-HM_A4_HEAD;
+            let box=null;const ev=()=>{box=hmA4Layout(root,c.cols,c.mode);return hmA4Fit(box,c.ori)};let cur=ev();
+            for(let it=0;it<50;it++){
+                let bg=null,bv=0,bs=cur*1.002;const hLim=box.H/ah>=box.W/aw,dirs=hLim?[1]:[-1];
+                for(const g of groups)for(const dv of dirs){const v=g.lc+dv;if(v<1||v>Math.min(6,g.children.length))continue;const o=g.lc;g.lc=v;const sv=ev();g.lc=o;if(sv>bs){bs=sv;bg=g;bv=v}}
+                if(!bg)break;bg.lc=bv;cur=ev();
+            }
+            const eff=Math.min(cur,cap/minFs);
+            if(!win||eff>win.s*1.001)win=Object.assign({},c,{s:eff,raw:cur,lcs:groups.map(g=>[g,g.lc])});
+            if(eff>=cap/minFs-1e-9)break;
+        }
+        return win&&win.s>b.s*1.001?win:b;
+    };
     // 🔠 "en az N pt": tek sayfaya o boyutta sığmıyorsa sayfalara bölünür — önce 1. seviye dallar, o da yetmezse
-    //    2. seviye dallar (1. seviye dal adı her sayfada "⋯ devam" ile tekrarlanır); sıra bozulmaz, sayfalar dengeli,
-    //    bütün sayfalarda aynı yazı boyu (en küçüğü)
-    if(fix&&b.s*minFs<fix-1e-6&&root.children.length){
+    //    2. seviye dallar (1. seviye dal adı her sayfada "⋯" ile tekrarlanır); sıra bozulmaz, sayfalar dengeli, bütün sayfalarda
+    //    aynı yazı boyu. İstenen boyuta varılamıyorsa (sayfa GENİŞLİĞİ yetmiyor) o boyuta en az sayfayla iner.
+    const paginate=(root,minFs)=>{
         const L1=root.children;L1.forEach(c=>hmA4Lay(c,2));
         const items1=L1.map(c=>({l1:c,sub:null,w:c.sh+HM_A4_GB}));
         const items2=[];L1.forEach(c=>{if(c.children.length)c.children.forEach(g=>items2.push({l1:c,sub:g,w:g.sh+HM_A4_GY}));else items2.push({l1:c,sub:null,w:c.sh+HM_A4_GB})});
@@ -4039,27 +4127,45 @@ function hmA4Plan(){
             ch.forEach(it=>{let last=kids[kids.length-1];
                 if(!it.sub){kids.push(Object.assign({},it.l1));return}
                 if(!last||last._src!==it.l1){last=Object.assign({},it.l1,{children:[],_src:it.l1});
-                    if(it.l1.children[0]!==it.sub){last.lab=it.l1.lab+' ⋯';last.w=it.l1.w+hmA4Measure(' ⋯',it.l1.bold)*it.l1.fs}kids.push(last)}
+                    if(it.l1.children[0]!==it.sub){last.lab=it.l1.lab+' ⋯';last.lines=it.l1.lines.slice(0,-1).concat(it.l1.lines[it.l1.lines.length-1]+' ⋯');last.w=it.l1.w+hmA4Measure(' ⋯',it.l1.bold)*it.l1.fs}kids.push(last)}
                 last.children.push(it.sub)});
             return Object.assign({},root,{children:kids})};
         const tryK=(items,k)=>{let f=null;const chunks=hmA4Chunks(items,items.map(x=>x.w),k);
             for(const ori of oris){const pg=chunks.map(ch=>{const r=pageRoot(ch);return{root:r,b:best(r,[ori],minFs)}}),smin=Math.min(...pg.map(x=>x.b.s));if(!f||smin>f.smin)f={pages:pg,smin}}
             return f};
-        // en çok sayfayla ulaşılabilecek yazı: istenen boyuta varılamıyorsa (sayfa GENİŞLİĞİ yetmiyor: seviye sayısı / ad
-        // uzunluğu) gereksiz sayfa üretme — o boyuta en az sayfayla ulaş; sayfa sayısı ikili aramayla bulunur
         let list=null,top=null;
         for(const items of L1.length>1?[items1,items2]:[items2]){const f=tryK(items,Math.min(40,items.length));if(!top||f.smin>top.smin*1.001){top=f;list=items}if(f.smin*minFs>=fix-1e-6)break}
         const reach=top.smin*minFs>=fix-1e-6,target=reach?fix/minFs:top.smin*0.97;
         let lo=2,hi=Math.min(40,list.length),found=top;
         while(lo<=hi){const k=(lo+hi)>>1,f=tryK(list,k);if(f.smin>=target-1e-9){found=f;hi=k-1}else lo=k+1}
-        if(!reach)note=(note?note+' • ':'')+'Yazı en çok '+(top.smin*minFs).toFixed(1)+' pt olabiliyor (sayfa genişliği yetmiyor) — derinliği, ad uzunluğunu ya da değeri azaltınca büyür';
-        pages=found.pages;pages.forEach((x,i)=>{x.b.s=found.smin;x.root.pg=(i+1)+'/'+pages.length});
+        return{pages:found.pages,smin:found.smin,reach,max:top.smin*minFs};
+    };
+    let depth=dp?Math.min(dp,maxD):maxD,note='',root,minFs,b,pg=null;
+    for(;;){
+        // değer konumu (yanında / altında) otomatikte ikisi de denenir: tek sayfada yazıyı büyüten; "en az N pt"de istenen boyuta
+        // en az sayfayla varan (varılamıyorsa en büyük yazıyı veren)
+        let bb=null;
+        const cands=vps.map(vp=>{hmA4VP=vp;const r=hmA4Tree(depth);hmA4Prep(r,0,'#546E7A');const mf=minFsOf(r);return{vp,r,mf,x:best(r,oris,mf)}}).sort((a,b)=>b.x.s*b.mf-a.x.s*a.mf);
+        cands.forEach((q,i)=>{if(i<2){hmA4VP=q.vp;q.x=refine(q.r,q.x,q.mf)}});
+        for(const q of cands){const vp=q.vp,r=q.r,mf=q.mf,x=q.x;
+            const c={root:r,b:x,mf,vp,pg:null,pt:x.s*mf,n:1,reach:x.s*mf>=fix-1e-6};
+            if(fix&&!c.reach&&r.children.length){const q=paginate(r,mf);c.pg=q;c.pt=q.smin*mf;c.n=q.pages.length;c.reach=q.reach}
+            const better=!bb||(fix?(c.reach!==bb.reach?c.reach:c.reach?c.n<bb.n||(c.n===bb.n&&c.pt>bb.pt):c.pt>bb.pt*1.02):c.pt>bb.pt*1.02);
+            if(better)bb=c}
+        root=bb.root;b=bb.b;minFs=bb.mf;hmA4VP=bb.vp;pg=bb.pg;
+        if(fix||dp||b.s*minFs>=HM_A4_MINPT||depth<=1)break;
+        note='Okunurluk için '+(maxD-depth+1)+' alt seviye çıkarıldı (derinliği elle seçebilirsin)';depth--;
+    }
+    let pages=[{root,b}];
+    if(pg){
+        if(!pg.reach)note=(note?note+' • ':'')+'Yazı en çok '+pg.max.toFixed(1)+' pt olabiliyor (sayfa genişliği yetmiyor) — derinliği, ad uzunluğunu ya da değeri azaltınca büyür';
+        pages=pg.pages;pages.forEach((x,i)=>{x.b.s=pg.smin;x.root.pg=(i+1)+'/'+pages.length});
     }
     // son yerleşim (denemeler düğüm konumlarını değiştirdi)
-    const out=pages.map(x=>Object.assign({},x.b,{root:x.root,box:hmA4Layout(x.root,x.b.cols,x.b.mode),depth,minFs,src:hmA4Src}));
+    const out=pages.map(x=>{hmA4Walk(x.root,n=>{n.lc=null});if(x.b.lcs)x.b.lcs.forEach(([g,v])=>{g.lc=v});return Object.assign({},x.b,{root:x.root,box:hmA4Layout(x.root,x.b.cols,x.b.mode),depth,minFs,src:hmA4Src})});
     out.forEach(o=>{o.pt=o.s*minFs});
     let nodes=0;hmA4Walk(root,()=>nodes++);
-    return Object.assign({},out[0],{pages:out,note,nodes:nodes-1,maxD});
+    return Object.assign({},out[0],{pages:out,note,nodes:nodes-1,maxD,vp:hmA4VP});
 }
 // sırayı bozmadan, yükseklikleri dengeli k parça
 function hmA4Chunks(kids,w,k){
@@ -4086,21 +4192,24 @@ function hmA4Svg(P,pxW){
             n.gc.forEach(g=>{lines+='<line x1="'+X(g.sx)+'" y1="'+Y(n.busY)+'" x2="'+X(g.sx)+'" y2="'+Y(g.y2)+'" stroke="'+rc+'" stroke-width="2"/>'});
             n.children.forEach(c=>{const sx=n.gc.reduce((a,g)=>g.sx<=c.x&&g.sx>a?g.sx:a,-Infinity);lines+='<line x1="'+X(sx)+'" y1="'+Y(c.y+c.h/2)+'" x2="'+X(c.x)+'" y2="'+Y(c.y+c.h/2)+'" stroke="'+hmA4Col(c.branch,true)+'" stroke-width="2"/>'});
         }else n.children.forEach(c=>{const side=c.side<0?-1:1;curve(n.d===0?(side<0?n.x:n.x+n.w):out,my,side<0?c.x+c.w:c.x,c.y+c.h/2,n.d===0?hmA4Col(c.branch,true):bc,n.d===0?'2.2':wd)});
-        const fs=n.fs*s,tx=n.x+n.pad*n.fs+n.dot*n.fs,ty=n.y+n.h/2+n.fs*0.36;
+        const L=n.lines.length+(n.v2?1:0),fs=n.fs*s,tx=n.x+n.pad*n.fs+n.dot*n.fs,ty=n.y+n.h/2-(L-1)*n.fs*0.5+n.fs*0.36,blk=hmA4.ink!=='color';
         if(n.d===0)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.32).toFixed(2)+'" fill="#263238"/>';
         else if(n.d===1)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.3).toFixed(2)+'" fill="'+(hmA4.color?hmA4Col(n.heat,false):'#fff')+'" fill-opacity="'+(hmA4.color?0.16:1)+'" stroke="'+bc+'" stroke-width="1.2"/>';
-        else nodes+='<circle cx="'+X(n.x+(n.pad+n.dot*0.42)*n.fs)+'" cy="'+Y(n.y+n.h/2)+'" r="'+(n.fs*0.27*s).toFixed(2)+'" fill="'+(hmA4.color?n.heat:'#888')+'"/>';
-        const tc=n.d===0?'#fff':n.d===1?(hmA4.color?bc:'#111'):'#1a1a1a';
-        nodes+='<text x="'+X(tx)+'" y="'+Y(ty)+'" '+F+' font-size="'+fs.toFixed(2)+'" font-weight="'+(n.bold?700:500)+'" fill="'+tc+'">'+esc(n.lab)
-            +(n.vt?'<tspan dx="'+(0.45*fs).toFixed(2)+'" font-size="'+(fs*0.8).toFixed(2)+'" font-weight="500" fill="'+(n.d===0?'#CFD8DC':'#666')+'">'+esc(n.vt)+'</tspan>':'')+'</text>';
+        else nodes+='<circle cx="'+X(n.x+(n.pad+n.dot*0.42)*n.fs)+'" cy="'+Y(ty-n.fs*0.36)+'" r="'+(n.fs*0.27*s).toFixed(2)+'" fill="'+(hmA4.color?n.heat:'#888')+'"/>';
+        const tc=n.d===0?'#fff':blk?'#000':n.d===1?(hmA4.color?bc:'#111'):'#1a1a1a',vc=n.d===0?'#ECEFF1':blk?'#111':'#555',vfs=(fs*hmA4VF()).toFixed(2);
+        n.lines.forEach((ln,i)=>{const last=i===n.lines.length-1;
+            nodes+='<text x="'+X(tx)+'" y="'+Y(ty+i*n.fs)+'" '+F+' font-size="'+fs.toFixed(2)+'" font-weight="'+hmA4W(n.bold)+'" fill="'+tc+'">'+esc(ln)
+                +(last&&n.vt&&!n.v2?'<tspan dx="'+(0.45*fs).toFixed(2)+'" font-size="'+vfs+'" font-weight="'+hmA4W(false)+'" fill="'+vc+'">'+esc(n.vt)+'</tspan>':'')+'</text>'});
+        if(n.v2)nodes+='<text x="'+X(tx)+'" y="'+Y(ty+n.lines.length*n.fs)+'" '+F+' font-size="'+vfs+'" font-weight="'+hmA4W(false)+'" fill="'+vc+'">'+esc(n.vt)+'</text>';
     });
     const lv=heatmapMindLevelKeys().map(k=>(HEATMAP_DIMENSIONS[k]||{}).label).filter(Boolean),from=P.root.isAll?0:1;
-    const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+16)+'" '+F+' font-size="16" font-weight="800" fill="#111">'+esc((P.src?P.src.title:'Isı Haritası — '+P.root.name)+(P.root.pg?'  •  sayfa '+P.root.pg:''))+'</text>'
-        +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+31)+'" '+F+' font-size="9" fill="#555">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
-        +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+16)+'" text-anchor="end" '+F+' font-size="9" fill="#555">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
-        +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+37)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+37)+'" stroke="#ccc" stroke-width="0.8"/>';
+    const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+14)+'" '+F+' font-size="15" font-weight="800" fill="#111">'+esc((P.src?P.src.title:'Isı Haritası — '+P.root.name)+(P.root.pg?'  •  sayfa '+P.root.pg:''))+'</text>'
+        +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+26)+'" '+F+' font-size="8.5" fill="#333">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
+        +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+14)+'" text-anchor="end" '+F+' font-size="8.5" fill="#333">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
+        +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+31)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+31)+'" stroke="#ccc" stroke-width="0.8"/>';
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pw+' '+ph+'"'+(pxW?' width="'+pxW+'" height="'+Math.round(pxW*ph/pw)+'"':'')+'><rect width="'+pw+'" height="'+ph+'" fill="#fff"/>'+head+lines+nodes+'</svg>';
 }
+function hmA4Easy(){Object.assign(hmA4,{font:'fit',weight:'bold',ink:'black',vsize:'same',vpos:'auto',gap:'tight',side:'auto',cols:0,ori:'auto'});hmA4Save();hmA4Render();if(hmA4Src&&hmA4Src.changed)hmA4Src.changed()}
 function hmA4Set(k,v){if(k==='depth'&&hmA4Src)hmA4Src.setDepth(v);else{hmA4[k]=v;hmA4Save()}hmA4Render();if(hmA4Src&&hmA4Src.changed)hmA4Src.changed()}
 function hmA4Open(src){
     hmA4Src=src||null;
@@ -4125,8 +4234,13 @@ function hmA4Render(){
         +'<label>Yerleşim'+sel('side',[['auto','Otomatik ('+(P.mode==='two'?'iki yana':P.mode==='one'?'tek yana':P.mode.slice(1)+' sütunlu ağaç')+')'],['two','İki yana (mind map)'],['one','Tek yana (ağaç)'],['grid','Sütunlu ağaç (kök üstte)']],hmA4.side)+'</label>'
         +'<label>Son seviye sütunu'+sel('cols',[[0,'Otomatik ('+P.cols+')'],[1,'1'],[2,'2'],[3,'3'],[4,'4']],hmA4.cols)+'</label>'
         +'<label>Değer'+sel('val',[['both','Parti + kg'],['kg','Yalnız kg'],['count','Yalnız parti'],['none','Yok']],hmA4.val)+'</label>'
-        +'<label>Yazı boyutu'+sel('font',[['fit','Sığdır (tek sayfa, en büyük yazı)'],['8','En az 8 pt'],['9','En az 9 pt'],['10','En az 10 pt'],['11','En az 11 pt'],['12','En az 12 pt'],['14','En az 14 pt']],String(hmA4.font||'fit'))+'</label>'
-        +'<label>Aralık'+sel('gap',[['normal','Normal'],['tight','Sıkı (daha büyük yazı)']],hmA4.gap||'normal')+'</label>'
+        +'<label>Değer konumu'+sel('vpos',[['auto','Otomatik ('+({below:'altında',mix:'dallarda altında',mixw:'dallarda altında, ad 2 satır'}[P.vp]||'yanında')+')'],['side','Adın yanında'],['below','Adın altında (daha büyük yazı)']],hmA4.vpos||'auto')+'</label>'
+        +'<label>Değer yazısı'+sel('vsize',[['same','Adla aynı boy'],['small','Küçük']],hmA4.vsize||'same')+'</label>'
+        +'<button type="button" class="hm-a4-easy" onclick="hmA4Easy()" title="Tek sayfada en okunaklı: akıllı yerleşim (yazıyı en büyük yapan düzen, sayfa yönü, sütunlar, değer konumu), kalın ve siyah yazı, sıkı aralık">📖 Okunaklı baskı (tek sayfa)</button>'
+        +'<label>Yazı boyutu'+sel('font',[['fit','Tek sayfa (en büyük yazı)'],['8','En az 8 pt (gerekirse çok sayfa)'],['9','En az 9 pt (gerekirse çok sayfa)'],['10','En az 10 pt (gerekirse çok sayfa)'],['11','En az 11 pt (gerekirse çok sayfa)'],['12','En az 12 pt (gerekirse çok sayfa)'],['14','En az 14 pt (gerekirse çok sayfa)'],['16','En az 16 pt (gerekirse çok sayfa)'],['18','En az 18 pt (gerekirse çok sayfa)']],String(hmA4.font||'fit'))+'</label>'
+        +'<label>Yazı kalınlığı'+sel('weight',[['bold','Kalın'],['normal','Normal']],hmA4.weight||'bold')+'</label>'
+        +'<label>Yazı rengi'+sel('ink',[['black','Siyah (baskı için)'],['color','Renkli']],hmA4.ink||'black')+'</label>'
+        +'<label>Aralık'+sel('gap',[['tight','Sıkı (daha büyük yazı)'],['normal','Geniş']],hmA4.gap==='normal'?'normal':'tight')+'</label>'
         +'<label>Ad uzunluğu'+sel('maxCh',[[22,'Kısa (22)'],[30,'Orta (30)'],[40,'Uzun (40)'],[70,'Tam']],hmA4.maxCh)+'</label>'
         +'<label>Renk'+sel('color',[['1','Renkli'],['0','Siyah-beyaz']],hmA4.color?'1':'0')+'</label>'
         +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4'+(P.pages.length>1?' • <b>'+P.pages.length+' sayfa</b>':'')+'</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
@@ -4180,6 +4294,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.ge
     +'.hm-a4-opt{flex:0 0 230px;display:flex;flex-direction:column;gap:7px;overflow:auto;font-size:12px}.hm-a4-t{font-size:15px;color:#fff}'
     +'.hm-a4-opt label{display:flex;flex-direction:column;gap:2px;color:#FFD54F;font-weight:700}.hm-a4-opt select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px;font-size:13px;max-width:100%}'
     +'.hm-a4-info{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.08);line-height:1.45;border-left:4px solid #888}.hm-a4-info.ok{border-color:#66BB6A}.hm-a4-info.mid{border-color:#FFCA28}.hm-a4-info.low{border-color:#EF5350}.hm-a4-info small{opacity:.8}'
+    +'.hm-a4-easy{border:0;border-radius:8px;padding:7px;font-weight:800;font-size:13px;cursor:pointer;background:#2E7D32;color:#fff}'
     +'.hm-a4-btns{display:flex;flex-direction:column;gap:5px;margin-top:auto}.hm-a4-btns button{border:0;border-radius:8px;padding:8px;font-weight:800;font-size:13px;cursor:pointer;background:#1565C0;color:#fff}.hm-a4-btns button.pdf{background:#C62828}.hm-a4-btns button.x{background:#455A64}'
     +'.hm-a4-prev{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;background:#3a3a4a;border-radius:8px;padding:10px;container-type:size}'
     +'.hm-a4-page{background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.6);flex:0 0 auto}.hm-a4-page svg{display:block;width:100%;height:100%}'

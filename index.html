@@ -3142,6 +3142,7 @@ const HEATMAP_DIMENSIONS={
         const defs=flowWaitBucketDefs(),def=defs.find(x=>days>=x.min&&days<x.max)||defs[defs.length-1];
         return def.name;
     }},
+    musteri:{label:'Müşteri (sipariş)',get:k=>{try{return lbSubCust(k)||'Kendi siparişi'}catch(e){return'Kendi siparişi'}}},
     parti:{label:'Parti No',get:k=>heatmapShortParti(k)},
     partiRecete:{label:'Parti No + Reçete',get:k=>{const p=heatmapShortParti(k),r=String(k.recete_adi||'').trim();return r?p+' · '+(r.length>14?r.slice(0,13).trim()+'…':r):p}}
 };
@@ -3910,7 +3911,7 @@ function heatmapMindTreeToolbarHtml(){
 }
 function heatmapMindOutRowHtml(){
     return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
-        +'<button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
+        +'<button type="button" class="view-action-btn" onclick="kkDailyOpen()" title="Kalite Kontrol günlük durum: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4" style="background:#E65100">📄 KK günlük</button><button type="button" class="view-action-btn" onclick="srDailyOpen()" title="Sarım1 ve Sarım2 günlük durum: bekleyenler ve bugün geçenler — tek A4" style="background:#7E57C2">🧵 Sarım günlük</button><button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="heatmapMindExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="heatmapMindExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="heatmapMindExport(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="heatmapMindExport(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button>'
         +'<small class="tmap-out-view">'+(heatmapMindVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
 }
@@ -3942,7 +3943,8 @@ function hmA4W(bold){return hmA4.weight==='normal'?(bold?700:500):(bold?800:700)
 function hmA4VF(){return hmA4.vsize==='small'?0.8:1}
 function hmA4Measure(t,bold){if(!hmA4Ctx)hmA4Ctx=document.createElement('canvas').getContext('2d');hmA4Ctx.font=hmA4W(bold)+' 100px "Segoe UI",Arial,sans-serif';return hmA4Ctx.measureText(String(t)).width/100}
 function hmA4Short(s,n){s=String(s||'').trim();return s.length>n?s.slice(0,n-1).trim()+'…':s}
-function hmA4ValTxt(n){if(hmA4.val==='none')return'';const kg=Math.round(n.kg).toLocaleString('tr-TR')+' kg',c=n.count.toLocaleString('tr-TR')+' p';return hmA4.val==='kg'?kg:hmA4.val==='count'?c:n.count===1?kg:c+' · '+kg}   // tek partide "1 p" yazılmaz
+function hmA4ValTxt(n){if(n.vxOnly)return n.vx||'';const b=hmA4ValBase(n);return n.vx?n.vx+(b?' · '+b:''):b}   // vxOnly: yalnız ek (ör. KK günlükte parti satırı: bekleme / saat)
+function hmA4ValBase(n){if(hmA4.val==='none')return'';const kg=Math.round(n.kg).toLocaleString('tr-TR')+' kg',c=n.count.toLocaleString('tr-TR')+' p';return hmA4.val==='kg'?kg:hmA4.val==='count'?c:n.count===1?kg:c+' · '+kg}   // tek partide "1 p" yazılmaz
 function hmA4KKName(names){return names.find(n=>/^KAL[İI]TE\s*KONTROL$/i.test(String(n).trim()))||null}
 // Ağaç verisi (ekrandaki ağaçla aynı kurallar). depth: kökün altında gösterilecek seviye sayısı
 function hmA4Tree(depth){
@@ -3955,7 +3957,7 @@ function hmA4Tree(depth){
         rows.forEach((r,i)=>{
             const path=prefix?prefix+'-'+i:String(i),k=nk+'›'+r.name;if(heatmapMindHidden.has(k))return;
             const deeper=li<levels.length-1&&left>1&&(!hmA4.open||heatmapMindExpandedPaths.has(path));
-            out.push({name:r.name,count:r.count,kg:r.kg,heat:sc(r.value),children:deeper?build(r.cards,li+1,path,k,left-1):[]});
+            out.push({name:r.name,count:r.count,kg:r.kg,heat:sc(r.value),mk:hmA4Marks(r.cards),children:deeper?build(r.cards,li+1,path,k,left-1):[]});
         });
         return out;
     };
@@ -3977,9 +3979,22 @@ function hmA4Wrap(t,bold){
 }
 // değer konumu (hmA4VP): side = adın yanında · below = altında · mix = ara dallarda (firma, kumaş…) altında, yapraklarda yanında
 // (az sayıda ara dal uzar, kalabalık yapraklar alçak kalır) · mixw = mix + uzun ara dal adı iki satır
+// ⏱ uzun bekleme / ⚠ tamir işareti: o aşamada eşikten (varsayılan 2 gün) uzun bekleyen parti kırmızı, açık tamiri olan ⚠;
+//    birden çok partili son seviye dalda sayıları (⏱3 ⚠1). hmA4.mark = eşik gün ya da 'off'
+let hmA4OpenMemo={src:null,set:null};
+function hmA4OpenRep(){const T=window.TAMIR_ALL||[];if(hmA4OpenMemo.src!==T){hmA4OpenMemo={src:T,set:new Set(T.filter(t=>!String(t.durum||'').trim()).map(t=>String(t.parti||'').trim()))}}return hmA4OpenMemo.set}
+function hmA4Thr(){return +hmA4.mark||2}
+function hmA4Thr2(){const t=hmA4Thr();return {1:3,2:5,3:7,5:10}[t]||t*2}
+function hmA4Marks(cards){
+    if(hmA4.mark==='off'||!cards||!cards.length)return null;
+    const thr=hmA4Thr(),thr2=hmA4Thr2(),open=hmA4OpenRep();let lw=0,lw2=0,tm=0;
+    cards.forEach(k=>{if(!k||!k.id)return;const d=fifoAgeDays(k);if(d!=null&&d>=thr){lw++;if(d>=thr2)lw2++}if(open.has(lbPn(k)))tm++});
+    return lw||tm?{lw,lw2,tm,single:cards.length===1}:null;
+}
 function hmA4Prep(n,d,branch){
-    n.d=d;n.fs=HM_A4_FS[Math.min(d,HM_A4_FS.length-1)];n.bold=d<=1;n.lab=hmA4Short(n.name,d===0?48:hmA4.maxCh);n.vt=hmA4ValTxt(n);
-    n.branch=d===1?n.heat:branch;
+    n.d=d;n.fs=HM_A4_FS[Math.min(d,HM_A4_FS.length-1)];n.bold=d<=1;n.lab=hmA4Short(n.name,d===0?48:hmA4.maxCh+(n.longOk?16:0));n.vt=hmA4ValTxt(n);
+    n.branch=d===1?n.heat:branch;n.red=false;
+    n.orange=false;if(n.mk&&!n.children.length){const m=n.mk;n.red=m.lw2>0;n.orange=!n.red&&m.lw>0;n.lab+=m.single?(m.tm?' ⚠':''):(m.lw?' ⏱'+m.lw:'')+(m.tm?' ⚠'+m.tm:'')}
     const inner=n.children.length>0,vp=hmA4VP;
     n.v2=!!n.vt&&(vp==='below'||((vp==='mix'||vp==='mixw')&&inner));
     n.lines=vp==='mixw'&&inner&&d>0?hmA4Wrap(n.lab,n.bold):[n.lab];
@@ -4053,22 +4068,53 @@ function hmA4Walk(n,f){f(n);n.children.forEach(c=>hmA4Walk(c,f))}
 // Bir yerleşimi hesapla → kutu ölçüsü (birim)
 function hmA4Layout(root,cols,mode){
     root.children.forEach(c=>hmA4Lay(c,cols));
-    root.x=-root.w/2;root.y=-root.h/2;root.side=0;root.gc=null;
+    root.x=-root.w/2;root.y=-root.h/2;root.side=0;root.gc=null;root.qk=false;root.qf=false;
     const kids=root.children,two=mode==='two';let L=[],R=[];
-    if(mode[0]==='g'&&kids.length>1){
+    if(mode.slice(0,2)==='qf'&&kids.length>=2){
+        const hs=kids.map(G=>G.children.reduce((a,c)=>a+c.sh+HM_A4_GB,0)),tot=hs.reduce((a,b)=>a+b,0)||1,T=tot/(+mode.slice(2));
+        const blocks=kids.map((G,gi)=>{const F=G.children,k=F.length?Math.max(1,Math.min(4,F.length,Math.ceil(hs[gi]/T-0.15))):1;
+            const cols=F.length?hmA4Partition(F.map(c=>c.sh+HM_A4_GB),k).map(r=>F.slice(r[0],r[1])):[],st=cols.map(a=>hmA4Stack(a,HM_A4_GB));
+            const w=Math.max(G.w,cols.reduce((a,arr)=>a+Math.max(...arr.map(c=>c.sw))+0.9+1.6,0)-(cols.length?1.6:0)),h=G.h+1.0+Math.max(0,...st.map(x=>x.H));
+            return{G,cols,st,w,h}});
+        let x=0,y=0,cw=0,W=0;
+        blocks.forEach(b=>{
+            if(y>0&&y+b.h>Math.max(T,b.h)*1.05){x+=cw+3.0;y=0;cw=0}
+            const G=b.G;G.x=x;G.y=y;G.side=1;G.qc=[];let cx=x;const top=y+G.h+1.0;
+            b.cols.forEach((arr,ci)=>{arr.forEach((c,i)=>hmA4Place(c,cx+0.9,top+b.st[ci].ys[i],1));G.qc.push({sx:cx+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});cx+=Math.max(...arr.map(c=>c.sw))+0.9+1.6});
+            y+=b.h+2.0;cw=Math.max(cw,b.w);W=Math.max(W,x+cw);
+        });
+        root.x=(W-root.w)/2;root.y=-root.h-1.2;root.qf=true;
+    }else{
+    const qn=mode.slice(0,2)==='qn'&&kids.length>=2;
+    if(qn||(mode[0]==='q'&&kids.length===2)){
+        let ks;
+        if(qn){const hs=kids.map(G=>G.children.reduce((a,c)=>a+c.sh+HM_A4_GB,0)),tot=hs.reduce((a,b)=>a+b,0)||1,tgt=tot/(+mode.slice(2));
+            ks=kids.map((G,i)=>G.children.length?Math.max(1,Math.min(4,G.children.length,Math.round(hs[i]/tgt)||1)):1)}
+        else ks=[+mode[1],+mode[2]];
+        let x=0;
+        kids.forEach((G,gi)=>{
+            const F=G.children;G.x=x;G.y=0;G.side=1;G.qc=[];let cx=x;const top=G.h+1.0;
+            if(F.length){const k=Math.max(1,Math.min(ks[gi],F.length)),cols=hmA4Partition(F.map(c=>c.sh+HM_A4_GB),k).map(r=>F.slice(r[0],r[1]));
+                cols.forEach(arr=>{const st=hmA4Stack(arr,HM_A4_GB);arr.forEach((c,i)=>hmA4Place(c,cx+0.9,top+st.ys[i],1));G.qc.push({sx:cx+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});cx+=Math.max(...arr.map(c=>c.sw))+0.9+1.6});cx-=1.6}
+            x+=Math.max(G.w,cx-x)+3.0;
+        });
+        root.x=(x-3.0-root.w)/2;root.y=-root.h-1.6;root.busY=-0.8;root.qk=true;
+    }else if(mode[0]==='g'&&kids.length>1){
         // sütunlu ağaç: dallar sırası bozulmadan k sütuna (yükseklikleri dengeli) bölünür; kök üstte, sütunlara dikey omurga
         const k=Math.min(+mode.slice(1),kids.length),cols_=hmA4Partition(kids.map(c=>c.sh+HM_A4_GB),k).map(r=>kids.slice(r[0],r[1]));
         let x=0;root.gc=[];
         cols_.forEach(arr=>{const st=hmA4Stack(arr,HM_A4_GB);arr.forEach((c,i)=>hmA4Place(c,x+0.9,st.ys[i],1));root.gc.push({sx:x+0.3,y2:arr[arr.length-1].y+arr[arr.length-1].h/2});x+=Math.max(...arr.map(c=>c.sw))+0.9+2.2});
         const W=x-2.2;root.x=(W-root.w)/2;root.y=-root.h-1.6;root.busY=-0.8;
     }else{
-    if(two&&kids.length>1){let hl=0,hr=0;kids.map((c,i)=>({c,i})).sort((a,b)=>b.c.sh-a.c.sh).forEach(o=>{if(hr<=hl){R.push(o);hr+=o.c.sh+HM_A4_GB}else{L.push(o);hl+=o.c.sh+HM_A4_GB}});
+    if(two&&kids.length===2&&root.fixedSides){L=[kids[0]];R=[kids[1]]}   // KK günlük: solda bekleyen, sağda geçen
+    else if(two&&kids.length>1){let hl=0,hr=0;kids.map((c,i)=>({c,i})).sort((a,b)=>b.c.sh-a.c.sh).forEach(o=>{if(hr<=hl){R.push(o);hr+=o.c.sh+HM_A4_GB}else{L.push(o);hl+=o.c.sh+HM_A4_GB}});
         L=L.sort((a,b)=>a.i-b.i).map(o=>o.c);R=R.sort((a,b)=>a.i-b.i).map(o=>o.c)}
     else{R=kids.slice();root.x=0}
     const x0=root.x===0?root.w+HM_A4_GX:root.w/2+HM_A4_GX;   // tek yana: kök solda; iki yana: kök ortada (sol taraf aynalanır)
     const col=(arr,mirror)=>{if(!arr.length)return;const st=hmA4Stack(arr,HM_A4_GB);
         arr.forEach((c,i)=>{hmA4Place(c,x0,-st.H/2+st.ys[i],1);if(mirror)hmA4Mirror(c)})};
     col(R,false);col(L,true);
+    }
     }
     let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
     hmA4Walk(root,n=>{x1=Math.min(x1,n.x);y1=Math.min(y1,n.y);x2=Math.max(x2,n.x+n.w);y2=Math.max(y2,n.y+n.h)});
@@ -4077,13 +4123,18 @@ function hmA4Layout(root,cols,mode){
 function hmA4Fit(box,ori){const[pw,ph]=HM_A4_PAGE[ori];return Math.min((pw-2*HM_A4_M)/box.W,(ph-2*HM_A4_M-HM_A4_HEAD)/box.H)}
 // En iyi yerleşimi seç (otomatik) — seçili olanlar sabit
 function hmA4Plan(){
+    if(hmA4Src&&hmA4Src.multi){
+        const outer=hmA4Src,Ps=outer.multi.map(sub=>{hmA4Src=sub;try{return hmA4Plan()}finally{hmA4Src=outer}});
+        const pages=[].concat(...Ps.map(x=>x.pages));pages.forEach((pg,i)=>{pg.root.pg=(i+1)+'/'+pages.length});
+        return Object.assign({},Ps[0],{pages,pt:Math.min(...Ps.map(x=>x.pt)),note:Ps.map(x=>x.note).filter(Boolean).join(' • '),nodes:Ps.reduce((a,x)=>a+x.nodes,0),maxD:outer.maxDepth(),depth:Ps[0].depth,src:outer});
+    }
     hmA4Gap(hmA4.gap);
     const maxD=Math.max(1,hmA4MaxDepth()),dp=hmA4Src?hmA4Src.depth:hmA4.depth,fix=+hmA4.font||0;
     const oris=hmA4.ori==='auto'?['land','port']:[hmA4.ori];
-    const modes=hmA4.side==='auto'?['two','one','g2','g3','g4']:hmA4.side==='grid'?['g2','g3','g4','g5']:[hmA4.side];
+    const modes=hmA4Src&&hmA4Src.modes?hmA4Src.modes:hmA4.side==='auto'?['two','one','g2','g3','g4']:hmA4.side==='grid'?['g2','g3','g4','g5']:[hmA4.side];
     const colsL=hmA4.cols?[hmA4.cols]:[1,2,3,4];
     const minFsOf=root=>{let m=9;hmA4Walk(root,n=>{if(n.d>0)m=Math.min(m,n.fs)});return m===9?1:m};
-    const cap=Math.max(HM_A4_MAXPT,fix),vps=hmA4.val==='none'?['side','mixw']:hmA4.vpos==='side'||hmA4.vpos==='below'?[hmA4.vpos]:['side','below','mix','mixw'];
+    const cap=Math.max(HM_A4_MAXPT,fix),vps=hmA4Src&&hmA4Src.vps&&hmA4.vpos!=='side'&&hmA4.vpos!=='below'?hmA4Src.vps:hmA4.val==='none'?['side','mixw']:hmA4.vpos==='side'||hmA4.vpos==='below'?[hmA4.vpos]:['side','below','mix','mixw'];
     // en iyi yerleşim (yazıyı en büyük yapan); eşit yazıda daha az sütun, iki yana ve yatay öncelikli (küçük pay)
     const clearLc=root=>hmA4Walk(root,n=>{n.lc=null});
     const best=(root,os,minFs)=>{let b=null;const all=[];clearLc(root);
@@ -4185,6 +4236,15 @@ function hmA4Svg(P,pxW){
         if(n.grid){
             const kids=n.children,g0=Math.min(...kids.map(c=>c.y)),g1=Math.max(...kids.map(c=>c.y+c.h)),gx=n.side<0?Math.max(...kids.map(c=>c.x+c.w))+0.35:Math.min(...kids.map(c=>c.x))-0.35;
             curve(out,my,gx,(g0+g1)/2,bc,wd);lines+='<line x1="'+X(gx)+'" y1="'+Y(g0+0.15)+'" x2="'+X(gx)+'" y2="'+Y(g1-0.15)+'" stroke="'+bc+'" stroke-width="'+wd+'" stroke-linecap="round"/>';
+        }else if(n.d===0&&n.qf){
+        }else if(n.d===0&&n.qk){
+            const rc='#607D8B',cs=n.children.map(c=>c.x+Math.min(c.w,6)/2),mid=n.x+n.w/2;
+            lines+='<line x1="'+X(mid)+'" y1="'+Y(n.y+n.h)+'" x2="'+X(mid)+'" y2="'+Y(n.busY)+'" stroke="'+rc+'" stroke-width="2.2"/>'
+                +'<line x1="'+X(Math.min(...cs,mid))+'" y1="'+Y(n.busY)+'" x2="'+X(Math.max(...cs,mid))+'" y2="'+Y(n.busY)+'" stroke="'+rc+'" stroke-width="2.2" stroke-linecap="round"/>';
+            n.children.forEach((c,i)=>{lines+='<line x1="'+X(cs[i])+'" y1="'+Y(n.busY)+'" x2="'+X(cs[i])+'" y2="'+Y(c.y)+'" stroke="'+hmA4Col(c.branch,true)+'" stroke-width="2.2"/>'});
+        }else if(n.d===1&&n.qc&&n.qc.length){
+            n.qc.forEach(g=>{lines+='<line x1="'+X(g.sx)+'" y1="'+Y(n.y+n.h)+'" x2="'+X(g.sx)+'" y2="'+Y(g.y2)+'" stroke="'+bc+'" stroke-width="1.8"/>'});
+            n.children.forEach(c=>{const sx=n.qc.reduce((a,g)=>g.sx<=c.x&&g.sx>a?g.sx:a,-Infinity);lines+='<line x1="'+X(sx)+'" y1="'+Y(c.y+c.h/2)+'" x2="'+X(c.x)+'" y2="'+Y(c.y+c.h/2)+'" stroke="'+bc+'" stroke-width="1.6"/>'});
         }else if(n.d===0&&n.gc){
             const rc='#607D8B',bx=n.gc.map(g=>g.sx);
             lines+='<line x1="'+X(n.x+n.w/2)+'" y1="'+Y(n.y+n.h)+'" x2="'+X(n.x+n.w/2)+'" y2="'+Y(n.busY)+'" stroke="'+rc+'" stroke-width="2.2"/>'
@@ -4196,7 +4256,8 @@ function hmA4Svg(P,pxW){
         if(n.d===0)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.32).toFixed(2)+'" fill="#263238"/>';
         else if(n.d===1)nodes+='<rect x="'+X(n.x)+'" y="'+Y(n.y)+'" width="'+(n.w*s).toFixed(2)+'" height="'+(n.h*s).toFixed(2)+'" rx="'+(n.h*s*0.3).toFixed(2)+'" fill="'+(hmA4.color?hmA4Col(n.heat,false):'#fff')+'" fill-opacity="'+(hmA4.color?0.16:1)+'" stroke="'+bc+'" stroke-width="1.2"/>';
         else nodes+='<circle cx="'+X(n.x+(n.pad+n.dot*0.42)*n.fs)+'" cy="'+Y(ty-n.fs*0.36)+'" r="'+(n.fs*0.27*s).toFixed(2)+'" fill="'+(hmA4.color?n.heat:'#888')+'"/>';
-        const tc=n.d===0?'#fff':blk?'#000':n.d===1?(hmA4.color?bc:'#111'):'#1a1a1a',vc=n.d===0?'#ECEFF1':blk?'#111':'#555',vfs=(fs*hmA4VF()).toFixed(2);
+        if(n.red||n.orange||/⚠/.test(n.lab))P._marked=true;
+        const tc=n.d===0?'#fff':n.red?'#C62828':n.orange?'#E65100':blk?'#000':n.d===1?(hmA4.color?bc:'#111'):'#1a1a1a',vc=n.d===0?'#ECEFF1':blk?'#111':'#555',vfs=(fs*hmA4VF()).toFixed(2);
         n.lines.forEach((ln,i)=>{const last=i===n.lines.length-1;
             nodes+='<text x="'+X(tx)+'" y="'+Y(ty+i*n.fs)+'" '+F+' font-size="'+fs.toFixed(2)+'" font-weight="'+hmA4W(n.bold)+'" fill="'+tc+'">'+esc(ln)
                 +(last&&n.vt&&!n.v2?'<tspan dx="'+(0.45*fs).toFixed(2)+'" font-size="'+vfs+'" font-weight="'+hmA4W(false)+'" fill="'+vc+'">'+esc(n.vt)+'</tspan>':'')+'</text>'});
@@ -4207,7 +4268,8 @@ function hmA4Svg(P,pxW){
         +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+26)+'" '+F+' font-size="8.5" fill="#333">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
         +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+14)+'" text-anchor="end" '+F+' font-size="8.5" fill="#333">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
         +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+31)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+31)+'" stroke="#ccc" stroke-width="0.8"/>';
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pw+' '+ph+'"'+(pxW?' width="'+pxW+'" height="'+Math.round(pxW*ph/pw)+'"':'')+'><rect width="'+pw+'" height="'+ph+'" fill="#fff"/>'+head+lines+nodes+'</svg>';
+    const foot=P._marked?'<text x="'+HM_A4_M+'" y="'+(ph-5)+'" '+F+' font-size="8" fill="#333"><tspan fill="#E65100" font-weight="800">Turuncu</tspan>: bu aşamada '+hmA4Thr()+' günden uzun   •   <tspan fill="#C62828" font-weight="800">Kırmızı</tspan>: '+hmA4Thr2()+' günden uzun bekliyor   •   ⏱n: o daldaki uzun bekleyen sayısı   •   ⚠: açık tamiri var</text>':'';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pw+' '+ph+'"'+(pxW?' width="'+pxW+'" height="'+Math.round(pxW*ph/pw)+'"':'')+'><rect width="'+pw+'" height="'+ph+'" fill="#fff"/>'+head+lines+nodes+foot+'</svg>';
 }
 function hmA4Easy(){Object.assign(hmA4,{font:'fit',weight:'bold',ink:'black',vsize:'same',vpos:'auto',gap:'tight',side:'auto',cols:0,ori:'auto'});hmA4Save();hmA4Render();if(hmA4Src&&hmA4Src.changed)hmA4Src.changed()}
 function hmA4Set(k,v){if(k==='depth'&&hmA4Src)hmA4Src.setDepth(v);else{hmA4[k]=v;hmA4Save()}hmA4Render();if(hmA4Src&&hmA4Src.changed)hmA4Src.changed()}
@@ -4241,6 +4303,7 @@ function hmA4Render(){
         +'<label>Yazı kalınlığı'+sel('weight',[['bold','Kalın'],['normal','Normal']],hmA4.weight||'bold')+'</label>'
         +'<label>Yazı rengi'+sel('ink',[['black','Siyah (baskı için)'],['color','Renkli']],hmA4.ink||'black')+'</label>'
         +'<label>Aralık'+sel('gap',[['tight','Sıkı (daha büyük yazı)'],['normal','Geniş']],hmA4.gap==='normal'?'normal':'tight')+'</label>'
+        +'<label>Uzun bekleme işareti'+sel('mark',[['2','2 gün turuncu, 5 gün kırmızı'],['1','1 gün turuncu, 3 gün kırmızı'],['3','3 gün turuncu, 7 gün kırmızı'],['5','5 gün turuncu, 10 gün kırmızı'],['off','Kapalı']],String(hmA4.mark||'2'))+'</label>'
         +'<label>Ad uzunluğu'+sel('maxCh',[[22,'Kısa (22)'],[30,'Orta (30)'],[40,'Uzun (40)'],[70,'Tam']],hmA4.maxCh)+'</label>'
         +'<label>Renk'+sel('color',[['1','Renkli'],['0','Siyah-beyaz']],hmA4.color?'1':'0')+'</label>'
         +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4'+(P.pages.length>1?' • <b>'+P.pages.length+' sayfa</b>':'')+'</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
@@ -5540,7 +5603,8 @@ function lbMindSrc(K,cards){
     const st=lbMindSt[K],lv=lbMindLv(K),T=LB_MIND_T[K],kgOf=cs=>cs.reduce((s,k)=>s+num(k.kilo),0);
     const build=(cs,li,left)=>{if(left<=0||li>=lv.length)return[];const rows=lbMindRows(K,cs,lv[li],li?lv[li-1]:'');if(!rows.length)return[];
         const sc=heatmapColorScale('kg',Math.max(...rows.map(r=>r.value))||1);
-        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):sc(r.value),children:build(r.cards,li+1,left-1)}))};
+        const sub=lv[li]==='firma'&&lv.indexOf('musteri')<0;
+        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):sc(r.value),mk:K==='sel'?hmA4Marks(r.cards):null,children:sub&&left>1?custSplit(r.cards,L=>build(L,li+1,left-1),sc,K==='sel'):build(r.cards,li+1,left-1)}))};
     const src={kind:K,depth:st.depth,title:T[0],file:T[2],
         tree:d=>({name:T[1],count:cards.length,kg:kgOf(cards),heat:'#546E7A',isAll:true,children:build(cards,0,d)}),
         maxDepth:()=>lv.length,
@@ -5585,6 +5649,113 @@ function lbMindHtml(K,cards){
         +'<div class="lb-mind-area'+(P.pages.length>1?' multi':'')+'">'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
 }
 function lbSelMindHtml(cards){return lbMindHtml('sel',cards)}
+// ── 📄 KK günlük tablosu (tek A4): ortada Kalite Kontrol, solda ⏳ KK'da bekleyenler (son KK; firma › parti, en uzun bekleyen
+//    önde), sağda ✅ bugün KK'dan geçenler (firma › parti • saat). Başlıkta bekleyen / geçen, geçiş hızı, kalan işin tahmini süresi
+let kkDailyDepth=0;
+// firmanın partilerini kendi siparişleri + başka müşteri için olanlar (👤 MÜŞTERİ alt dalı) olarak ayır; inner: listeden alt düğümler
+function custSplit(L,inner,sc,isWait){
+    const own=L.filter(k=>!lbSubCust(k)),m=new Map();L.forEach(k=>{const c=lbSubCust(k);if(c){if(!m.has(c))m.set(c,[]);m.get(c).push(k)}});
+    if(!m.size)return inner(L);
+    const kg=l=>l.reduce((s,k)=>s+num(k.kilo),0),subs=[...m.entries()].map(([c,l])=>({c,l,kg:kg(l)})).sort((a,b)=>b.kg-a.kg);
+    return (own.length?inner(own):[]).concat(subs.map(x=>({name:'👤 '+x.c,count:x.l.length,kg:x.kg,heat:sc?sc(x.kg):'#78909C',mk:isWait?hmA4Marks(x.l):null,children:inner(x.l)})));
+}
+function kkDailyCards(){
+    const wait=getAllCards().filter(k=>{try{return liveIsFinalKk(k)}catch(e){return false}});
+    const o=(liveProdStats().log||{}).kkPassed||{};
+    const passed=Object.keys(o).map(pn=>{const e=o[pn];return lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mTs:e.ts||0,_mEst:!!e.est,_mGidis:e.a||'',_kumas:e.kumas||'',_recete:e.recete||''}})});
+    let coming=0;try{coming=getAllCards().filter(k=>swKkComingFinal(k)).length}catch(e){}
+    return{wait,passed,coming};
+}
+let kkDailySplit=mapLoadPref('kkSplit9',v=>v==='1'||v==='0','0')==='1';
+// part: null = iki bölüm tek sayfada; 'w' / 'p' = yalnız o bölüm (kök o bölüm olur) — "her bölüm ayrı sayfa" için
+function kkDailySrc(part){
+    const D=kkDailyCards(),kgOf=cs=>cs.reduce((s,k)=>s+num(k.kilo),0),firm=k=>LB_MIND_FIRMA.get(k);
+    const kum=k=>String(k.ham_adi||k._kumas||'').trim()||'Kumaş yok',rec=k=>String(k.recete_adi||k._recete||'').trim();
+    const grp=(cs,key)=>{const m=new Map();cs.forEach(k=>{const f=key(k);if(!m.has(f))m.set(f,[]);m.get(f).push(k)});return[...m.entries()].map(([n,l])=>({n,l,kg:kgOf(l)})).sort((a,b)=>b.kg-a.kg)};
+    const wAge=k=>{const d=fifoAgeDays(k);return d==null?-1:d};
+    // firma › kumaş › parti (parti satırı: "10382 · SİYAH", değerde bekleme süresi ya da geçiş saati + kg); lv: firmanın seviyesi
+    const build=(cs,isWait,depth,lv)=>{const F=grp(cs,firm),sc=heatmapColorScale('kg',(F[0]&&F[0].kg)||1);
+        const hm=ts=>ts?new Date(ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';   // hepsi bu vardiya: tarihsiz
+        const leaf=(k,pre)=>({name:(pre?pre+' › ':'')+heatmapShortParti(k)+(rec(k)?' · '+rec(k):''),longOk:!!pre,count:1,kg:num(k.kilo),heat:sc(num(k.kilo)),vx:isWait?lbWaitShort(wAge(k)*24):(k._mEst?'~':'')+hm(k._mTs),mk:isWait?hmA4Marks([k]):null,children:[]});
+        const sortL=isWait?(a,b)=>wAge(b)-wAge(a):(a,b)=>(b._mTs||0)-(a._mTs||0);
+        return F.map(f=>({name:f.n,count:f.l.length,kg:f.kg,heat:sc(f.kg),mk:isWait?hmA4Marks(f.l):null,
+            children:depth<lv+1?[]:custSplit(f.l,L=>grp(L,kum).map(q=>depth>=lv+2&&q.l.length===1?leaf(q.l[0],hmA4Short(q.n,13)):({name:q.n,count:q.l.length,kg:q.kg,heat:sc(q.kg),mk:isWait?hmA4Marks(q.l):null,
+                children:depth<lv+2?[]:q.l.slice().sort(sortL).map(k=>leaf(k))})),sc,isWait)}))};
+    const wkg=kgOf(D.wait),pkg=kgOf(D.passed),{start}=todayShiftWindow(),now=Date.now(),hrs=Math.max(0.25,(now-start.getTime())/3600000);
+    const win=Math.min(3,hrs),recent=D.passed.filter(k=>(k._mTs||0)>=now-win*3600000),rkg=kgOf(recent);
+    const useRecent=recent.length>0,rate=useRecent?rkg/win:pkg/hrs,rateLbl=useRecent?'hız (son '+(win<3?win.toLocaleString('tr-TR',{maximumFractionDigits:1}):'3')+' sa)':'hız (vardiya ort.)';
+    const t=n=>Math.round(n).toLocaleString('tr-TR');
+    const sub=()=>'Bekleyen '+D.wait.length+' parti • '+t(wkg)+' kg   |   Bugün geçen '+D.passed.length+' parti • '+t(pkg)+' kg (08:00\'den)   |   '+rateLbl+' ≈ '+t(rate)+' kg/sa'+(rate>0?'   |   kalan ≈ '+(wkg/rate).toLocaleString('tr-TR',{maximumFractionDigits:1})+' sa':'')+'   |   KK\'ya gelecek '+D.coming+' parti';
+    const opt=()=>'<label>Sayfa<select onchange="kkDailySetSplit(this.value===&quot;1&quot;)"><option value="0"'+(kkDailySplit?'':' selected')+'>İki bölüm tek sayfada</option><option value="1"'+(kkDailySplit?' selected':'')+'>Her bölüm ayrı sayfa (daha büyük yazı)</option></select></label>'
+        +'<div class="hm-a4-info" style="border-color:#E65100">Firma › Kumaş › Parti No · Reçete. KK\'da bekleyenler en uzun bekleyen önde (parti yanında bekleme süresi ve kg), bugün geçenler geçiş saati ve kg ile; firma / kumaş dallarında parti sayısı ve toplam kg. Sayılar canlı izlemeyle aynı (son KK).</div>';
+    const wait={name:'⏳ KK\'da bekleyen',count:D.wait.length,kg:wkg,heat:'#E65100'},pass={name:'✅ Bugün geçen',count:D.passed.length,kg:pkg,heat:'#2E7D32'};
+    let src;
+    if(part){
+        const isW=part==='w',g=isW?wait:pass;
+        src={kind:'kk',depth:kkDailyDepth?Math.min(3,kkDailyDepth):3,title:'Kalite Kontrol — '+(isW?'KK\'da bekleyenler':'bugün geçenler'),file:'kk_gunluk',vps:['side','below','mix','mixw'],
+            tree:d=>Object.assign({},g,{isAll:true,children:build(isW?D.wait:D.passed,isW,d,1)}),
+            maxDepth:()=>3,setDepth:v=>{kkDailyDepth=v},sub,optHtml:opt};
+    }else{
+        const modes=['q11','q21','q31','q41','q12','q22','q32','qf2','qf3'];
+        src={kind:'kk',depth:kkDailyDepth||4,title:'Kalite Kontrol — günlük durum',file:'kk_gunluk',modes,vps:['side','mixw'],
+            tree:d=>({name:'Kalite Kontrol',count:D.wait.length+D.passed.length,kg:wkg+pkg,heat:'#546E7A',isAll:true,children:[
+                Object.assign({},wait,{children:d>1?build(D.wait,true,d,2):[]}),Object.assign({},pass,{children:d>1?build(D.passed,false,d,2):[]})]}),
+            maxDepth:()=>4,setDepth:v=>{kkDailyDepth=v;src.depth=v||4},sub,optHtml:opt};
+    }
+    return src;
+}
+// "her bölüm ayrı sayfa": iki kaynak art arda (1. sayfa bekleyenler, 2. sayfa geçenler)
+function kkDailyMakeSrc(){
+    if(!kkDailySplit)return kkDailySrc(null);
+    const a=kkDailySrc('w'),b=kkDailySrc('p');
+    const m={kind:'kk',multi:[a,b],title:'Kalite Kontrol — günlük durum',file:'kk_gunluk',depth:a.depth,maxDepth:()=>3,
+        setDepth:v=>{kkDailyDepth=v;a.depth=b.depth=m.depth=v?Math.min(3,v):3},sub:a.sub,optHtml:a.optHtml};
+    return m;
+}
+function kkDailySetSplit(on){kkDailySplit=!!on;mapSavePref('kkSplit9',on?'1':'0');hmA4Src=kkDailyMakeSrc();hmA4Render()}
+// ── 📄 Sarım günlük tablosu (tek A4): Sarım1 ve Sarım2 için ayrı ayrı ⏳ bekleyenler (en uzun bekleyen önde) ve ✅ bugün geçenler;
+//    firma › kumaş › parti no · reçete; bölüm sütunları sayfayı dolduracak biçimde otomatik
+let srDailyDepth=0;
+function srDailySrc(){
+    const kgOf=cs=>cs.reduce((s,k)=>s+num(k.kilo),0),firm=k=>LB_MIND_FIRMA.get(k),log=liveProdStats().log||{},all=getAllCards(),now=Date.now(),{start}=todayShiftWindow();
+    const kum=k=>String(k.ham_adi||k._kumas||'').trim()||'Kumaş yok',rec=k=>String(k.recete_adi||k._recete||'').trim();
+    const grp=(cs,key)=>{const m=new Map();cs.forEach(k=>{const f=key(k);if(!m.has(f))m.set(f,[]);m.get(f).push(k)});return[...m.entries()].map(([n,l])=>({n,l,kg:kgOf(l)})).sort((a,b)=>b.kg-a.kg)};
+    const wAge=k=>{const d=fifoAgeDays(k);return d==null?-1:d},hm=ts=>ts?new Date(ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';
+    const build=(cs,isWait,depth)=>{const F=grp(cs,firm),sc=heatmapColorScale('kg',(F[0]&&F[0].kg)||1);
+        const leaf=(k,pre)=>({name:(pre?pre+' › ':'')+heatmapShortParti(k)+(rec(k)?' · '+rec(k):''),longOk:!!pre,count:1,kg:num(k.kilo),heat:sc(num(k.kilo)),vx:isWait?lbWaitShort(wAge(k)*24):(k._mEst?'~':'')+hm(k._mTs),mk:isWait?hmA4Marks([k]):null,children:[]});
+        const sortL=isWait?(a,b)=>wAge(b)-wAge(a):(a,b)=>(b._mTs||0)-(a._mTs||0);
+        return F.map(f=>({name:f.n,count:f.l.length,kg:f.kg,heat:sc(f.kg),mk:isWait?hmA4Marks(f.l):null,
+            children:depth<3?[]:custSplit(f.l,L=>grp(L,kum).map(q=>depth>=4&&q.l.length===1?leaf(q.l[0],hmA4Short(q.n,13)):({name:q.n,count:q.l.length,kg:q.kg,heat:sc(q.kg),mk:isWait?hmA4Marks(q.l):null,
+                children:depth<4?[]:q.l.slice().sort(sortL).map(k=>leaf(k))})),sc,isWait)}))};
+    const t=n=>Math.round(n).toLocaleString('tr-TR'),hrs=Math.max(0.25,(now-start.getTime())/3600000),win=Math.min(3,hrs);
+    const S=['sr1','sr2'].map(key=>{const R=SW_ROWS.find(r=>r.key===key),o=log[R.log]||{};
+        const wait=all.filter(k=>{try{return R.is(k)}catch(e){return false}});
+        const passed=Object.keys(o).map(pn=>{const e=o[pn];return lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mTs:e.ts||0,_mEst:!!e.est,_kumas:e.kumas||'',_recete:e.recete||''}})});
+        let coming=0;try{coming=all.filter(k=>R.coming(k)).length}catch(e){}
+        const recent=passed.filter(k=>(k._mTs||0)>=now-win*3600000),rate=recent.length?kgOf(recent)/win:kgOf(passed)/hrs;
+        return{R,wait,passed,coming,wkg:kgOf(wait),pkg:kgOf(passed),rate,recent:recent.length>0}});
+    const modes=[];for(let n=1;n<=6;n++)modes.push('qf'+n);
+    const sec=(x,name,heat,cs,isWait,d)=>({name,count:cs.length,kg:kgOf(cs),heat,children:d>1?build(cs,isWait,d):[]});
+    const src={kind:'sr',depth:srDailyDepth||4,title:'Sarım1 ve Sarım2 — günlük durum',file:'sarim_gunluk',modes,vps:['side','mixw'],
+        tree:d=>({name:'Sarım',count:S.reduce((a,x)=>a+x.wait.length+x.passed.length,0),kg:S.reduce((a,x)=>a+x.wkg+x.pkg,0),heat:'#546E7A',isAll:true,children:[
+            sec(S[0],'🟣 Sarım1\'de bekleyen','#7E57C2',S[0].wait,true,d),sec(S[0],'✅ Sarım1\'den bugün geçen','#2E7D32',S[0].passed,false,d),
+            sec(S[1],'🟢 Sarım2\'de bekleyen','#00897B',S[1].wait,true,d),sec(S[1],'✅ Sarım2\'den bugün geçen','#558B2F',S[1].passed,false,d)]}),
+        maxDepth:()=>4,
+        setDepth:v=>{srDailyDepth=v;src.depth=v||4},
+        sub:P=>S.map(x=>x.R.name+': bekleyen '+x.wait.length+' p • '+t(x.wkg)+' kg, bugün geçen '+x.passed.length+' p • '+t(x.pkg)+' kg, '+(x.recent?'hız (son 3 sa)':'hız (vardiya ort.)')+' ≈ '+t(x.rate)+' kg/sa'+(x.rate>0&&x.wkg?', kalan ≈ '+(x.wkg/x.rate).toLocaleString('tr-TR',{maximumFractionDigits:1})+' sa':'')+', gelecek '+x.coming+' p').join('   ||   '),
+        optHtml:()=>'<div class="hm-a4-info" style="border-color:#7E57C2">Sarım1 ve Sarım2 aynı sayfada: her biri için bekleyenler (en uzun bekleyen önde, bekleme süresi + kg) ve bugün geçenler (geçiş saati + kg). Firma › Kumaş › Parti No · Reçete. Sayılar canlı izlemeyle aynı.</div>'};
+    return src;
+}
+function srDailyOpen(){
+    uretimLogFetchedAt=0;uretimLogRefresh(()=>{const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex'&&hmA4Src&&hmA4Src.kind==='sr'){hmA4Src=srDailySrc();hmA4Render()}});
+    hmA4Open(srDailySrc());
+}
+function kkDailyOpen(){
+    // bugünkü geçenler sunucu kaydından: kayıt yeni yüklenirse tablo kendini yeniler
+    uretimLogFetchedAt=0;uretimLogRefresh(()=>{const m=document.getElementById('hmA4Modal');if(m&&m.style.display==='flex'&&hmA4Src&&hmA4Src.kind==='kk'){hmA4Src=kkDailyMakeSrc();hmA4Render()}});
+    hmA4Open(kkDailyMakeSrc());
+}
+
 function lbSelFilterReset(){lbSelCol='';lbFocus=null;lbSelStage='';lbSelCust=[];lbLastKeys=null;lbPvHide();lbRender()}
 // Seçilenlerde aşama süzgeci: KK / Sarım dışındaki şu anki aşamalar (BOYAMA, RAM…) için de; '' = yok
 let lbSelStage='';
@@ -7223,7 +7394,10 @@ function lbFsaCust(v){
     if(segs.length)return ok(segs[segs.length-1].split(/\s+/)[0]);
     const m=t.slice(i).match(/^FSA[\s._-]*\d+[\s._-]+([^\s._\d/]+)/);return m?ok(m[1]):'';
 }
-function lbGroupName(k){const f=lbFirm(k),c=lbFsaCust(k.musteri_siparis);return(c&&c.slice(0,4)!==f.slice(0,4)?c:f)||'Müşteri yok'}
+// siparişin son müşterisi firmadan farklıysa (ör. FAYTEKS'in YATAŞ işi) o müşteri; firmanın kendi siparişiyse ''
+function lbSubCust(k){const f=lbFirm(k),c=lbFsaCust(k.musteri_siparis);return c&&c.slice(0,4)!==f.slice(0,4)?c:''}
+// müşteri grubu: kendi siparişi → firma; başka müşteri için → "FİRMA › MÜŞTERİ" (firmanın alt dalı, firmasının yanında sıralanır)
+function lbGroupName(k){const f=lbFirm(k),c=lbSubCust(k);return(c?(f?f+' › '+c:c):f)||'Müşteri yok'}
 function lbHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
 function lbOpen(){
     let el=document.getElementById('liveBoard');
@@ -7310,21 +7484,32 @@ function lbFmax(root){const exp=!!(root&&root.classList.contains('lb-export')),p
     if(lbView==='t'||lbView==='p')return exp?50:phone?(lbFocusMode?28:22):(lbFocusMode?60:40);if(lbFocus)return phone?26:44;return lbView==='all'?(phone?15:22):(phone?20:32)}
 // Hücre içeriği: müşteri grupları (büyükten küçüğe) + en geniş parti no / kg (1 px yazı başına)
 function lbWaitTone(h){return h==null?'#546E7A':(LB_WAIT_BANDS.find(b=>h<b.h)||LB_WAIT_BANDS[LB_WAIT_BANDS.length-1]).c}
+// kutu başlığında alt müşteri kısa: firması aynı kutuda varsa "↳ İSTİKBAL", yoksa "FAYT› İSTİKBAL" (tam ad ipucunda)
+function lbSubTitle(name,names,d){
+    const i=String(name).indexOf(' › ');if(i<0||lbGroupMode!=='cust'||d.groupBy)return name;
+    const par=name.slice(0,i),sub=name.slice(i+3);return names.has(par)?'↳ '+sub:par.slice(0,4)+'› '+sub;
+}
 function lbCellModel(d){
     const kgv=lbUnit==='kg',wg=lbGroupMode==='wait'&&!d.groupBy,from=(lbGroupMode==='from'||wg)&&!d.groupBy&&!d.tv,kgS=kgv?0.92:0.74,head=lbShowCust||!!d.groupBy;
     // Tamirler / Üretim (d.tv): sıra hep en yeniden eskiye — yalnız ART ARDA gelen aynı gruptakiler bir blokta birleşir
     const m=new Map();let run=0,prev=null;d.items.forEach(x=>{let n=lbGrpKey(d,x.k);if(d.tv){if(n!==prev){run++;prev=n}n=n+'\u0001'+run}if(!m.has(n))m.set(n,[]);m.get(n).push(x)});
     // başlık: ad (ya da "RAM'dan") + adet ya da toplam kg; kg görünümünde gruplar ve partiler kg'a göre sıralı
+    const cellNames=new Set([...m.keys()].map(x=>String(x).split('\u0001')[0]));
     const groups=[...m.entries()].map(([gid,list])=>{const name=String(gid).split('\u0001')[0];
-        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):name,t=title+' '+lab;
+        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):lbSubTitle(name,cellNames,d),t=title+' '+lab;
         if(d.tv);else if(wg)list=list.slice().sort((a,b)=>(lbWaitH(b.k)||0)-(lbWaitH(a.k)||0));else if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
         return{name,title,lab,kg,mw,list,nm:head?lbMw(t):0,nl:t.length};
-    }).sort((a,b)=>d.tv?0:d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):wg?b.mw-a.mw:(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
+    });
+    const famOn=lbGroupMode==='cust'&&!d.groupBy&&!d.ord&&!wg&&!d.tv,famP=g=>String(g.name).split(' › ')[0],fam=new Map();
+    if(famOn)groups.forEach(g=>{const p=famP(g);fam.set(p,(fam.get(p)||0)+(kgv?g.kg:g.list.length))});
+    groups.sort((a,b)=>d.tv?0:d.ord?d.ord.indexOf(a.name)-d.ord.indexOf(b.name):wg?b.mw-a.mw
+        :(famOn?(fam.get(famP(b))-fam.get(famP(a)))||famP(a).localeCompare(famP(b),'tr')||((a.name.indexOf(' › ')>=0)-(b.name.indexOf(' › ')>=0)):0)
+        ||(kgv?b.kg-a.kg:0)||b.list.length-a.list.length||a.name.localeCompare(b.name,'tr'));
     const noW=d.items.length?Math.max(...d.items.map(x=>lbMw(heatmapShortParti(x.k)))):0,kgW=d.items.length?Math.max(...d.items.map(x=>lbMw(lbShortKg(x.k.kilo))))*(kgS+0.06):0;
     // Seçilenler kutusu: parti no / kg altında şu anki proses ve tahmini KK / Sarım varışı (iki küçük satır, yazının %42'si)
     const sx=lbView==='sel'&&!!d.groupBy,mx=!sx&&d.cls==='g'&&!d.groupBy;d.items.forEach(x=>{x.ex=sx||mx?lbSelTileEx(x):null});
     const exW=(sx||mx)&&d.items.length?Math.max(...d.items.map(x=>Math.max(lbMw(x.ex.p),lbMw(x.ex.e||''))))*LB_TX_S*0.9:0;
-    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,keep:wg||!!d.tv,xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
+    return{groups,noW,kgW,kgS,cls:d.cls,n:d.items.length,head,keep:wg||!!d.tv||(famOn&&groups.some(g=>String(g.name).indexOf(' › ')>=0)),xl:sx||mx?LB_TX_S*3.1:0,exW:mx?Math.min(exW,Math.max(noW,kgW)*1.3):exW,opt:mx};
 }
 const LB_TX_S=0.42;
 function lbSelTileEx(it){
@@ -7577,6 +7762,8 @@ function lbRender(){
         +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" data-l="Parti adedi / kg" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
         +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" data-l="Bekleme renkleri" onclick="lbToggleWait()">⏱</button>'
         +'<button type="button" class="lb-annb'+(lbAnnActive()?' on':'')+'" title="Pano duyurusu: bütün ekranlarda üst şeritte görünen mesaj" data-l="Pano duyurusu" onclick="lbAnnOpen()">📢</button>'
+        +'<button type="button" data-l="KK günlük tablo (A4)" title="📄 KK günlük tablo: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4, PDF / yazdır" onclick="kkDailyOpen()">📄</button>'
+        +'<button type="button" data-l="Sarım günlük tablo (A4)" title="📄 Sarım günlük tablo: Sarım1 ve Sarım2 tek sayfada — bekleyenler ve bugün geçenler" onclick="srDailyOpen()">🧵</button>'
         +'<button type="button" class="lb-exp" style="background:#1565C0" data-l="PNG indir" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
         +'<button type="button" class="lb-exp lb-exp-pdf" style="background:#C62828" data-l="PDF indir" title="PDF indir" onclick="lbExport(&quot;pdf&quot;)">📄<span class="lb-bl"> PDF</span></button>'
         +'<button type="button" class="lb-exp" style="background:#25D366" data-l="WhatsApp ile paylaş" title="WhatsApp ile paylaş (PNG)" onclick="lbExport(&quot;wa&quot;)">📱<span class="lb-bl"> WhatsApp PNG</span></button>'

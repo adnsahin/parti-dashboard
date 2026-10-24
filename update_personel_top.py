@@ -15,6 +15,7 @@ Kullanim:
   python update_personel_top.py urt.Xlsx [urt222.Xlsx] [--out data/personel_top.json] [--klasor ..] [--kartlar kartlar.pdf]
 """
 import sys, os, json, glob
+from bisect import bisect_left, bisect_right
 from datetime import datetime, timedelta
 from collections import defaultdict
 from openpyxl import load_workbook
@@ -85,7 +86,7 @@ def load_events(urt, urt222):
     for r in rows:
         t = to_dt(r[iT])
         if t and clean(r[iU]):
-            ev.append((clean(r[iU]), t, "kk", num(r[iK]), num(r[iM])))
+            ev.append((clean(r[iU]), t, "kk", num(r[iK]), num(r[iM]), clean(r[0])))
     if urt222:
         head, rows = read_sheet(urt222)
         iG = next(i for i, h in enumerate(head) if h.startswith("Giri") and "Tarih" in h)
@@ -95,7 +96,7 @@ def load_events(urt, urt222):
         for r in rows:
             t = to_dt(r[iG])
             if t and clean(r[iP]):
-                ev.append((clean(r[iP]), t, "sr", num(r[iK]), 0.0))
+                ev.append((clean(r[iP]), t, "sr", num(r[iK]), 0.0, clean(r[0])))
     return ev
 
 
@@ -106,10 +107,60 @@ def block_of(t):
     return base.date(), a
 
 
-def build(ev, tmax):
+def load_queue(path):
+    """data/uretim_log.json -> t anindaki KK kuyrugu (parti sayisi). Geliş kaydı olup geçişi görünmeyen parti en çok 48 saat bekliyor sayılır."""
+    j = load_json(path, None)
+    if not j or "days" not in j:
+        return None
+    def ts(v):
+        try:
+            return datetime.strptime(str(v)[:16], "%Y-%m-%dT%H:%M")
+        except ValueError:
+            return None
+    arr, pas = defaultdict(list), defaultdict(list)
+    for d in j["days"].values():
+        for pn, r in (d.get("kkGelen") or {}).items():
+            t = ts(r.get("t"))
+            if t:
+                arr[pn].append(t)
+        for pn, r in (d.get("kkGecen") or {}).items():
+            t = ts(r.get("t"))
+            if t:
+                pas[pn].append(t)
+    days = sorted(j["days"])
+    t0 = datetime.strptime(days[0], "%Y-%m-%d") + timedelta(days=1)   # ilk gun eksik olabilir
+    t1 = ts(j.get("snapshotAt")) or datetime.now()
+    iv = []
+    for pn, al in arr.items():
+        pl = sorted(pas.get(pn, []))
+        for a in sorted(al):
+            e = next((x for x in pl if x > a), None)
+            iv.append((a, e if e else a + timedelta(hours=48)))
+    def q(t):
+        if t < t0 or t > t1:
+            return -1
+        return sum(1 for a, e in iv if a <= t < e)
+    return q
+
+
+def build(ev, tmax, queue=None):
+    allkk = sorted(t for p, t, k, kg, m, pa in ev if k == "kk")
+    idle_iv = [(allkk[i], allkk[i + 1]) for i in range(len(allkk) - 1) if (allkk[i + 1] - allkk[i]).total_seconds() >= GAP_MIN * 60]
+    iv_end = [b for a, b in idle_iv]
+
+    def team_idle(t0, t1):
+        i, ov = bisect_right(iv_end, t0), 0.0
+        while i < len(idle_iv) and idle_iv[i][0] < t1:
+            ov += (min(t1, idle_iv[i][1]) - max(t0, idle_iv[i][0])).total_seconds() / 60.0
+            i += 1
+        return ov
+
+    def others(t0, t1):
+        return bisect_left(allkk, t1) - bisect_right(allkk, t0)
+
     B = defaultdict(list)
-    for p, t, k, kg, m in ev:
-        B[(p,) + block_of(t)].append((t, k, kg, m))
+    for p, t, k, kg, m, pa in ev:
+        B[(p,) + block_of(t)].append((t, k, kg, m, pa))
     out = {}
     for (p, d, a), l in B.items():
         l.sort()
@@ -122,8 +173,11 @@ def build(ev, tmax):
         act = sum(g for g, _ in gaps if g < GAP_MIN)
         idle = sum(g for g, _ in gaps if g >= GAP_MIN)
         top = [g for g in gaps if g[0] >= GAP_MIN]   # tum bosluklar (cizelge icin)
+        # parti ici duraksama: ayni partinin ardisik topu arasi (ekibin de bos oldugu sure dusulur)
+        inp = [(g, i) for g, i in top if l[i][1] == l[i + 1][1] and l[i][4] == l[i + 1][4]]
+        pdw = sum(g - min(g, team_idle(ts[i], ts[i + 1])) for g, i in inp)
         hrs = [0] * 24
-        for t, k, kg, m in l:
+        for t, k, kg, m, pa in l:
             hrs[t.hour] += kg
         kk = [x for x in l if x[1] == "kk"]
         sr = [x for x in l if x[1] == "sr"]
@@ -132,7 +186,10 @@ def build(ev, tmax):
             "sn": len(sr), "skg": round(sum(x[2] for x in sr)),
             "f": round((ts[0] - st).total_seconds() / 60), "l": round((en - ts[-1]).total_seconds() / 60),
             "act": round(act), "idle": round(idle), "mg": round(max([g for g, _ in gaps] or [0])),
-            "gp": [[round((ts[i] - st).total_seconds() / 60), round(g)] for g, i in top],
+            "gp": [[round((ts[i] - st).total_seconds() / 60), round(g), round(min(g, team_idle(ts[i], ts[i + 1]))), others(ts[i], ts[i + 1]),
+                    queue(ts[i]) if queue else -1] for g, i in top],
+            "wg": round(sum(g - min(g, team_idle(ts[i], ts[i + 1])) for g, i in top)),
+            "pd": round(pdw), "pc": sum(1 for g, i in inp if g - min(g, team_idle(ts[i], ts[i + 1])) >= GAP_MIN * 0.5),
             "h": [round(x) for x in hrs],
         }
     return out
@@ -166,7 +223,8 @@ def stats(rows):
             "tpa": S("kn") / (act / 60.0), "kpa": S("kkg") / (act / 60.0), "mpa": S("km") / (act / 60.0),
             "idle": 100.0 * S("idle") / max(1, S("idle") + S("act")), "late": S("f") / n, "early": S("l") / n,
             "ne": sum(1 for r in rows if r["l"] > EARLY_MIN), "nl": sum(1 for r in rows if r["f"] > LATE_MIN),
-            "kgv": kg / n, "knv": S("kn") / n, "mv": S("km") / n, "maxg": max(r["mg"] for r in rows)}
+            "kgv": kg / n, "knv": S("kn") / n, "mv": S("km") / n, "maxg": max(r["mg"] for r in rows),
+            "wg": sum(r.get("wg", 0) for r in rows) / n, "haswg": all("wg" in r for r in rows)}
 
 
 def hm(minutes, a):
@@ -186,16 +244,46 @@ def heavy(rows):
     return kg > 0 and sum(r["skg"] for r in rows) / kg >= SR_HEAVY
 
 
+DV_LATE, DV_EARLY, DV_MOLA = 30, 30, 60   # geç başlama / erken bırakma payı (dk), mola payı (dk / vardiya)
+DV_END = {8: 0, 16: 0, 0: 0}                # vardiyanın gerçek bitişi bloktan kaç dk önce (ör. 16-24 fiilen 23:00'te bitiyorsa {16: 60})
+
+
+def dv(rows):
+    n = len(rows)
+    A = {"n": n, "late": 0, "early": 0, "fm": 0, "pd": 0, "pc": 0, "wg": 0, "len": 0, "nl": 0, "ne": 0, "nf": 0}
+    for r in rows:
+        off = DV_END.get(r["a"], 0)
+        la, ea = max(0, r["f"] - DV_LATE), max(0, r["l"] - off - DV_EARLY)
+        wg = r.get("wg", 0)
+        fm = max(0, wg - DV_MOLA)
+        A["late"] += la
+        A["early"] += ea
+        A["fm"] += fm
+        A["pd"] += r.get("pd", 0)
+        A["pc"] += r.get("pc", 0)
+        A["wg"] += wg
+        A["len"] += 480 - off
+        A["nl"] += la > 0
+        A["ne"] += ea > 0
+        A["nf"] += fm > 0
+    A["loss"] = A["late"] + A["early"] + A["fm"]
+    A["pct"] = 100.0 * (1 - A["loss"] / max(1, A["len"]))
+    return A
+
+
 def meters(rows, T, tcov):
     s = stats(rows)
     hv = heavy(rows)
     cov = cov_of(rows)
+    wgok = s["haswg"] and T["haswg"]
     M = [
         ("Üretim", "vardiya başına kg", s["kgv"] / T["kgv"], "%d kg" % s["kgv"], "takım %d" % T["kgv"], False, 0),
         ("Çalışma hızı", "çalıştığı sürede kg/saat", s["kpa"] / T["kpa"], "%d kg/sa" % s["kpa"], "takım %d" % T["kpa"], hv, 0),
         ("Süreklilik", "vardiyada kayıt bırakmadığı süre", (100 - s["idle"]) / (100 - T["idle"]), "%%%d çalışma" % (100 - s["idle"]), "takım %%%d" % (100 - T["idle"]), hv, 0),
         ("Vardiya kapsamı", "vardiyanın ilk–son kayıt arası", cov / max(1, tcov), "%%%d" % cov, "takım %%%d" % tcov, hv, cov - tcov),
     ]
+    if wgok:
+        M.append(("İş varken kayıtsız", "ekipte kayıt sürerken kendi boşluğu", (T["wg"] + 5.0) / (s["wg"] + 5.0), "%d dk/vardiya" % s["wg"], "takım %d" % T["wg"], hv, 0))
     return s, M, hv
 
 
@@ -208,11 +296,15 @@ def message(s, M, hv):
     out = []
     if hv:
         return "Ağırlıklı Sarım yaptığı için KK süreklilik / kapsam ölçüleri yanıltıcı olabilir; yalnız üretim ve hıza bakın."
+    if len(M) > 4 and M[4][2] < 0.8:
+        out.append("ekipte iş sürerken vardiyada ortalama %d dk kayıt yok" % s["wg"])
+    elif len(M) > 4 and M[2][2] < 0.9:
+        out.append("boşlukların çoğu ekibin de boş olduğu saatlerde (iş yokluğu olası)")
     if M[1][2] >= 1.1:
         out.append("çalıştığı sürede hızlı")
     elif M[0][2] >= 1.1:
         out.append("üretimi yüksek")
-    if M[2][2] < 0.9:
+    if len(M) <= 4 and M[2][2] < 0.9:
         out.append("vardiyanın önemli kısmında kayıt yok (boşluk saatlerine bakın)")
     if M[1][2] < 0.9:
         out.append("çalışırken hız takımın altında")
@@ -259,12 +351,34 @@ def wrap(d, text, x, y, w, f, fill, lh=34):
     return y + lh + 4
 
 
-def draw_card(name, code, rows, T, tcov, period):
+def prev_line(lab, s, ps):
+    """kisinin kendi onceki donemine gore degisim metni"""
+    if not ps:
+        return ""
+    pairs = {"Üretim": ("kgv", 1), "Çalışma hızı": ("kpa", 1), "Süreklilik": ("idle", -1), "Vardiya kapsamı": None, "İş varken kayıtsız": ("wg", -1)}
+    spec = pairs.get(lab)
+    if lab == "Vardiya kapsamı":
+        return ""
+    if not spec:
+        return ""
+    k, dirn = spec
+    a, b = s[k], ps[k]
+    if lab == "Süreklilik":
+        a, b = 100 - s["idle"], 100 - ps["idle"]
+        dirn = 1
+    if b <= 0:
+        return ""
+    ch = (a - b) / b * 100
+    return "kendi önceki dönemi: %d → %d (%s%%%d)" % (b, a, "↑" if ch >= 0 else "↓", abs(round(ch)))
+
+
+def draw_card(name, code, rows, T, tcov, period, prev=None):
     from PIL import Image, ImageDraw
     W, H = 1240, 1754
     im = Image.new("RGB", (W, H), "white")
     d = ImageDraw.Draw(im)
     s, M, hv = meters(rows, T, tcov)
+    ps = stats(prev) if prev and len(prev) >= 3 else None
     d.rectangle([0, 0, W, 130], fill=(31, 56, 100))
     d.text((50, 22), name, fill="white", font=font(52, True))
     d.text((50, 86), "Kod: %s   •   %s   •   %d vardiya" % (code, period, s["n"]), fill=(210, 220, 240), font=font(26))
@@ -286,14 +400,32 @@ def draw_card(name, code, rows, T, tcov, period):
         d.rectangle([mx - 2, y + 2, mx + 2, y + 38], fill=(40, 40, 40))
         d.text((BX + BW + 24, y + 2), txt, fill=col if not neutral else (110, 110, 110), font=font(27, True))
         d.text((BX + BW + 24, y + 36), "%s • %s" % (ref, gt), fill=(120, 120, 120), font=font(19))
+        pl = prev_line(lab, s, ps) if not neutral else ""
+        if pl:
+            d.text((BX, y + 40), pl, fill=(70, 100, 150), font=font(19))
         y += 82
     y += 4
     y = wrap(d, message(s, M, hv), 50, y, W - 100, font(27, True), (30, 30, 30))
+    if rows and all("pd" in r for r in rows) and not hv:
+        A, TD = dv(rows), T.get("_dv")
+        n = A["n"]
+        kg = A["loss"] / n / 60.0 * s["kpa"]
+        d.text((50, y), "Üretim devamlılığı: %%%d" % A["pct"] + ("  (takım %%%d)" % TD["pct"] if TD else ""), fill=(31, 56, 100), font=font(30, True))
+        y += 42
+        lines = [
+            "Geç başlama: %d vardiyanın %d'inde ilk kayıt %d dk'dan sonra geldi → %d dk/vardiya%s" % (n, A["nl"], DV_LATE, A["late"] / n, " (takım %d)" % (TD["late"] / TD["n"]) if TD else ""),
+            "Erken bırakma: %d vardiyanın %d'inde son kayıt bitişten %d dk'dan önce → %d dk/vardiya%s" % (n, A["ne"], DV_EARLY, A["early"] / n, " (takım %d)" % (TD["early"] / TD["n"]) if TD else ""),
+            "Parti içi duraksama: vardiyada %.1f kez, toplam %d dk (aynı partinin iki topu arası > %d dk)" % (A["pc"] / float(n), A["pd"] / n, GAP_MIN),
+            "Fazla mola: ekipte iş sürerken %d dk kayıtsız − %d dk mola payı → %d dk/vardiya (%d/%d vardiya)" % (A["wg"] / n, DV_MOLA, A["fm"] / n, A["nf"], n),
+            "Toplam kayıp %d dk/vardiya = vardiyanın %%%d'i ≈ %d kg/vardiya (kendi hızıyla)" % (A["loss"] / n, 100 - A["pct"], kg),
+        ]
+        for ln in lines:
+            y = wrap(d, "• " + ln, 50, y, W - 100, font(23), (30, 30, 30), 29)
     y += 8
     # vardiya cizelgesi
     d.text((50, y), "Vardiya çizelgesi (her şerit 8 saatlik vardiya)", fill=(31, 56, 100), font=font(32, True))
     y += 48
-    for x0, c, t in ((50, (46, 158, 106), "Kayıt var (çalışıyor)"), (360, (224, 123, 57), "Kayıt yok ≥ %d dk" % GAP_MIN), (640, (139, 58, 58), "Vardiya başı / sonu boş")):
+    for x0, c, t in ((50, (46, 158, 106), "Kayıt var"), (250, (224, 123, 57), "Boşluk, ekipte iş sürüyor"), (590, (111, 134, 168), "Boşluk, ekip de boş"), (900, (139, 58, 58), "Vardiya başı / sonu")):
         d.rectangle([x0, y + 4, x0 + 26, y + 22], fill=c)
         d.text((x0 + 34, y), t, fill=(60, 60, 60), font=font(21))
     y += 38
@@ -307,8 +439,10 @@ def draw_card(name, code, rows, T, tcov, period):
         px = lambda m: sx + int(sw * min(480, max(0, m)) / 480)
         if a1 > a0:
             d.rectangle([px(a0), y, px(a1), y + 22], fill=(46, 158, 106))
-        for st, ln in r.get("gp", []):
-            d.rectangle([px(st), y, max(px(st) + 1, px(st + ln)), y + 22], fill=(224, 123, 57))
+        for g in r.get("gp", []):
+            st, ln = g[0], g[1]
+            idle_t = g[2] if len(g) > 2 else 0
+            d.rectangle([px(st), y, max(px(st) + 1, px(st + ln)), y + 22], fill=(111, 134, 168) if len(g) > 2 and idle_t >= 0.7 * ln else (224, 123, 57))
         gl = sum(g[1] for g in r.get("gp", []))
         d.text((sx + sw + 18, y + 1), "%d kg • %d top • boşluk %d dk%s" % (r["kkg"] + r["skg"], r["kn"], gl, " • %d dk erken" % r["l"] if r["l"] > EARLY_MIN else ""), fill=(60, 60, 60), font=font(19))
         y += 30
@@ -331,7 +465,14 @@ def draw_card(name, code, rows, T, tcov, period):
     return im
 
 
-def make_cards(path, shifts, codes, min_shifts):
+def make_cards(path, shifts, codes, min_shifts, tmax, gun):
+    cut = (tmax - timedelta(days=gun)).date().isoformat()
+    cut0 = (tmax - timedelta(days=2 * gun)).date().isoformat()
+    prevby = defaultdict(list)
+    for r in shifts:
+        if cut0 <= r["d"] < cut:
+            prevby[r["p"]].append(r)
+    shifts = [r for r in shifts if r["d"] >= cut]
     by = defaultdict(list)
     for r in shifts:
         by[r["p"]].append(r)
@@ -339,6 +480,7 @@ def make_cards(path, shifts, codes, min_shifts):
     ok = {p: l for p, l in by.items() if len(l) >= min_shifts}
     base = [r for p, l in ok.items() if not heavy(l) for r in l] or [r for l in ok.values() for r in l]
     T = stats(base)
+    T["_dv"] = dv(base) if all("pd" in r for r in base) else None
     tcov = cov_of(base)
     days = sorted(r["d"] for l in ok.values() for r in l)
     period = "%s – %s" % (datetime.fromisoformat(days[0]).strftime("%d.%m.%Y"), datetime.fromisoformat(days[-1]).strftime("%d.%m.%Y"))
@@ -346,7 +488,7 @@ def make_cards(path, shifts, codes, min_shifts):
     tmp = []
     import tempfile
     for p, l in sorted(ok.items(), key=lambda x: -sum(r["kkg"] + r["skg"] for r in x[1])):
-        im = draw_card(inv.get(p, p), p, l, T, tcov, period)
+        im = draw_card(inv.get(p, p), p, l, T, tcov, period, prevby.get(p))
         f = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
         f.close()
         im.save(f.name, "JPEG", quality=92)
@@ -393,7 +535,8 @@ def main():
 
     ev = load_events(urt, urt222)
     tmax = max(e[1] for e in ev)
-    built = build(ev, tmax)
+    queue = load_queue(opt.get("log", os.path.join(os.path.dirname(out) or ".", "uretim_log.json")))
+    built = build(ev, tmax, queue)
     shifts = []
     for (p, d, a_), r in built.items():
         k = tr_upper(p)
@@ -420,7 +563,7 @@ def main():
     print("%s: %d vardiya (bu çalıştırmada %d), kişi %d" % (out, len(allr), len(shifts), len({r["p"] for r in allr})))
     if "kartlar" in opt:
         try:
-            n = make_cards(opt["kartlar"], [r for r in allr if r["d"] >= (tmax - timedelta(days=int(opt.get("gun", 40)))).date().isoformat()], codes, int(opt.get("min", 5)))
+            n = make_cards(opt["kartlar"], allr, codes, int(opt.get("min", 5)), tmax, int(opt.get("gun", 40)))
             print("%s: %d kart" % (opt["kartlar"], n))
         except ImportError:
             print("Kart PDF için Pillow gerekli: pip install pillow")

@@ -70,6 +70,23 @@ if exist "..\zaman.xlsx" (
   echo Zaman raporu atlandi: ..\zaman.xlsx bulunamadi.
 )
 
+if exist "..\urt.xlsx" (
+  where python >nul 2>nul
+  if errorlevel 1 (
+    echo UYARI: Python bulunamadi, personel top raporu atlandi.
+  ) else (
+    echo Personel top raporu isleniyor...
+    if exist "..\urt222.xlsx" (
+      python "update_personel_top.py" "..\urt.xlsx" "..\urt222.xlsx" --out "data\personel_top.json"
+    ) else (
+      python "update_personel_top.py" "..\urt.xlsx" --out "data\personel_top.json"
+    )
+    if errorlevel 1 echo UYARI: Personel top raporu islenemedi, devam ediliyor.
+  )
+) else (
+  echo Personel top raporu atlandi: ..\urt.xlsx bulunamadi.
+)
+
 git status --short > "%TEMP%\parti_dashboard_git_status.txt"
 for %%A in ("%TEMP%\parti_dashboard_git_status.txt") do if %%~zA==0 (
   echo.
@@ -82,7 +99,7 @@ del "%TEMP%\parti_dashboard_git_status.txt" >nul 2>nul
 
 echo.
 echo Degisiklikler commit ediliyor...
-git add data/partiler.json data/tamirler.json data/zaman_ozet.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py
+git add data/partiler.json data/tamirler.json data/zaman_ozet.json data/personel_top.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py update_personel_top.py
 git commit -m "Update dashboard data"
 if errorlevel 1 (
   echo.

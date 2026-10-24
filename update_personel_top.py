@@ -23,6 +23,7 @@ from openpyxl import load_workbook
 GAP_MIN = 20          # iki kayit arasi bu kadar dakikayi gecerse "bosluk"
 EARLY_MIN = 45        # son kayit vardiya bitisinden bu kadar once ise "erken birakma"
 LATE_MIN = 30
+BREAK_MAX = 90        # ekibin tamaminin durdugu aralik bu kadar dakikayi gecmezse "ortak mola" sayilir
 MIN_REC = 8           # bir vardiya blogunda en az bu kadar kayit -> o vardiya calisilmis sayilir
 BLOCKS = (8, 16, 0)   # vardiya baslangic saatleri: 08-16, 16-24, 00-08
 KEEP_DAYS = 120
@@ -147,6 +148,16 @@ def build(ev, tmax, queue=None):
     allkk = sorted(t for p, t, k, kg, m, pa in ev if k == "kk")
     idle_iv = [(allkk[i], allkk[i + 1]) for i in range(len(allkk) - 1) if (allkk[i + 1] - allkk[i]).total_seconds() >= GAP_MIN * 60]
     iv_end = [b for a, b in idle_iv]
+    # ekibin tamami durdu ve sure 20-90 dk ise "ortak mola" (yemek / cay); daha uzunu is yoklugu
+    brk_iv = [(a, b) for a, b in idle_iv if (b - a).total_seconds() <= BREAK_MAX * 60]
+    brk_end = [b for a, b in brk_iv]
+
+    def team_break(t0, t1):
+        i, ov = bisect_right(brk_end, t0), 0.0
+        while i < len(brk_iv) and brk_iv[i][0] < t1:
+            ov += (min(t1, brk_iv[i][1]) - max(t0, brk_iv[i][0])).total_seconds() / 60.0
+            i += 1
+        return ov
 
     def team_idle(t0, t1):
         i, ov = bisect_right(iv_end, t0), 0.0
@@ -189,10 +200,31 @@ def build(ev, tmax, queue=None):
             "gp": [[round((ts[i] - st).total_seconds() / 60), round(g), round(min(g, team_idle(ts[i], ts[i + 1]))), others(ts[i], ts[i + 1]),
                     queue(ts[i]) if queue else -1] for g, i in top],
             "wg": round(sum(g - min(g, team_idle(ts[i], ts[i + 1])) for g, i in top)),
+            "tm": round(sum(min(g, team_break(ts[i], ts[i + 1])) for g, i in top)),
             "pd": round(pdw), "pc": sum(1 for g, i in inp if g - min(g, team_idle(ts[i], ts[i + 1])) >= GAP_MIN * 0.5),
             "h": [round(x) for x in hrs],
         }
     return out
+
+
+def break_windows(ev):
+    """Ekibin tamaminin durdugu ortak mola pencereleri (gunluk tekrar eden saatler)"""
+    allkk = sorted(t for p, t, k, kg, m, pa in ev if k == "kk")
+    days = {t.date() for t in allkk}
+    bins = defaultdict(list)
+    for i in range(len(allkk) - 1):
+        a, b = allkk[i], allkk[i + 1]
+        mins = (b - a).total_seconds() / 60.0
+        if GAP_MIN <= mins <= BREAK_MAX and 8 <= a.hour < 23:
+            bins[(a.hour * 60 + a.minute) // 30].append((a, mins))
+    res = []
+    for k, l in bins.items():
+        nd = len({a.date() for a, _ in l})
+        if nd >= max(3, len(days) * 0.25):
+            st = sorted(a.hour * 60 + a.minute for a, _ in l)[len(l) // 2]
+            du = sorted(m for _, m in l)[len(l) // 2]
+            res.append({"s": "%02d:%02d" % (st // 60, st % 60), "e": "%02d:%02d" % (int(st + du) // 60 % 24, int(st + du) % 60), "n": nd, "d": round(du)})
+    return sorted(res, key=lambda x: x["s"])
 
 
 def load_json(path, default):
@@ -251,23 +283,25 @@ def heavy(rows):
 DV_LATE, DV_EARLY, DV_MOLA = 30, 30, 60   # geç başlama / erken bırakma payı (dk), mola payı (dk / vardiya)
 DV_REF = {}     # (gun, blok) -> o vardiyada ekipte en gec biten kisinin vardiya bitisine kalan dk (erken birakma bu degere gore olculur)
 DV_REFF = {}    # (gun, blok) -> o vardiyada ekipte en erken baslayan kisinin ilk kayit dk'si (gec baslama bu degere gore olculur)
+DV_MOLA_IN = False   # ekibin ortak molasi (yemek / cay) mola payina sayilir
 DV_END = {8: 0, 16: 0, 0: 0}                # vardiyanın gerçek bitişi bloktan kaç dk önce (ör. 16-24 fiilen 23:00'te bitiyorsa {16: 60})
 
 
 def dv(rows):
     n = len(rows)
-    A = {"n": n, "late": 0, "early": 0, "fm": 0, "pd": 0, "pc": 0, "wg": 0, "len": 0, "nl": 0, "ne": 0, "nf": 0}
+    A = {"n": n, "late": 0, "early": 0, "fm": 0, "pd": 0, "pc": 0, "wg": 0, "len": 0, "nl": 0, "ne": 0, "nf": 0, "tm": 0}
     for r in rows:
         off = DV_REF.get((r["d"], r["a"]), 0) if DV_REF else DV_END.get(r["a"], 0)
         la, ea = max(0, r["f"] - (DV_REFF.get((r["d"], r["a"]), 0) if DV_REFF else 0) - DV_LATE), max(0, r["l"] - off - DV_EARLY)
         wg = r.get("wg", 0)
-        fm = max(0, wg - DV_MOLA)
+        fm = max(0, wg + (r.get("tm", 0) if DV_MOLA_IN else 0) - DV_MOLA)
         A["late"] += la
         A["early"] += ea
         A["fm"] += fm
         A["pd"] += r.get("pd", 0)
         A["pc"] += r.get("pc", 0)
         A["wg"] += wg
+        A["tm"] += r.get("tm", 0)
         A["len"] += 480 - (0 if DV_REF else off)
         A["nl"] += la > 0
         A["ne"] += ea > 0
@@ -425,7 +459,7 @@ def draw_card(name, code, rows, T, tcov, period, prev=None):
             "Geç başlama: %d vardiyanın %d'inde ilk kayıt o vardiyada en erken başlayandan %d dk'dan sonra geldi → %d dk/vardiya%s" % (n, A["nl"], DV_LATE, A["late"] / n, " (takım %d)" % (TD["late"] / TD["n"]) if TD else ""),
             "Erken bırakma: %d vardiyanın %d'inde son kayıt o vardiyada en geç biten kişiden %d dk'dan önce → %d dk/vardiya%s" % (n, A["ne"], DV_EARLY, A["early"] / n, " (takım %d)" % (TD["early"] / TD["n"]) if TD else ""),
             "Parti içi duraksama: vardiyada %.1f kez, toplam %d dk (aynı partinin iki topu arası > %d dk)" % (A["pc"] / float(n), A["pd"] / n, GAP_MIN),
-            "Fazla mola: ekipte iş sürerken %d dk kayıtsız − %d dk mola payı → %d dk/vardiya (%d/%d vardiya)" % (A["wg"] / n, DV_MOLA, A["fm"] / n, A["nf"], n),
+            "Fazla mola: ekipte iş sürerken %d dk kayıtsız + ekibin ortak molası %d dk − %d dk mola payı → %d dk/vardiya (%d/%d vardiya)" % (A["wg"] / n, A["tm"] / n, DV_MOLA, A["fm"] / n, A["nf"], n),
             "Toplam kayıp %d dk/vardiya = vardiyanın %%%d'i ≈ %d kg/vardiya (kendi hızıyla)" % (A["loss"] / n, 100 - A["pct"], kg),
         ]
         for ln in lines:
@@ -575,7 +609,7 @@ def main():
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         json.dump({"v": 1, "generatedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "to": tmax.strftime("%Y-%m-%dT%H:%M"),
-                   "gapMin": GAP_MIN, "earlyMin": EARLY_MIN, "lateMin": LATE_MIN, "shifts": allr}, f, ensure_ascii=False, separators=(",", ":"))
+                   "gapMin": GAP_MIN, "earlyMin": EARLY_MIN, "lateMin": LATE_MIN, "breakMax": BREAK_MAX, "breaks": break_windows(ev), "days": len({e[1].date() for e in ev}), "shifts": allr}, f, ensure_ascii=False, separators=(",", ":"))
     print("%s: %d vardiya (bu çalıştırmada %d), kişi %d" % (out, len(allr), len(shifts), len({r["p"] for r in allr})))
     if "kartlar" in opt:
         try:

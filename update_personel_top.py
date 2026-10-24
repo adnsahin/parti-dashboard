@@ -121,7 +121,7 @@ def build(ev, tmax):
         gaps = [((ts[i + 1] - ts[i]).total_seconds() / 60.0, i) for i in range(len(ts) - 1)]
         act = sum(g for g, _ in gaps if g < GAP_MIN)
         idle = sum(g for g, _ in gaps if g >= GAP_MIN)
-        top = sorted([g for g in gaps if g[0] >= GAP_MIN], reverse=True)[:3]
+        top = [g for g in gaps if g[0] >= GAP_MIN]   # tum bosluklar (cizelge icin)
         hrs = [0] * 24
         for t, k, kg, m in l:
             hrs[t.hour] += kg
@@ -174,10 +174,60 @@ def hm(minutes, a):
     return "%02d:%02d" % (t // 60, t % 60)
 
 
+SR_HEAVY = 0.4   # Sarim kg payi bu orani asarsa KK sureklilik / kapsam olculeri yaniltici -> notr
+
+
+def cov_of(rows):
+    return sum(max(0, 480 - r["f"] - r["l"]) / 480.0 * 100 for r in rows) / len(rows)
+
+
+def heavy(rows):
+    kg = sum(r["kkg"] + r["skg"] for r in rows)
+    return kg > 0 and sum(r["skg"] for r in rows) / kg >= SR_HEAVY
+
+
+def meters(rows, T, tcov):
+    s = stats(rows)
+    hv = heavy(rows)
+    cov = cov_of(rows)
+    M = [
+        ("Üretim", "vardiya başına kg", s["kgv"] / T["kgv"], "%d kg" % s["kgv"], "takım %d" % T["kgv"], False, 0),
+        ("Çalışma hızı", "çalıştığı sürede kg/saat", s["kpa"] / T["kpa"], "%d kg/sa" % s["kpa"], "takım %d" % T["kpa"], hv, 0),
+        ("Süreklilik", "vardiyada kayıt bırakmadığı süre", (100 - s["idle"]) / (100 - T["idle"]), "%%%d çalışma" % (100 - s["idle"]), "takım %%%d" % (100 - T["idle"]), hv, 0),
+        ("Vardiya kapsamı", "vardiyanın ilk–son kayıt arası", cov / max(1, tcov), "%%%d" % cov, "takım %%%d" % tcov, hv, cov - tcov),
+    ]
+    return s, M, hv
+
+
+def grade(v, pts):
+    g = (2 if v >= 5 else 1 if v > -5 else 0) if pts is not None else (2 if v >= 1.1 else 1 if v >= 0.9 else 0)
+    return g, [(190, 60, 40), (200, 150, 0), (30, 130, 60)][g], ["Geliştirilmeli", "Ortalama", "İyi"][g]
+
+
+def message(s, M, hv):
+    out = []
+    if hv:
+        return "Ağırlıklı Sarım yaptığı için KK süreklilik / kapsam ölçüleri yanıltıcı olabilir; yalnız üretim ve hıza bakın."
+    if M[1][2] >= 1.1:
+        out.append("çalıştığı sürede hızlı")
+    elif M[0][2] >= 1.1:
+        out.append("üretimi yüksek")
+    if M[2][2] < 0.9:
+        out.append("vardiyanın önemli kısmında kayıt yok (boşluk saatlerine bakın)")
+    if M[1][2] < 0.9:
+        out.append("çalışırken hız takımın altında")
+    if M[3][6] < -5:
+        out.append("vardiya sonundan erken (%d dk) / geç başlıyor (%d dk)" % (s["early"], s["late"]))
+    if not out:
+        return "Takım ortalamasında seyrediyor."
+    t = "; ".join(out)
+    return t[0].upper() + t[1:] + "."
+
+
 def feedback(s, T):
     good, imp = [], []
     if s["kpa"] >= T["kpa"] * 1.1:
-        good.append("Aktif çalıştığı sürede hızı takım ortalamasının üstünde (%d kg/sa, takım %d)." % (s["kpa"], T["kpa"]))
+        good.append("Çalıştığı sürede hızı takım ortalamasının üstünde (%d kg/sa, takım %d)." % (s["kpa"], T["kpa"]))
     if s["idle"] <= T["idle"] - 5:
         good.append("Kayıt aralarındaki boşluk payı takımdan düşük (%%%d, takım %%%d)." % (s["idle"], T["idle"]))
     if s["ne"] == 0:
@@ -185,9 +235,9 @@ def feedback(s, T):
     if s["kgv"] >= T["kgv"] * 1.1:
         good.append("Vardiya başına üretimi takım ortalamasının üstünde (%d kg, takım %d)." % (s["kgv"], T["kgv"]))
     if s["idle"] >= T["idle"] + 5:
-        imp.append("Kayıt aralarında %%%d boşluk var (takım %%%d). Bu aralıkların bir kısmı iş yokluğu / mola olabilir; saatleri aşağıda." % (s["idle"], T["idle"]))
+        imp.append("Kayıt aralarında %%%d boşluk var (takım %%%d); bir kısmı iş yokluğu / mola olabilir." % (s["idle"], T["idle"]))
     if s["kpa"] <= T["kpa"] * 0.9:
-        imp.append("Aktif çalışırken hız %d kg/sa, takım %d: top başına süre / küçük top yapısı gözden geçirilebilir." % (s["kpa"], T["kpa"]))
+        imp.append("Çalışırken hız %d kg/sa, takım %d: top başına süre / küçük top yapısı gözden geçirilebilir." % (s["kpa"], T["kpa"]))
     if s["ne"] >= max(3, s["n"] * 0.4):
         imp.append("%d vardiyanın %d'inde son kayıt vardiya bitiminden %d dk'dan fazla önce (ortalama %d dk)." % (s["n"], s["ne"], EARLY_MIN, s["early"]))
     if s["nl"] >= max(3, s["n"] * 0.4):
@@ -195,111 +245,90 @@ def feedback(s, T):
     return good or ["Belirgin bir üstünlük çıkmadı; değerler takım ortalamasına yakın."], imp or ["Belirgin bir iyileştirme noktası çıkmadı."]
 
 
-def draw_card(name, code, rows, T, team_h, period):
-    from PIL import Image, ImageDraw
-    W, H = 1240, 1754
-    im = Image.new("RGB", (W, H), "white")
-    d = ImageDraw.Draw(im)
-    s = stats(rows)
-    d.rectangle([0, 0, W, 130], fill=(31, 56, 100))
-    d.text((50, 25), name, fill="white", font=font(52, True))
-    d.text((50, 88), "Kod: %s   •   %s   •   %d vardiya" % (code, period, s["n"]), fill=(210, 220, 240), font=font(26))
-    d.text((W - 50, 40), "Üretim geri bildirim kartı", fill=(210, 220, 240), font=font(26), anchor="ra")
-    y = 160
-    d.text((50, y), "Üretim (KK)", fill=(31, 56, 100), font=font(32, True))
-    y += 50
-    hdr = ["", "Sizin", "Takım ort.", "Fark"]
-    xs = [50, 560, 780, 1000]
-    for x, h in zip(xs, hdr):
-        d.text((x, y), h, fill=(90, 90, 90), font=font(24, True))
-    y += 36
-    items = [("Vardiya başına kg", s["kgv"], T["kgv"], "%d", 1), ("Vardiya başına top", s["knv"], T["knv"], "%d", 1),
-             ("Vardiya başına metre (bilgi)", s["mv"], T["mv"], "%d", 0), ("Aktif saatte kg", s["kpa"], T["kpa"], "%d", 1),
-             ("Aktif saatte top", s["tpa"], T["tpa"], "%.1f", 1), ("Kayıt aralarında boşluk payı %", s["idle"], T["idle"], "%d", -1),
-             ("Ort. geç başlama (dk)", s["late"], T["late"], "%d", -1), ("Ort. erken bırakma (dk)", s["early"], T["early"], "%d", -1)]
-    for lab, a, b, f, good in items:
-        diff = a - b
-        c = (60, 60, 60)
-        if good and abs(diff) > 0.05 * max(1, abs(b)):
-            c = (30, 130, 60) if diff * good > 0 else (190, 60, 40)
-        d.text((xs[0], y), lab, fill=(30, 30, 30), font=font(27))
-        d.text((xs[1], y), f % a, fill=(0, 0, 0), font=font(27, True))
-        d.text((xs[2], y), f % b, fill=(90, 90, 90), font=font(27))
-        d.text((xs[3], y), ("%+d" % round(diff)) if f == "%d" else ("%+.1f" % diff), fill=c, font=font(27, True))
-        y += 40
-    d.text((50, y + 4), "Metre kumaş cinsine bağlıdır (hafif kumaşta çok, ağırda az); performans ölçüsü olarak kullanılmaz.", fill=(120, 120, 120), font=font(21))
-    y += 50
-    d.text((50, y), "Saat saat üretim (kg / saat, bu vardiyalarda)", fill=(31, 56, 100), font=font(32, True))
-    y += 56
-    # saat profili: kisinin kg/saat'i (mavi) ve takim (gri cizgi)
-    h0 = [0.0] * 24
-    cnt = [0] * 24
-    for r in rows:
-        for hh in range(8):
-            hour = (r["a"] + hh) % 24
-            h0[hour] += r["h"][hour]
-            cnt[hour] += 1
-    mine = [h0[i] / cnt[i] if cnt[i] else None for i in range(24)]
-    order = list(range(8, 24)) + list(range(0, 8))
-    mx = max([v for v in mine if v] + [v for v in team_h if v] + [1])
-    ch_h, bw = 300, 48
-    base = y + ch_h
-    for i, hour in enumerate(order):
-        x = 48 + i * (bw - 2)
-        v = mine[hour]
-        if v:
-            bh = int(ch_h * v / mx)
-            d.rectangle([x, base - bh, x + bw - 8, base], fill=(57, 135, 229))
-            d.text((x + (bw - 8) // 2, base - bh - 20), "%d" % v, fill=(30, 30, 30), font=font(17), anchor="ma")
-        t = team_h[hour]
-        if t:
-            ty = base - int(ch_h * t / mx)
-            d.line([x, ty, x + bw - 8, ty], fill=(217, 89, 38), width=4)
-        d.text((x + (bw - 8) // 2, base + 6), "%02d" % hour, fill=(90, 90, 90), font=font(18), anchor="ma")
-    d.rectangle([50, base + 38, 70, base + 54], fill=(57, 135, 229))
-    d.text((78, base + 34), "Siz", fill=(30, 30, 30), font=font(21))
-    d.line([140, base + 46, 170, base + 46], fill=(217, 89, 38), width=4)
-    d.text((178, base + 34), "Takım ortalaması (aynı saatte)", fill=(30, 30, 30), font=font(21))
-    y = base + 90
-    d.text((50, y), "En uzun kayıt boşlukları (≥ %d dk)" % GAP_MIN, fill=(31, 56, 100), font=font(32, True))
-    y += 50
-    gl = []
-    for r in rows:
-        for st, ln in r["gp"]:
-            gl.append((ln, r["d"], hm(st, r["a"]), hm(st + ln, r["a"])))
-    gl.sort(reverse=True)
-    for ln, dd, a, b in gl[:6]:
-        d.text((50, y), "%s  %s–%s" % (datetime.fromisoformat(dd).strftime("%d.%m"), a, b), fill=(30, 30, 30), font=font(26))
-        d.text((420, y), "%d dk" % ln, fill=(190, 60, 40), font=font(26, True))
-        y += 38
-    d.text((50, y + 2), "Boşluk = iki kayıt arası; iş yokluğu, mola ya da başka iş olabilir.", fill=(120, 120, 120), font=font(21))
-    y += 56
-    good, imp = feedback(s, T)
-    d.text((50, y), "Güçlü yönler", fill=(30, 130, 60), font=font(32, True))
-    y += 46
-    for g in good:
-        y = wrap(d, "• " + g, 50, y, W - 100, font(26), (30, 30, 30))
-    y += 14
-    d.text((50, y), "Konuşulabilecek noktalar", fill=(190, 100, 20), font=font(32, True))
-    y += 46
-    for g in imp:
-        y = wrap(d, "• " + g, 50, y, W - 100, font(26), (30, 30, 30))
-    d.text((50, H - 50), "Kaynak: ERP KK kaydı (top bazlı). Vardiya blokları 08-16 / 16-24 / 00-08 varsayılmıştır; kayıt saati dışında iş görülmüş olabilir.", fill=(130, 130, 130), font=font(19))
-    return im
-
-
-def wrap(d, text, x, y, w, f, fill):
+def wrap(d, text, x, y, w, f, fill, lh=34):
     line = ""
     for word in text.split(" "):
         t = (line + " " + word).strip()
         if d.textlength(t, font=f) > w and line:
             d.text((x, y), line, fill=fill, font=f)
-            y += 36
-            line = "   " + word
+            y += lh
+            line = "  " + word
         else:
             line = t
     d.text((x, y), line, fill=fill, font=f)
-    return y + 38
+    return y + lh + 4
+
+
+def draw_card(name, code, rows, T, tcov, period):
+    from PIL import Image, ImageDraw
+    W, H = 1240, 1754
+    im = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(im)
+    s, M, hv = meters(rows, T, tcov)
+    d.rectangle([0, 0, W, 130], fill=(31, 56, 100))
+    d.text((50, 22), name, fill="white", font=font(52, True))
+    d.text((50, 86), "Kod: %s   •   %s   •   %d vardiya" % (code, period, s["n"]), fill=(210, 220, 240), font=font(26))
+    d.text((W - 50, 40), "Üretim geri bildirim kartı", fill=(210, 220, 240), font=font(26), anchor="ra")
+    y = 155
+    d.text((50, y), "Takıma göre durumunuz", fill=(31, 56, 100), font=font(32, True))
+    d.text((W - 50, y + 8), "beyaz çizgi = takım ortalaması", fill=(120, 120, 120), font=font(21), anchor="ra")
+    y += 52
+    BX, BW = 360, 560
+    for lab, sub, v, txt, ref, neutral, pts in M:
+        usepts = lab == "Vardiya kapsamı"
+        g, col, gt = (1, (150, 150, 150), "Yorumlanmaz") if neutral else grade(pts if usepts else v, pts if usepts else None)
+        d.text((50, y), lab, fill=(30, 30, 30), font=font(28, True))
+        d.text((50, y + 34), sub, fill=(120, 120, 120), font=font(19))
+        d.rounded_rectangle([BX, y + 8, BX + BW, y + 32], 8, fill=(228, 230, 236))
+        fw = int(BW * min(1.5, max(0.03, v)) / 1.5)
+        d.rounded_rectangle([BX, y + 8, BX + fw, y + 32], 8, fill=col)
+        mx = BX + int(BW / 1.5)
+        d.rectangle([mx - 2, y + 2, mx + 2, y + 38], fill=(40, 40, 40))
+        d.text((BX + BW + 24, y + 2), txt, fill=col if not neutral else (110, 110, 110), font=font(27, True))
+        d.text((BX + BW + 24, y + 36), "%s • %s" % (ref, gt), fill=(120, 120, 120), font=font(19))
+        y += 82
+    y += 4
+    y = wrap(d, message(s, M, hv), 50, y, W - 100, font(27, True), (30, 30, 30))
+    y += 8
+    # vardiya cizelgesi
+    d.text((50, y), "Vardiya çizelgesi (her şerit 8 saatlik vardiya)", fill=(31, 56, 100), font=font(32, True))
+    y += 48
+    for x0, c, t in ((50, (46, 158, 106), "Kayıt var (çalışıyor)"), (360, (224, 123, 57), "Kayıt yok ≥ %d dk" % GAP_MIN), (640, (139, 58, 58), "Vardiya başı / sonu boş")):
+        d.rectangle([x0, y + 4, x0 + 26, y + 22], fill=c)
+        d.text((x0 + 34, y), t, fill=(60, 60, 60), font=font(21))
+    y += 38
+    R = sorted(rows, key=lambda r: (r["d"], r["a"] or 24))[-22:]
+    sx, sw = 225, 470
+    for r in R:
+        dt = datetime.fromisoformat(r["d"])
+        d.text((50, y + 1), "%s %s %s" % (dt.strftime("%d.%m"), ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"][dt.weekday()], {8: "08-16", 16: "16-24", 0: "00-08"}[r["a"]]), fill=(30, 30, 30), font=font(21, True))
+        d.rectangle([sx, y, sx + sw, y + 22], fill=(150, 80, 80))
+        a0, a1 = max(0, r["f"]), 480 - r["l"]
+        px = lambda m: sx + int(sw * min(480, max(0, m)) / 480)
+        if a1 > a0:
+            d.rectangle([px(a0), y, px(a1), y + 22], fill=(46, 158, 106))
+        for st, ln in r.get("gp", []):
+            d.rectangle([px(st), y, max(px(st) + 1, px(st + ln)), y + 22], fill=(224, 123, 57))
+        gl = sum(g[1] for g in r.get("gp", []))
+        d.text((sx + sw + 18, y + 1), "%d kg • %d top • boşluk %d dk%s" % (r["kkg"] + r["skg"], r["kn"], gl, " • %d dk erken" % r["l"] if r["l"] > EARLY_MIN else ""), fill=(60, 60, 60), font=font(19))
+        y += 30
+    y += 14
+    good, imp = feedback(s, T)
+    if hv:
+        good = [g for g in good if g.startswith("Vardiya başına")] or ["Üretim dışındaki ölçüler Sarım ağırlığı nedeniyle yorumlanmadı."]
+        imp = ["Ağırlıklı Sarım yaptığı için KK kayıt boşluğu / erken-geç bırakma yorumlanmadı."]
+    d.text((50, y), "Güçlü yönler", fill=(30, 130, 60), font=font(30, True))
+    y += 42
+    for g in good:
+        y = wrap(d, "• " + g, 50, y, W - 100, font(25), (30, 30, 30), 31)
+    y += 6
+    d.text((50, y), "Konuşulabilecek noktalar", fill=(190, 100, 20), font=font(30, True))
+    y += 42
+    for g in imp:
+        y = wrap(d, "• " + g, 50, y, W - 100, font(25), (30, 30, 30), 31)
+    d.text((50, H - 66), "Kaynak: ERP KK top kaydı. Vardiyalar 08-16 / 16-24 / 00-08 varsayıldı.", fill=(130, 130, 130), font=font(18))
+    d.text((50, H - 40), "Boşluk iş yokluğu, mola ya da başka iş olabilir; konuşma ipucudur, suçlama değildir.", fill=(130, 130, 130), font=font(18))
+    return im
 
 
 def make_cards(path, shifts, codes, min_shifts):
@@ -307,26 +336,34 @@ def make_cards(path, shifts, codes, min_shifts):
     for r in shifts:
         by[r["p"]].append(r)
     inv = {v: k for k, v in codes.items()}
-    team = [r for p, l in by.items() if len(l) >= min_shifts for r in l]
-    T = stats(team)
-    h = [0.0] * 24
-    c = [0] * 24
-    for r in team:
-        for hh in range(8):
-            hour = (r["a"] + hh) % 24
-            h[hour] += r["h"][hour]
-            c[hour] += 1
-    team_h = [h[i] / c[i] if c[i] else None for i in range(24)]
-    days = sorted(r["d"] for r in team)
+    ok = {p: l for p, l in by.items() if len(l) >= min_shifts}
+    base = [r for p, l in ok.items() if not heavy(l) for r in l] or [r for l in ok.values() for r in l]
+    T = stats(base)
+    tcov = cov_of(base)
+    days = sorted(r["d"] for l in ok.values() for r in l)
     period = "%s – %s" % (datetime.fromisoformat(days[0]).strftime("%d.%m.%Y"), datetime.fromisoformat(days[-1]).strftime("%d.%m.%Y"))
-    pages = []
-    for p, l in sorted(by.items(), key=lambda x: -sum(r["kkg"] + r["skg"] for r in x[1])):
-        if len(l) < min_shifts:
-            continue
-        pages.append(draw_card(inv.get(p, p), p, l, T, team_h, period))
-    if pages:
-        pages[0].save(path, "PDF", resolution=150, save_all=True, append_images=pages[1:])
-    return len(pages)
+    n = 0
+    tmp = []
+    import tempfile
+    for p, l in sorted(ok.items(), key=lambda x: -sum(r["kkg"] + r["skg"] for r in x[1])):
+        im = draw_card(inv.get(p, p), p, l, T, tcov, period)
+        f = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        f.close()
+        im.save(f.name, "JPEG", quality=92)
+        im.close()
+        tmp.append(f.name)
+        n += 1
+    if tmp:
+        from PIL import Image
+        first = Image.open(tmp[0]).convert("RGB")
+        rest = [Image.open(t).convert("RGB") for t in tmp[1:]]
+        first.save(path, "PDF", resolution=150, save_all=True, append_images=rest)
+        for t in tmp:
+            try:
+                os.remove(t)
+            except OSError:
+                pass
+    return n
 
 
 def main():

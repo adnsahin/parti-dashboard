@@ -8471,7 +8471,7 @@ function paOpen(){
     if(!el){el=document.createElement('div');el.id='prodAnalysis';el.className='pa';document.body.appendChild(el);paBindTips(el)}
     el.style.display='flex';paRender();
     if(typeof liveLoadZaman==='function')liveLoadZaman();
-    uretimLogFetchedAt=0;uretimLogRefresh(()=>{if(paVisible())paRender()});
+    uretimLogFetchedAt=0;uretimLogRefresh(()=>{if(paVisible())paRender()});paTopLoad();
     if(!paTimer)paTimer=setInterval(()=>{if(paVisible())uretimLogRefresh(()=>paRender())},120000);
 }
 function paClose(){const el=document.getElementById('prodAnalysis');if(el)el.style.display='none';if(paTimer){clearInterval(paTimer);paTimer=null}paTipHide()}
@@ -9317,6 +9317,69 @@ function paPpHtml(M){
     return h;
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-ppd{font-size:11px}.pa-ppd th,.pa-ppd td{padding:4px 3px;text-align:center}.pa-ppd td:first-child,.pa-ppd th:first-child{text-align:left;white-space:nowrap;padding-left:6px}.pa-ppd td.fut{background:transparent}.pa-pp td,.pa-pp th{text-align:right}.pa-pp td:first-child,.pa-pp th:first-child{text-align:left}.pa-pp tr.pa-pp-n{opacity:.55}.pa-pp tr.pa-pp-t td{border-top:2px solid #47437a}.pa-pp .pa-pp-b{width:28%;min-width:80px;text-align:left}.pa-pp-b i{display:block;height:12px;border-radius:3px}';document.head.appendChild(st)})();
+// ── 👥 Personel geri bildirimi: KK top kayıtlarından (data/personel_top.json, kişi KODUYLA; adlar yok) vardiya bazlı üretim,
+//    aktif saatteki hız, kayıt boşlukları, geç başlama / erken bırakma. Metre kumaş cinsine bağlı olduğundan yalnız bilgi amaçlı.
+let PERSTOP=null,PERSTOP_AT=0,paTopSel='';
+function paTopLoad(){
+    if(Date.now()-PERSTOP_AT<120000)return;PERSTOP_AT=Date.now();
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/personel_top.json'+ts,{cache:'no-store'});
+    (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/personel_top.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel)).then(r=>r&&r.ok?r.json():null)
+        .then(j=>{if(j&&j.shifts){PERSTOP=j;if(paVisible())paRender()}}).catch(()=>{});
+}
+function paTopSet(c){paTopSel=paTopSel===c?'':c;paRender()}
+function paTopStats(rows){
+    const n=rows.length,S=k=>rows.reduce((a,r)=>a+r[k],0),act=Math.max(1,S('act')),idle=S('idle');
+    return{n,kn:S('kn'),kg:S('kkg')+S('skg'),kkg:S('kkg'),km:S('km'),kgv:(S('kkg')+S('skg'))/n,knv:S('kn')/n,mv:S('km')/n,kpa:S('kkg')/(act/60),tpa:S('kn')/(act/60),
+        idle:100*idle/Math.max(1,idle+act),late:S('f')/n,early:S('l')/n,ne:rows.filter(r=>r.l>(PERSTOP.earlyMin||45)).length,nl:rows.filter(r=>r.f>(PERSTOP.lateMin||30)).length};
+}
+function paTopHm(min,a){const t=((a*60+min)%1440+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
+function paTopFb(s,T){
+    const good=[],imp=[],r0=v=>Math.round(v);
+    if(s.kpa>=T.kpa*1.1)good.push('Aktif çalıştığı sürede hızı takım ortalamasının üstünde ('+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+').');
+    if(s.idle<=T.idle-5)good.push('Kayıt aralarındaki boşluk payı takımdan düşük (%'+r0(s.idle)+', takım %'+r0(T.idle)+').');
+    if(s.ne===0)good.push('Hiçbir vardiyada erken bırakma görülmedi.');
+    if(s.kgv>=T.kgv*1.1)good.push('Vardiya başına üretimi takım ortalamasının üstünde ('+r0(s.kgv)+' kg, takım '+r0(T.kgv)+').');
+    if(s.idle>=T.idle+5)imp.push('Kayıt aralarında %'+r0(s.idle)+' boşluk var (takım %'+r0(T.idle)+'); bir kısmı iş yokluğu / mola olabilir.');
+    if(s.kpa<=T.kpa*0.9)imp.push('Aktif çalışırken hız '+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+': top başına süre / küçük top yapısı gözden geçirilebilir.');
+    if(s.ne>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+s.ne+'\'inde son kayıt vardiya bitiminden '+(PERSTOP.earlyMin||45)+' dk\'dan fazla önce (ortalama '+r0(s.early)+' dk).');
+    if(s.nl>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+s.nl+'\'inde ilk kayıt vardiya başından '+(PERSTOP.lateMin||30)+' dk\'dan sonra.');
+    return{good:good.length?good:['Belirgin bir üstünlük çıkmadı; değerler takım ortalamasına yakın.'],imp:imp.length?imp:['Belirgin bir iyileştirme noktası çıkmadı.']};
+}
+function paTopHtml(M){
+    const D=PERSTOP;if(!D)return '<div class="pa-note">Personel verisi okunuyor… Gelmezse çalışma bilgisayarında <b>update_personel_top.py urt.Xlsx [urt222.Xlsx]</b> çalıştırıp <b>data/personel_top.json</b> dosyasını gönderin.</div>';
+    const last=new Date(D.to.slice(0,10)),cut=new Date(last);cut.setDate(cut.getDate()-paRange+1);const ck=cut.getFullYear()+'-'+String(cut.getMonth()+1).padStart(2,'0')+'-'+String(cut.getDate()).padStart(2,'0');
+    const rows=D.shifts.filter(r=>r.d>=ck),by={};rows.forEach(r=>(by[r.p]=by[r.p]||[]).push(r));
+    const codes=Object.keys(by).filter(c=>by[c].length>=3).sort((a,b)=>by[b].reduce((x,r)=>x+r.kkg+r.skg,0)-by[a].reduce((x,r)=>x+r.kkg+r.skg,0));
+    if(!codes.length)return '<div class="pa-note">Seçili dönemde yeterli vardiya kaydı yok ('+esc(ck)+' sonrası).</div>';
+    const team=codes.flatMap(c=>by[c]),T=paTopStats(team),St={};codes.forEach(c=>St[c]=paTopStats(by[c]));
+    const f0=v=>Math.round(v).toLocaleString('tr-TR'),f1=v=>(Math.round(v*10)/10).toLocaleString('tr-TR');
+    // hücre rengi: takıma göre iyi (yeşil) / zayıf (kırmızı); dir: +1 yüksek iyi, -1 düşük iyi, 0 renksiz
+    const cell=(v,t,dir,fmt)=>{const d=v-t,c=dir&&Math.abs(d)>0.07*Math.max(1,Math.abs(t))?(d*dir>0?'#5ecf8a':'#ff8a80'):'';return '<td'+(c?' style="color:'+c+';font-weight:800"':'')+'>'+fmt(v)+'</td>'};
+    let h='<div class="pa-sts pa-sts4"><div class="pa-st"><div class="pa-st-l">Takım · vardiya başına</div><div class="pa-st-v">'+f0(T.kgv)+' <small>kg</small></div><div class="pa-st-s">'+f0(T.knv)+' top • '+codes.length+' kişi • '+T.n+' vardiya</div></div>'
+        +'<div class="pa-st"><div class="pa-st-l">Takım · aktif saatte</div><div class="pa-st-v">'+f0(T.kpa)+' <small>kg/sa</small></div><div class="pa-st-s">'+f1(T.tpa)+' top/sa (kayıt aralığı &lt; '+(D.gapMin||20)+' dk)</div></div>'
+        +'<div class="pa-st"><div class="pa-st-l">Takım · boşluk payı</div><div class="pa-st-v">%'+f0(T.idle)+'</div><div class="pa-st-s">kayıt aralarında ≥ '+(D.gapMin||20)+' dk</div></div>'
+        +'<div class="pa-st"><div class="pa-st-l">Takım · erken bırakma</div><div class="pa-st-v">'+f0(T.early)+' <small>dk</small></div><div class="pa-st-s">son kayıt → vardiya sonu (ort.) • geç başlama '+f0(T.late)+' dk</div></div></div>';
+    h+='<div class="pa-tw"><table class="pa-tbl pa-pt"><thead><tr><th>Kod</th><th>Vardiya</th><th>kg / vardiya</th><th>top / vardiya</th><th>metre / vardiya <small>(bilgi)</small></th><th>kg / aktif sa</th><th>top / aktif sa</th><th>Boşluk %</th><th>Geç başl. dk</th><th>Erken bırak. dk</th><th>Erken (&gt;'+(D.earlyMin||45)+' dk)</th></tr></thead><tbody>'
+        +codes.map(c=>{const s=St[c];return '<tr class="'+(paTopSel===c?'on':'')+'" onclick="paTopSet(&quot;'+c+'&quot;)" title="Ayrıntı için tıkla"><td><b>'+esc(c)+'</b></td><td>'+s.n+'</td>'+cell(s.kgv,T.kgv,1,f0)+'<td>'+f0(s.knv)+'</td><td>'+f0(s.mv)+'</td>'+cell(s.kpa,T.kpa,1,f0)+cell(s.tpa,T.tpa,1,f1)+cell(s.idle,T.idle,-1,f0)+cell(s.late,T.late,-1,f0)+cell(s.early,T.early,-1,f0)+'<td>'+s.ne+' / '+s.n+'</td></tr>'}).join('')
+        +'<tr class="pa-pp-t"><td><b>Takım</b></td><td>'+T.n+'</td><td>'+f0(T.kgv)+'</td><td>'+f0(T.knv)+'</td><td>'+f0(T.mv)+'</td><td>'+f0(T.kpa)+'</td><td>'+f1(T.tpa)+'</td><td>'+f0(T.idle)+'</td><td>'+f0(T.late)+'</td><td>'+f0(T.early)+'</td><td>'+T.ne+' / '+T.n+'</td></tr></tbody></table></div>';
+    if(paTopSel&&St[paTopSel]){
+        const c=paTopSel,s=St[c],R=by[c],fb=paTopFb(s,T),hs=new Array(24).fill(0),hc=new Array(24).fill(0),th=new Array(24).fill(0),tc=new Array(24).fill(0);
+        R.forEach(r=>{for(let k=0;k<8;k++){const hr=(r.a+k)%24;hs[hr]+=r.h[hr];hc[hr]++}});team.forEach(r=>{for(let k=0;k<8;k++){const hr=(r.a+k)%24;th[hr]+=r.h[hr];tc[hr]++}});
+        const mine=hs.map((v,i)=>hc[i]?v/hc[i]:null),tm=th.map((v,i)=>tc[i]?v/tc[i]:null),mx=Math.max(1,...mine.filter(Boolean),...tm.filter(Boolean)),ord=[...Array(16).keys()].map(i=>i+8).concat([...Array(8).keys()]);
+        const gl=[];R.forEach(r=>(r.gp||[]).forEach(g=>gl.push({len:g[1],d:r.d,a:paTopHm(g[0],r.a),b:paTopHm(g[0]+g[1],r.a)})));gl.sort((x,y)=>y.len-x.len);
+        const best=R.slice().sort((x,y)=>(y.kkg+y.skg)-(x.kkg+x.skg));
+        h+='<div class="pa-sub">'+esc(c)+' · geri bildirim <small>'+s.n+' vardiya • seçimi kaldırmak için satıra tekrar tıkla</small></div>'
+            +'<div class="pa-pt-bars">'+ord.map(hr=>{const v=mine[hr],t=tm[hr];return '<div class="b" title="'+String(hr).padStart(2,'0')+':00 • siz '+(v?f0(v):'-')+' kg/sa • takım '+(t?f0(t):'-')+'"><span class="v">'+(v?f0(v):'')+'</span><i style="height:'+(v?Math.max(2,v/mx*100):0)+'%"></i>'+(t?'<u style="bottom:'+(t/mx*100)+'%"></u>':'')+'<em>'+String(hr).padStart(2,'0')+'</em></div>'}).join('')+'</div>'
+            +'<div class="pa-leg"><span><i style="background:#3987e5"></i>'+esc(c)+' (kg/sa, bu vardiyalarda)</span><span><i class="ln" style="background:#d95926"></i>Takım ortalaması (aynı saatte)</span></div>'
+            +'<div class="pa-two"><div><div class="pa-sub">En uzun kayıt boşlukları <small>≥ '+(D.gapMin||20)+' dk • iş yokluğu, mola ya da başka iş olabilir</small></div><div class="pa-lk-list">'
+            +gl.slice(0,6).map(g=>'<div class="pa-lk-i" style="cursor:default"><b class="wh">'+g.d.slice(8,10)+'.'+g.d.slice(5,7)+'</b><span class="tm">'+g.a+'–'+g.b+'</span><span class="ds"></span><em>'+g.len+' dk</em></div>').join('')+'</div>'
+            +'<div class="pa-sub">En iyi / en düşük vardiya <small>kg</small></div><div class="pa-note">En iyi: <b>'+f0(best[0].kkg+best[0].skg)+' kg</b> ('+best[0].d.slice(8,10)+'.'+best[0].d.slice(5,7)+' '+({8:'08-16',16:'16-24',0:'00-08'}[best[0].a])+') • En düşük: <b>'+f0(best[best.length-1].kkg+best[best.length-1].skg)+' kg</b> ('+best[best.length-1].d.slice(8,10)+'.'+best[best.length-1].d.slice(5,7)+' '+({8:'08-16',16:'16-24',0:'00-08'}[best[best.length-1].a])+')</div></div>'
+            +'<div><div class="pa-sub" style="color:#5ecf8a">Güçlü yönler</div><ul class="pa-ins">'+fb.good.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><div class="pa-sub" style="color:#ffb74d">Konuşulabilecek noktalar</div><ul class="pa-ins">'+fb.imp.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div></div>';
+    }
+    h+='<div class="pa-note"><b>Nasıl okunur:</b> kaynak ERP KK top kayıtları (kg, saniyesine kadar saat). Vardiya blokları 08–16 / 16–24 / 00–08 varsayılır; blokta en az 8 kayıt varsa vardiya sayılır. <b>Aktif saat</b> = kayıt aralarının '+(D.gapMin||20)+' dk\'dan kısa olanların toplamı; <b>boşluk</b> = ondan uzun aralar (iş yokluğu, mola veya başka bir iş de olabilir). Renkler takım ortalamasına göre (yeşil iyi, kırmızı zayıf). Metre kumaş cinsine (gramaj) bağlı olduğundan yalnız bilgi içindir. Kişiler kodla gösterilir. Kayıt: '+esc(String(D.to).replace('T',' '))+'\'e kadar.</div>';
+    return h;
+}
+(function(){const st=document.createElement('style');st.textContent='.pa-pt td,.pa-pt th{text-align:right}.pa-pt td:first-child,.pa-pt th:first-child{text-align:left}.pa-pt tbody tr{cursor:pointer}.pa-pt tbody tr:hover{background:rgba(255,255,255,.06)}.pa-pt tr.on{background:rgba(57,135,229,.22)}.pa-pt-bars{display:flex;gap:3px;height:150px;align-items:flex-end;margin-top:8px;padding-top:16px}.pa-pt-bars .b{flex:1;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center}.pa-pt-bars i{display:block;width:100%;background:#3987e5;border-radius:3px 3px 0 0}.pa-pt-bars u{position:absolute;left:0;right:0;height:3px;background:#d95926;text-decoration:none}.pa-pt-bars .v{position:absolute;top:-14px;font-size:9.5px;color:#c3c2b7;left:50%;transform:translateX(-50%);white-space:nowrap}.pa-pt-bars em{position:absolute;bottom:-17px;font-size:10px;font-style:normal;color:#928fb0}.pa-pt-bars{margin-bottom:22px}';document.head.appendChild(st)})();
 function paLkTableHtml(M){
     const L=paLkModel();if(!L)return'';const day=paLkSel(L);
     return '<div class="pa-card"><div class="pa-card-t">Kayıp zaman avı — kişi bazında <small>KK & Sarım ekibi • seçili dönem • kod ile</small></div>'+paLkPerHtml(L,M)+'</div>'
@@ -9348,6 +9411,7 @@ function paBodyHtml(M){
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Parti büyüklüğünün üretime etkisi <small>'+esc(M.R.name)+' • tak-çıkar kaybı • kaydın tamamından</small></div>'+paSizeHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Çalışma saati çubuğu <small>KK • Sarım1 • Sarım2 • kayıt giriş saatlerinden dolu ve boş zaman • aşama seçiminden bağımsız</small></div>'+paWkHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat başı kişi başı üretim <small>KK + Sarım1 + Sarım2 • kg • saat bazlı ortalama ÷ kişi sayısı</small></div>'+paPpHtml(M)+'</div>'
+        +'<div class="pa-card pa-wide"><div class="pa-card-t">Personel geri bildirimi <small>KK top kayıtları • kişi kodla • vardiya bazlı üretim, aktif saat hızı, boşluk, geç başlama / erken bırakma • satıra tıkla</small></div>'+paTopHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Kayıp zaman avı <small>KK & Sarım ekibi • ERP zaman raporu • kişiler kodla • aşama seçiminden bağımsız</small></div>'+paLkHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'
             +'<div class="pa-two"><div><div class="pa-sub">Gün gün, saat saat <small>hücrede o saatte geçen miktar • sağda gün toplamı</small><span class="pa-seg pa-heat-tg"><button type="button" class="'+(paHeatAll?'':'on')+'" onclick="paHeatAllSet(0)">'+esc(M.R.name)+'</button><button type="button" class="'+(paHeatAll?'on':'')+'" onclick="paHeatAllSet(1)" title="KK + Sarım1 + Sarım2 toplamı: aynı kişi her ikisinde de çalışabilir">Hepsi</button></span></div>'+paHeatHtml(M)+'</div><div>'+paHourChartsHtml(M)+'</div></div></div>'

@@ -9337,20 +9337,20 @@ function paTopStats(rows){
 }
 function paTopHm(min,a){const t=((a*60+min)%1440+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
 function paTopFb(s,T){
-    const good=[],imp=[],r0=v=>Math.round(v);
+    const good=[],imp=[],r0=v=>Math.round(v),Q=paDvAgg(s.rows),rf=paDvMode==='ref';
     if(s.kpa>=T.kpa*1.1)good.push('Aktif çalıştığı sürede hızı takım ortalamasının üstünde ('+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+').');
     if(s.idle<=T.idle-5)good.push('Kayıt aralarındaki boşluk payı takımdan düşük (%'+r0(s.idle)+', takım %'+r0(T.idle)+').');
-    if(s.ne===0)good.push('Hiçbir vardiyada erken bırakma görülmedi.');
+    if(Q.ne===0)good.push(rf?'Hiçbir vardiyada ekibin en geç biten kişisinden erken bırakmadı.':'Hiçbir vardiyada erken bırakma görülmedi.');
     if(s.kgv>=T.kgv*1.1)good.push('Vardiya başına üretimi takım ortalamasının üstünde ('+r0(s.kgv)+' kg, takım '+r0(T.kgv)+').');
     if(s.idle>=T.idle+5)imp.push('Kayıt aralarında %'+r0(s.idle)+' boşluk var (takım %'+r0(T.idle)+'); bir kısmı iş yokluğu / mola olabilir.');
     if(s.kpa<=T.kpa*0.9)imp.push('Aktif çalışırken hız '+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+': top başına süre / küçük top yapısı gözden geçirilebilir.');
-    if(s.ne>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+s.ne+'\'inde son kayıt vardiya bitiminden '+(PERSTOP.earlyMin||45)+' dk\'dan fazla önce (ortalama '+r0(s.early)+' dk).');
-    if(s.nl>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+s.nl+'\'inde ilk kayıt vardiya başından '+(PERSTOP.lateMin||30)+' dk\'dan sonra.');
+    if(Q.ne>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+Q.ne+'\'inde son kayıt '+(rf?'o vardiyada en geç biten kişiden':'vardiya bitişinden')+' '+paDvEarly+' dk\'dan fazla önce (bu vardiyalarda ortalama '+r0(Q.earlySum/Math.max(1,Q.ne))+' dk fazla).');
+    if(Q.nl>=Math.max(3,s.n*0.4))imp.push(s.n+' vardiyanın '+Q.nl+'\'inde ilk kayıt '+(rf?'o vardiyada en erken başlayandan':'vardiya başından')+' '+paDvLate+' dk\'dan sonra.');
     return{good:good.length?good:['Belirgin bir üstünlük çıkmadı; değerler takım ortalamasına yakın.'],imp:imp.length?imp:['Belirgin bir iyileştirme noktası çıkmadı.']};
 }
 // ── Karne görünümü: her kişi için 4 basit ölçü (takıma göre), tek cümlelik yorum ve vardiya vardiya çalışma çizelgesi
 const PA_TOP_LAB={8:'08-16',16:'16-24',0:'00-08'},PA_TOP_DOW=['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
-function paTopCov(rows){return rows.reduce((a,r)=>a+Math.max(0,480-r.f-r.l)/480*100,0)/rows.length}
+function paTopCov(rows){return rows.reduce((a,r)=>{const ref=paDvMode==='ref',win=ref?Math.max(60,480-paDvRefF(r)-paDvRef(r)):480;return a+Math.min(100,Math.max(0,480-r.f-r.l)/win*100)},0)/rows.length}
 // ölçü derecesi: oran (takıma göre) ya da puan farkı
 function paTopGrade(r,pts){const g=pts?(r>=5?2:r>-5?1:0):(r>=1.1?2:r>=0.9?1:0);return{c:['#ff8a80','#ffd54f','#5ecf8a'][g],e:['🔴','🟡','🟢'][g],t:['Geliştirilmeli','Ortalama','İyi'][g],g}}
 function paTopMeters(s,T){
@@ -9359,7 +9359,7 @@ function paTopMeters(s,T){
         {k:'Üretim',sub:'vardiya başına kg',v:s.kgv/T.kgv,txt:Math.round(s.kgv).toLocaleString('tr-TR')+' kg',ref:'takım '+Math.round(T.kgv).toLocaleString('tr-TR')},
         {k:'Çalışma hızı',sub:'çalıştığı sürede kg/saat',v:s.kpa/T.kpa,txt:Math.round(s.kpa)+' kg/sa',ref:'takım '+Math.round(T.kpa)},
         {k:'Süreklilik',sub:'vardiyada kayıt bırakmadığı süre',v:(100-s.idle)/(100-T.idle),txt:'%'+Math.round(100-s.idle)+' çalışma',ref:'takım %'+Math.round(100-T.idle)},
-        {k:'Vardiya kapsamı',sub:'vardiyanın ilk–son kayıt arası',pts:cov-tcov,v:cov/Math.max(1,tcov),txt:'%'+Math.round(cov),ref:'takım %'+Math.round(tcov)}
+        {k:'Vardiya kapsamı',sub:paDvMode==='ref'?'ekibin çalışma penceresinin yüzde kaçı (en erken başlayan → en geç biten)':'vardiyanın ilk–son kayıt arası',pts:cov-tcov,v:cov/Math.max(1,tcov),txt:'%'+Math.round(cov),ref:'takım %'+Math.round(tcov)}
     ];
     if(s.haswg&&T.haswg)M.push({k:'İş varken kayıtsız',sub:'ekipte kayıt sürerken kendi boşluğu',v:(T.wg+5)/(s.wg+5),txt:Math.round(s.wg)+' dk/vardiya',ref:'takım '+Math.round(T.wg)});
     if(hv)M.forEach((m,i)=>{if(i>0)m.na=true});
@@ -9374,7 +9374,7 @@ function paTopMsg(s,T,M){
     else if(wk&&sk<0.9)out.push('boşlukların çoğu ekibin de boş olduğu saatlerde (iş yokluğu olası)');
     else if(sk<0.9)out.push('vardiyanın önemli kısmında kayıt yok (en uzun boşluklara bakın)');
     if(hz<0.9)out.push('çalışırken hız takımın altında');
-    if(kp<-5)out.push('vardiya sonundan erken ('+Math.round(s.early)+' dk) / geç başlıyor ('+Math.round(s.late)+' dk)');
+    if(kp<-5){const Q=paDvAgg(s.rows);out.push(paDvMode==='ref'?'ekibin en geç biten kişisinden ortalama '+Math.round(Q.m('early'))+' dk erken bırakıyor / en erken başlayandan '+Math.round(Q.m('late'))+' dk sonra başlıyor (paylar düşülmüş)':'vardiya sonundan '+Math.round(Q.m('early'))+' dk erken / '+Math.round(Q.m('late'))+' dk geç (paylar düşülmüş)')}
     if(!out.length)return 'Takım ortalamasında seyrediyor.';
     const t=out.join('; ');return t.charAt(0).toUpperCase()+t.slice(1)+'.';
 }
@@ -9423,13 +9423,18 @@ function paTopHtml(M){
 // ── ⏱ Üretim devamlılığı: 3 ölçü — (1) geç başlama (2) erken bırakma (3) parti içi duraksama + fazla mola.
 //    Hepsi dakika cinsindendir; toplam kayıp süre vardiyaya oranlanır ve kişinin kendi hızıyla tahmini kg kaybına çevrilir.
 let paDvSel='',paDvLate=+mapLoadPref('paDvLate9',v=>['15','20','30','45'].includes(v),'30'),paDvEarly=+mapLoadPref('paDvEarly9',v=>['15','30','45','60'].includes(v),'30'),paDvMola=+mapLoadPref('paDvMola9',v=>['30','45','60','90'].includes(v),'60');
+let paDvMode=mapLoadPref('paDvMode9',v=>v==='ref'||v==='end','ref');
 let paDvEnd8=+mapLoadPref('paDvEnd8_9',v=>['0','30','60'].includes(v),'0'),paDvEnd16=+mapLoadPref('paDvEnd16_9',v=>['0','30','60'].includes(v),'0');
-function paDvSet(k,v){if(k==='late'){paDvLate=+v;mapSavePref('paDvLate9',v)}else if(k==='early'){paDvEarly=+v;mapSavePref('paDvEarly9',v)}else if(k==='mola'){paDvMola=+v;mapSavePref('paDvMola9',v)}else if(k==='e8'){paDvEnd8=+v;mapSavePref('paDvEnd8_9',v)}else if(k==='e16'){paDvEnd16=+v;mapSavePref('paDvEnd16_9',v)}else if(k==='sel')paDvSel=paDvSel===v?'':v;paRender()}
+function paDvSet(k,v){if(k==='late'){paDvLate=+v;mapSavePref('paDvLate9',v)}else if(k==='early'){paDvEarly=+v;mapSavePref('paDvEarly9',v)}else if(k==='mola'){paDvMola=+v;mapSavePref('paDvMola9',v)}else if(k==='e8'){paDvEnd8=+v;mapSavePref('paDvEnd8_9',v)}else if(k==='e16'){paDvEnd16=+v;mapSavePref('paDvEnd16_9',v)}else if(k==='mode'){paDvMode=v;mapSavePref('paDvMode9',v)}else if(k==='sel')paDvSel=paDvSel===v?'':v;paRender()}
 function paDvEndOff(a){return a===8?paDvEnd8:a===16?paDvEnd16:0}
+// ekipte o vardiyada (gün + blok) en geç biten kişinin 'vardiya bitişine kalan dk' değeri (yalnız yeterli KK kaydı olanlar)
+function paDvRefInit(){const D=PERSTOP;if(D.__ref)return;const m={},f={};D.shifts.forEach(x=>{if((x.kn||0)>=5){const k=x.d+'|'+x.a;if(m[k]==null||x.l<m[k])m[k]=x.l;if(f[k]==null||x.f<f[k])f[k]=x.f}});D.__ref=m;D.__reff=f}
+function paDvRef(r){paDvRefInit();const v=PERSTOP.__ref[r.d+'|'+r.a];return v==null?0:v}
+function paDvRefF(r){paDvRefInit();const v=PERSTOP.__reff[r.d+'|'+r.a];return v==null?0:v}
 // bir vardiyanın üç kaybı (dk)
 function paDvShift(r){
-    const off=paDvEndOff(r.a),late=Math.max(0,r.f-paDvLate),early=Math.max(0,r.l-off-paDvEarly),wg=r.wg!=null?r.wg:0,fm=Math.max(0,wg-paDvMola);
-    return{late,early,fm,pd:r.pd||0,pc:r.pc||0,wg,len:480-off,loss:late+early+fm,nl:late>0,ne:early>0,nf:fm>0};
+    const off=paDvMode==='ref'?paDvRef(r):paDvEndOff(r.a),late=Math.max(0,r.f-(paDvMode==='ref'?paDvRefF(r):0)-paDvLate),early=Math.max(0,r.l-off-paDvEarly),wg=r.wg!=null?r.wg:0,fm=Math.max(0,wg-paDvMola);
+    return{late,early,fm,pd:r.pd||0,pc:r.pc||0,wg,len:480-(paDvMode==='ref'?0:off),loss:late+early+fm,nl:late>0,ne:early>0,nf:fm>0};
 }
 function paDvAgg(rows){
     const n=rows.length,A={n,late:0,early:0,fm:0,pd:0,pc:0,wg:0,loss:0,len:0,nl:0,ne:0,nf:0,lateSum:0,earlySum:0};
@@ -9447,13 +9452,12 @@ function paDvHtml(M){
     const kpaOf=c=>{const s=paTopStats(by[c]);return s.kpa};const tkpa=paTopStats((light.length?light:codes).flatMap(c=>by[c])).kpa;
     const sel=(k,cur,opts)=>'<select onchange="paDvSet(&quot;'+k+'&quot;,this.value)">'+opts.map(([v,l])=>'<option value="'+v+'"'+(String(cur)===String(v)?' selected':'')+'>'+l+'</option>').join('')+'</select>';
     let h='<div class="pa-cmpbar"><span class="pa-cmp-vs">Geç başlama payı</span>'+sel('late',paDvLate,[[15,'15 dk'],[20,'20 dk'],[30,'30 dk'],[45,'45 dk']])
-        +'<span class="pa-cmp-vs">Erken bırakma payı</span>'+sel('early',paDvEarly,[[15,'15 dk'],[30,'30 dk'],[45,'45 dk'],[60,'60 dk']])
+        +'<span class="pa-cmp-vs">Erken / geç ölçütü</span>'+sel('mode',paDvMode,[['ref','Ekipte en erken başlayan / en geç biten kişiye göre'],['end','Vardiya saatlerine göre']])+'<span class="pa-cmp-vs">Erken bırakma payı</span>'+sel('early',paDvEarly,[[15,'15 dk'],[30,'30 dk'],[45,'45 dk'],[60,'60 dk']])
         +'<span class="pa-cmp-vs">Mola payı</span>'+sel('mola',paDvMola,[[30,'30 dk / vardiya'],[45,'45 dk / vardiya'],[60,'60 dk / vardiya'],[90,'90 dk / vardiya']])
-        +'<span class="pa-cmp-vs">08–16 gerçek bitiş</span>'+sel('e8',paDvEnd8,[[0,'16:00'],[30,'15:30'],[60,'15:00']])
-        +'<span class="pa-cmp-vs">16–24 gerçek bitiş</span>'+sel('e16',paDvEnd16,[[0,'24:00'],[30,'23:30'],[60,'23:00']])+'</div>';
+        +(paDvMode==='end'?'<span class="pa-cmp-vs">08–16 gerçek bitiş</span>'+sel('e8',paDvEnd8,[[0,'16:00'],[30,'15:30'],[60,'15:00']])+'<span class="pa-cmp-vs">16–24 gerçek bitiş</span>'+sel('e16',paDvEnd16,[[0,'24:00'],[30,'23:30'],[60,'23:00']]):'')+'</div>';
     h+='<div class="pa-dv-how"><b>Üç ölçü, üç dil:</b><ol>'
-        +'<li><b>Geç başlama</b> = vardiya başlangıcından ilk kayda kadar geçen süre − <b>'+paDvLate+' dk</b> pay (ilk topun hazırlığı + kontrolü). Negatifse 0 sayılır.</li>'
-        +'<li><b>Erken bırakma</b> = vardiya bitişi − son kayıt − <b>'+paDvEarly+' dk</b> pay (son topun kaydı + toparlanma). Negatifse 0 sayılır.</li>'
+        +'<li><b>Geç başlama</b> = '+(paDvMode==='ref'?'o vardiyada <b>ekipte en erken başlayan kişinin</b> ilk kaydı ile kişinin ilk kaydı arasındaki süre':'vardiya başlangıcından ilk kayda kadar geçen süre')+' − <b>'+paDvLate+' dk</b> pay (ilk topun hazırlığı + kontrolü). Negatifse 0 sayılır.'+(paDvMode==='ref'?' <b>Vardiya kapsamı</b> da buna göre: kişinin ilk–son kayıt süresi ÷ ekibin o vardiyadaki çalışma penceresi.':'')+'</li>'
+        +'<li><b>Erken bırakma</b> = '+(paDvMode==='ref'?'o vardiyada <b>ekipte en geç biten kişinin</b> son kaydı ile kişinin son kaydı arasındaki süre':'vardiya bitişi − son kayıt')+' − <b>'+paDvEarly+' dk</b> pay (son topun kaydı + toparlanma). Negatifse 0 sayılır.'+(paDvMode==='ref'?' Ekibin ortak kapanış payı (herkesin vardiya bitiminden önce kayıt kesmesi) otomatik düşer; kalan süre kişiye özgüdür. Örnek: ekipte son kayıt 23:21, kişinin son kaydı 22:10 → 71 dk − pay.':'')+'</li>'
         +'<li><b>Duraksama ve fazla mola</b>: aynı partinin iki topu arasında <b>'+(D.gapMin||20)+' dk</b>\'dan fazla geçerse <b>parti içi duraksama</b> (sayı ve dk). Ekipte başkası top girerken kişinin tüm kayıtsız süresi (parti geçişi dahil, ekibin de boş olduğu süre çıkarılır) <b>'+paDvMola+' dk</b> mola payını aşarsa aşan kısım <b>fazla mola</b>.</li></ol>'
         +'<b>Toplam kayıp</b> = geç başlama + erken bırakma + fazla mola (dk/vardiya). <b>Devamlılık %</b> = 100 × (1 − toplam kayıp ÷ vardiya süresi). <b>≈ kg</b> = toplam kayıp ÷ 60 × kişinin çalışırken saatlik kg hızı. Parti içi duraksama fazla molanın içinde olabilir, ayrıca toplanmaz.</div>';
     h+='<div class="pa-sts pa-sts4"><div class="pa-st"><div class="pa-st-l">Takım devamlılığı</div><div class="pa-st-v">%'+f0(T.pct)+'</div><div class="pa-st-s">vardiyanın %'+f0(100-T.pct)+'\'i kayıp</div></div>'
@@ -9471,13 +9475,13 @@ function paDvHtml(M){
         const c=paDvSel,A=paDvAgg(by[c]),hv=heavyOf(c),n=A.n,kg=A.m('loss')/60*kpaOf(c);
         h+='<div class="pa-sub">'+esc(c)+' · rakamlarla özet <small>'+n+' vardiya • satıra tekrar tıkla kapat</small></div><ul class="pa-ins">'
             +(hv?'<li style="color:#ffb74d">Ağırlıklı Sarım yaptığı için bu kişide KK kayıt ölçüleri yanıltıcı olabilir; yalnız bilgi.</li>':'')
-            +'<li><b>Geç başlama:</b> '+n+' vardiyanın <b>'+A.nl+'</b>\'inde ilk kayıt vardiya başından '+paDvLate+' dk\'dan sonra geldi'+(A.nl?'; geç kalınan vardiyalarda ortalama <b>'+f0(A.lateSum/A.nl)+' dk</b> fazla':'')+'. Tüm vardiyalara yayınca <b>'+f0(A.m('late'))+' dk/vardiya</b> (takım '+f0(T.m('late'))+').</li>'
-            +'<li><b>Erken bırakma:</b> '+n+' vardiyanın <b>'+A.ne+'</b>\'inde son kayıt vardiya bitişinden '+paDvEarly+' dk\'dan önce geldi'+(A.ne?'; bu vardiyalarda ortalama <b>'+f0(A.earlySum/A.ne)+' dk</b> fazla':'')+'. Ortalama <b>'+f0(A.m('early'))+' dk/vardiya</b> (takım '+f0(T.m('early'))+').</li>'
+            +'<li><b>Geç başlama:</b> '+n+' vardiyanın <b>'+A.nl+'</b>\'inde ilk kayıt '+(paDvMode==='ref'?'o vardiyada en erken başlayandan':'vardiya başından')+' '+paDvLate+' dk\'dan sonra geldi'+(A.nl?'; geç kalınan vardiyalarda ortalama <b>'+f0(A.lateSum/A.nl)+' dk</b> fazla':'')+'. Tüm vardiyalara yayınca <b>'+f0(A.m('late'))+' dk/vardiya</b> (takım '+f0(T.m('late'))+').</li>'
+            +'<li><b>Erken bırakma:</b> '+n+' vardiyanın <b>'+A.ne+'</b>\'inde son kayıt '+(paDvMode==='ref'?'o vardiyada en geç biten kişiden':'vardiya bitişinden')+' '+paDvEarly+' dk\'dan önce geldi'+(A.ne?'; bu vardiyalarda ortalama <b>'+f0(A.earlySum/A.ne)+' dk</b> fazla':'')+'. Ortalama <b>'+f0(A.m('early'))+' dk/vardiya</b> (takım '+f0(T.m('early'))+').</li>'
             +'<li><b>Parti içi duraksama:</b> aynı partinin iki topu arasında '+(D.gapMin||20)+' dk\'yı aşan ara vardiya başına <b>'+(A.pc/n).toLocaleString('tr-TR',{maximumFractionDigits:1})+' kez</b>, toplam <b>'+f0(A.m('pd'))+' dk</b> (takım '+f0(T.m('pd'))+' dk).</li>'
             +'<li><b>Fazla mola:</b> ekipte iş sürerken kayıtsız süre vardiya başına <b>'+f0(A.m('wg'))+' dk</b>; '+paDvMola+' dk mola payı aşılınca fazla mola <b>'+f0(A.m('fm'))+' dk/vardiya</b> ('+A.nf+'/'+n+' vardiyada, takım '+f0(T.m('fm'))+').</li>'
             +'<li><b>Toplam:</b> <b>'+f0(A.m('loss'))+' dk/vardiya</b> = vardiyanın <b>%'+f0(100-A.pct)+'</b>\'i; devamlılık <b>%'+f0(A.pct)+'</b>'+(hv?'':' ≈ <b>'+f0(kg)+' kg/vardiya</b> (kendi hızıyla)')+'.</li></ul>';
     }
-    return h+'<div class="pa-note">Kaynak: ERP KK top kayıtları ve parti no; vardiya blokları 08–16 / 16–24 / 00–08. Paylar ve gerçek vardiya bitişi yukarıdan ayarlanır (ör. 16–24 vardiyası fiilen 23:00\'te bitiyorsa 23:00 seçin). Bu ölçüler <b>kayıt saatinden</b> türetilir: kişinin başka bir işte olması ya da kaydı toplu girmesi sonucu etkiler; rakamlar konuşma başlatmak içindir.</div>';
+    return h+'<div class="pa-note">Kaynak: ERP KK top kayıtları ve parti no; vardiya blokları 08–16 / 16–24 / 00–08. Paylar ve erken bırakma ölçütü yukarıdan ayarlanır (varsayılan: günün en geç bitenine göre; 16–24 vardiyasında ekibin tamamı bitişten ~40 dk önce kayıt kestiği için bu ölçüt adildir). Bu ölçüler <b>kayıt saatinden</b> türetilir: kişinin başka bir işte olması ya da kaydı toplu girmesi sonucu etkiler; rakamlar konuşma başlatmak içindir.</div>';
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-dv-how{background:rgba(255,255,255,.05);border-left:4px solid #5598e7;border-radius:8px;padding:8px 12px;margin:6px 0 8px;font-size:12.5px;line-height:1.5}.pa-dv-how ol{margin:4px 0 6px 18px;padding:0}.pa-dv td,.pa-dv th{text-align:right}.pa-dv td:first-child,.pa-dv th:first-child{text-align:left}.pa-dv tbody tr{cursor:pointer}.pa-dv tbody tr:hover{background:rgba(255,255,255,.06)}.pa-dv tr.on{background:rgba(57,135,229,.22)}.pa-dv td small{opacity:.65}';document.head.appendChild(st)})();
 // ── 📊 Personel karşılaştırma grafikleri: her ölçü için ayrı çubuk grafik (kişiler iyiden zayıfa), takım ortalaması çizgisi
@@ -9516,7 +9520,7 @@ function paCmpHtml(M){
         ['Üretim','vardiya başına kg',c=>S[c].kgv,T.kgv,'kg',1,0],
         ['Çalışma hızı','çalıştığı sürede kg / saat',c=>S[c].kpa,T.kpa,'kg/sa',1,1],
         ['Süreklilik','vardiyada kayıt bırakmadığı süre, %',c=>100-S[c].idle,100-T.idle,'%',1,1],
-        ['Vardiya kapsamı','ilk–son kayıt arası, vardiyanın %',c=>paTopCov(by[c]),paTopCov(teamRows),'%',1,1],
+        ['Vardiya kapsamı',paDvMode==='ref'?'ekibin çalışma penceresinin %':'ilk–son kayıt arası, vardiyanın %',c=>paTopCov(by[c]),paTopCov(teamRows),'%',1,1],
         ['İş varken kayıtsız','ekipte iş sürerken kendi boşluğu, dk / vardiya',c=>S[c].wg,T.wg,'dk',-1,1],
         ['Erken bırakma','payı aşan, dk / vardiya',c=>A[c].m('early'),TA.m('early'),'dk',-1,1],
         ['Geç başlama','payı aşan, dk / vardiya',c=>A[c].m('late'),TA.m('late'),'dk',-1,1]

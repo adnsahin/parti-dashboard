@@ -236,7 +236,11 @@ SR_HEAVY = 0.4   # Sarim kg payi bu orani asarsa KK sureklilik / kapsam olculeri
 
 
 def cov_of(rows):
-    return sum(max(0, 480 - r["f"] - r["l"]) / 480.0 * 100 for r in rows) / len(rows)
+    """vardiya kapsami: kisinin ilk-son kayit suresi / ekibin o vardiyadaki calisma penceresi (en erken baslayan -> en gec biten)"""
+    def one(r):
+        win = max(60, 480 - DV_REFF.get((r["d"], r["a"]), 0) - DV_REF.get((r["d"], r["a"]), 0)) if DV_REF else 480
+        return min(100.0, max(0, 480 - r["f"] - r["l"]) / win * 100)
+    return sum(one(r) for r in rows) / len(rows)
 
 
 def heavy(rows):
@@ -245,6 +249,8 @@ def heavy(rows):
 
 
 DV_LATE, DV_EARLY, DV_MOLA = 30, 30, 60   # geç başlama / erken bırakma payı (dk), mola payı (dk / vardiya)
+DV_REF = {}     # (gun, blok) -> o vardiyada ekipte en gec biten kisinin vardiya bitisine kalan dk (erken birakma bu degere gore olculur)
+DV_REFF = {}    # (gun, blok) -> o vardiyada ekipte en erken baslayan kisinin ilk kayit dk'si (gec baslama bu degere gore olculur)
 DV_END = {8: 0, 16: 0, 0: 0}                # vardiyanın gerçek bitişi bloktan kaç dk önce (ör. 16-24 fiilen 23:00'te bitiyorsa {16: 60})
 
 
@@ -252,8 +258,8 @@ def dv(rows):
     n = len(rows)
     A = {"n": n, "late": 0, "early": 0, "fm": 0, "pd": 0, "pc": 0, "wg": 0, "len": 0, "nl": 0, "ne": 0, "nf": 0}
     for r in rows:
-        off = DV_END.get(r["a"], 0)
-        la, ea = max(0, r["f"] - DV_LATE), max(0, r["l"] - off - DV_EARLY)
+        off = DV_REF.get((r["d"], r["a"]), 0) if DV_REF else DV_END.get(r["a"], 0)
+        la, ea = max(0, r["f"] - (DV_REFF.get((r["d"], r["a"]), 0) if DV_REFF else 0) - DV_LATE), max(0, r["l"] - off - DV_EARLY)
         wg = r.get("wg", 0)
         fm = max(0, wg - DV_MOLA)
         A["late"] += la
@@ -262,7 +268,7 @@ def dv(rows):
         A["pd"] += r.get("pd", 0)
         A["pc"] += r.get("pc", 0)
         A["wg"] += wg
-        A["len"] += 480 - off
+        A["len"] += 480 - (0 if DV_REF else off)
         A["nl"] += la > 0
         A["ne"] += ea > 0
         A["nf"] += fm > 0
@@ -273,6 +279,7 @@ def dv(rows):
 
 def meters(rows, T, tcov):
     s = stats(rows)
+    s["_A"] = dv(rows)
     hv = heavy(rows)
     cov = cov_of(rows)
     wgok = s["haswg"] and T["haswg"]
@@ -280,7 +287,7 @@ def meters(rows, T, tcov):
         ("Üretim", "vardiya başına kg", s["kgv"] / T["kgv"], "%d kg" % s["kgv"], "takım %d" % T["kgv"], False, 0),
         ("Çalışma hızı", "çalıştığı sürede kg/saat", s["kpa"] / T["kpa"], "%d kg/sa" % s["kpa"], "takım %d" % T["kpa"], hv, 0),
         ("Süreklilik", "vardiyada kayıt bırakmadığı süre", (100 - s["idle"]) / (100 - T["idle"]), "%%%d çalışma" % (100 - s["idle"]), "takım %%%d" % (100 - T["idle"]), hv, 0),
-        ("Vardiya kapsamı", "vardiyanın ilk–son kayıt arası", cov / max(1, tcov), "%%%d" % cov, "takım %%%d" % tcov, hv, cov - tcov),
+        ("Vardiya kapsamı", "ekibin çalışma penceresinin yüzdesi" if DV_REF else "vardiyanın ilk–son kayıt arası", cov / max(1, tcov), "%%%d" % cov, "takım %%%d" % tcov, hv, cov - tcov),
     ]
     if wgok:
         M.append(("İş varken kayıtsız", "ekipte kayıt sürerken kendi boşluğu", (T["wg"] + 5.0) / (s["wg"] + 5.0), "%d dk/vardiya" % s["wg"], "takım %d" % T["wg"], hv, 0))
@@ -309,7 +316,8 @@ def message(s, M, hv):
     if M[1][2] < 0.9:
         out.append("çalışırken hız takımın altında")
     if M[3][6] < -5:
-        out.append("vardiya sonundan erken (%d dk) / geç başlıyor (%d dk)" % (s["early"], s["late"]))
+        A = s["_A"]
+        out.append("ekibin en geç biten kişisinden ortalama %d dk erken bırakıyor / en erken başlayandan %d dk sonra başlıyor (paylar düşülmüş)" % (A["early"] / A["n"], A["late"] / A["n"]))
     if not out:
         return "Takım ortalamasında seyrediyor."
     t = "; ".join(out)
@@ -322,18 +330,19 @@ def feedback(s, T):
         good.append("Çalıştığı sürede hızı takım ortalamasının üstünde (%d kg/sa, takım %d)." % (s["kpa"], T["kpa"]))
     if s["idle"] <= T["idle"] - 5:
         good.append("Kayıt aralarındaki boşluk payı takımdan düşük (%%%d, takım %%%d)." % (s["idle"], T["idle"]))
-    if s["ne"] == 0:
-        good.append("Hiçbir vardiyada erken bırakma görülmedi.")
+    A = s["_A"]
+    if A["ne"] == 0:
+        good.append("Hiçbir vardiyada ekibin en geç biten kişisinden erken bırakmadı.")
     if s["kgv"] >= T["kgv"] * 1.1:
         good.append("Vardiya başına üretimi takım ortalamasının üstünde (%d kg, takım %d)." % (s["kgv"], T["kgv"]))
     if s["idle"] >= T["idle"] + 5:
         imp.append("Kayıt aralarında %%%d boşluk var (takım %%%d); bir kısmı iş yokluğu / mola olabilir." % (s["idle"], T["idle"]))
     if s["kpa"] <= T["kpa"] * 0.9:
         imp.append("Çalışırken hız %d kg/sa, takım %d: top başına süre / küçük top yapısı gözden geçirilebilir." % (s["kpa"], T["kpa"]))
-    if s["ne"] >= max(3, s["n"] * 0.4):
-        imp.append("%d vardiyanın %d'inde son kayıt vardiya bitiminden %d dk'dan fazla önce (ortalama %d dk)." % (s["n"], s["ne"], EARLY_MIN, s["early"]))
-    if s["nl"] >= max(3, s["n"] * 0.4):
-        imp.append("%d vardiyanın %d'inde ilk kayıt vardiya başından %d dk'dan sonra." % (s["n"], s["nl"], LATE_MIN))
+    if A["ne"] >= max(3, s["n"] * 0.4):
+        imp.append("%d vardiyanın %d'inde son kayıt o vardiyada en geç biten kişiden %d dk'dan fazla önce (bu vardiyalarda ortalama %d dk fazla)." % (s["n"], A["ne"], DV_EARLY, A["early"] / max(1, A["ne"])))
+    if A["nl"] >= max(3, s["n"] * 0.4):
+        imp.append("%d vardiyanın %d'inde ilk kayıt o vardiyada en erken başlayandan %d dk'dan sonra." % (s["n"], A["nl"], DV_LATE))
     return good or ["Belirgin bir üstünlük çıkmadı; değerler takım ortalamasına yakın."], imp or ["Belirgin bir iyileştirme noktası çıkmadı."]
 
 
@@ -413,8 +422,8 @@ def draw_card(name, code, rows, T, tcov, period, prev=None):
         d.text((50, y), "Üretim devamlılığı: %%%d" % A["pct"] + ("  (takım %%%d)" % TD["pct"] if TD else ""), fill=(31, 56, 100), font=font(30, True))
         y += 42
         lines = [
-            "Geç başlama: %d vardiyanın %d'inde ilk kayıt %d dk'dan sonra geldi → %d dk/vardiya%s" % (n, A["nl"], DV_LATE, A["late"] / n, " (takım %d)" % (TD["late"] / TD["n"]) if TD else ""),
-            "Erken bırakma: %d vardiyanın %d'inde son kayıt bitişten %d dk'dan önce → %d dk/vardiya%s" % (n, A["ne"], DV_EARLY, A["early"] / n, " (takım %d)" % (TD["early"] / TD["n"]) if TD else ""),
+            "Geç başlama: %d vardiyanın %d'inde ilk kayıt o vardiyada en erken başlayandan %d dk'dan sonra geldi → %d dk/vardiya%s" % (n, A["nl"], DV_LATE, A["late"] / n, " (takım %d)" % (TD["late"] / TD["n"]) if TD else ""),
+            "Erken bırakma: %d vardiyanın %d'inde son kayıt o vardiyada en geç biten kişiden %d dk'dan önce → %d dk/vardiya%s" % (n, A["ne"], DV_EARLY, A["early"] / n, " (takım %d)" % (TD["early"] / TD["n"]) if TD else ""),
             "Parti içi duraksama: vardiyada %.1f kez, toplam %d dk (aynı partinin iki topu arası > %d dk)" % (A["pc"] / float(n), A["pd"] / n, GAP_MIN),
             "Fazla mola: ekipte iş sürerken %d dk kayıtsız − %d dk mola payı → %d dk/vardiya (%d/%d vardiya)" % (A["wg"] / n, DV_MOLA, A["fm"] / n, A["nf"], n),
             "Toplam kayıp %d dk/vardiya = vardiyanın %%%d'i ≈ %d kg/vardiya (kendi hızıyla)" % (A["loss"] / n, 100 - A["pct"], kg),
@@ -466,6 +475,13 @@ def draw_card(name, code, rows, T, tcov, period, prev=None):
 
 
 def make_cards(path, shifts, codes, min_shifts, tmax, gun):
+    DV_REF.clear()
+    DV_REFF.clear()
+    for r in shifts:
+        if r["kn"] >= 5:
+            k = (r["d"], r["a"])
+            DV_REF[k] = min(DV_REF.get(k, 10 ** 6), r["l"])
+            DV_REFF[k] = min(DV_REFF.get(k, 10 ** 6), r["f"])
     cut = (tmax - timedelta(days=gun)).date().isoformat()
     cut0 = (tmax - timedelta(days=2 * gun)).date().isoformat()
     prevby = defaultdict(list)

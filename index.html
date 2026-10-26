@@ -3910,7 +3910,7 @@ function heatmapMindTreeToolbarHtml(){
     return h+'</div>';
 }
 function heatmapMindOutRowHtml(){
-    return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
+    return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label><label class="tmap-white" title="Renkleri gri tona çevirir: yazıcıdan siyah-beyaz çıktı için (PNG / PDF / Yazdır)"><input type="checkbox"'+(tmapBW?' checked':'')+' onchange="tmapSetBW(this.checked)"> ⚫⚪ Siyah-beyaz (yazıcı)</label>'
         +'<button type="button" class="view-action-btn" onclick="kkDailyOpen()" title="Kalite Kontrol günlük durum: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4" style="background:#E65100">📄 KK günlük</button><button type="button" class="view-action-btn" onclick="srDailyOpen()" title="Sarım1 ve Sarım2 günlük durum: bekleyenler ve bugün geçenler — tek A4" style="background:#7E57C2">🧵 Sarım günlük</button><button type="button" class="view-action-btn" onclick="shiftAutoSetup()" title="Vardiya sonu otomatik çıktı: 16:00 ve 24:00\'te KK + Sarım günlük PDF → indir + telefona" style="background:#455A64">🕓 Vardiya sonu</button><button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="heatmapMindExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="heatmapMindExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="heatmapMindExport(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="heatmapMindExport(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button>'
         +'<small class="tmap-out-view">'+(heatmapMindVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
@@ -3926,7 +3926,7 @@ function heatmapMindExportTitle(){return 'Isı Haritası — '+heatmapMindLevelK
 function heatmapMindExport(mode){
     const title=heatmapMindExportTitle(),sc=heatmapMindStageCounts();
     const th=hmMindThemeOf(heatmapMindTheme);
-    return mapExportImage(mode,{title,file:'isi_haritasi_mindmap',bg:th.bg,build:(white,bg)=>mapBuildExportEl(white,title,(heatmapMetric==='count'?'Adete':'Kg\'a')+' göre • her dalda ilk '+heatmapTopN+(sc.filtered?' • '+sc.shown+'/'+sc.total+' '+sc.label+' seçili':''),heatmapMindTreeHtml(true,white?(th.k==='color'?'color':'light'):th.k),white?null:{bg,light:!!th.light})});
+    return mapExportImage(mode,{title,file:'isi_haritasi_mindmap',bg:th.bg,build:(white,bg)=>mapBuildExportEl(white,title,(heatmapMetric==='count'?'Adete':'Kg\'a')+' göre • her dalda ilk '+heatmapTopN+(sc.filtered?' • '+sc.shown+'/'+sc.total+' '+sc.label+' seçili':''),heatmapMindTreeHtml(true,white?(th.k==='color'&&!tmapBW?'color':'light'):th.k),white?null:{bg,light:!!th.light})});
 }
 /* ══ 📄 A4 mindmap: ısı haritası ağacını tek A4 sayfaya sığan, okunur yazılı, akıllı yerleşimle çizer ══
    • Kök varsayılan "Kalite Kontrol" (1. seviye aşama ise); ağacın seviyeleri, metrik, Top N, 🎯 seçim ve gizlenenler aynen
@@ -10102,7 +10102,7 @@ function renderTakipMapPanel(){
     const ctx=tmapCtx(),scroll=p.scrollTop;
     let h='<button class="panel-close" onclick="document.getElementById(&quot;takipMapPanel&quot;).style.display=&quot;none&quot;">×</button><h2 style="color:#FFD700">🧭 Takip Haritası</h2>';
     h+='<details class="live-help"><summary>ℹ️ Nasıl çalışır?</summary><div class="panel-summary">Ana dal ve alt dalları sen tanımlarsın: her dal bir kurala (aşamada bekleyenler, bugün gelen/geçenler, acil listesi, tamir) ve/veya elle seçtiğin kartlara göre dolar; seçtiğin kartlar dalın altında kendi dalları olarak görünür. Haritada bir dala tıklayınca yanında araçlar çıkar: ✏️ adını orada değiştir, ➕ parti kartı (İş yükü / Üretim gibi kural dallarında o dalın partileri işaret kutularıyla gelir; işaretlediklerin haritada kart olarak görünür), 🌿 alt dal, 📝 not dalı, ⚙️ kural/aşama, 🗑️ sil (iki kez bas). Not dalına tıklayınca yerinde düzenlenir; 🎤 sesle yazma güvenli adreste (https ya da localhost) çalışır. Üst dal, alt dallarının toplamını gösterir. Alt dallara da "🌿 Alt dal ekle" ile alt dal açabilirsin ('+TMAP_MAX_DEPTH+' seviyeye kadar). Bir dala tıklayınca partiler altta listelenir. Tanımlar bu cihazda saklanır; dışa aktarıp başka cihaza yükleyebilirsin.</div></details>';
-    h+='<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label>'
+    h+='<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label><label class="tmap-white" title="Renkleri gri tona çevirir: yazıcıdan siyah-beyaz çıktı için (PNG / PDF / Yazdır)"><input type="checkbox"'+(tmapBW?' checked':'')+' onchange="tmapSetBW(this.checked)"> ⚫⚪ Siyah-beyaz (yazıcı)</label>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="tmapExportImage(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="tmapExportImage(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="tmapExportImage(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="tmapExportImage(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button><small class="tmap-out-view">'+(tmapVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
     h+='<div data-fs-anchor style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn-all-export" onclick="tmapEdit=!tmapEdit;renderTakipMapPanel()">'+(tmapEdit?'✅ Düzenlemeyi bitir':'✏️ Dalları düzenle')+'</button>'
         +'<button type="button" class="btn-all-export tmap-tb-toggle'+(tmapFit?' on':'')+'" onclick="tmapSetFit(!tmapFit)" title="Haritanın tamamı ekrana sığar; sürükleyip kaydır, tekerlek / iki parmakla büyüt">⤢ Ekrana sığdır'+(tmapFit?' <b class="mapv-lbl">%'+Math.round(TMAP_V.pz.s*100)+'</b>':'')+'</button>'
@@ -10226,10 +10226,12 @@ function tmapShowCards(){
 }
 /* ── PNG / PDF / WhatsApp / Yazdır: yalnızca harita (butonlar, liste, ekleme kutusu olmadan) ── */
 let tmapWhite=(()=>{try{return localStorage.getItem('tmapWhite9')==='1'}catch(e){return false}})();
+let tmapBW=(()=>{try{return localStorage.getItem('tmapBW9')==='1'}catch(e){return false}})();
+function tmapSetBW(on){tmapBW=!!on;try{localStorage.setItem('tmapBW9',tmapBW?'1':'0')}catch(e){}}
 function tmapSetWhite(on){tmapWhite=!!on;try{localStorage.setItem('tmapWhite9',tmapWhite?'1':'0')}catch(e){}}
 // Harita çıktısı (Takip Haritası ve Isı Haritası Mindmap ortak): yalnızca harita, ekranda seçili görünümle (yatay/dikey).
 function mapBuildExportEl(white,title,sub,tree,opt){
-    const wrap=document.createElement('div');wrap.className='tmap-export'+(white?' white':opt&&opt.light?' lightbg':'');if(!white&&opt&&opt.bg)wrap.style.background=opt.bg;
+    const wrap=document.createElement('div');wrap.className='tmap-export'+(white?' white':opt&&opt.light?' lightbg':'')+(white&&tmapBW?' bw':'');if(!white&&opt&&opt.bg)wrap.style.background=opt.bg;
     wrap.innerHTML='<div class="tmap-export-title">'+esc(title)+'</div><div class="tmap-export-sub">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+(sub?' • '+esc(sub):'')+'</div>'+tree;
     const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';
     outer.appendChild(wrap);document.body.appendChild(outer);wrap._exportOuter=outer;
@@ -10238,12 +10240,12 @@ function mapBuildExportEl(white,title,sub,tree,opt){
 function tmapBuildExportEl(white){
     // Çıktı ekranda seçili görünümü ve temayı izler (Yazdır / 'Beyaz zemin' seçiliyse beyaz).
     const ctx=tmapCtx(),e=tmapEdit,s=tmapSel,mn=tmapMapNoteEdit,re=tmapRootEdit,rn=tmapRenaming;tmapEdit=false;tmapSel=null;tmapMapNoteEdit=null;tmapRootEdit=false;tmapRenaming=null;
-    const th=hmMindThemeOf(tmapTheme),tree=tmapTreeHtml(ctx,true,white?(th.k==='color'?'color':'light'):th.k);tmapEdit=e;tmapSel=s;tmapMapNoteEdit=mn;tmapRootEdit=re;tmapRenaming=rn;
+    const th=hmMindThemeOf(tmapTheme),tree=tmapTreeHtml(ctx,true,white?(th.k==='color'&&!tmapBW?'color':'light'):th.k);tmapEdit=e;tmapSel=s;tmapMapNoteEdit=mn;tmapRootEdit=re;tmapRenaming=rn;
     return mapBuildExportEl(white,takipMap.name+' — Takip Haritası','',tree,white?null:{bg:th.bg,light:!!th.light});
 }
 function tmapExportImage(mode){return mapExportImage(mode,{title:takipMap.name+' — Takip Haritası',file:'takip_haritasi',bg:hmMindThemeOf(tmapTheme).bg,build:tmapBuildExportEl})}
 async function mapExportImage(mode,o){
-    const white=!o.noWhite&&(mode==='print'||tmapWhite||!!o.white),bg=white?'#ffffff':(o.bg||'#1a1a2e'),name=o.file+'_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
+    const white=!o.noWhite&&(mode==='print'||tmapWhite||tmapBW||!!o.white),bg=white?'#ffffff':(o.bg||'#1a1a2e'),name=o.file+'_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_');
     // Telefonda gizli çerçeveden yazdırma tüm sayfayı basabiliyor; yazdırma penceresi tıklama anında açılır (açılır pencere engeline takılmasın).
     const printWin=mode==='print'&&matchMedia('(pointer:coarse)').matches?window.open('','_blank'):null;
     if(printWin)printWin.document.write('<p style="font-family:sans-serif">Harita hazırlanıyor…</p>');
@@ -10432,7 +10434,7 @@ function tmapModalAdd(cardId){
         +'.tmap.mono{--line:#8d8d86;background:#fafaf7;color:#2b2b2b;border-radius:10px;padding:10px 8px}.tmap.mono .tmap-node{color:#2b2b2b}.tmap.mono .tmap-node:hover{background:#efefea}'
         +'.tmap.mono .tmap-node .tmap-name{color:#2b2b2b}.tmap.mono .tmap-count{color:#5a5a55}.tmap.mono .hm-caret{color:#333}.tmap.mono .hm-x{color:#888}.tmap.mono .hm-bulk{color:#004D40;border-color:#80CBC4}'
         +'.tmap.mono .hm-dot{background:var(--g)!important;box-shadow:0 0 0 1px #555}.tmap.mono .kkheat-chk{border-color:#222}.tmap.mono .kkheat-chk.on{background:#222;color:#fff}.tmap.mono .tmap-node.hm-leaf.on{background:#e0e0e0}'
-        +'.tmap-export.white .tmap.mono{padding:0}'
+        +'.tmap-export.white .tmap.mono{padding:0}.tmap-export.bw,.tmap-export.bw *{color:#000!important;text-shadow:none!important}.tmap-export.bw .tmap{--line:#000}.tmap-export.bw .tmap-count{color:#000!important}.tmap-export.bw .hm-dot{background:#444!important;box-shadow:0 0 0 1px #000}'
         // Siyah fon, beyaz yazı: yoğunluk gri tonla (açık = çok)
         +'.tmap.mono-dark{--line:#6f6f6f;background:#161616;color:#e6e6e6;border-radius:10px;padding:10px 8px}.tmap.mono-dark .tmap-node{color:#e6e6e6}.tmap.mono-dark .tmap-node:hover{background:#262626}'
         +'.tmap.mono-dark .tmap-node .tmap-name{color:#e6e6e6}.tmap.mono-dark .tmap-count{color:#a8a8a8}.tmap.mono-dark .hm-caret{color:#ccc}.tmap.mono-dark .hm-x{color:#888}.tmap.mono-dark .hm-bulk{color:#B2DFDB;border-color:#4DB6AC}'

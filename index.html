@@ -3760,6 +3760,31 @@ const mapThemeOk=v=>HM_MIND_THEMES.some(x=>x.k===v),mapFontOk=v=>v==='normal'||v
    sığdırılır; büyütüp kaydırınca görünüm korunur ve dokunulan dal parmağın altında kalır. ⤢ yeniden tamamını sığdırır.
    Kayıt: {panel, fit():bool, setFit(on,quiet), render(), fullBar():html} ── */
 const MAPV={};
+// Normal (kaydırmalı) görünümde büyütme / küçültme: harita yazısı ve kutuları birlikte ölçeklenir; her harita kendi seviyesini hatırlar.
+const MAPZ_PANEL={heat:'heatmapMindmapPanel',tmap:'takipMapPanel'};
+let mapZoomV={heat:+mapLoadPref('mapZoom9heat',v=>v>=0.4&&v<=3,'1'),tmap:+mapLoadPref('mapZoom9tmap',v=>v>=0.4&&v<=3,'1')};
+function mapZoomStyle(key,exp,fit){const z=mapZoomV[key];return !exp&&!fit&&z&&Math.abs(z-1)>0.001?' style="zoom:'+z+'"':''}
+function mapZoomCtlHtml(key){
+    const q='&quot;'+key+'&quot;';
+    return '<span class="mapz-ctl" title="Haritayı büyüt / küçült"><button type="button" onclick="mapZoomStep('+q+',1/1.2)" title="Küçült">🔍－</button><button type="button" class="mapz-lbl" onclick="mapZoomSet('+q+',1)" title="Sıfırla (%100)">%'+Math.round((mapZoomV[key]||1)*100)+'</button><button type="button" onclick="mapZoomStep('+q+',1.2)" title="Büyüt">🔍＋</button></span>';
+}
+function mapZoomSet(key,z){
+    z=Math.min(3,Math.max(0.4,z));mapZoomV[key]=z;mapSavePref('mapZoom9'+key,String(z));
+    const p=document.getElementById(MAPZ_PANEL[key]);if(!p)return;
+    p.querySelectorAll('.tmap:not(.fit)').forEach(t=>{t.style.zoom=Math.abs(z-1)>0.001?z:''});
+    p.querySelectorAll('.mapz-lbl').forEach(l=>{l.textContent='%'+Math.round(z*100)});
+}
+// A4 mindmap önizlemeleri (A4 düzeni penceresi ve Seçilenler / Bugün A4 görünümü): sayfa büyür, çevresinde kaydırılır.
+let a4Zoom=+mapLoadPref('a4Zoom9',v=>v>=0.5&&v<=4,'1');
+function a4ZoomCtlHtml(){return '<span class="mapz-ctl" title="Önizlemeyi büyüt / küçült (yalnız ekranda; PDF / PNG / yazdırma değişmez)"><button type="button" onclick="a4ZoomStep(1/1.25)" title="Küçült">🔍－</button><button type="button" class="a4z-lbl" onclick="a4ZoomSet(1)" title="Sıfırla (%100)">%'+Math.round(a4Zoom*100)+'</button><button type="button" onclick="a4ZoomStep(1.25)" title="Büyüt">🔍＋</button></span>'}
+function a4ZoomAttr(){return Math.abs(a4Zoom-1)>0.001?' style="--a4z:'+a4Zoom+'"':''}
+function a4ZoomSet(z){
+    a4Zoom=Math.min(4,Math.max(0.5,z));mapSavePref('a4Zoom9',String(a4Zoom));
+    document.querySelectorAll('.hm-a4-prev,.lb-mind-area').forEach(e=>{e.style.setProperty('--a4z',a4Zoom)});
+    document.querySelectorAll('.a4z-lbl').forEach(l=>{l.textContent='%'+Math.round(a4Zoom*100)});
+}
+function a4ZoomStep(f){a4ZoomSet(Math.round(a4Zoom*f*100)/100)}
+function mapZoomStep(key,f){mapZoomSet(key,Math.round((mapZoomV[key]||1)*f*100)/100)}
 function mapvReg(key,o){return MAPV[key]=Object.assign({key,pz:{s:1,x:0,y:0,auto:true},anchor:null,ro:null,full:false},o)}
 function mapvEls(V){const p=document.getElementById(V.panel),vp=p&&p.querySelector('.hm-fit-wrap.on'),tm=vp&&vp.querySelector('.tmap');return{p,vp,tm}}
 function mapvCtlHtml(key){
@@ -3900,7 +3925,7 @@ function heatmapMindTreeToolbarHtml(){
     let h='<div class="kkmind-toolbar" data-fs-anchor><button type="button" onclick="heatmapMindCollapseAll()">⊟ Tümünü Kapat</button><span class="lbl">⊞ Aç:</span>'
         +levels.slice(1).map((k,i)=>'<button type="button" onclick="heatmapMindExpandTo('+(i+1)+')" title="'+esc((HEATMAP_DIMENSIONS[k]||{}).label||'')+' seviyesine kadar tüm dalları aç">'+esc((HEATMAP_DIMENSIONS[k]||{}).label||(i+2)+'. seviye')+(i===levels.length-2&&i>0?' (tümü)':'')+'</button>').join('')
         +'<button type="button" class="hm-tb-toggle'+(heatmapMindFit?' on':'')+'" onclick="setHeatmapMindFit(!heatmapMindFit)" title="Harita büyüdükçe ekrana sığacak şekilde küçülür">⤢ Ekrana sığdır'+(heatmapMindFit?' <b class="mapv-lbl">%'+Math.round(hmPZ.s*100)+'</b>':'')+'</button>'
-        +'<button type="button" class="hm-tb-toggle hm-full-btn" onclick="heatmapMindSetFull(true)" title="Yalnızca harita, tüm ekran (Esc ile çık)">⛶ Tam ekran harita</button>'
+        +(heatmapMindFit?'':mapZoomCtlHtml('heat'))+'<button type="button" class="hm-tb-toggle hm-full-btn" onclick="heatmapMindSetFull(true)" title="Yalnızca harita, tüm ekran (Esc ile çık)">⛶ Tam ekran harita</button>'
         +hmMindThemeSelectHtml()+hmMindFontSelectHtml()
         +'<button type="button" onclick="setHeatmapMindVertical(!heatmapMindVertical)" title="Harita panele sığmazsa dikey görünüm hepsini gösterir">'+(heatmapMindVertical?'↔ Yatay görünüm':'↕ Dikey görünüm')+'</button>';
     if(heatmapMindHidden.size){
@@ -3919,7 +3944,7 @@ function heatmapMindTreeHtml(exp,theme){
     const all=heatmapMindCards();
     if(!exp){heatmapMindNodeCache=new Map();heatmapMindHideKeys=[]}
     const levels=heatmapMindLevelKeys(),rootLabel=(HEATMAP_DIMENSIONS[levels[0]]||HEATMAP_DIMENSIONS.asama).label,sc=heatmapMindStageCounts();
-    return (exp?'':'<div class="hm-fit-wrap'+(heatmapMindFit?' on t-'+heatmapMindTheme:'')+'">'+(heatmapMindFit?hmPZCtlHtml():''))+'<div class="tmap hm-map'+(heatmapMindVertical?' vertical':'')+hmMindThemeOf(theme||heatmapMindTheme).cls+hmMindFontCls()+(heatmapMindFit&&!exp?' fit':'')+'"><div class="tmap-root"><div class="tmap-node lvl0"><span class="tmap-name">🌡️ '+esc(rootLabel)+'</span><span class="tmap-count">'+heatmapMindTotalsText(all.length,all.reduce((s,k)=>s+num(k.kilo),0))+(sc.filtered?' • '+sc.shown+'/'+sc.total+' seçili':'')+'</span></div></div>'
+    return (exp?'':'<div class="hm-fit-wrap'+(heatmapMindFit?' on t-'+heatmapMindTheme:'')+'">'+(heatmapMindFit?hmPZCtlHtml():''))+'<div class="tmap hm-map'+(heatmapMindVertical?' vertical':'')+hmMindThemeOf(theme||heatmapMindTheme).cls+hmMindFontCls()+(heatmapMindFit&&!exp?' fit':'')+'"'+mapZoomStyle('heat',exp,heatmapMindFit&&!exp)+'><div class="tmap-root"><div class="tmap-node lvl0"><span class="tmap-name">🌡️ '+esc(rootLabel)+'</span><span class="tmap-count">'+heatmapMindTotalsText(all.length,all.reduce((s,k)=>s+num(k.kilo),0))+(sc.filtered?' • '+sc.shown+'/'+sc.total+' seçili':'')+'</span></div></div>'
         +'<div class="tmap-branches">'+heatmapMindRenderBranches(all,0,'',levels,'',exp)+'</div></div>'+(exp?'':'</div>');
 }
 function heatmapMindExportTitle(){return 'Isı Haritası — '+heatmapMindLevelKeys().map(k=>(HEATMAP_DIMENSIONS[k]||{}).label).filter(Boolean).join(' › ')}
@@ -4305,6 +4330,7 @@ function hmA4Render(){
         +'<label>Değer'+sel('val',[['both','Parti + kg'],['kg','Yalnız kg'],['count','Yalnız parti'],['none','Yok']],hmA4.val)+'</label>'
         +'<label>Değer konumu'+sel('vpos',[['auto','Otomatik ('+({below:'altında',mix:'dallarda altında',mixw:'dallarda altında, ad 2 satır'}[P.vp]||'yanında')+')'],['side','Adın yanında'],['below','Adın altında (daha büyük yazı)']],hmA4.vpos||'auto')+'</label>'
         +'<label>Değer yazısı'+sel('vsize',[['same','Adla aynı boy'],['small','Küçük']],hmA4.vsize||'same')+'</label>'
+        +'<label>Önizleme büyütme'+a4ZoomCtlHtml()+'</label>'
         +'<button type="button" class="hm-a4-easy" onclick="hmA4Easy()" title="Tek sayfada en okunaklı: akıllı yerleşim (yazıyı en büyük yapan düzen, sayfa yönü, sütunlar, değer konumu), kalın ve siyah yazı, sıkı aralık">📖 Okunaklı baskı (tek sayfa)</button>'
         +'<label>Yazı boyutu'+sel('font',[['fit','Tek sayfa (en büyük yazı)'],['8','En az 8 pt (gerekirse çok sayfa)'],['9','En az 9 pt (gerekirse çok sayfa)'],['10','En az 10 pt (gerekirse çok sayfa)'],['11','En az 11 pt (gerekirse çok sayfa)'],['12','En az 12 pt (gerekirse çok sayfa)'],['14','En az 14 pt (gerekirse çok sayfa)'],['16','En az 16 pt (gerekirse çok sayfa)'],['18','En az 18 pt (gerekirse çok sayfa)']],String(hmA4.font||'fit'))+'</label>'
         +'<label>Yazı kalınlığı'+sel('weight',[['bold','Kalın'],['normal','Normal']],hmA4.weight||'bold')+'</label>'
@@ -4315,7 +4341,7 @@ function hmA4Render(){
         +'<label>Renk'+sel('color',[['1','Renkli'],['0','Siyah-beyaz']],hmA4.color?'1':'0')+'</label>'
         +'<div class="hm-a4-info '+ptc+'">En küçük yazı: <b>'+P.pt.toFixed(1)+' pt</b> '+(ptc==='ok'?'✅ rahat okunur':ptc==='mid'?'🙂 okunur':'⚠️ küçük')+'<br><small>'+P.nodes+' dal • '+(P.ori==='land'?'yatay':'dikey')+' A4'+(P.pages.length>1?' • <b>'+P.pages.length+' sayfa</b>':'')+'</small>'+(P.note?'<br><small>ℹ️ '+esc(P.note)+'</small>':'')+'</div>'
         +'<div class="hm-a4-btns"><button type="button" class="pdf" onclick="hmA4Export(&quot;pdf&quot;)">📄 PDF indir</button><button type="button" onclick="hmA4Export(&quot;png&quot;)">🖼️ PNG indir</button><button type="button" onclick="hmA4Export(&quot;print&quot;)">🖨️ Yazdır</button><button type="button" class="x" onclick="hmA4Close()">Kapat</button></div></div>';
-    m.innerHTML='<div class="hm-a4-box">'+opt+'<div class="hm-a4-prev'+(P.pages.length>1?' multi':'')+'">'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
+    m.innerHTML='<div class="hm-a4-box">'+opt+'<div class="hm-a4-prev'+(P.pages.length>1?' multi':'')+'"'+a4ZoomAttr()+'>'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
 }
 function hmA4Canvas(P){
     return new Promise((res,rej)=>{
@@ -4368,7 +4394,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.ge
     +'.hm-a4-btns{display:flex;flex-direction:column;gap:5px;margin-top:auto}.hm-a4-btns button{border:0;border-radius:8px;padding:8px;font-weight:800;font-size:13px;cursor:pointer;background:#1565C0;color:#fff}.hm-a4-btns button.pdf{background:#C62828}.hm-a4-btns button.x{background:#455A64}'
     +'.hm-a4-prev{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;background:#3a3a4a;border-radius:8px;padding:10px;container-type:size}'
     +'.hm-a4-page{background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.6);flex:0 0 auto}.hm-a4-page svg{display:block;width:100%;height:100%}'
-    +'.hm-a4-page.land{width:min(100cqw,100cqh*1.4142);height:min(100cqh,100cqw/1.4142)}.hm-a4-page.port{height:min(100cqh,100cqw*1.4142);width:min(100cqw,100cqh/1.4142)}'
+    +'.hm-a4-page{margin:auto}.hm-a4-prev,.lb-mind-area{overflow:auto;align-items:flex-start;justify-content:flex-start}.hm-a4-page.land{width:calc(min(100cqw,100cqh*1.4142)*var(--a4z,1));height:calc(min(100cqh,100cqw/1.4142)*var(--a4z,1))}.hm-a4-page.port{height:calc(min(100cqh,100cqw*1.4142)*var(--a4z,1));width:calc(min(100cqw,100cqh/1.4142)*var(--a4z,1))}'
     +'.lbsel-bulk.mini{padding:0 6px;font-size:11px;line-height:17px;border-radius:9px;margin-left:5px;vertical-align:middle;white-space:nowrap;font-family:inherit}.tmap-export .lbsel-bulk{display:none}.hm-a4-lv{display:flex;flex-wrap:wrap;gap:3px}'
     +'.lb-mindw{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:5px;padding:4px 8px 6px}.lb-mind-tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#fff}'
     +'.lb-mind-tb select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:2px 4px;font-size:12px;max-width:42vw}.lb-mind-tb button{background:#6A1B9A;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:800;cursor:pointer}'
@@ -5652,8 +5678,8 @@ function lbMindHtml(K,cards){
         +'<select title="Sayfa yönü: Otomatik = yazının en okunur olduğu yön" onchange="lbMindOri(this.value)">'+[['auto','Otomatik ('+(P.ori==='land'?'▭ yatay':'▯ dikey')+')'],['land','▭ Yatay A4'],['port','▯ Dikey A4']].map(([v,l])=>'<option value="'+v+'"'+(hmA4.ori===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
         +'<span class="lb-mind-info '+ptc+'" title="'+esc(P.nodes+' dal'+(P.note?' • '+P.note:''))+'">en küçük yazı <b>'+P.pt.toFixed(1)+' pt</b>'+(P.pages.length>1?' • '+P.pages.length+' sayfa':'')+(P.note?' • ℹ️':'')+'</span>'
         +'<select title="Yazı boyutu: Sığdır = tek sayfa; En az N pt = yazı küçülmez, gerekirse sayfalara bölünür" onchange="lbMindFont(this.value)">'+[['fit','Yazı: sığdır'],['9','Yazı en az 9 pt'],['10','Yazı en az 10 pt'],['12','Yazı en az 12 pt'],['14','Yazı en az 14 pt']].map(([v,l])=>'<option value="'+v+'"'+(String(hmA4.font||'fit')===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'
-        +'<button type="button" onclick="lbMindA4(&quot;'+K+'&quot;)" title="A4 önizleme: yerleşim, derinlik, renk… → PDF / PNG / yazdır">📄 A4 / PDF</button>'+(tv?lbTvBtns():'')+'</div>'
-        +'<div class="lb-mind-area'+(P.pages.length>1?' multi':'')+'">'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
+        +'<button type="button" onclick="lbMindA4(&quot;'+K+'&quot;)" title="A4 önizleme: yerleşim, derinlik, renk… → PDF / PNG / yazdır">📄 A4 / PDF</button>'+a4ZoomCtlHtml()+(tv?lbTvBtns():'')+'</div>'
+        +'<div class="lb-mind-area'+(P.pages.length>1?' multi':'')+'"'+a4ZoomAttr()+'>'+P.pages.map(pg=>'<div class="hm-a4-page '+pg.ori+'">'+hmA4Svg(pg)+'</div>').join('')+'</div></div>';
 }
 function lbSelMindHtml(cards){return lbMindHtml('sel',cards)}
 // ── 📄 KK günlük tablosu (tek A4): ortada Kalite Kontrol, solda ⏳ KK'da bekleyenler (son KK; firma › parti, en uzun bekleyen
@@ -9894,7 +9920,7 @@ function tmapSubtreeHtml(n,ctx,level,color){
 }
 function tmapTreeHtml(ctx,exp,theme){
     const fit=tmapFit&&!exp;
-    let h=(fit?'<div class="hm-fit-wrap on t-'+tmapTheme+'">'+mapvCtlHtml('tmap'):'')+'<div class="tmap'+(tmapVertical?' vertical':'')+hmMindThemeOf(theme||tmapTheme).cls+mapFontCls(tmapFont)+(fit?' fit':'')+'"><div class="tmap-root">'+(tmapRootEdit
+    let h=(fit?'<div class="hm-fit-wrap on t-'+tmapTheme+'">'+mapvCtlHtml('tmap'):'')+'<div class="tmap'+(tmapVertical?' vertical':'')+hmMindThemeOf(theme||tmapTheme).cls+mapFontCls(tmapFont)+(fit?' fit':'')+'"'+mapZoomStyle('tmap',exp,fit)+'><div class="tmap-root">'+(tmapRootEdit
         ?'<div class="tmap-node lvl0 root-edit" onclick="event.stopPropagation()"><input id="tmapRootName" value="'+esc(takipMap.name)+'" onkeydown="if(event.key===&quot;Enter&quot;)tmapRootSave();if(event.key===&quot;Escape&quot;){tmapRootEdit=false;renderTakipMapPanel()}"><button type="button" onclick="tmapRootSave()">💾</button><button type="button" onclick="tmapRootEdit=false;renderTakipMapPanel()">✕</button></div>'
         :'<div class="tmap-node lvl0'+(tmapSel==='root'?' sel':'')+'" data-id="root" onclick="tmapSelect(&quot;root&quot;)"><span class="tmap-name">'+esc(takipMap.name)+'</span><span class="tmap-count">'+tmapTotalsText(tmapRootItems(ctx))+'</span>'
         +(tmapEdit||tmapSel==='root'?'<span class="tmap-tools" onclick="event.stopPropagation()"><button type="button" onclick="tmapRenameRoot()" title="Adını değiştir">✏️</button><button type="button" onclick="tmapAddBranch()" title="Ana dal ekle">🌿</button></span>':'')+'</div>')+'</div><div class="tmap-branches">';
@@ -10105,7 +10131,7 @@ function renderTakipMapPanel(){
     h+='<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label><label class="tmap-white" title="Renkleri gri tona çevirir: yazıcıdan siyah-beyaz çıktı için (PNG / PDF / Yazdır)"><input type="checkbox"'+(tmapBW?' checked':'')+' onchange="tmapSetBW(this.checked)"> ⚫⚪ Siyah-beyaz (yazıcı)</label>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="tmapExportImage(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="tmapExportImage(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="tmapExportImage(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="tmapExportImage(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button><small class="tmap-out-view">'+(tmapVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
     h+='<div data-fs-anchor style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="btn-all-export" onclick="tmapEdit=!tmapEdit;renderTakipMapPanel()">'+(tmapEdit?'✅ Düzenlemeyi bitir':'✏️ Dalları düzenle')+'</button>'
-        +'<button type="button" class="btn-all-export tmap-tb-toggle'+(tmapFit?' on':'')+'" onclick="tmapSetFit(!tmapFit)" title="Haritanın tamamı ekrana sığar; sürükleyip kaydır, tekerlek / iki parmakla büyüt">⤢ Ekrana sığdır'+(tmapFit?' <b class="mapv-lbl">%'+Math.round(TMAP_V.pz.s*100)+'</b>':'')+'</button>'
+        +'<button type="button" class="btn-all-export tmap-tb-toggle'+(tmapFit?' on':'')+'" onclick="tmapSetFit(!tmapFit)" title="Haritanın tamamı ekrana sığar; sürükleyip kaydır, tekerlek / iki parmakla büyüt">⤢ Ekrana sığdır'+(tmapFit?' <b class="mapv-lbl">%'+Math.round(TMAP_V.pz.s*100)+'</b>':'')+'</button>'+(tmapFit?'':mapZoomCtlHtml('tmap'))
         +'<button type="button" class="btn-all-export" onclick="mapvSetFull(&quot;tmap&quot;,true)" title="Yalnızca harita, tüm ekran (Esc ile çık)">⛶ Tam ekran harita</button>'
         +mapThemeSelectHtml(tmapTheme,'tmapSetTheme')+mapFontSelectHtml(tmapFont,'tmapSetFont')
         +'<button type="button" class="btn-all-export tmap-view-toggle" onclick="tmapSetVertical(!tmapVertical)" title="Derin dallarda harita panele sığmazsa dikey görünüm hepsini gösterir">'+(tmapVertical?'↔ Yatay görünüm':'↕ Dikey görünüm')+'</button>'
@@ -10426,6 +10452,7 @@ function tmapModalAdd(cardId){
         +'.hm-tb-select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:700;cursor:pointer;max-width:210px}.hm-full-bar .hm-tb-select{font-size:12px;padding:5px 6px}'
         +'@media(max-width:700px){.hm-full-bar{right:8px;top:54px}}'
         +'.hm-fit-wrap.on .tmap.fit{position:absolute;left:0;top:0;width:max-content;overflow:visible;transform-origin:0 0;will-change:transform}'
+        +'.mapz-ctl{display:inline-flex;gap:3px;align-items:center}.mapz-ctl button{padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.5);background:rgba(128,128,128,.18);color:inherit;cursor:pointer;font-size:12px;font-weight:700}.mapz-ctl .mapz-lbl{min-width:46px}'
         +'.hm-pz-ctl{position:absolute;right:8px;top:8px;z-index:3;display:flex;gap:4px;align-items:center;background:rgba(17,14,46,.88);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:4px;cursor:default}'
         +'.hm-pz-ctl button{width:36px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:#2d2359;color:#fff;font-size:17px;font-weight:800;cursor:pointer;line-height:1}.hm-pz-ctl button:hover{background:#533b88}'
         +'.hm-pz-ctl span{min-width:46px;text-align:center;color:#FFD700;font-weight:800;font-size:12px}'

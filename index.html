@@ -3784,6 +3784,13 @@ function a4ZoomSet(z){
     document.querySelectorAll('.a4z-lbl').forEach(l=>{l.textContent='%'+Math.round(a4Zoom*100)});
 }
 function a4ZoomStep(f){a4ZoomSet(Math.round(a4Zoom*f*100)/100)}
+// Ctrl + tekerlek (ve dokunmatik yüzeyde iki parmak yakınlaştırma): imlecin altındaki nokta yerinde kalacak şekilde büyütür
+document.addEventListener('wheel',e=>{
+    if(!e.ctrlKey)return;const box=e.target.closest&&e.target.closest('.lb-mind-area,.hm-a4-prev');if(!box)return;
+    e.preventDefault();const z0=a4Zoom,r=box.getBoundingClientRect(),cx=e.clientX-r.left+box.scrollLeft,cy=e.clientY-r.top+box.scrollTop;
+    a4ZoomSet(Math.round(z0*Math.exp(-e.deltaY*0.0025)*100)/100);
+    if(a4Zoom!==z0){const k=a4Zoom/z0;box.scrollLeft=cx*k-(e.clientX-r.left);box.scrollTop=cy*k-(e.clientY-r.top)}
+},{passive:false});
 function mapZoomStep(key,f){mapZoomSet(key,Math.round((mapZoomV[key]||1)*f*100)/100)}
 function mapvReg(key,o){return MAPV[key]=Object.assign({key,pz:{s:1,x:0,y:0,auto:true},anchor:null,ro:null,full:false},o)}
 function mapvEls(V){const p=document.getElementById(V.panel),vp=p&&p.querySelector('.hm-fit-wrap.on'),tm=vp&&vp.querySelector('.tmap');return{p,vp,tm}}

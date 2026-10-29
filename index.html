@@ -9433,12 +9433,12 @@ function paTopHtml(M){
     let h='<div class="pa-note" style="margin:0 0 8px"><b>Nasıl okunur:</b> her kutu bir kişidir (kod). Çubuğun üzerindeki beyaz çizgi <b>takım ortalamasıdır</b>; çubuk çizgiyi geçiyorsa kişi takımdan iyi. 🟢 iyi • 🟡 ortalama • 🔴 geliştirilmeli. Kutuya tıklayınca vardiya vardiya çalışma çizelgesi açılır.</div>'
         +'<div class="pa-pk-grid">'+codes.map(c=>{
             const s=St[c],M4=Me[c];
-            return '<div class="pa-pk'+(paTopSel===c?' on':'')+'" onclick="paTopSet(&quot;'+c+'&quot;)"><div class="pa-pk-h"><b>'+esc(c)+'</b><small>'+s.n+' vardiya • '+f0(s.knv)+' top/vardiya</small></div>'
+            return '<div class="pa-pk'+(paTopSel===c?' on':'')+'" onclick="paTopSet(&quot;'+c+'&quot;)"><div class="pa-pk-h"><span>'+paNm(c)+'</span><small>'+s.n+' vardiya • '+f0(s.knv)+' top/vardiya</small></div>'
                 +M4.map(m=>{const g=m.na?{c:'#9e9e9e',e:'⚪'}:paTopGrade(m.pts!=null?m.pts:m.v,m.pts!=null);return '<div class="pa-pk-m"><div class="pa-pk-l"><span>'+m.k+'</span><b style="color:'+g.c+'">'+g.e+' '+m.txt+'</b></div><div class="pa-pk-b"><i style="width:'+Math.min(100,Math.max(3,m.v/1.5*100)).toFixed(0)+'%;background:'+g.c+'"></i><u></u></div><div class="pa-pk-r">'+m.sub+' • '+m.ref+'</div>'+((PV[c]&&!m.na&&raw(PV[c],M4.indexOf(m))>0)?(()=>{const i=M4.indexOf(m),a=raw(s,i),b=raw(PV[c],i),ch=(a-b)/b*100,good=(a-b)*dirs[i]>=0;return '<div class="pa-pk-r" style="color:'+(Math.abs(ch)<3?'#928fb0':good?'#5ecf8a':'#ff8a80')+'">kendi önceki dönemi: '+f0(b)+' → '+f0(a)+' ('+(ch>=0?'↑':'↓')+'%'+Math.abs(Math.round(ch))+')</div>'})():'')+'</div>'}).join('')
                 +'<div class="pa-pk-s">'+esc(paTopMsg(s,T,M4))+'</div></div>'}).join('')+'</div>';
     if(paTopSel&&St[paTopSel]){
         const c=paTopSel,s=St[c],R=by[c].slice().sort((a,b)=>(a.d<b.d?-1:a.d>b.d?1:0)||(a.a===0?-1:b.a===0?1:a.a-b.a)),fb=paTopFb(s,T);
-        h+='<div class="pa-sub">'+esc(c)+' · vardiya çizelgesi <small>'+s.n+' vardiya • her şerit 8 saatlik vardiya • turuncuya gelince saat aralığı görünür • kapatmak için kutuya tekrar tıkla</small></div>'
+        h+='<div class="pa-sub">'+paNm(c)+' · vardiya çizelgesi <small>'+s.n+' vardiya • her şerit 8 saatlik vardiya • turuncuya gelince saat aralığı görünür • kapatmak için kutuya tekrar tıkla</small></div>'
             +'<div class="pa-leg"><span><i style="background:#2e9e6a"></i>Kayıt var (çalışıyor)</span><span><i style="background:#e07b39"></i>Boşluk ≥ '+(D.gapMin||20)+' dk, ekipte iş sürüyor</span><span><i style="background:#6f86a8"></i>Boşluk, ekip de boş (iş yokluğu olası)</span><span><i style="background:#8b3a3a"></i>Vardiya başı / sonu boş</span></div>'
             +'<div class="pa-ts-list">'+R.map(r=>{const d=new Date(r.d+'T12:00:00'),gl=(r.gp||[]).reduce((a,g)=>a+g[1],0);
                 return '<div class="pa-ts-r"><div class="pa-ts-d"><b>'+r.d.slice(8,10)+'.'+r.d.slice(5,7)+'</b> '+PA_TOP_DOW[d.getDay()]+' '+PA_TOP_LAB[r.a]+'</div>'+paTopStrip(r)
@@ -9452,6 +9452,192 @@ function paTopHtml(M){
  +'.pa-pk-b{position:relative;height:9px;background:rgba(255,255,255,.1);border-radius:5px;margin-top:3px}.pa-pk-b i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.pa-pk-b u{position:absolute;left:66.67%;top:-3px;bottom:-3px;width:2px;background:#fff;text-decoration:none}.pa-pk-r{font-size:10.5px;color:#928fb0;margin-top:2px}.pa-pk-s{margin-top:9px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-size:12.5px;line-height:1.4}'
  +'.pa-ts-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}.pa-ts-r{display:grid;grid-template-columns:120px minmax(0,1fr) 230px;gap:8px;align-items:center;font-size:12px}.pa-ts-d b{font-size:12.5px}.pa-ts{position:relative;height:18px;background:#2b2850;border-radius:4px;overflow:hidden}.pa-ts i{position:absolute;top:0;bottom:0}.pa-ts .act{background:#2e9e6a}.pa-ts .late,.pa-ts .early{background:#8b3a3a}.pa-ts .gapq{background:#6f86a8}.pa-ts .gap{background:#e07b39;border-left:1px solid #1a1836;border-right:1px solid #1a1836}.pa-ts-i{color:#c3c2b7}'
  +'@media(max-width:700px){.pa-ts-r{grid-template-columns:1fr}.pa-pk-grid{grid-template-columns:1fr}}';document.head.appendChild(st)})();
+// ── 🔒 Personel adları: data/personel_adlar.enc.json (AES-GCM, anahtar şifreden PBKDF2 ile). Şifre hiçbir yerde saklanmaz;
+//    açılan adlar yalnız bu sekmede (sessionStorage) tutulur, sekme kapanınca gider. Dosyayı sifrele_personel_adlari.py üretir.
+let PERSAD=(()=>{try{const v=sessionStorage.getItem('perAd9');return v?JSON.parse(v):null}catch(e){return null}})(),PERSAD_ENC=null;
+function paAdName(c){return PERSAD&&PERSAD[c]||''}
+function paNm(c){const n=paAdName(c);return '<b>'+esc(c)+'</b>'+(n?' <span class="pa-adn">'+esc(n)+'</span>':'')}
+function paAdFetch(){
+    if(PERSAD_ENC)return Promise.resolve(PERSAD_ENC);
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/personel_adlar.enc.json'+ts,{cache:'no-store'});
+    return (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/personel_adlar.enc.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel))
+        .then(r=>r&&r.ok?r.json():null).then(j=>(PERSAD_ENC=j&&j.ct?j:null)).catch(()=>null);
+}
+async function paAdUnlock(pw){
+    const E=await paAdFetch();if(!E)throw new Error('Şifreli ad dosyası yok (data/personel_adlar.enc.json). Önce sifrele_personel_adlari.py çalıştırılmalı.');
+    const ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),pwb=new TextEncoder().encode(pw);let pt;
+    if(window.crypto&&crypto.subtle){
+        const base=await crypto.subtle.importKey('raw',pwb,'PBKDF2',false,['deriveKey']);
+        const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:ub(E.salt),iterations:E.it||600000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+        try{pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub(E.iv)},key,ub(E.ct))}catch(e){throw new Error('Şifre yanlış')}
+    }else{
+        // http://192.168… gibi güvenli olmayan adreslerde tarayıcı WebCrypto vermez: aynı hesap JS kütüphanesiyle (noble) yapılır
+        let P,S,A;try{[P,S,A]=await Promise.all([import('https://cdn.jsdelivr.net/npm/@noble/hashes@1.4.0/pbkdf2/+esm'),import('https://cdn.jsdelivr.net/npm/@noble/hashes@1.4.0/sha256/+esm'),import('https://cdn.jsdelivr.net/npm/@noble/ciphers@0.5.3/aes/+esm')])}
+        catch(e){throw new Error('Şifre çözme kütüphanesi yüklenemedi (internet gerekli)')}
+        const key=await P.pbkdf2Async(S.sha256,pwb,ub(E.salt),{c:E.it||600000,dkLen:32});
+        try{pt=A.gcm(key,ub(E.iv)).decrypt(ub(E.ct))}catch(e){throw new Error('Şifre yanlış')}
+    }
+    PERSAD=JSON.parse(new TextDecoder().decode(pt));try{sessionStorage.setItem('perAd9',JSON.stringify(PERSAD))}catch(e){}
+    return PERSAD;
+}
+function paAdLock(){PERSAD=null;try{sessionStorage.removeItem('perAd9')}catch(e){}if(document.getElementById('pkcBox'))paKartRender();if(paVisible())paRender();showToast('🔒 İsimler gizlendi')}
+async function paAdTry(){
+    const i=document.getElementById('pkcPw'),pw=i&&i.value;if(!pw)return;
+    const b=document.getElementById('pkcPwBtn');if(b){b.disabled=true;b.textContent='Açılıyor…'}if(!(window.crypto&&crypto.subtle))showToast('🔐 Şifre çözülüyor… (bu adreste birkaç saniye sürebilir)','warning');
+    try{await paAdUnlock(pw);i.value='';showToast('🔓 İsimler açıldı (yalnız bu sekmede)');paKartRender();if(paVisible())paRender()}
+    catch(e){showToast(e.message,'error');if(b){b.disabled=false;b.textContent='🔓 Aç'}}
+}
+
+// ── 📄 Personel kartları (PDF): seçilen gün / aralık ve kişiler için A4 kart; takım = aynı aralıkta çalışan herkes
+let pkc={from:'',to:'',sel:null,q:'',showCmp:false,cmpPdf:mapLoadPref('pkcCmpPdf9',v=>v==='1'||v==='0','1')==='1'};
+function pkcDk(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function pkcDays(){return [...new Set(PERSTOP.shifts.map(r=>r.d))].sort()}
+function paKartOpen(){
+    if(!PERSTOP){paTopLoad();showToast('Personel verisi okunuyor, birazdan tekrar deneyin','warning');return}
+    const days=pkcDays(),last=days[days.length-1];
+    if(!pkc.to||pkc.to>last||pkc.to<days[0]){pkc.from=pkc.to=last}
+    paAdFetch().then(()=>{if(document.getElementById('pkcBox'))paKartRender()});
+    hmModalShow('<div id="pkcBox" class="pkc-box"></div>');paKartRender();
+}
+function pkcRange(k){
+    const days=pkcDays(),last=days[days.length-1];
+    if(k==='day'){pkc.from=pkc.to}else{const d=new Date(last+'T12:00:00');d.setDate(d.getDate()-(+k)+1);pkc.from=pkcDk(d);pkc.to=last}
+    pkc.sel=null;paKartRender();
+}
+function pkcSet(k,v){
+    if(k==='from'||k==='to'){pkc[k]=v;if(pkc.from>pkc.to){if(k==='from')pkc.to=v;else pkc.from=v}pkc.sel=null}
+    else if(k==='q'){pkc.q=v;paKartRender();const i=document.getElementById('pkcQ');if(i){i.focus();i.setSelectionRange(v.length,v.length)}return}
+    paKartRender();
+}
+function pkcPrevDay(n){const days=pkcDays(),i=days.indexOf(pkc.to),j=Math.min(days.length-1,Math.max(0,(i<0?days.length-1:i)+n));pkc.from=pkc.to=days[j];pkc.sel=null;paKartRender()}
+function pkcData(){
+    const rows=PERSTOP.shifts.filter(r=>r.d>=pkc.from&&r.d<=pkc.to),by={};rows.forEach(r=>(by[r.p]=by[r.p]||[]).push(r));
+    const codes=Object.keys(by).sort((a,b)=>by[b].reduce((x,r)=>x+r.kkg+r.skg,0)-by[a].reduce((x,r)=>x+r.kkg+r.skg,0));
+    const light=codes.filter(c=>paTopStats(by[c]).srShare<0.4),team=(light.length?light:codes).flatMap(c=>by[c]);
+    let T=null;if(team.length){T=paTopStats(team);T.rows=team}
+    return{by,codes,T};
+}
+function pkcToggle(c){const D=pkcData();if(!pkc.sel)pkc.sel=new Set(D.codes);pkc.sel.has(c)?pkc.sel.delete(c):pkc.sel.add(c);paKartRender()}
+function pkcAll(on){const D=pkcData(),q=pkc.q.trim().toLocaleLowerCase('tr-TR'),vis=D.codes.filter(c=>!q||(c+' '+paAdName(c)).toLocaleLowerCase('tr-TR').includes(q));if(!pkc.sel)pkc.sel=new Set(D.codes);vis.forEach(c=>on?pkc.sel.add(c):pkc.sel.delete(c));paKartRender()}
+function paKartRender(){
+    const box=document.getElementById('pkcBox');if(!box)return;
+    const days=pkcDays(),D=pkcData(),sel=pkc.sel||new Set(D.codes),f0=v=>Math.round(v).toLocaleString('tr-TR'),q=pkc.q.trim().toLocaleLowerCase('tr-TR');
+    const vis=D.codes.filter(c=>!q||(c+' '+paAdName(c)).toLocaleLowerCase('tr-TR').includes(q)),nSel=D.codes.filter(c=>sel.has(c)).length;
+    const one=pkc.from===pkc.to,fd=d=>d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4);
+    const lock=PERSAD?'<div class="pkc-lock on">🔓 İsimler açık <small>(yalnız bu sekmede; PDF\'e de yazılır)</small><button type="button" onclick="paAdLock()">🔒 Kilitle</button></div>'
+        :'<div class="pkc-lock"><b>🔒 İsimleri göster</b>'+(PERSAD_ENC?'':' <small>(şifreli ad dosyası bulunamadı — sifrele_personel_adlari.py)</small>')+'<form onsubmit="paAdTry();return false" autocomplete="off"><input type="password" id="pkcPw" placeholder="Şifre" autocomplete="new-password"><button type="submit" id="pkcPwBtn">🔓 Aç</button></form><small>Şifre yoksa kartlar yalnız kodla basılır.</small></div>';
+    box.innerHTML='<div class="pkc-t">📄 Personel kartları (PDF)</div>'
+        +'<div class="pkc-row"><b>Tarih</b><button type="button" onclick="pkcPrevDay(-1)" title="Önceki gün">◀</button><input type="date" value="'+pkc.from+'" min="'+days[0]+'" max="'+days[days.length-1]+'" onchange="pkcSet(&quot;from&quot;,this.value)"><span>–</span><input type="date" value="'+pkc.to+'" min="'+days[0]+'" max="'+days[days.length-1]+'" onchange="pkcSet(&quot;to&quot;,this.value)"><button type="button" onclick="pkcPrevDay(1)" title="Sonraki gün">▶</button>'
+        +'<span class="pkc-q">'+[['day','Tek gün'],['7','Son 7 gün'],['30','Son 30 gün']].map(([k,l])=>'<button type="button" onclick="pkcRange(&quot;'+k+'&quot;)">'+l+'</button>').join('')+'</span></div>'
+        +'<div class="pkc-sub">'+(one?fd(pkc.from)+' günü':fd(pkc.from)+' – '+fd(pkc.to))+' • '+D.codes.length+' kişi çalışmış • veri '+fd(days[0])+' – '+fd(days[days.length-1])+'</div>'
+        +lock
+        +'<div class="pkc-row"><b>Personel</b><input type="search" id="pkcQ" placeholder="Ara (kod / ad)" value="'+esc(pkc.q)+'" oninput="pkcSet(&quot;q&quot;,this.value)"><button type="button" onclick="pkcAll(true)">☑ Tümü</button><button type="button" onclick="pkcAll(false)">☐ Hiçbiri</button><span class="pkc-n">'+nSel+' / '+D.codes.length+' seçili</span></div>'
+        +(D.codes.length?'<div class="pkc-list">'+vis.map(c=>{const R=D.by[c],kg=R.reduce((a,r)=>a+r.kkg+r.skg,0),kn=R.reduce((a,r)=>a+r.kn,0);
+            return '<label class="'+(sel.has(c)?'on':'')+'"><input type="checkbox"'+(sel.has(c)?' checked':'')+' onchange="pkcToggle(&quot;'+c+'&quot;)"> '+paNm(c)+'<small>'+R.length+' vardiya • '+f0(kg)+' kg • '+kn+' top</small></label>'}).join('')+(vis.length?'':'<div class="pkc-sub">Aramaya uyan kişi yok.</div>')+'</div>'
+            :'<div class="pkc-sub">Bu tarihlerde vardiya kaydı yok.</div>')
+        +'<div class="pkc-row"><b>Kıyas</b><button type="button" onclick="pkcCmpToggle()"'+(nSel>1?'':' disabled')+'>📊 '+(pkc.showCmp?'Kıyas grafiklerini gizle':'Kıyas grafiklerini göster')+'</button><label class="pkc-chk"><input type="checkbox"'+(pkc.cmpPdf?' checked':'')+' onchange="pkcCmpSetPdf(this.checked)"> PDF\'in başına kıyas sayfası ekle</label>'+(nSel>1?'':'<small class="pkc-sub">en az 2 kişi seçin</small>')+'</div>'
+        +(pkc.showCmp&&nSel>1&&D.T?(()=>{const cs=D.codes.filter(c=>sel.has(c)),{hv,defs}=pkcCmpDefs(D,cs);return '<div class="pkc-cmpv"><div class="pkc-sub">'+pkcCmpLegend()+' Takım ortalaması: bu tarihlerde çalışan tüm ekip.</div><div class="pa-cc-grid pkc-ccw">'+defs.map(d=>pkcCmpChart(d,cs,hv,false)).join('')+'</div></div>'})():'')
+        +'<div class="pkc-btns"><button type="button" class="pdf" onclick="paKartPdf()"'+(nSel?'':' disabled')+'>📄 PDF indir ('+nSel+' kart'+(pkc.cmpPdf&&nSel>1?' + kıyas':'')+')</button><button type="button" style="background:#1565C0" onclick="paKartPdf(true)"'+(nSel>1?'':' disabled')+'>📊 Yalnız kıyas PDF</button><button type="button" class="x" onclick="hmCardPopupClose()">Kapat</button></div>'
+        +'<div class="pkc-sub">Her kişi bir A4 sayfa: üretim, hız, süreklilik, devamlılık (geç başlama / erken bırakma / fazla mola), vardiya çizelgesi, güçlü yönler ve konuşulabilecek noktalar. Kıyas, aynı tarihlerde çalışan ekibe göredir'+(one?'; tek günde vardiya sayısı az olduğundan sonuçlar kesin yargı değil, konuşma için ipucudur':'')+'.</div>';
+}
+// A4 kart (794×1120 px ≈ 96 dpi; A4 oranının hafif altında, tek sayfaya sığsın). Açık zemin, baskıda okunur renkler.
+function pkcCardHtml(c,D){
+    const R=D.by[c].slice().sort((a,b)=>(a.d<b.d?-1:a.d>b.d?1:0)||(a.a===0?-1:b.a===0?1:a.a-b.a)),T=D.T,s=paTopStats(R);s.rows=R;
+    const M=paTopMeters(s,T),A=paDvAgg(R),TA=paDvAgg(T.rows),fb=paTopFb(s,T),f0=v=>Math.round(v).toLocaleString('tr-TR'),fd=d=>d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4);
+    const nm=paAdName(c),gc=['#C62828','#B7791F','#2E7D32'],one=pkc.from===pkc.to;
+    const tiles=[['Üretim',f0(s.kg)+' kg',s.n+' vardiya'+(s.n>1?' • '+f0(s.kgv)+' kg/vardiya':'')],['Top',f0(s.kn)+' adet',f0(s.knv)+' top/vardiya'],['Metre',f0(s.km)+' m','bilgi amaçlı (kumaşa bağlı)'],['Çalışma hızı',f0(s.kpa)+' kg/sa','takım '+f0(T.kpa)],['Devamlılık','%'+Math.round(A.pct),'takım %'+Math.round(TA.pct)]];
+    const met=M.map(m=>{const g=m.na?{c:'#9e9e9e',e:'⚪',t:'—'}:paTopGrade(m.pts!=null?m.pts:m.v,m.pts!=null),col=m.na?'#9e9e9e':gc[g.g];
+        return '<div class="pkc-m"><div class="pkc-ml"><span>'+m.k+'</span><b style="color:'+col+'">'+m.txt+' · '+(m.na?'—':g.t)+'</b></div><div class="pkc-mb"><i style="width:'+Math.min(100,Math.max(3,m.v/1.5*100)).toFixed(0)+'%;background:'+col+'"></i><u></u></div><div class="pkc-mr">'+m.sub+' • '+m.ref+(m.na?' • Sarım ağırlıklı: KK ölçüsü yanıltıcı':'')+'</div></div>'}).join('');
+    const dv=[['Geç başlama','late','ekipte en erken başlayana göre, '+paDvLate+' dk pay düşülmüş'],['Erken bırakma','early','ekipte en geç bitirene göre, '+paDvEarly+' dk pay düşülmüş'],['Fazla mola','fm',paDvMola+' dk mola payını aşan kayıtsız süre'],['Parti içi duraksama','pd','aynı partide '+(PERSTOP.gapMin||20)+' dk üstü ara']]
+        .map(([l,k,t])=>{const v=A.m(k),tv=TA.m(k),bad=v>tv*1.25+2,good=v<tv*0.75-2;return '<tr><td><b>'+l+'</b><small>'+t+'</small></td><td style="color:'+(bad?'#C62828':good?'#2E7D32':'#222')+'"><b>'+f0(v)+' dk</b></td><td>'+f0(tv)+' dk</td></tr>'}).join('');
+    const MAXR=16,RR=R.length>MAXR?R.slice(-MAXR):R;
+    const strips=RR.map(r=>{const d=new Date(r.d+'T12:00:00'),gl=(r.gp||[]).reduce((a,g)=>a+g[1],0),x=paDvShift(r);
+        return '<div class="pkc-sr"><div class="pkc-sd"><b>'+r.d.slice(8,10)+'.'+r.d.slice(5,7)+'</b> '+PA_TOP_DOW[d.getDay()]+' '+PA_TOP_LAB[r.a]+'</div>'+paTopStrip(r)+'<div class="pkc-si">'+f0(r.kkg+r.skg)+' kg • '+r.kn+' top • '+paTopHm(r.f,r.a)+'–'+paTopHm(480-r.l,r.a)+(gl?' • boşluk '+gl+' dk':'')+(x.late?' • <b style="color:#B7791F">geç '+f0(x.late)+'</b>':'')+(x.early?' • <b style="color:#C62828">erken '+f0(x.early)+'</b>':'')+'</div></div>'}).join('');
+    return '<div class="pkc-page"><div class="pkc-hd"><div><div class="pkc-code">'+esc(c)+(nm?' <span>'+esc(nm)+'</span>':'')+'</div><div class="pkc-per">Personel üretim kartı • '+(one?fd(pkc.from):fd(pkc.from)+' – '+fd(pkc.to))+' • '+s.n+' vardiya</div></div><div class="pkc-gen">Parti Takip Sistemi<br>'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div></div>'
+        +'<div class="pkc-tiles">'+tiles.map(t=>'<div><small>'+t[0]+'</small><b>'+t[1]+'</b><em>'+t[2]+'</em></div>').join('')+'</div>'
+        +'<div class="pkc-msg">'+esc(paTopMsg(s,T,M))+'</div>'
+        +'<div class="pkc-two"><div><div class="pkc-h">Takıma göre ölçüler <small>dikey çizgi = takım ortalaması</small></div>'+met+'</div>'
+        +'<div><div class="pkc-h">Üretim devamlılığı <small>dk / vardiya</small></div><table class="pkc-tb"><thead><tr><th></th><th>Kişi</th><th>Takım</th></tr></thead><tbody>'+dv+'<tr class="t"><td><b>Toplam kayıp</b><small>≈ '+f0(A.m('loss')/60*s.kpa)+' kg/vardiya (kendi hızıyla)</small></td><td><b>'+f0(A.m('loss'))+' dk</b></td><td>'+f0(TA.m('loss'))+' dk</td></tr></tbody></table></div></div>'
+        +'<div class="pkc-h">Vardiya çizelgesi <small>'+(R.length>MAXR?'son '+MAXR+' vardiya • ':'')+'yeşil kayıt var • turuncu boşluk (ekipte iş varken) • mavi ekip de boş • koyu kırmızı vardiya başı / sonu boş</small></div><div class="pkc-strips">'+strips+'</div>'
+        +'<div class="pkc-two"><div><div class="pkc-h" style="color:#2E7D32">Güçlü yönler</div><ul>'+fb.good.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div><div><div class="pkc-h" style="color:#B7791F">Konuşulabilecek noktalar</div><ul>'+fb.imp.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div></div>'
+        +'<div class="pkc-ft">Kaynak: ERP KK / Sarım top kayıtları. Kıyas: aynı tarihlerde çalışan ekip ('+(T.rows.length)+' vardiya; Sarım ağırlıklı kişiler takım ortalamasına katılmaz). Boşluk iş yokluğu, mola ya da başka bir iş de olabilir — "bu saatte ne oldu?" diye konuşmak için ipucudur, suçlama değildir.</div></div>';
+}
+// ── 📊 Kıyas: kart ölçüleri seçilen aralıkta, seçilen kişiler arasında çubuk grafik (adlar açıksa adla). Takım ortalaması = aralıkta çalışan ekip.
+function pkcCmpDefs(D,codes){
+    const S={},A={},hv={};codes.forEach(c=>{const s=paTopStats(D.by[c]);s.rows=D.by[c];S[c]=s;hv[c]=s.srShare>=0.4;A[c]=paDvAgg(D.by[c])});
+    const T=D.T,TA=paDvAgg(T.rows);
+    // [başlık, açıklama, değer, takım, birim, yüksek iyi mi (1 / -1), KK'ya özgü mü]
+    return{hv,defs:[
+        ['Üretim','vardiya başına kg',c=>S[c].kgv,T.kgv,'kg',1,0],
+        ['Çalışma hızı','çalıştığı sürede kg / saat',c=>S[c].kpa,T.kpa,'kg/sa',1,1],
+        ['Süreklilik','vardiyada kayıt bırakmadığı süre, %',c=>100-S[c].idle,100-T.idle,'%',1,1],
+        ['Vardiya kapsamı',paDvMode==='ref'?'ekibin çalışma penceresinin %':'ilk–son kayıt arası, vardiyanın %',c=>paTopCov(D.by[c]),paTopCov(T.rows),'%',1,1],
+        ['Devamlılık','kayıpsız süre, % (geç + erken + fazla mola düşülür)',c=>A[c].pct,TA.pct,'%',1,1],
+        ['İş varken kayıtsız','ekipte iş sürerken kendi boşluğu, dk / vardiya',c=>S[c].wg,T.wg,'dk',-1,1],
+        ['Geç başlama','payı ('+paDvLate+' dk) aşan, dk / vardiya',c=>A[c].m('late'),TA.m('late'),'dk',-1,1],
+        ['Erken bırakma','payı ('+paDvEarly+' dk) aşan, dk / vardiya',c=>A[c].m('early'),TA.m('early'),'dk',-1,1],
+        ['Fazla mola',paDvMola+' dk mola payını aşan, dk / vardiya',c=>A[c].m('fm'),TA.m('fm'),'dk',-1,1]
+    ]};
+}
+function pkcCmpChart(d,codes,hv,print){
+    const [t,sub,val,tv,u,dir,kk]=d,f0=v=>Math.round(v).toLocaleString('tr-TR');
+    const L=codes.map(c=>({c,v:val(c),na:kk&&hv[c]})).sort((a,b)=>(a.na-b.na)||((b.v-a.v)*dir));
+    const mx=Math.max(1,tv,...L.map(x=>x.v)),pos=tv/mx*100,C=print?['#9e9e9e','#C9A227','#2E7D32','#C62828']:['#6f6c8e','#d9b640','#2e9e6a','#d9534f'];
+    return '<div class="pa-cc"><div class="pa-cc-t">'+t+' <small>'+sub+'</small></div><div class="pa-cc-b">'+L.map(x=>{
+        const diff=(x.v-tv)*dir,rel=Math.abs(diff)/Math.max(1,Math.abs(tv)),col=x.na?C[0]:(rel<0.1?C[1]:diff>0?C[2]:C[3]),nm=paAdName(x.c);
+        return '<div class="pa-cc-r"><span class="n" title="'+esc(x.c+(nm?' '+nm:''))+'"><b>'+esc(x.c)+'</b>'+(nm?' '+esc(nm):'')+(x.na?'<em title="Ağırlıklı Sarım yapıyor">S</em>':'')+'</span><div class="bar"><i style="width:'+Math.max(1,x.v/mx*100).toFixed(1)+'%;background:'+col+'"></i><u style="left:'+pos.toFixed(1)+'%"></u></div><span class="v">'+f0(x.v)+' <small>'+u+'</small></span></div>'}).join('')
+        +'</div><div class="pa-cc-f"><u></u> takım ortalaması <b>'+f0(tv)+' '+u+'</b> • '+(dir>0?'yüksek iyi':'düşük iyi')+'</div></div>';
+}
+function pkcCmpLegend(){return 'Kişiler <b>iyiden zayıfa</b> sıralı; dikey çizgi <b>takım ortalaması</b>. Yeşil takımdan iyi, sarı takıma yakın (±%10), kırmızı takımdan zayıf; <b>S</b> = ağırlıklı Sarım (KK ölçüleri gri).'}
+function pkcCmpToggle(){pkc.showCmp=!pkc.showCmp;paKartRender()}
+function pkcCmpSetPdf(on){pkc.cmpPdf=!!on;mapSavePref('pkcCmpPdf9',on?'1':'0')}
+// PDF sayfaları: grafikleri iki sütuna, sayfa yüksekliğine göre dağıtır
+function pkcCmpPages(D,codes){
+    const {hv,defs}=pkcCmpDefs(D,codes),fd=d=>d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4),one=pkc.from===pkc.to;
+    const ch=46+codes.length*19,avail=1120-68-150,per=Math.max(1,Math.floor(avail/(ch+12)))*2,pages=[];
+    for(let i=0;i<defs.length;i+=per)pages.push(defs.slice(i,i+per));
+    return pages.map((P,k)=>'<div class="pkc-page pkc-cmp"><div class="pkc-hd"><div><div class="pkc-code">📊 Personel kıyası</div><div class="pkc-per">'+(one?fd(pkc.from):fd(pkc.from)+' – '+fd(pkc.to))+' • '+codes.length+' kişi • takım: aynı tarihlerde çalışan ekip ('+D.T.rows.length+' vardiya)'+(pages.length>1?' • sayfa '+(k+1)+'/'+pages.length:'')+'</div></div><div class="pkc-gen">Parti Takip Sistemi<br>'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div></div>'
+        +'<div class="pkc-msg" style="font-weight:500;font-size:12.5px">'+pkcCmpLegend()+'</div><div class="pkc-cc">'+P.map(d=>pkcCmpChart(d,codes,hv,true)).join('')+'</div>'
+        +'<div class="pkc-ft">Geç başlama / erken bırakma: o vardiyada ekipte en erken başlayan / en geç bitirene göre, paylar düşülmüş. Tek gün ya da az vardiyada sonuçlar kesin yargı değil, konuşma için ipucudur.</div></div>');
+}
+async function paKartPdf(onlyCmp){
+    const D=pkcData(),sel=pkc.sel||new Set(D.codes),codes=D.codes.filter(c=>sel.has(c));if(!codes.length||!D.T)return;
+    if(onlyCmp&&codes.length<2){showToast('Kıyas için en az 2 kişi seçin','warning');return}
+    const htmls=[...((onlyCmp||(pkc.cmpPdf&&codes.length>1))?pkcCmpPages(D,codes):[]),...(onlyCmp?[]:codes.map(c=>()=>pkcCardHtml(c,D)))];
+    showToast('📄 '+(onlyCmp?'Kıyas':codes.length+' kart')+' hazırlanıyor…','warning');
+    const outer=document.createElement('div');outer.style.cssText='position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;pointer-events:none';document.body.appendChild(outer);
+    try{
+        let pdf=null;
+        for(let i=0;i<htmls.length;i++){
+            if(htmls.length>2)showToast('📄 Sayfa '+(i+1)+' / '+htmls.length+' hazırlanıyor…','warning');
+            outer.innerHTML='<div class="pkc-wrap">'+(typeof htmls[i]==='function'?htmls[i]():htmls[i])+'</div>';
+            const cv=await html2canvas(outer.firstChild.firstChild,{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollY:0,onclone:sanitizeOklchColors});
+            if(!pdf)pdf=await html2pdf().set({margin:0,image:{type:'jpeg',quality:.92},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(cv,'canvas').toPdf().get('pdf');
+            else{pdf.addPage('a4','portrait');const ih=Math.min(297,210*cv.height/cv.width);pdf.addImage(cv.toDataURL('image/jpeg',0.92),'JPEG',0,0,210,ih)}
+        }
+        const nm=pkc.from===pkc.to?pkc.from:pkc.from+'_'+pkc.to;
+        pdf.save((onlyCmp?'personel_kiyas_':'personel_kartlari_')+nm+(codes.length===1?'_'+codes[0]:'')+'.pdf');showToast('✅ '+(onlyCmp?'Kıyas':codes.length+' kart')+' indirildi');
+    }catch(e){showToast('PDF oluşturulamadı: '+e,'error')}
+    finally{outer.remove()}
+}
+(function(){const st=document.createElement('style');st.textContent='.pa-adn{font-weight:600;opacity:.85;font-size:.85em}.pa-kart-btn{float:right;background:#C62828;color:#fff;border:0;border-radius:7px;padding:4px 10px;font-weight:800;font-size:12.5px;cursor:pointer}'
+ +'.pkc-box{display:flex;flex-direction:column;gap:9px;min-width:min(640px,90vw);max-width:820px;color:#fff;font-size:13px}.pkc-t{font-size:17px;font-weight:800}.pkc-sub{font-size:12px;color:#b9b6d6}'
+ +'.pkc-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pkc-row b{min-width:62px;color:#FFD54F}.pkc-row input{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 6px;font-size:13px;color-scheme:dark}.pkc-row input[type=search]{flex:1 1 160px}'
+ +'.pkc-row button,.pkc-lock button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 9px;font-size:12.5px;font-weight:700;cursor:pointer}.pkc-q{display:inline-flex;gap:4px;flex-wrap:wrap}.pkc-n{margin-left:auto;color:#b9b6d6}'
+ +'.pkc-lock{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.06);border-left:4px solid #888}.pkc-lock.on{border-color:#66BB6A}.pkc-lock form{display:inline-flex;gap:5px}.pkc-lock input{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 6px;width:170px}.pkc-lock small{color:#b9b6d6}'
+ +'.pkc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:5px;max-height:44vh;overflow:auto;padding:2px}.pkc-list label{display:flex;flex-wrap:wrap;gap:4px;align-items:baseline;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);cursor:pointer}.pkc-list label.on{border-color:#80CBC4;background:rgba(0,137,123,.18)}.pkc-list small{flex-basis:100%;color:#b9b6d6;font-size:11px}'
+ +'.pkc-btns{display:flex;gap:6px}.pkc-btns button{border:0;border-radius:8px;padding:9px 14px;font-weight:800;font-size:13.5px;cursor:pointer;background:#455A64;color:#fff}.pkc-btns button.pdf{background:#C62828}.pkc-btns button:disabled{opacity:.45;cursor:default}'
+ +'.pkc-wrap{position:absolute;left:0;top:0}.pkc-page{width:794px;height:1120px;box-sizing:border-box;padding:34px 38px;background:#fff;color:#1a1a1a;font-family:"Segoe UI",Arial,sans-serif;font-size:12.5px;display:flex;flex-direction:column;gap:11px;overflow:hidden}'
+ +'.pkc-hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #263238;padding-bottom:8px}.pkc-code{font-size:28px;font-weight:800;color:#263238}.pkc-code span{font-size:22px;color:#37474F;margin-left:6px}.pkc-per{font-size:13px;color:#555;margin-top:2px}.pkc-gen{text-align:right;font-size:11px;color:#777}'
+ +'.pkc-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.pkc-tiles div{border:1px solid #cfd8dc;border-radius:8px;padding:7px 8px;background:#f7f9fa}.pkc-tiles small{display:block;font-size:11px;color:#607D8B;font-weight:700}.pkc-tiles b{display:block;font-size:19px;color:#1a1a1a;margin:2px 0}.pkc-tiles em{font-style:normal;font-size:10.5px;color:#666}'
+ +'.pkc-msg{padding:8px 11px;border-left:5px solid #1565C0;background:#eef4fb;border-radius:6px;font-size:13.5px;font-weight:600;line-height:1.4}'
+ +'.pkc-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pkc-h{font-size:14px;font-weight:800;color:#263238;margin-bottom:4px}.pkc-h small{font-weight:500;color:#777;font-size:10.5px;margin-left:4px}'
+ +'.pkc-m{margin-bottom:8px}.pkc-ml{display:flex;justify-content:space-between;gap:6px;font-size:13px}.pkc-ml span{font-weight:700}.pkc-ml small{color:#888;font-size:10px}.pkc-mb{position:relative;height:11px;background:#e6e9eb;border-radius:5px;margin-top:2px}.pkc-mb i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.pkc-mb u{position:absolute;left:66.67%;top:-3px;bottom:-3px;width:2px;background:#263238}.pkc-mr{font-size:10.5px;color:#666;margin-top:2px}'
+ +'.pkc-tb{width:100%;border-collapse:collapse;font-size:13px}.pkc-tb th{font-size:11px;color:#607D8B;text-align:right;padding:3px 5px}.pkc-tb td{padding:5px;border-top:1px solid #e0e0e0;text-align:right;vertical-align:top}.pkc-tb td:first-child{text-align:left}.pkc-tb td small{display:block;font-size:10px;color:#888}.pkc-tb tr.t td{border-top:2px solid #263238}'
+ +'.pkc-strips{display:flex;flex-direction:column;gap:4px}.pkc-sr{display:grid;grid-template-columns:100px minmax(0,1fr) 255px;gap:7px;align-items:center;font-size:11.5px}.pkc-sr .pa-ts{height:18px;background:#eceff1}.pkc-sr .pa-ts .gap{border-color:#fff}.pkc-si{color:#444}'
+ +'.pkc-ccw .pa-cc-r{grid-template-columns:minmax(90px,150px) minmax(0,1fr) 78px}.pkc-ccw .pa-cc-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}.pkc-cmpv{max-height:56vh;overflow:auto;display:flex;flex-direction:column;gap:6px}.pkc-chk{display:inline-flex;gap:4px;align-items:center;font-size:12.5px}.pkc-row button:disabled{opacity:.45;cursor:default}'
+ +'.pkc-cc{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start}.pkc-cmp .pa-cc{background:#fff;border:1px solid #cfd8dc;color:#1a1a1a;padding:8px 10px}.pkc-cmp .pa-cc-t small{color:#666;opacity:1}.pkc-cmp .pa-cc-r{grid-template-columns:118px minmax(0,1fr) 66px;font-size:11.5px;margin:2px 0}.pkc-cmp .pa-cc-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}.pkc-cmp .pa-cc-r .bar{background:#eceff1;height:13px}.pkc-cmp .pa-cc-r .bar u,.pkc-cmp .pa-cc-f u{background:#263238}.pkc-cmp .pa-cc-f{color:#555;border-color:#e0e0e0}.pkc-cmp .pa-cc-r .n em{background:#9e9e9e;color:#fff}'
+ +'.pkc-page ul{margin:0;padding-left:18px;line-height:1.5;font-size:13px}.pkc-ft{margin-top:auto;font-size:10px;color:#777;border-top:1px solid #ddd;padding-top:6px;line-height:1.4}';document.head.appendChild(st)})();
 (function(){const st=document.createElement('style');st.textContent='.pa-pt td,.pa-pt th{text-align:right}.pa-pt td:first-child,.pa-pt th:first-child{text-align:left}.pa-pt tbody tr{cursor:pointer}.pa-pt tbody tr:hover{background:rgba(255,255,255,.06)}.pa-pt tr.on{background:rgba(57,135,229,.22)}.pa-pt-bars{display:flex;gap:3px;height:150px;align-items:flex-end;margin-top:8px;padding-top:16px}.pa-pt-bars .b{flex:1;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center}.pa-pt-bars i{display:block;width:100%;background:#3987e5;border-radius:3px 3px 0 0}.pa-pt-bars u{position:absolute;left:0;right:0;height:3px;background:#d95926;text-decoration:none}.pa-pt-bars .v{position:absolute;top:-14px;font-size:9.5px;color:#c3c2b7;left:50%;transform:translateX(-50%);white-space:nowrap}.pa-pt-bars em{position:absolute;bottom:-17px;font-size:10px;font-style:normal;color:#928fb0}.pa-pt-bars{margin-bottom:22px}';document.head.appendChild(st)})();
 // ── ⏱ Üretim devamlılığı: 3 ölçü — (1) geç başlama (2) erken bırakma (3) parti içi duraksama + fazla mola.
 //    Hepsi dakika cinsindendir; toplam kayıp süre vardiyaya oranlanır ve kişinin kendi hızıyla tahmini kg kaybına çevrilir.
@@ -9501,13 +9687,13 @@ function paDvHtml(M){
     const cell=(v,t)=>{const c=v>t*1.25+2?'#ff8a80':v<t*0.75-2?'#5ecf8a':'';return c?' style="color:'+c+';font-weight:800"':''};
     h+='<div class="pa-tw"><table class="pa-tbl pa-dv"><thead><tr><th>Kod</th><th>Vardiya</th><th>Devamlılık</th><th>Geç başlama <small>dk/vardiya</small></th><th>Erken bırakma <small>dk/vardiya</small></th><th>Parti içi duraksama <small>kez • dk/vardiya</small></th><th>Fazla mola <small>dk/vardiya</small></th><th>Toplam kayıp <small>dk/vardiya</small></th><th>≈ kg kaybı <small>/vardiya</small></th></tr></thead><tbody>'
         +codes.map(c=>{const A=paDvAgg(by[c]),hv=heavyOf(c),kg=A.m('loss')/60*kpaOf(c);
-            return '<tr class="'+(paDvSel===c?'on':'')+'" onclick="paDvSet(&quot;sel&quot;,&quot;'+c+'&quot;)"><td><b>'+esc(c)+'</b>'+(hv?' <span class="pa-na" title="Ağırlıklı Sarım yapıyor; KK kayıt ölçüleri yanıltıcı olabilir">Sarım</span>':'')+'</td><td>'+A.n+'</td><td'+(hv?'':(A.pct<T.pct-5?' style="color:#ff8a80;font-weight:800"':A.pct>T.pct+5?' style="color:#5ecf8a;font-weight:800"':''))+'><b>%'+f0(A.pct)+'</b></td>'
+            return '<tr class="'+(paDvSel===c?'on':'')+'" onclick="paDvSet(&quot;sel&quot;,&quot;'+c+'&quot;)"><td>'+paNm(c)+(hv?' <span class="pa-na" title="Ağırlıklı Sarım yapıyor; KK kayıt ölçüleri yanıltıcı olabilir">Sarım</span>':'')+'</td><td>'+A.n+'</td><td'+(hv?'':(A.pct<T.pct-5?' style="color:#ff8a80;font-weight:800"':A.pct>T.pct+5?' style="color:#5ecf8a;font-weight:800"':''))+'><b>%'+f0(A.pct)+'</b></td>'
                 +'<td'+cell(A.m('late'),T.m('late'))+'>'+f0(A.m('late'))+' <small>('+A.nl+'/'+A.n+')</small></td><td'+cell(A.m('early'),T.m('early'))+'>'+f0(A.m('early'))+' <small>('+A.ne+'/'+A.n+')</small></td>'
                 +'<td'+cell(A.m('pd'),T.m('pd'))+'>'+(A.pc/A.n).toLocaleString('tr-TR',{maximumFractionDigits:1})+' kez • '+f0(A.m('pd'))+' dk</td><td'+cell(A.m('fm'),T.m('fm'))+'>'+f0(A.m('fm'))+' <small>('+A.nf+'/'+A.n+')</small></td><td><b>'+f0(A.m('loss'))+'</b></td><td>'+(hv?'—':'≈ '+f0(kg)+' kg')+'</td></tr>'}).join('')
         +'<tr class="pa-pp-t"><td><b>Takım</b></td><td>'+T.n+'</td><td><b>%'+f0(T.pct)+'</b></td><td>'+f0(T.m('late'))+'</td><td>'+f0(T.m('early'))+'</td><td>'+(T.pc/T.n).toLocaleString('tr-TR',{maximumFractionDigits:1})+' kez • '+f0(T.m('pd'))+' dk</td><td>'+f0(T.m('fm'))+'</td><td><b>'+f0(T.m('loss'))+'</b></td><td>≈ '+f0(T.m('loss')/60*tkpa)+' kg</td></tr></tbody></table></div>';
     if(paDvSel&&by[paDvSel]){
         const c=paDvSel,A=paDvAgg(by[c]),hv=heavyOf(c),n=A.n,kg=A.m('loss')/60*kpaOf(c);
-        h+='<div class="pa-sub">'+esc(c)+' · rakamlarla özet <small>'+n+' vardiya • satıra tekrar tıkla kapat</small></div><ul class="pa-ins">'
+        h+='<div class="pa-sub">'+paNm(c)+' · rakamlarla özet <small>'+n+' vardiya • satıra tekrar tıkla kapat</small></div><ul class="pa-ins">'
             +(hv?'<li style="color:#ffb74d">Ağırlıklı Sarım yaptığı için bu kişide KK kayıt ölçüleri yanıltıcı olabilir; yalnız bilgi.</li>':'')
             +'<li><b>Geç başlama:</b> '+n+' vardiyanın <b>'+A.nl+'</b>\'inde ilk kayıt '+(paDvMode==='ref'?'o vardiyada en erken başlayandan':'vardiya başından')+' '+paDvLate+' dk\'dan sonra geldi'+(A.nl?'; geç kalınan vardiyalarda ortalama <b>'+f0(A.lateSum/A.nl)+' dk</b> fazla':'')+'. Tüm vardiyalara yayınca <b>'+f0(A.m('late'))+' dk/vardiya</b> (takım '+f0(T.m('late'))+').</li>'
             +'<li><b>Erken bırakma:</b> '+n+' vardiyanın <b>'+A.ne+'</b>\'inde son kayıt '+(paDvMode==='ref'?'o vardiyada en geç biten kişiden':'vardiya bitişinden')+' '+paDvEarly+' dk\'dan önce geldi'+(A.ne?'; bu vardiyalarda ortalama <b>'+f0(A.earlySum/A.ne)+' dk</b> fazla':'')+'. Ortalama <b>'+f0(A.m('early'))+' dk/vardiya</b> (takım '+f0(T.m('early'))+').</li>'
@@ -9536,7 +9722,7 @@ function paAvgStripsHtml(by,codes,hv){
         +'<div class="pa-cmpbar"><span class="pa-cmp-vs">Vardiya</span><span class="pa-seg">'+[['all','Hepsi'],['8','08–16'],['16','16–24'],['0','00–08']].map(([v,l])=>'<button type="button" class="'+(paAvgBlk===v?'on':'')+'" onclick="paAvgSet(&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</span></div>'
         +'<div class="pa-leg"><span><i style="background:'+col.g+'"></i>Kayıt var (çalışıyor)</span><span><i style="background:'+col.o+'"></i>Boşluk, ekipte iş sürüyor</span><span><i style="background:'+col.b+'"></i>Boşluk, ekip de boş</span><span><i style="background:'+col.r+'"></i>Vardiya başı / sonu boş</span></div>'
         +'<div class="pa-av-ax"><span></span><div>'+lab.map(x=>'<em>'+x+'</em>').join('')+'</div><span></span></div>'
-        +list.map(x=>'<div class="pa-av-r"><span class="n"><b>'+esc(x.c)+'</b>'+(hv[x.c]?'<em title="Ağırlıklı Sarım yapıyor">S</em>':'')+'<small>'+x.n+' vard.</small></span><div class="pa-av-s">'+x.cells.map((z,i)=>'<i title="'+String(Math.floor(i*10/60))+'. sa +'+(i*10%60)+' dk: çalışıyor %'+Math.round(z.g/x.n*100)+' • iş varken boşluk %'+Math.round(z.o/x.n*100)+' • ekip de boş %'+Math.round(z.b/x.n*100)+' • vardiya dışı %'+Math.round(z.r/x.n*100)+'" style="background:'+grad(z)+'"></i>').join('')+'</div>'
+        +list.map(x=>'<div class="pa-av-r"><span class="n">'+paNm(x.c)+(hv[x.c]?'<em title="Ağırlıklı Sarım yapıyor">S</em>':'')+'<small>'+x.n+' vard.</small></span><div class="pa-av-s">'+x.cells.map((z,i)=>'<i title="'+String(Math.floor(i*10/60))+'. sa +'+(i*10%60)+' dk: çalışıyor %'+Math.round(z.g/x.n*100)+' • iş varken boşluk %'+Math.round(z.o/x.n*100)+' • ekip de boş %'+Math.round(z.b/x.n*100)+' • vardiya dışı %'+Math.round(z.r/x.n*100)+'" style="background:'+grad(z)+'"></i>').join('')+'</div>'
             +'<span class="i">ilk kayıt <b>+'+Math.round(x.f)+' dk</b><br>son kayıt <b>−'+Math.round(x.l)+' dk</b><br>çalışıyor <b>%'+Math.round(x.work)+'</b></span></div>').join('');
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-av-r{display:grid;grid-template-columns:70px minmax(0,1fr) 104px;gap:8px;align-items:center;margin:5px 0}.pa-av-r .n{display:flex;flex-direction:column;line-height:1.15}.pa-av-r .n b{font-size:15px}.pa-av-r .n small{opacity:.6;font-size:10.5px}.pa-av-r .n em{font-style:normal;background:#6f6c8e;border-radius:3px;padding:0 3px;font-size:10px;width:max-content}.pa-av-s{display:grid;grid-template-columns:repeat(48,1fr);height:30px;border-radius:5px;overflow:hidden;background:#2b2850}.pa-av-s i{display:block;height:100%}.pa-av-r .i{font-size:11px;line-height:1.35;color:#c3c2b7}.pa-av-ax{display:grid;grid-template-columns:70px minmax(0,1fr) 104px;gap:8px;font-size:10px;color:#928fb0}.pa-av-ax div{display:grid;grid-template-columns:repeat(8,1fr)}.pa-av-ax em{font-style:normal;border-left:1px solid #47437a;padding-left:3px}@media(max-width:700px){.pa-av-r,.pa-av-ax{grid-template-columns:52px minmax(0,1fr)}.pa-av-r .i,.pa-av-ax span:last-child{display:none}}';document.head.appendChild(st)})();
@@ -9565,11 +9751,11 @@ function paCmpHtml(M){
         const mx=Math.max(1,tv,...L.map(x=>x.v)),pos=tv/mx*100;
         return '<div class="pa-cc"><div class="pa-cc-t">'+t+' <small>'+sub+'</small></div><div class="pa-cc-b">'+L.map(x=>{
             const diff=(x.v-tv)*dir,rel=Math.abs(diff)/Math.max(1,Math.abs(tv)),col=x.na?'#6f6c8e':(rel<0.1?'#d9b640':diff>0?'#2e9e6a':'#d9534f');
-            return '<div class="pa-cc-r"><span class="n">'+esc(x.c)+(x.na?'<em title="Ağırlıklı Sarım yapıyor">S</em>':'')+'</span><div class="bar"><i style="width:'+Math.max(1,x.v/mx*100).toFixed(1)+'%;background:'+col+'"></i><u style="left:'+pos.toFixed(1)+'%"></u></div><span class="v">'+f0(x.v)+' <small>'+u+'</small></span></div>'}).join('')
+            return '<div class="pa-cc-r"><span class="n">'+esc(x.c)+(paAdName(x.c)?' '+esc(paAdName(x.c)):'')+(x.na?'<em title="Ağırlıklı Sarım yapıyor">S</em>':'')+'</span><div class="bar"><i style="width:'+Math.max(1,x.v/mx*100).toFixed(1)+'%;background:'+col+'"></i><u style="left:'+pos.toFixed(1)+'%"></u></div><span class="v">'+f0(x.v)+' <small>'+u+'</small></span></div>'}).join('')
             +'</div><div class="pa-cc-f"><u></u> takım ortalaması <b>'+f0(tv)+' '+u+'</b> • '+(dir>0?'yüksek iyi':'düşük iyi')+'</div></div>';
     };
     return '<div class="pa-note" style="margin:0 0 8px">Her grafik tek bir ölçüyü gösterir; kişiler <b>iyiden zayıfa</b> sıralıdır, beyaz çizgi <b>takım ortalaması</b>. Yeşil takımdan iyi, sarı takıma yakın (±%10), kırmızı takımdan zayıf. <em style="font-style:normal;background:#6f6c8e;border-radius:3px;padding:0 4px">S</em> = ağırlıklı Sarım yapan kişi (KK ölçüleri yanıltıcı olabileceğinden gri).</div>'
-        +'<div class="pa-cc-grid">'+defs.map(chart).join('')+'</div>'+paAvgStripsHtml(by,codes,hv)
+        +'<div class="pa-cc-grid'+(PERSAD?' pkc-ccw':'')+'">'+defs.map(chart).join('')+'</div>'+paAvgStripsHtml(by,codes,hv)
         +'<div class="pa-note">Geç başlama ve erken bırakma, <b>Devamlılık</b> kartındaki paylara (geç '+paDvLate+' dk, erken '+paDvEarly+' dk) göre hesaplanır; payı aşan süreyi gösterir. Dönem: son '+paRange+' gün • '+codes.length+' kişi • '+teamRows.length+' vardiya.</div>';
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-cc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}.pa-cc{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px}.pa-cc-t{font-weight:800;font-size:14px;margin-bottom:6px}.pa-cc-t small{font-weight:400;opacity:.65;font-size:11.5px;margin-left:4px}'
@@ -9608,7 +9794,7 @@ function paBodyHtml(M){
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat başı kişi başı üretim <small>KK + Sarım1 + Sarım2 • kg • saat bazlı ortalama ÷ kişi sayısı</small></div>'+paPpHtml(M)+'</div>'
         +'<div class="pa-card pa-wide" id="paDvCard"><div class="pa-card-t">Üretim devamlılığı <small>geç başlama • erken bırakma • parti içi duraksama ve fazla mola • dakika, yüzde ve ≈ kg olarak • satıra tıkla</small></div>'+paDvHtml(M)+'</div>'
         +'<div class="pa-card pa-wide" id="paCmpCard"><div class="pa-card-t">Personel karşılaştırma grafikleri <small>üretim • çalışma hızı • süreklilik • vardiya kapsamı • iş varken kayıtsız • erken bırakma • geç başlama</small></div>'+paCmpHtml(M)+'</div>'
-        +'<div class="pa-card pa-wide" id="paTopCard"><div class="pa-card-t">Personel geri bildirimi <small>KK top kayıtları • kişi kodla • takıma göre 4 ölçü ve vardiya çizelgesi • kutuya tıkla</small></div>'+paTopHtml(M)+'</div>'
+        +'<div class="pa-card pa-wide" id="paTopCard"><div class="pa-card-t">Personel geri bildirimi <small>KK top kayıtları • kişi kodla • takıma göre 4 ölçü ve vardiya çizelgesi • kutuya tıkla</small><button type="button" class="pa-kart-btn" onclick="paKartOpen()" title="Seçtiğin gün / kişiler için A4 personel kartları; isimler şifreyle açılır">📄 Kartlar (PDF)</button></div>'+paTopHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Kayıp zaman avı <small>KK & Sarım ekibi • ERP zaman raporu • kişiler kodla • aşama seçiminden bağımsız</small></div>'+paLkHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'
             +'<div class="pa-two"><div><div class="pa-sub">Gün gün, saat saat <small>hücrede o saatte geçen miktar • sağda gün toplamı</small><span class="pa-seg pa-heat-tg"><button type="button" class="'+(paHeatAll?'':'on')+'" onclick="paHeatAllSet(0)">'+esc(M.R.name)+'</button><button type="button" class="'+(paHeatAll?'on':'')+'" onclick="paHeatAllSet(1)" title="KK + Sarım1 + Sarım2 toplamı: aynı kişi her ikisinde de çalışabilir">Hepsi</button></span></div>'+paHeatHtml(M)+'</div><div>'+paHourChartsHtml(M)+'</div></div></div>'

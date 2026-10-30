@@ -1,0 +1,43 @@
+name: Parti kayitlari
+
+# Panodaki ⭐ parti kayitlari cihazlar arasinda ntfy kanalindan esitlenir (kanal 12 saat tutar). Bu is kanaldakini
+# depodaki kalici kopyayla (data/parti_kayitlari.json) birlestirir. Cakisma olmamasi icin bu dosyayi yalnizca bu is yazar.
+on:
+  push:
+    branches: [main]
+    paths: [data/partiler.json]
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: parti-kayitlari
+  cancel-in-progress: false
+
+jobs:
+  kayit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Kayitlari guncelle ve gonder
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            python3 update_parti_kayitlari.py
+            git add data/parti_kayitlari.json
+            if git diff --cached --quiet; then echo "Degisiklik yok"; exit 0; fi
+            git commit -q -m "Parti kayitlari guncellendi [skip ci]"
+            if git push -q origin HEAD:main; then exit 0; fi
+            echo "main ilerlemis, en son veriyle yeniden deneniyor ($i)"
+            git fetch -q --depth=1 origin main
+            git reset -q --hard FETCH_HEAD
+            sleep 3
+          done
+          exit 1

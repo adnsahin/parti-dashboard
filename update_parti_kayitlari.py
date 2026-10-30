@@ -6,7 +6,8 @@
 
 Panodaki kayitlar cihazlar arasinda ntfy.sh kanalindan esitlenir; kanal mesajlari 12 saat tutar. Bu betik kanaldaki en yeni
 tam anlik goruntuyu okuyup depodaki dosyayla birlestirir (her kayit kendi degisiklik zamaniyla, "u"); boylece hicbir cihaz
-uzun sure acilmasa da kayitlar kaybolmaz. GUNCELLE_VE_PUSH.bat her calismada otomatik calistirir.
+uzun sure acilmasa da kayitlar kaybolmaz. GitHub Actions (.github/workflows/parti_kayitlari.yml) her veri
+gonderiminde ve 3 saatte bir calistirir; dosyayi yalnizca o yazar.
 """
 import argparse
 import json

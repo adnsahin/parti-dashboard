@@ -1531,8 +1531,8 @@ function srKatDel(i){const n=DURUM_KAT[i],cnt=srRows().filter(r=>r.durum===n).le
     DURUM_KAT.splice(i,1);srRows().forEach(r=>{if(r.durum===n)r.durum=''});if(srKatF===n)srKatF='';srKatSave();saveSelected();srKatOpen();srRefresh()}
 function srKatMove(i,d){const j=i+d;if(j<0||j>=DURUM_KAT.length)return;const t=DURUM_KAT[i];DURUM_KAT[i]=DURUM_KAT[j];DURUM_KAT[j]=t;srKatSave();srKatOpen();srRefresh()}
 // ── ☁ Parti kayıtlarının cihazlar arası eşitlenmesi (Seçilenler gibi, ayar gerekmez). Ortak saklama yeri: ntfy.sh'de rastgele adlı
-//    gizli kanal (12 saat tutar; açık olan her cihaz 6 saatte bir tazeler) + depoda data/parti_kayitlari.json (işyeri PC'si
-//    GUNCELLE_VE_PUSH.bat ile kanaldakini depoya yazar → kanal boşalsa da kayıtlar kalıcı). Her kayıt kendi değişiklik zamanıyla (u)
+//    gizli kanal (12 saat tutar; açık olan her cihaz 6 saatte bir tazeler) + depoda data/parti_kayitlari.json (
+//    GitHub Actions, parti_kayitlari.yml: her veri gönderiminde ve 3 saatte bir kanaldakini depoya yazar → kanal boşalsa da kalıcı). Her kayıt kendi değişiklik zamanıyla (u)
 //    birleşir: hangi cihazda en son değiştiyse o geçerli; silinen kayıt "silindi" işaretiyle (60 gün) yayılır.
 //    Kanal mesajı 4 KB ile sınırlı olduğundan bir anlık görüntü parçalara bölünür: {v:'sr1', t, c:[sıra, adet], k?, r, x}.
 const SR_SYNC={url:'https://ntfy.sh/parti-kayit-80229929701cee76beb5',file:'data/parti_kayitlari.json',refreshMs:6*3600000,maxBytes:3800,tombDays:60};

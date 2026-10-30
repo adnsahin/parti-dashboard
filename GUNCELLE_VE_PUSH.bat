@@ -87,6 +87,13 @@ if exist "..\urt.xlsx" (
   echo Personel top raporu atlandi: ..\urt.xlsx bulunamadi.
 )
 
+where python >nul 2>nul
+if not errorlevel 1 (
+  echo Parti kayitlari kalici kopyasi guncelleniyor...
+  python "update_parti_kayitlari.py"
+  if errorlevel 1 echo UYARI: Parti kayitlari guncellenemedi, devam ediliyor.
+)
+
 git status --short > "%TEMP%\parti_dashboard_git_status.txt"
 for %%A in ("%TEMP%\parti_dashboard_git_status.txt") do if %%~zA==0 (
   echo.
@@ -99,7 +106,7 @@ del "%TEMP%\parti_dashboard_git_status.txt" >nul 2>nul
 
 echo.
 echo Degisiklikler commit ediliyor...
-git add data/partiler.json data/tamirler.json data/zaman_ozet.json data/personel_top.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py update_personel_top.py
+git add data/partiler.json data/tamirler.json data/zaman_ozet.json data/personel_top.json data/parti_kayitlari.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py update_personel_top.py update_parti_kayitlari.py
 git commit -m "Update dashboard data"
 if errorlevel 1 (
   echo.

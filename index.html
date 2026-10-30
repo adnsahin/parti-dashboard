@@ -709,7 +709,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <button class="btn-alarm-list" onclick="toggleAlarmPanel()">🔔 Alarm</button>
 <button class="btn-tamir-list" id="btnTamirList" onclick="toggleTamirPanel()">🛠️ Tamir (0)</button>
 <button data-action="post" style="background:#00A8CC;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="togglePostProcessPanel()">🧭 KK/Sarım Sonrası</button><button style="background:#F39C12;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleKkSarimPanel()">📈 KK/Sarım1 Analiz</button><button style="background:#6A1B9A;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleHeatmapMindmapPanel()">🧠 Isı Haritası Mindmap</button><button style="background:#8E24AA;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleRecentArrivalPanel()">🔔 Son Gelenler</button><button style="background:#00838F;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleUretimLogPanel()">📒 Üretim Kayıtları</button><button style="background:#006064;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button><button style="background:#AD1457;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="lbOpen()">📺 Canlı Hareket İzleme</button><button style="background:#1565C0;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="paOpen()">📊 Üretim Analizi</button><button style="background:#5D4037;color:white;border:none;padding:9px 16px;border-radius:25px;cursor:pointer;font-weight:bold" onclick="toggleTakipMapPanel()">🧭 Takip Haritası</button>
-<button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()">⭐ Seçimler (0)</button><button class="btn-star-list btn-lbsel-list" id="btnLbSelList" onclick="lbOpenSel()" title="Canlı izlemenin ortak Seçilenler listesi (tüm cihazlarda) — kartlardaki ☑ ile eklenir">☑ Seçilenler (0)</button>
+<button class="btn-star-list" id="btnStarList" onclick="toggleSelectionPanel()" title="Parti kayıtları: sorunlu / özel partiler kategoriye göre (liste, kutular, mindmap)">⭐ Kayıtlar (0)</button><button class="btn-star-list btn-lbsel-list" id="btnLbSelList" onclick="lbOpenSel()" title="Canlı izlemenin ortak Seçilenler listesi (tüm cihazlarda) — kartlardaki ☑ ile eklenir">☑ Seçilenler (0)</button>
 <button class="btn-all-export" onclick="exportAllToExcel()">📦 Excel</button>
 </div>
 <div class="total-bar" id="totalBar"></div>
@@ -825,7 +825,7 @@ let BSA_ORDER=[];
 let TAMIR_LIST=[];
 
 const FIRE_REASONS=['Leke','Yırtık','Renk Farkı','Dokuma Hatası','Boya Hatası','Kesim Firesi','Metraj Eksikliği','Numune Firesi','Test Firesi','Kenar Firesi','Dikiş/Birleşim Hatası','Diğer'];
-const DURUM_KAT=['Acil','Öncelikli','Beklemede','Sorunlu','Tamamlandı','Müşteri Bekleniyor','Üretim Hatası'];
+const DURUM_KAT=(()=>{const d=['Acil','Öncelikli','Beklemede','Sorunlu','Tamamlandı','Müşteri Bekleniyor','Üretim Hatası'];try{const v=JSON.parse(localStorage.getItem('srKat9')||'null');if(Array.isArray(v)&&v.length)return v.map(String)}catch(e){}return d})();   // ⚙ Kategoriler ile düzenlenir
 const ALARM_PRIORITIES=['Kritik','Yüksek','Orta','Düşük'];
 
 let currentSeviye=null,currentGroupMode='hedef';
@@ -843,7 +843,9 @@ let fireRecords=safeParse('fr9','{}');
 let noteRecords=safeParse('nr9','{}');
 let alarmRecords=safeParse('ar9','{}');
 let filterAlarmRecords=safeParse('far9','[]');
-let selectedRecords=safeParse('sr9','{}');
+// ⭐ kayıtlar parti no ile saklanır (kart kimliği "c_N" her veri yenilemede değişebildiği için); eski kayıtlar açılışta dönüştürülür
+let selectedRecords=(()=>{const o=safeParse('sr9','{}'),n={};if(o&&typeof o==='object')Object.values(o).forEach(r=>{if(r&&r.parti){const p=String(r.parti).trim();r.id=p;r.u=r.u||1;if(!n[p]||(r.u||0)>=(n[p].u||0))n[p]=r}});return n})();
+function srK(k){return String(k&&k.parti||'').trim()}
 let tamirOverrides=safeParse('to9','{}'); // Tamir durum & not özelleştirmeleri
 let postProcessNotes=safeParse('ppn9','{}');
 let uploadValidation={mainRows:0,repairRows:0,emptyParti:0,emptyStage:0,zeroKg:0,duplicateParties:0,matchedRepair:0,unmatchedRepair:0,missingColumns:[]};
@@ -1009,7 +1011,7 @@ function saveFilterAlarm(){
 }
 function toggleFilterAlarm(uid){const r=filterAlarmRecords.find(x=>x.uid===uid);if(r){r.active=r.active===false;saveFilterAlarms();renderFilterAlarmPanel()}}
 function deleteFilterAlarm(uid){filterAlarmRecords=filterAlarmRecords.filter(x=>x.uid!==uid);saveFilterAlarms();renderFilterAlarmPanel()}
-function saveSelected(){localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
+function saveSelected(){if(typeof srStamp==='function'){srStamp();srLocalSave();srSyncQueue()}else localStorage.setItem('sr9',JSON.stringify(selectedRecords))}
 function saveTamirOverrides(){localStorage.setItem('to9',JSON.stringify(tamirOverrides))}
 function savePostProcessNotes(){localStorage.setItem('ppn9',JSON.stringify(postProcessNotes))}
 
@@ -1421,17 +1423,18 @@ function fallbackDownload(blob, filename='tamirler.png') {
 /* ── YILDIZ SEÇİM SİSTEMİ ── */
 function toggleSelect(e,id){
     e.stopPropagation();
-    if(selectedRecords[id])delete selectedRecords[id];
-    else{const k=getCardById(id);const al=getAlarmsList(id);selectedRecords[id]={id,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',firma:k.line1||'',ham_adi:k.ham_adi||'',recete_adi:k.recete_adi||'',kilo:k.kilo,bekleme:waitHoursText(k),durum:'',not:'',alarm_info:al.filter(a=>a.active!==false).map(a=>a.title).join(', '),added_at:new Date().toLocaleString('tr-TR')}}
-    saveSelected();document.querySelectorAll('.star-'+id).forEach(el=>{el.classList.toggle('active',!!selectedRecords[id]);el.innerHTML=selectedRecords[id]?'🌟':'⭐'});updateStarCount();
+    const k=getCardById(id),p=k?srK(k):String(id).trim();
+    if(selectedRecords[p])delete selectedRecords[p];
+    else{if(!k)return;const al=getAlarmsList(id);selectedRecords[p]={id:p,parti:k.parti,asama:k._asama,bir_sonraki:k.bir_sonraki||'',firma:k.line1||'',ham_adi:k.ham_adi||'',recete_adi:k.recete_adi||'',kilo:k.kilo,bekleme:waitHoursText(k),durum:'',not:'',alarm_info:al.filter(a=>a.active!==false).map(a=>a.title).join(', '),added_at:new Date().toLocaleString('tr-TR')}}
+    saveSelected();srStarSync(p);updateStarCount();
     if(document.getElementById('selectionPanel').style.display==='block')renderSelectionPanel();
 }
 function updateStarCount(){
     const c=Object.keys(selectedRecords).length;
     const b=document.getElementById('btnStarList');
-    if(b)b.innerHTML='⭐ Seçimler ('+c+')';
+    if(b)b.innerHTML='⭐ Kayıtlar ('+c+')';
     const b2=document.getElementById('btnStarBottom');
-    if(b2)b2.innerHTML='<span>⭐</span>Seçimler ('+c+')';
+    if(b2)b2.innerHTML='<span>⭐</span>Kayıtlar ('+c+')';
 }
 
 function toggleSelectionPanel(){closeAllPanels();const p=document.getElementById('selectionPanel');if(p.style.display==='block')p.style.display='none';else renderSelectionPanel()}
@@ -1439,24 +1442,198 @@ function selectedWaitText(r){const card=getCardById(r&&r.id)||getAllCards().find
 function renderSelectionPanel(){
     const p=document.getElementById('selectionPanel');const rows=Object.values(selectedRecords);
     const ro=['<option value="">-- Durum --</option>'].concat(DURUM_KAT.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
-    let h='<button class="panel-close" onclick="document.getElementById(\'selectionPanel\').style.display=\'none\'">×</button><h2 style="color:#FF9800">⭐ Özel Seçim Listesi</h2><div class="panel-summary">'+rows.length+' parti</div>';
+    let h='<button class="panel-close" onclick="document.getElementById(\'selectionPanel\').style.display=\'none\'">×</button><h2 style="color:#FF9800">⭐ Parti Kayıtları <small style="font-size:12px;color:#bbb;font-weight:400">kategoriye göre • tüm cihazlarda ortak • parti sistemden çıksa da kalır</small></h2><div class="panel-summary">'+rows.length+' parti'+(srKatF!==''?' • süzgeç: <b>'+esc(srKatF||'Kategorisiz')+'</b>':'')+'</div>'+(rows.length?srBarHtml(rows):'');
 
     h+='<div class="sel-bulk" style="margin-bottom:15px; background:rgba(156, 39, 176, 0.15); border:1px solid rgba(156, 39, 176, 0.4);"><strong style="color:#E040FB;">✨ Parti Ekle:</strong><input type="text" id="manualStarInput" class="sel-input" style="width:120px" placeholder="Parti No..." onkeypress="if(event.key===\'Enter\') addManualToSelection()"><button style="background:#4CAF50;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="addManualToSelection()">Ekle</button><button id="btnYildizSesli" style="background:#9C27B0;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="baslatKesintisizYildizSesli()" title="Kesintisiz Sesle Ekle">🎙️ Kesintisiz Sesli Ekle</button></div>';
 
     if(rows.length){
         h+='<div class="sel-bulk"><strong>Toplu:</strong><select id="bulkDurum" class="sel-select" style="width:130px">'+ro+'</select><input type="text" id="bulkNot" class="sel-input" style="flex:1" placeholder="Toplu Not..."><button style="background:#4CAF50;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="applyBulkSelection()">Uygula</button><button style="background:#455A64;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="toggleElementFullscreen(&quot;selectionPanel&quot;,&quot;Özel Seçimler&quot;)">⛶ Tam Ekran</button><button style="background:#2196F3;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="exportSelectionExcel()">📥 Excel</button><button style="background:#9B59B6;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="exportSelectionPDF()">📄 PDF</button><button style="background:#25D366;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold" onclick="shareWhatsApp()">📱 WhatsApp</button><button style="background:#E74C3C;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;margin-left:auto" onclick="clearAllSelections()">🗑️ Temizle</button></div>';
+        if(srView!=='list')h+=srAltHtml(rows);else{
         h+='<div id="selectionListContainer" style="overflow-x:auto;max-height:55vh;overflow-y:auto;border-radius:8px"><div id="pdfWrapper" style="background:#1a1a2e;padding:15px;border-radius:8px"><h3 style="color:#FFD700;text-align:center;margin-bottom:15px;font-family:Arial">ÖZEL SEÇİMLER LİSTESİ</h3><table class="sel-panel-table"><thead><tr><th>⭐</th><th>Parti</th><th>Aşama/Sonraki</th><th>Kumaş/Reçete</th><th>Tamir</th><th>Firma</th><th>Kilo</th><th>Bekleme</th><th>Durum/Not</th><th class="islem-col">İşlem</th></tr></thead><tbody>';
-        rows.sort((a,b)=>a.added_at.localeCompare(b.added_at)).forEach(r=>{
+        srFiltered(rows).sort((a,b)=>String(a.added_at).localeCompare(String(b.added_at))).forEach(r=>{
             const sRo=DURUM_KAT.map(dk=>'<option value="'+esc(dk)+'" '+(r.durum===dk?'selected':'')+'>'+esc(dk)+'</option>').join('');
             const card=getCardById(r.id),ts=card?tamirShort(card):tamirSummaryForParti(r.parti);
             h+='<tr><td>🌟</td><td><b style="color:#FFD700;font-size:14px">'+esc(r.parti)+'</b></td><td><div style="color:#81D4FA;font-weight:bold">'+esc(r.asama)+'</div><div style="color:#FFB74D;font-size:10px">'+esc(r.bir_sonraki||'-')+'</div></td><td><div style="font-weight:bold;color:#E0E0E0">'+esc(r.ham_adi||'-')+'</div><div style="color:#FFD54F;font-size:10px;font-weight:800">🎨 '+esc(r.recete_adi||'-')+'</div></td><td style="color:#FFB37A;font-weight:bold;font-size:11px">'+(ts?'🛠️ '+esc(ts):'-')+'</td><td>'+esc(r.firma||'-')+'</td><td style="text-align:right;font-weight:bold;white-space:nowrap">'+(r.kilo||0).toLocaleString('tr-TR')+' kg</td><td style="font-weight:bold;white-space:nowrap">'+esc(selectedWaitText(r))+'</td><td><select class="sel-select snapshot-hide" onchange="updateSelItem(\''+r.id+'\',\'durum\',this.value)" style="width:100px;margin-bottom:4px">'+sRo+'</select><div style="display:flex;gap:4px"><input type="text" id="sel_not_'+r.id+'" class="sel-input snapshot-hide" value="'+esc(r.not||'')+'" onchange="updateSelItem(\''+r.id+'\',\'not\',this.value)" placeholder="Not..." style="width:110px"><button id="btn_mic_'+r.id+'" class="snapshot-hide" style="background:#9C27B0;color:white;border:none;border-radius:4px;padding:4px 6px;cursor:pointer" onclick="startVoiceNote(\''+r.id+'\')" title="Sesli Not Ekle">🎤</button></div></td><td class="islem-col"><button style="background:#E74C3C;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px" onclick="toggleSelect(event,\''+r.id+'\')">Çıkar</button></td></tr>';
         });
-        h+='</tbody></table></div></div>';
+        h+='</tbody></table></div></div>';}
     } else {
         h+='<div class="list-empty">Seçim Listesi Boş.<br>Yukarıdaki alandan parti numarası yazarak veya "Kesintisiz Sesli Ekle" butonuna basarak seçim yapabilirsiniz.</div>';
     }
     p.innerHTML=h;p.style.display='block';addPanelFullButton('selectionPanel');
 }
+// ── ⭐ Parti kayıtları: Özel Seçim Listesi kategorili kalıcı kayıt olarak. Kayıt partinin o anki bilgisiyle saklanır
+//    (parti sistemden çıksa da kalır); kategori = "durum" (hata / durum adı, düzenlenebilir). Görünüm: liste / kutular / mindmap.
+const SR_KAT_C=['#E53935','#FB8C00','#FDD835','#8E24AA','#43A047','#1E88E5','#6D4C41','#00897B','#D81B60','#3949AB','#7CB342','#546E7A','#F4511E','#00ACC1'];
+let srView=mapLoadPref('srView9',v=>v==='list'||v==='box'||v==='mind','list'),srKatF='';
+function srKatSave(){srKatU=Date.now();try{localStorage.setItem('srKat9',JSON.stringify(DURUM_KAT));localStorage.setItem('srKatU9',String(srKatU))}catch(e){}if(typeof srSyncQueue==='function')srSyncQueue()}
+function srKatColor(n){const i=DURUM_KAT.indexOf(n);return i<0?'#78909C':SR_KAT_C[i%SR_KAT_C.length]}
+function srViewSet(v){srView=v;mapSavePref('srView9',v);renderSelectionPanel()}
+function srKatFilter(n){srKatF=srKatF===n?'':n;renderSelectionPanel()}
+function srPanelOpen(){const p=document.getElementById('selectionPanel');return p&&p.style.display==='block'}
+function srRefresh(){if(srPanelOpen())renderSelectionPanel();updateStarCount()}
+function srCardOf(r,m){m=m||srCardMap();return m.get(String(r.parti).trim())||null}
+function srCardMap(){return new Map(getAllCards().map(k=>[String(k.parti).trim(),k]))}
+function srRows(){return Object.values(selectedRecords)}
+function srKatCounts(rows){const c={};rows.forEach(r=>{const k=r.durum||'';c[k]=(c[k]||0)+1});return c}
+// görünüm çubuğu: görünüm + kategori çipleri (sayılı; tıkla: süz) + kategori düzenleme + yedek
+function srBarHtml(rows){
+    const c=srKatCounts(rows),cats=DURUM_KAT.filter(n=>c[n]).concat(c['']?['']:[]);
+    return '<div class="sr-bar"><span class="sr-views">'+[['list','📋 Liste'],['box','🗂 Kutular'],['mind','🧠 Mindmap']].map(([v,l])=>'<button type="button" class="'+(srView===v?'on':'')+'" onclick="srViewSet(&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</span>'
+        +'<span class="sr-cats">'+cats.map(n=>'<button type="button" class="sr-chip'+(srKatF===n?' on':'')+'" style="--kc:'+(n?srKatColor(n):'#78909C')+'" onclick="srKatFilter(&quot;'+esc(n)+'&quot;)" title="Yalnız bu kategoriyi göster (tekrar bas: hepsi)">'+esc(n||'Kategorisiz')+' <b>'+c[n]+'</b></button>').join('')+'</span>'
+        +'<span class="sr-tools"><button type="button" onclick="srKatOpen()" title="Hata / durum kategorilerini ekle, adını değiştir, sil">⚙ Kategoriler</button>'+srSyncChip()+'</span></div>';
+}
+function srFiltered(rows){return srKatF===''?rows:rows.filter(r=>(r.durum||'')===srKatF)}
+// kutular: her kategori bir sütun, içinde parti kutuları
+function srBoxHtml(rows){
+    const m=srCardMap(),by=new Map();rows.forEach(r=>{const k=r.durum||'';if(!by.has(k))by.set(k,[]);by.get(k).push(r)});
+    const order=DURUM_KAT.filter(n=>by.has(n)).concat(by.has('')?['']:[]),f0=v=>Math.round(num(v)).toLocaleString('tr-TR');
+    const opts=cur=>'<option value="">Kategorisiz</option>'+DURUM_KAT.map(n=>'<option value="'+esc(n)+'"'+(cur===n?' selected':'')+'>'+esc(n)+'</option>').join('');
+    return '<div class="sr-box">'+order.map(n=>{const L=by.get(n).slice().sort((a,b)=>String(b.added_at).localeCompare(String(a.added_at))),kg=L.reduce((a,r)=>a+num(r.kilo),0),col=n?srKatColor(n):'#78909C';
+        return '<div class="sr-col" style="--kc:'+col+'"><div class="sr-col-h"><b>'+esc(n||'Kategorisiz')+'</b><small>'+L.length+' parti • '+f0(kg)+' kg</small></div>'+L.map(r=>{const k=srCardOf(r,m),st=k?normalizeStageName(k._asama||k.asama)||k._asama:'';
+            return '<div class="sr-t'+(k?'':' gone')+'"><div class="sr-t-h"><b'+(k?' class="lnk" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="Parti ayrıntısı"':'')+'>'+esc(r.parti)+'</b><span>'+f0(r.kilo)+' kg</span></div>'
+                +'<div class="sr-t-f">'+esc(r.firma||'-')+'</div><div class="sr-t-s">'+(k?'📍 '+esc(st||'-'):'⚪ sistemde yok • son aşama: <b>'+esc(r.asama||'-')+'</b>'+(r.gorulme?' • '+esc(r.gorulme):''))+'</div>'
+                +(r.not?'<div class="sr-t-n">📝 '+esc(r.not)+'</div>':'')
+                +'<div class="sr-t-b"><select onchange="srSetKatId(&quot;'+esc(r.id)+'&quot;,this.value)" title="Kategori">'+opts(r.durum||'')+'</select><small>'+esc(String(r.added_at||'').slice(0,10))+'</small><button type="button" title="Kaydı sil" onclick="srRemove(&quot;'+esc(r.id)+'&quot;)">🗑</button></div></div>'}).join('')+'</div>'}).join('')+'</div>';
+}
+function srMindHtml(){return '<div class="sr-mindw">'+lbMindHtml('kay',lbMindCards('kay'))+'</div>'}
+function srAltHtml(rows){return srView==='box'?srBoxHtml(srFiltered(rows)):srMindHtml()}
+function srSetKatId(id,v){const r=selectedRecords[id];if(!r)return;r.durum=v;r.kat_at=new Date().toLocaleString('tr-TR');saveSelected();srRefresh()}
+function srRemove(id){const r=selectedRecords[id];if(!r||!confirm(r.parti+' kaydı silinsin mi?'+(r.not?'\nNot: '+r.not:'')))return;delete selectedRecords[id];saveSelected();srStarSync(id);srRefresh()}
+function srStarSync(p){const k=getAllCards().find(c=>srK(c)===p);if(!k)return;const on=!!selectedRecords[p];document.querySelectorAll('.star-'+k.id).forEach(el=>{el.classList.toggle('active',on);el.innerHTML=on?'🌟':'⭐'})}
+// parti ayrıntı penceresinden tek tıkla kategori: kayıt yoksa oluşturur; aynı kategoriye tekrar basınca kategoriyi kaldırır
+function srDetailHtml(k){
+    try{const r=selectedRecords[srK(k)],cur=r?r.durum||'':null;
+        return '<div class="sr-det"><div class="sr-det-h">⭐ <b>Parti kaydı</b><small>'+(r?'kayıtlı'+(r.added_at?' • '+esc(String(r.added_at).slice(0,16)):''):'kategori seçince kaydedilir; parti sistemden çıksa da kalır')+'</small><button type="button" onclick="srKatOpen()" title="Kategorileri düzenle">⚙</button></div><div class="sr-det-c">'
+            +DURUM_KAT.map(n=>'<button type="button" class="sr-chip'+(cur===n?' on':'')+'" style="--kc:'+srKatColor(n)+'" onclick="srDetailSet(&quot;'+esc(k.id)+'&quot;,&quot;'+esc(n)+'&quot;)">'+esc(n)+'</button>').join('')+'</div></div>';
+    }catch(e){return''}
+}
+function srDetailSet(id,n){
+    const k=getCardById(id),p=k?srK(k):id;
+    if(!selectedRecords[p])toggleSelect({stopPropagation(){}},id);
+    const r=selectedRecords[p];if(!r)return;r.durum=r.durum===n?'':n;r.kat_at=new Date().toLocaleString('tr-TR');saveSelected();srRefresh();
+    showToast(r.durum?'⭐ '+r.parti+' → '+r.durum:'⭐ '+r.parti+' kategorisi kaldırıldı (kayıt duruyor)');openDetailModal(id);
+}
+// kategori yönetimi
+function srKatOpen(){
+    const c=srKatCounts(srRows());
+    hmModalShow('<div class="hm-card-title">⚙ Kayıt kategorileri<small>hata / durum adları • ad değişince o kategorideki kayıtlar da değişir • silinen kategorideki kayıtlar "Kategorisiz" olur</small></div><div class="sr-kat-list">'
+        +DURUM_KAT.map((n,i)=>'<div class="sr-kat-r"><i style="background:'+srKatColor(n)+'"></i><input type="text" maxlength="40" value="'+esc(n)+'" onchange="srKatRename('+i+',this.value)"><small>'+(c[n]||0)+' kayıt</small><button type="button" onclick="srKatMove('+i+',-1)" title="Yukarı"'+(i?'':' disabled')+'>▲</button><button type="button" onclick="srKatMove('+i+',1)" title="Aşağı"'+(i<DURUM_KAT.length-1?'':' disabled')+'>▼</button><button type="button" onclick="srKatDel('+i+')" title="Sil">🗑</button></div>').join('')
+        +'</div><div class="sr-kat-add"><input type="text" id="srKatNew" maxlength="40" placeholder="Yeni kategori (ör. Renk farkı, Müşteri iadesi…)" onkeydown="if(event.key===&quot;Enter&quot;)srKatAdd()"><button type="button" onclick="srKatAdd()">＋ Ekle</button></div>');
+    setTimeout(()=>{const i=document.getElementById('srKatNew');if(i)i.focus()},60);
+}
+function srKatAdd(){const i=document.getElementById('srKatNew'),v=String(i&&i.value||'').replace(/\s+/g,' ').trim();if(!v)return;if(DURUM_KAT.includes(v)){showToast('Bu kategori zaten var','warning');return}DURUM_KAT.push(v);srKatSave();srKatOpen();srRefresh()}
+function srKatRename(i,v){
+    v=String(v||'').replace(/\s+/g,' ').trim();const old=DURUM_KAT[i];if(!v||v===old){srKatOpen();return}
+    if(DURUM_KAT.includes(v)){showToast('Bu ad zaten var','warning');srKatOpen();return}
+    DURUM_KAT[i]=v;srRows().forEach(r=>{if(r.durum===old)r.durum=v});if(srKatF===old)srKatF=v;srKatSave();saveSelected();srKatOpen();srRefresh();showToast('✏️ '+old+' → '+v);
+}
+function srKatDel(i){const n=DURUM_KAT[i],cnt=srRows().filter(r=>r.durum===n).length;if(!confirm('"'+n+'" kategorisi silinsin mi?'+(cnt?'\n'+cnt+' kayıt "Kategorisiz" olacak (kayıtlar silinmez).':'')))return;
+    DURUM_KAT.splice(i,1);srRows().forEach(r=>{if(r.durum===n)r.durum=''});if(srKatF===n)srKatF='';srKatSave();saveSelected();srKatOpen();srRefresh()}
+function srKatMove(i,d){const j=i+d;if(j<0||j>=DURUM_KAT.length)return;const t=DURUM_KAT[i];DURUM_KAT[i]=DURUM_KAT[j];DURUM_KAT[j]=t;srKatSave();srKatOpen();srRefresh()}
+// ── ☁ Parti kayıtlarının cihazlar arası eşitlenmesi (Seçilenler gibi, ayar gerekmez). Ortak saklama yeri: ntfy.sh'de rastgele adlı
+//    gizli kanal (12 saat tutar; açık olan her cihaz 6 saatte bir tazeler) + depoda data/parti_kayitlari.json (işyeri PC'si
+//    GUNCELLE_VE_PUSH.bat ile kanaldakini depoya yazar → kanal boşalsa da kayıtlar kalıcı). Her kayıt kendi değişiklik zamanıyla (u)
+//    birleşir: hangi cihazda en son değiştiyse o geçerli; silinen kayıt "silindi" işaretiyle (60 gün) yayılır.
+//    Kanal mesajı 4 KB ile sınırlı olduğundan bir anlık görüntü parçalara bölünür: {v:'sr1', t, c:[sıra, adet], k?, r, x}.
+const SR_SYNC={url:'https://ntfy.sh/parti-kayit-80229929701cee76beb5',file:'data/parti_kayitlari.json',refreshMs:6*3600000,maxBytes:3800,tombDays:60};
+let srDel=safeParse('srDel9','{}');if(!srDel||typeof srDel!=='object'||Array.isArray(srDel))srDel={};
+let srKatU=+(localStorage.getItem('srKatU9')||0)||0,srSyncAt=+(localStorage.getItem('srSyncAt9')||0)||0,srSig={},srSyncT=null,srSyncBusy=false,srSyncSt={s:'',m:''},srRepoAt=0;
+const SR_F=['durum','not','asama','firma','kilo','added_at','u','bir_sonraki','ham_adi','recete_adi','kat_at','gorulme'];
+function srSigOf(r){return JSON.stringify(SR_F.filter(f=>f!=='u').map(f=>r[f]==null?'':r[f]))}
+function srSigInit(){srSig={};Object.keys(selectedRecords).forEach(p=>{srSig[p]=srSigOf(selectedRecords[p])})}
+// yerel değişiklikleri zamanla: değişen kayda u, silinene "silindi" işareti
+function srStamp(){
+    const now=Date.now();let ch=false;
+    Object.keys(selectedRecords).forEach(p=>{const r=selectedRecords[p],g=srSigOf(r);if(srSig[p]!==g){r.u=now;srSig[p]=g;ch=true}if(srDel[p])delete srDel[p]});
+    Object.keys(srSig).forEach(p=>{if(!selectedRecords[p]){srDel[p]=now;delete srSig[p];ch=true}});
+    return ch;
+}
+function srLocalSave(){try{localStorage.setItem('sr9',JSON.stringify(selectedRecords));localStorage.setItem('srDel9',JSON.stringify(srDel));localStorage.setItem('srKatU9',String(srKatU))}catch(e){}}
+function srSyncSaveAt(){try{localStorage.setItem('srSyncAt9',String(srSyncAt))}catch(e){}}
+function srSyncSet(s,m){srSyncSt={s,m:m||''};const e=document.getElementById('srSyncChip');if(e)e.outerHTML=srSyncChip()}
+function srSyncChip(){const s=srSyncSt.s,L=s==='err'?'☁ ⚠ eşitlenemedi':s==='wait'||s==='busy'?'☁ gönderiliyor…':'☁ tüm cihazlarda';
+    return '<button type="button" id="srSyncChip" class="sr-sync'+(s==='err'?' err':'')+'" onclick="srSyncPull(true)" title="'+esc(s==='err'?'Hata: '+srSyncSt.m+' — tıkla: yeniden dene':'Kayıtlar ve kategoriler bütün cihazlarda ortak; tıkla: şimdi eşitle')+'">'+L+'</button>'}
+function srEncRec(r){const t=(v,n)=>String(v==null?'':v).slice(0,n);return[t(r.durum,40),t(r.not,160),t(r.asama,30),t(r.firma,50),Math.round(num(r.kilo)),t(r.added_at,19),r.u||0,t(r.bir_sonraki,30),t(r.ham_adi,40),t(r.recete_adi,40),t(r.kat_at,19),t(r.gorulme,16)]}
+function srDecRec(p,a){const r={id:p,parti:p};SR_F.forEach((f,i)=>{r[f]=a[i]==null?'':a[i]});r.u=+r.u||0;r.kilo=num(r.kilo);return r}
+// ortak durum: {t, k:{l,u}, r:{parti: kayıt}, x:{parti: silinme ms}}
+function srMine(){const lim=Date.now()-SR_SYNC.tombDays*86400000,x={};Object.keys(srDel).forEach(p=>{if(srDel[p]>lim)x[p]=srDel[p]});return{k:{l:DURUM_KAT.slice(),u:srKatU},r:selectedRecords,x}}
+// uzaktakini birleştir; {ch: bu cihaz değişti, newer: bu cihazda uzakta olmayan yenilik var}
+function srMerge(S){
+    let ch=false,newer=false;const R=S.r||{},X=S.x||{};
+    Object.keys(R).forEach(p=>{const a=R[p],l=selectedRecords[p],lu=Math.max(l?l.u||0:0,srDel[p]||0);if((a.u||0)>lu){selectedRecords[p]=a;delete srDel[p];ch=true}});
+    Object.keys(X).forEach(p=>{const ms=X[p],l=selectedRecords[p];if(ms>(l?l.u||0:0)&&ms>(srDel[p]||0)){if(l)delete selectedRecords[p];srDel[p]=ms;ch=true}});
+    Object.keys(selectedRecords).forEach(p=>{const l=selectedRecords[p],ru=Math.max(R[p]?R[p].u||0:0,X[p]||0);if((l.u||0)>ru)newer=true});
+    Object.keys(srDel).forEach(p=>{if(R[p]&&(R[p].u||0)<srDel[p])newer=true;else if(!R[p]&&!X[p]&&srDel[p]>Date.now()-SR_SYNC.tombDays*86400000)newer=true});
+    const K=S.k;if(K&&Array.isArray(K.l)&&K.l.length){if((K.u||0)>srKatU){DURUM_KAT.splice(0,DURUM_KAT.length,...K.l.map(String));srKatU=K.u;try{localStorage.setItem('srKat9',JSON.stringify(DURUM_KAT))}catch(e){}ch=true}else if(srKatU>(K.u||0))newer=true}
+    else if(srKatU)newer=true;
+    if(ch){srSigInit();srLocalSave()}
+    return{ch,newer};
+}
+// kanaldaki en yeni TAM anlık görüntü (bütün parçaları gelmiş); yoksa null
+async function srSyncRead(){
+    const r=await fetch(SR_SYNC.url+'/json?poll=1&since=all',{cache:'no-store'});if(!r.ok)throw new Error('ntfy '+r.status);
+    const by=new Map();
+    (await r.text()).split('\n').forEach(line=>{if(!line.trim())return;try{const m=JSON.parse(line);if(m.event!=='message')return;const d=JSON.parse(m.message);if(!d||d.v!=='sr1'||typeof d.t!=='number'||!Array.isArray(d.c))return;
+        let s=by.get(d.t);if(!s){s={t:d.t,n:d.c[1],got:new Set(),r:{},x:{},k:null,time:0};by.set(d.t,s)}s.got.add(d.c[0]);s.time=Math.max(s.time,m.time*1000);if(d.k)s.k=d.k;
+        Object.keys(d.r||{}).forEach(p=>{s.r[p]=srDecRec(p,d.r[p])});Object.assign(s.x,d.x||{})}catch(e){}});
+    let best=null;by.forEach(s=>{if(s.got.size>=s.n&&(!best||s.t>best.t))best=s});return best;
+}
+async function srSyncWrite(){
+    const M=srMine(),t=Date.now(),parts=[],cur=()=>({r:{},x:{}});let c=cur(),sz=60;
+    const push=()=>{parts.push(c);c=cur();sz=60};
+    Object.keys(M.r).forEach(p=>{const e=JSON.stringify([p,srEncRec(M.r[p])]).length+2;if(sz+e>SR_SYNC.maxBytes-200&&Object.keys(c.r).length)push();c.r[p]=srEncRec(M.r[p]);sz+=e});
+    Object.keys(M.x).forEach(p=>{const e=p.length+20;if(sz+e>SR_SYNC.maxBytes-200)push();c.x[p]=M.x[p];sz+=e});
+    push();parts[0].k=M.k;
+    for(let i=0;i<parts.length;i++){const body=JSON.stringify(Object.assign({v:'sr1',t,c:[i,parts.length]},parts[i]));
+        const r=await fetch(SR_SYNC.url+'?priority=1',{method:'POST',body});if(!r.ok)throw new Error('ntfy '+r.status)}
+    srSyncAt=t;srSyncSaveAt();
+}
+function srAfterRemote(){srRefresh();try{document.querySelectorAll('.star-btn').forEach(el=>{const id=(el.className.match(/star-(\S+)/)||[])[1],k=id&&getCardById(id),on=!!(k&&selectedRecords[srK(k)]);el.classList.toggle('active',on);el.innerHTML=on?'🌟':'⭐'})}catch(e){}}
+// depodaki kalıcı kopya (sayfa açılışında ve 30 dk'da bir)
+async function srRepoRead(){
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch(SR_SYNC.file+ts,{cache:'no-store'});
+    const r=await (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/'+SR_SYNC.file+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel));
+    if(!r||!r.ok)return null;const j=await r.json();if(!j||j.v!=='sr1')return null;
+    const S={t:j.t||0,k:j.k||null,r:{},x:j.x||{}};Object.keys(j.r||{}).forEach(p=>{S.r[p]=srDecRec(p,j.r[p])});return S;
+}
+async function srSyncPull(manual){
+    if(srSyncBusy){if(!srSyncT)srSyncT=setTimeout(()=>{srSyncT=null;srSyncPull(manual)},1500);return}srSyncBusy=true;
+    try{
+        let ch=false,newer=false;
+        if(Date.now()-srRepoAt>1800000||manual){srRepoAt=Date.now();try{const F=await srRepoRead();if(F){const m=srMerge(F);ch=ch||m.ch}}catch(e){}}
+        const S=await srSyncRead();
+        if(S){const m=srMerge(S);ch=ch||m.ch;newer=m.newer}else newer=!!(Object.keys(selectedRecords).length||Object.keys(srDel).length||srKatU);
+        if(ch){srAfterRemote();if(!manual)showToast('☁ Parti kayıtları başka cihazdan güncellendi')}
+        // ortak durum alındıktan sonra: işletmedeki partilerin son görülen aşaması (yalnız aşama değişince yazılır)
+        if(srSeenUpdate()){srStamp();srLocalSave();newer=true;srRefresh()}
+        if(newer||(S&&Date.now()-S.time>SR_SYNC.refreshMs))await srSyncWrite();
+        srSyncSet('ok');
+    }catch(e){srSyncSet('err',e.message)}
+    finally{srSyncBusy=false}
+}
+// kayıttaki aşama, parti işletmedeyken güncel tutulur: aşama değişince yeni aşama + görüldüğü an yazılır. Parti sistemden
+// çıkınca son yazılan kalır ("son aşama: SEVK • 12.11.2026 14:30").
+function srSeenUpdate(){
+    const all=getAllCards();if(!all.length)return false;const m=new Map(all.map(k=>[srK(k),k])),now=new Date(),ts=now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});let ch=false;
+    Object.keys(selectedRecords).forEach(p=>{const r=selectedRecords[p],k=m.get(p);if(!k)return;const a=String(k._asama||'');
+        if(a&&(r.asama!==a||!r.gorulme)){if(r.asama!==a){r.asama=a;r.bir_sonraki=k.bir_sonraki||'';r.kilo=num(k.kilo)||r.kilo}r.gorulme=ts;ch=true}});
+    return ch;
+}
+function srSyncQueue(){clearTimeout(srSyncT);srSyncSet('wait');srSyncT=setTimeout(()=>{srSyncT=null;srSyncPull()},2500)}
+srSigInit();
+setTimeout(()=>srSyncPull(),2500);
+setInterval(()=>{if(!document.hidden&&!srSyncT)srSyncPull()},90000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)srSyncPull()});
+(function(){const st=document.createElement('style');st.textContent='.sr-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}.sr-views,.sr-cats,.sr-tools{display:inline-flex;flex-wrap:wrap;gap:4px}.sr-tools{margin-left:auto}'
+ +'.sr-bar button,.sr-up{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer}.sr-views button.on{background:#FF9800;border-color:#FFB74D;color:#1a1a2e}.sr-up input{display:none}'
+ +'.sr-chip{background:color-mix(in srgb,var(--kc) 22%,transparent)!important;border:1px solid var(--kc)!important;color:#fff;border-radius:14px!important;padding:3px 10px!important;font-size:12px;font-weight:700;cursor:pointer}.sr-chip b{margin-left:3px}.sr-chip.on{background:var(--kc)!important;color:#111}'
+ +'.sr-box{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:62vh;overflow:auto;align-items:start}.sr-col{border-top:4px solid var(--kc);background:rgba(255,255,255,.04);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:6px}'
+ +'.sr-col-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:2px 4px}.sr-col-h b{color:var(--kc);font-size:14px}.sr-col-h small{color:#aaa;font-size:11px}'
+ +'.sr-t{background:#1f1d3a;border:1px solid rgba(255,255,255,.12);border-left:4px solid var(--kc);border-radius:7px;padding:6px 8px;font-size:12px;display:flex;flex-direction:column;gap:2px}.sr-t.gone{opacity:.7}.sr-t-h{display:flex;justify-content:space-between}.sr-t-h b{color:#FFD700;font-size:14px}.sr-t-h b.lnk{cursor:pointer;text-decoration:underline dotted}.sr-t-f{color:#ddd;font-weight:700}.sr-t-s{color:#81D4FA;font-size:11px}.sr-t-n{color:#FFE082;font-size:11.5px}'
+ +'.sr-t-b{display:flex;gap:5px;align-items:center;margin-top:3px}.sr-t-b select{flex:1;min-width:0;background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:5px;font-size:11.5px;padding:2px}.sr-t-b small{color:#999;font-size:10px}.sr-t-b button{background:none;border:0;cursor:pointer;font-size:13px}'
+ +'.sr-sync{background:rgba(46,125,50,.25)!important;border-color:#66BB6A!important}.sr-sync.err{background:rgba(198,40,40,.3)!important;border-color:#EF5350!important}.sr-mindw{height:66vh;display:flex;flex-direction:column;background:#1d1a3a;border-radius:8px}'
+ +'.sr-det{margin-top:12px;background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.4);border-radius:8px;padding:8px 10px}.sr-det-h{display:flex;gap:6px;align-items:baseline;margin-bottom:6px;color:#FFB74D}.sr-det-h small{color:#bbb;font-size:11px;flex:1}.sr-det-h button{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;cursor:pointer}.sr-det-c{display:flex;flex-wrap:wrap;gap:5px}'
+ +'.sr-kat-list{display:flex;flex-direction:column;gap:5px;margin:8px 0}.sr-kat-r{display:flex;gap:6px;align-items:center}.sr-kat-r i{width:14px;height:14px;border-radius:50%;flex:0 0 auto}.sr-kat-r input,.sr-kat-add input{flex:1;background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 7px}.sr-kat-r small{color:#aaa;min-width:60px}.sr-kat-r button,.sr-kat-add button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 8px;cursor:pointer}.sr-kat-r button:disabled{opacity:.35}.sr-kat-add{display:flex;gap:6px}';document.head.appendChild(st)})();
 function updateSelItem(id,f,v){if(selectedRecords[id]){selectedRecords[id][f]=v;saveSelected()}}
 
 function applyBulkSelection() {
@@ -1492,9 +1669,9 @@ function addManualToSelection(disaridanPartiNo) {
     }
 
     if (card) {
-        if (!selectedRecords[card.id]) {
+        if (!selectedRecords[srK(card)]) {
             const al = getAlarmsList(card.id);
-            selectedRecords[card.id] = {id: card.id, parti: card.parti, asama: card._asama, bir_sonraki: card.bir_sonraki||'', firma: card.line1||'', ham_adi: card.ham_adi||'', recete_adi: card.recete_adi||'', kilo: card.kilo, bekleme: waitHoursText(card), durum: '', not: '', alarm_info: al.filter(a=>a.active!==false).map(a=>a.title).join(', '), added_at: new Date().toLocaleString('tr-TR')};
+            selectedRecords[srK(card)] = {id: srK(card), parti: card.parti, asama: card._asama, bir_sonraki: card.bir_sonraki||'', firma: card.line1||'', ham_adi: card.ham_adi||'', recete_adi: card.recete_adi||'', kilo: card.kilo, bekleme: waitHoursText(card), durum: '', not: '', alarm_info: al.filter(a=>a.active!==false).map(a=>a.title).join(', '), added_at: new Date().toLocaleString('tr-TR')};
             saveSelected();
             document.querySelectorAll('.star-'+card.id).forEach(el=>{el.classList.add('active');el.innerHTML='🌟'});
             updateStarCount();
@@ -1932,7 +2109,7 @@ function flashCardHtml(k,popup){
     const hasTamir = k.tamirler && k.tamirler.length > 0;
     const tamirBadge = hasTamir ? '<span class="tamir-badge">🛠️ '+k.tamirler.length+' Tamir</span>' : '';
 
-    const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" onclick="toggleSelect(event,\''+k.id+'\')" title="Seçime Ekle">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+    const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[srK(k)]?'active':'')+'" onclick="toggleSelect(event,\''+k.id+'\')" title="Seçime Ekle">'+(selectedRecords[srK(k)]?'🌟':'⭐')+'</span>';
     const alarmBtnH='<span class="alarm-btn '+(hasAl?'active':'')+'" onclick="event.stopPropagation();openAlarmModal(\''+k.id+'\')" title="Alarm">'+(hasAl?'🔔':'🔕')+'</span>';
     const ro=['<option value="">Sebep</option>'].concat(FIRE_REASONS.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
     let fml='';if(fl.length){fml='<div class="fire-mini-list">';fl.forEach((fr,i)=>{fml+='<div class="fire-mini-item"><b>'+(i+1)+') '+esc(fr.fire_sebebi||'')+'</b> '+num(fr.fire_kg).toLocaleString('tr-TR')+'kg<button onclick="deleteFireLine(event,\''+k.id+'\',\''+fr.uid+'\')">Sil</button></div>'});fml+='</div>'}
@@ -1960,7 +2137,7 @@ function renderMiniView(kartlar){
         const tamirIndicator = hasTamir ? ' 🛠️' : '';
 
         const sub=isN?'<span class="mc-asama">şu an: '+esc(k._asama)+'</span>':(cardNextText(k)?'<span style="font-size:9px;color:#FFB74D\">→'+esc(cardNextText(k))+'</span>':'');
-        const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:15px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+        const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[srK(k)]?'active':'')+'" style="font-size:15px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[srK(k)]?'🌟':'⭐')+'</span>';
         h+='<div class="mini-card '+sev+' '+(ic?'is-checked':'')+(lbMainSelOn(k)?' lbsel':'')+'" onclick="openDetailModal(\''+k.id+'\')"><div class="mc-top"><div style="display:flex;align-items:center">'+starH+lbMainSelBtn(k,15)+'<span class="mc-parti">'+esc(k.parti)+'</span></div><span class="mc-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <small>kg</small></span></div><div>'+sub+(hasAl?' 🔔':'')+tamirIndicator+'</div><div class="mc-line1">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="mc-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'mc-tamir')+'<div class="mc-bottom"><span class="mc-bekleme '+sev+'">'+esc(bt)+'</span><span class="mc-badge '+sev+'">'+bl+'</span></div></div>'})});c.innerHTML=h;
 }
 
@@ -1980,7 +2157,7 @@ function renderListView(kartlar){
         if(hasAl) statusIcons += '🔔 ';
         if(hasTamir) statusIcons += '🛠️ ';
 
-        const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:14px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+        const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[srK(k)]?'active':'')+'" style="font-size:14px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[srK(k)]?'🌟':'⭐')+'</span>';
         return '<tr class="'+(ic?'is-checked':'')+'" ondblclick="openDetailModal(\''+k.id+'\')"><td><input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"></td><td>'+starH+lbMainSelBtn(k,14)+'</td><td><span class="lv-seviye-dot '+k.seviye+'\"></span></td><td class="lv-parti">'+esc(k.parti)+'</td><td class="lv-asama">'+esc(k._asama)+'</td><td class="lv-next">'+(cardNextText(k)?'→ '+esc(cardNextText(k)):'')+'</td><td class="lv-line1">'+esc(k.line1||'-')+'</td><td class="lv-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+'</td><td class="lv-bekleme '+k.seviye+'">'+esc(waitHoursText(k))+'</td><td>'+statusIcons+'</td></tr>';
     };
     if(listSortCol)sorted.forEach(k=>h+=renderRow(k));
@@ -1995,7 +2172,7 @@ function renderKanbanView(kartlar){
     if(!groups.length){c.innerHTML='<div class="no-results" style="width:100%">Sonuç bulunamadı</div>';return}let h='';
     groups.forEach(g=>{let aC=0,aK=0;g.cards.forEach(k=>{if(!checkedCards.has(k.id)){aC++;aK+=k.kilo}});
     h+='<div class="kanban-column"><div class="kanban-col-header '+(isN?'kch-next':'kch-hedef')+'"><div class="kch-name">'+(isN?'→ ':'')+esc(g.key)+'</div><div class="kch-stats">'+aC+'p • '+Math.round(aK).toLocaleString('tr-TR')+'kg</div></div><div class="kanban-col-body">';
-    g.cards.forEach(k=>{const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev[0].toUpperCase();const al=getAlarmsList(k.id),hasAl=al.filter(a=>a.active!==false).length>0;const hasTamir = k.tamirler && k.tamirler.length > 0;const indicators = (hasAl?' 🔔':'') + (hasTamir?' 🛠️':'');const sub=isN?'<div class="kc-sub">şu an: '+esc(k._asama)+'</div>':(cardNextText(k)?'<div class="kc-sub" style="color:#FFB74D">→'+esc(cardNextText(k))+'</div>':'');const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:13px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+    g.cards.forEach(k=>{const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev[0].toUpperCase();const al=getAlarmsList(k.id),hasAl=al.filter(a=>a.active!==false).length>0;const hasTamir = k.tamirler && k.tamirler.length > 0;const indicators = (hasAl?' 🔔':'') + (hasTamir?' 🛠️':'');const sub=isN?'<div class="kc-sub">şu an: '+esc(k._asama)+'</div>':(cardNextText(k)?'<div class="kc-sub" style="color:#FFB74D">→'+esc(cardNextText(k))+'</div>':'');const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[srK(k)]?'active':'')+'" style="font-size:13px;margin-right:5px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[srK(k)]?'🌟':'⭐')+'</span>';
     h+='<div class="kanban-card '+sev+' '+(ic?'is-checked':'')+'" onclick="openDetailModal(\''+k.id+'\')"><div class="kc-top"><div style="display:flex;align-items:center">'+starH+'<span class="kc-parti">'+esc(k.parti)+'</span></div><span class="kc-kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+'kg</span></div><div class="kc-line1">'+esc(k.line1||'-')+'</div>'+(k.recete_adi?'<div class="kc-recipe">🎨 '+esc(k.recete_adi)+'</div>':'')+tamirLineHtml(k,'kc-tamir')+sub+'<div class="kc-bottom"><span class="kc-bekleme '+sev+'">'+esc(bt)+indicators+'</span><span class="kc-badge '+sev+'">'+bl+'</span></div></div>'});
     h+='</div></div>'});c.innerHTML=h;
 }
@@ -2017,11 +2194,12 @@ function openDetailModal(id){
         tamirMl += '</div>';
     }
 
-    const pipe=buildPipeline(k);const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[k.id]?'active':'')+'" style="font-size:24px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[k.id]?'🌟':'⭐')+'</span>';
+    const pipe=buildPipeline(k);const starH='<span class="star-btn star-'+k.id+' '+(selectedRecords[srK(k)]?'active':'')+'" style="font-size:24px" onclick="toggleSelect(event,\''+k.id+'\')">'+(selectedRecords[srK(k)]?'🌟':'⭐')+'</span>';
     let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px">'+starH+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\');openDetailModal(\''+k.id+'\')"><span style="font-size:22px;font-weight:bold;color:#FFD700">'+esc(k.parti)+'</span></div><span style="font-size:18px;font-weight:bold">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <small style="opacity:.7\">kg</small></span></div><div class="det-row"><span class="det-label">Bekliyor:</span><span style="color:#64B5F6;font-weight:bold">'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+cardNextHtml(k,'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div>'+(pipe?'<div style="margin:6px 0">'+pipe+'</div>':'')+'<div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span class="lv-bekleme '+k.seviye+'">'+esc(bt)+'</span></div>';
     h += tamirMl;
     h += zamanHistoryHtml(k);
     h += tmapModalHtml(k);
+    h += srDetailHtml(k);
     h += lbDetailSelHtml(k);
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div style="margin-top:8px"><label style="color:#64B5F6;font-size:12px;font-weight:bold">Hedef bekleme süresi (dakika)</label><input type="number" id="mAlarmDuration_'+k.id+'" min="0" step="15" value="0" placeholder="0 = sadece tarih/saat" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"><small style="color:#aaa">Seçilen aşamada bu süre dolmadan bildirim gönderilmez.</small></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
@@ -5576,9 +5754,9 @@ function lbSelCardModeNext(){
 function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
 // ── 🧠 Pano mindmap'leri: ☑ Seçilenler, ✅ Üretim (bugün geçenler) ve 🛠 Tamirler (devam eden) — her biri kendi seviyeleri ve
 //    hazır düzenleriyle A4 mindmap; panoda sayfa okunurluğa göre otomatik yatay / dikey A4, 📄 ile önizleme → PDF / PNG / yazdır
-const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti']};
+const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot']};
 const lbMindSt={};
-['sel','p','t'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
+['sel','p','t','kay'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
 const lbSelMind=lbMindSt.sel;
 function lbMindSave(K){try{localStorage.setItem(K==='sel'?'lbSelMind9':'lbMind9_'+K,JSON.stringify(lbMindSt[K]))}catch(e){}}
 // Üretim / Tamirler görünümünde kutular ↔ mindmap (cihaz başına)
@@ -5590,6 +5768,11 @@ const LB_T_YAS=['0–1 gün','1–3 gün','3–7 gün','7–30 gün','30+ gün']
 // kayıttan gelen (güncel veride olmayan) partilerde firma uzun adla gelir → kısa ada birleştir
 const LB_MIND_FIRMA={label:'Firma',get:k=>{const v=HEATMAP_DIMENSIONS.firma.get(k);try{return upShortCompany(v)||v}catch(e){return v}}},LB_MIND_MUS={label:'Müşteri (sipariş)',get:k=>lbGroupName(k)};
 const LB_MIND_EXTRA={
+    kay:{kat:{label:'Kategori',get:k=>k._kKat||'Kategorisiz',get ord(){return DURUM_KAT.concat(['Kategorisiz'])}},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
+        simdi:{label:'Şu anki / son aşama',get:k=>k.id?normalizeStageName(k._asama||k.asama)||'?':'Sistemde yok'+(k._kSon?' (son: '+k._kSon+')':'')},
+        partinot:{label:'Parti + not',get:k=>heatmapShortParti(k)+(k._kNot?' • '+k._kNot:'')},
+        not:{label:'Not',get:k=>k._kNot||'Notsuz'},
+        ay:{label:'Kayıt ayı',get:k=>{const m=String(k._kAt||'').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0'):'Tarihsiz'},byName:true}},
     sel:{makine:{label:'KK Makinesi',get:k=>lbSelMach[lbPn(k)]||'Makine yok'},musteri:LB_MIND_MUS},
     p:{firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,gecis:{label:'Geçtiği aşama',get:k=>k._mGecis||'?',ord:Object.values(LB_P_GEC)},
         gidis:{label:'Gittiği aşama',get:k=>k._mGidis||'?'},
@@ -5605,11 +5788,12 @@ const LB_MIND_EXTRA={
         tparti:{label:'Parti + tamir yaşı',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0),byAge:true}}
 };
 const LB_MIND_PRE={
+    kay:[['kat','🏷 Kategori › Firma',['kat','firma','partinot']],['katsimdi','🏷 Kategori › Şu anki aşama',['kat','simdi','partinot']],['firma','👤 Firma › Kategori',['firma','kat','partinot']],['ay','📅 Ay › Kategori',['ay','kat','partinot']]],
     sel:[['asama','🏭 Aşamaya göre',['asama','firma','parti']],['makine','🛠 KK makinesine göre',['makine','parti']],['makfir','🛠 Makine › Firma',['makine','firma','parti']]],
     p:[['gecis','✅ Geçtiği aşamaya göre',['gecis','firma','parti']],['gidis','➡ Gittiği aşamaya göre',['gidis','firma','parti']],['firma','👤 Firmaya göre',['firma','gecis','parti']],['saat','🕐 Saate göre',['saat','gecis','parti']]],
     t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','ttip','parti']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','parti']],['firma','👤 Firmaya göre',['firma','ttip','parti']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','parti']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
 };
-const LB_MIND_T={sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
+const LB_MIND_T={kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
 function lbMindDim(K,k){return (LB_MIND_EXTRA[K]||{})[k]||HEATMAP_DIMENSIONS[k]}
 function lbSelMindDim(k){return lbMindDim('sel',k)}
 function lbMindLv(K){const l=lbMindSt[K].lv.filter(k=>lbMindDim(K,k));return l.length?l:[LB_MIND_DEF[K][0]]}
@@ -5617,6 +5801,7 @@ function lbMindKey(){return lbView==='sel'?'sel':lbView}
 // veri: seçili kartlar / bugünkü üretim kayıtları / açık tamirler (kart biçiminde; güncel veride yoksa kayıttaki bilgiyle)
 function lbMindCards(K){
     if(K==='sel')return lbSelCustFilter(getAllCards().filter(k=>lbSel.has(lbPn(k))));
+    if(K==='kay')return srFiltered(srRows()).map(r=>lbTvCard(r.parti,{kg:r.kilo,firma:r.firma,extra:{_kKat:r.durum||'',_kNot:r.not||'',_kAt:r.added_at||'',_kSon:r.asama||''}}));
     if(K==='p'){const stats=liveProdStats(),out=[];SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{};Object.keys(o).forEach(pn=>{const e=o[pn];
         out.push(lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mGecis:LB_P_GEC[R.key]||R.name,_mGidis:e.a||'?',_mTs:e.ts||0}}))})});return out}
     if(K==='t'){const now=Date.now();return (window.TAMIR_ALL||[]).filter(t=>!String(t.durum||'').trim()).map(t=>{const ts=lbTvTs(t.tarih);
@@ -5644,7 +5829,7 @@ function lbMindSrc(K,cards){
     const build=(cs,li,left)=>{if(left<=0||li>=lv.length)return[];const rows=lbMindRows(K,cs,lv[li],li?lv[li-1]:'');if(!rows.length)return[];
         const sc=heatmapColorScale('kg',Math.max(...rows.map(r=>r.value))||1);
         const sub=lv[li]==='firma'&&lv.indexOf('musteri')<0;
-        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):sc(r.value),mk:K==='sel'?hmA4Marks(r.cards):null,children:sub&&left>1?custSplit(r.cards,L=>build(L,li+1,left-1),sc,K==='sel'):build(r.cards,li+1,left-1)}))};
+        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):lv[li]==='kat'?srKatColor(r.name):sc(r.value),mk:K==='sel'?hmA4Marks(r.cards):null,children:sub&&left>1?custSplit(r.cards,L=>build(L,li+1,left-1),sc,K==='sel'):build(r.cards,li+1,left-1)}))};
     const src={kind:K,depth:st.depth,title:T[0],file:T[2],
         tree:d=>({name:T[1],count:cards.length,kg:kgOf(cards),heat:'#546E7A',isAll:true,children:build(cards,0,d)}),
         maxDepth:()=>lv.length,
@@ -5671,7 +5856,7 @@ function lbMindSetLv(K,i,v){
     st.depth=0;lbMindSave(K);lbMindAfter(K);
 }
 function lbMindOn(){const K=lbMindKey();return K==='sel'?lbSelCardMode==='mind':(K==='p'||K==='t')&&!!lbTvMind[K]}
-function lbMindBoardRefresh(){if(lbMindOn()&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
+function lbMindBoardRefresh(){if(srView==='mind'&&srPanelOpen())renderSelectionPanel();if(lbMindOn()&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
 const lbSelMindBoardRefresh=lbMindBoardRefresh;
 function lbMindOri(v){hmA4.ori=v;hmA4Save();lbMindBoardRefresh()}
 function lbMindFont(v){hmA4.font=v;hmA4Save();lbMindBoardRefresh()}
@@ -10944,7 +11129,7 @@ function exportValidationWorkbook(){const v=uploadValidation||{},sheets=[];Objec
 function exportFlowTargetWorkbook(target){const b=makeFlowBuckets(target),sheets=[];Object.keys(b).forEach(kind=>{const rows=[];(b[kind]||[]).forEach(g=>{g.cards.forEach(k=>rows.push({...cardExportRow(k),'Akış Grubu':kind,'Grup Aşama':g.name,'Hedef':targetTitle(target)}))});sheets.push({name:(target+'_'+kind).slice(0,31),rows})});downloadWorkbook(target+'_akis_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',sheets)}
 function exportPostProcessWorkbook(){const rows=getPostProcessCards().map(k=>({...cardExportRow(k),'Post Puan':k.postScore,'Puan Kırılımı':(k.postParts||[]).map(p=>p[0]+' +'+p[1]).join(' / '),'Açıklama':postProcessNotes[k.id]||''}));downloadWorkbook('kk_sarim_sonrasi_oncelik_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'KK_Sarim_Sonrasi',rows}])}
 function exportFireWorkbook(){const rows=[];Object.keys(fireRecords).forEach(id=>{getFireList(id).forEach((f,i)=>{rows.push({'Parti':f.parti,'Aşama':f.asama,'#':i+1,'Sebep':f.fire_sebebi,'Fire Kg':num(f.fire_kg),'Fire Mt':num(f.fire_mt),'Açıklama':f.fire_aciklama||'','Tarih':f.saved_at})})});if(!rows.length){alert('Fire yok');return}downloadWorkbook('fire_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xls',[{name:'Fire',rows}])}
-function exportAllToExcel(){const rows=getAllCards().map(k=>{const fl=getFireList(k.id);const al=getAlarmsList(k.id);const sel=selectedRecords[k.id];return{'Aşama':k._asama,'Bir Sonraki':k.bir_sonraki||'','Parti':k.parti,'Firma':k.line1||'','Kumaş':k.ham_adi||'','Reçete':k.recete_adi||'','Kilo':num(k.kilo),'Bekleme (gün)':num(k.bekleme_gun),'Durum':sel?sel.durum:'','Not':sel?sel.not:(noteRecords[k.id]?noteRecords[k.id].note:''),'Fire (kg)':fl.reduce((a,b)=>a+num(b.fire_kg),0),'Alarm':al.filter(a=>a.active!==false).map(a=>a.title).join(', '),'Seviye':k.seviye==='kritik'?'KRİTİK':k.seviye==='uyari'?'UYARI':'NORMAL','Seçili':sel?'Evet':'Hayır'}});downloadWorkbook('parti_takip_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'')+'.xls',[{name:'Tümü',rows}])}
+function exportAllToExcel(){const rows=getAllCards().map(k=>{const fl=getFireList(k.id);const al=getAlarmsList(k.id);const sel=selectedRecords[srK(k)];return{'Aşama':k._asama,'Bir Sonraki':k.bir_sonraki||'','Parti':k.parti,'Firma':k.line1||'','Kumaş':k.ham_adi||'','Reçete':k.recete_adi||'','Kilo':num(k.kilo),'Bekleme (gün)':num(k.bekleme_gun),'Durum':sel?sel.durum:'','Not':sel?sel.not:(noteRecords[k.id]?noteRecords[k.id].note:''),'Fire (kg)':fl.reduce((a,b)=>a+num(b.fire_kg),0),'Alarm':al.filter(a=>a.active!==false).map(a=>a.title).join(', '),'Seviye':k.seviye==='kritik'?'KRİTİK':k.seviye==='uyari'?'UYARI':'NORMAL','Seçili':sel?'Evet':'Hayır'}});downloadWorkbook('parti_takip_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'')+'.xls',[{name:'Tümü',rows}])}
 
 /* ── EXCEL UPLOAD / COLAB DEVRE DIŞI ── */
 const BEKLEME_UYARI_GUN_UPLOAD=7, BEKLEME_KRITIK_GUN_UPLOAD=14;

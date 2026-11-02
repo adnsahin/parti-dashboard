@@ -78,6 +78,8 @@ if exist "..\urt.xlsx" (
     echo Personel top raporu isleniyor...
     python "update_personel_top.py" "..\urt.xlsx" --out "data\personel_top.json"
     if errorlevel 1 echo UYARI: Personel top raporu islenemedi, devam ediliyor.
+    python "update_kk_hiz.py" "..\urt.xlsx" --out "data\kk_hiz.json"
+    if errorlevel 1 echo UYARI: KK hiz verisi islenemedi, devam ediliyor.
   )
 ) else (
   echo Personel top raporu atlandi: ..\urt.xlsx bulunamadi.
@@ -95,7 +97,7 @@ del "%TEMP%\parti_dashboard_git_status.txt" >nul 2>nul
 
 echo.
 echo Degisiklikler commit ediliyor...
-git add data/partiler.json data/tamirler.json data/zaman_ozet.json data/personel_top.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py update_personel_top.py
+git add data/partiler.json data/tamirler.json data/zaman_ozet.json data/personel_top.json data/kk_hiz.json README.md convert_excel.js index.html update_data.ps1 update_zaman_json.py update_personel_top.py update_kk_hiz.py
 git commit -m "Update dashboard data"
 if errorlevel 1 (
   echo.

@@ -4134,7 +4134,7 @@ function heatmapMindTreeToolbarHtml(){
 }
 function heatmapMindOutRowHtml(){
     return '<div class="tmap-out-row"><b>Çıktı:</b><label class="tmap-white"><input type="checkbox"'+(tmapWhite?' checked':'')+' onchange="tmapSetWhite(this.checked)"> Beyaz zemin, siyah yazı</label><label class="tmap-white" title="Renkleri gri tona çevirir: yazıcıdan siyah-beyaz çıktı için (PNG / PDF / Yazdır)"><input type="checkbox"'+(tmapBW?' checked':'')+' onchange="tmapSetBW(this.checked)"> ⚫⚪ Siyah-beyaz (yazıcı)</label>'
-        +'<button type="button" class="view-action-btn" onclick="kkDailyOpen()" title="Kalite Kontrol günlük durum: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4" style="background:#E65100">📄 KK günlük</button><button type="button" class="view-action-btn" onclick="srDailyOpen()" title="Sarım1 ve Sarım2 günlük durum: bekleyenler ve bugün geçenler — tek A4" style="background:#7E57C2">🧵 Sarım günlük</button><button type="button" class="view-action-btn" onclick="shiftAutoSetup()" title="Vardiya sonu otomatik çıktı: 16:00 ve 24:00\'te KK + Sarım günlük PDF → indir + telefona" style="background:#455A64">🕓 Vardiya sonu</button><button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
+        +'<button type="button" class="view-action-btn" onclick="kkDailyOpen()" title="Kalite Kontrol günlük durum: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4" style="background:#E65100">📄 KK günlük</button><button type="button" class="view-action-btn" onclick="kkpOpen()" title="KK\'da bekleyenler için kumaş tipinin geçmiş hızına göre önceliklendirilmiş günlük çalışma programı (simülasyon)" style="background:#00897B">🧮 KK programı</button><button type="button" class="view-action-btn" onclick="srDailyOpen()" title="Sarım1 ve Sarım2 günlük durum: bekleyenler ve bugün geçenler — tek A4" style="background:#7E57C2">🧵 Sarım günlük</button><button type="button" class="view-action-btn" onclick="shiftAutoSetup()" title="Vardiya sonu otomatik çıktı: 16:00 ve 24:00\'te KK + Sarım günlük PDF → indir + telefona" style="background:#455A64">🕓 Vardiya sonu</button><button type="button" class="view-action-btn" style="background:#6A1B9A" onclick="hmA4Open()" title="Tek A4 sayfaya sığan, rahat okunur yazılı, iki yana dengeli mind map — önizleyip PDF / PNG / yazdır">📄 A4 düzeni</button>'
         +'<button type="button" class="view-action-btn" style="background:#1565C0" onclick="heatmapMindExport(&quot;png&quot;)">🖼️ PNG</button><button type="button" class="view-action-btn pdf" onclick="heatmapMindExport(&quot;pdf&quot;)">📄 PDF</button><button type="button" class="view-action-btn whatsapp" onclick="heatmapMindExport(&quot;wa&quot;)">📱 WhatsApp</button><button type="button" class="view-action-btn" style="background:#455A64" onclick="heatmapMindExport(&quot;print&quot;)" title="Her zaman beyaz zemin, siyah yazı; tek sayfa">🖨️ Yazdır</button>'
         +'<small class="tmap-out-view">'+(heatmapMindVertical?'↕ dikey basılır':'↔ yatay basılır')+'</small></div>';
 }
@@ -5191,7 +5191,7 @@ function renderLiveScreenPanel(){
     liveLoadZaman();
     h+=liveShiftHistoryHtml(stats)||liveProductionSummaryHtml(stats);
     const kk=liveKkCards(),kkNorm=liveNorm('KK_SON'),srNorm=liveNorm('SARIM 1');
-    h+=liveBoxHtml('liveBoxKk','🔵 Kalite Kontrole Gelenler ('+kk.length+')'+liveAbnormalBadge(kk,kkNorm),'#2196F3',liveNormLineHtml(kkNorm)+liveCardListHtml(kk,kkNorm));
+    h+=liveBoxHtml('liveBoxKk','🔵 Kalite Kontrole Gelenler ('+kk.length+')'+liveAbnormalBadge(kk,kkNorm),'#2196F3','<button type="button" class="kkp-open" onclick="kkpOpen()" title="Kumaş tipinin geçmiş KK hızına göre önceliklendirilmiş çalışma programı">🧮 Çalışma programı (hızlılar önce)</button>'+liveNormLineHtml(kkNorm)+liveCardListHtml(kk,kkNorm));
     const watch=liveWatchCards();
     h+=liveBoxHtml('liveBoxWatch','🔔 Acil Listesi — İzlenenler ('+watch.length+')','#E53935',liveCardListHtml(watch));
     const tamir=liveTamirCards();
@@ -5294,22 +5294,153 @@ function renderUretimLogPanel(){
 let ulgSer=(()=>{try{const v=JSON.parse(localStorage.getItem('ulgSer9')||'null');if(Array.isArray(v)&&v.length)return v}catch(e){}return['kkGecen','sr1Gecen','sr2Gecen']})();
 let ulgMet=mapLoadPref('ulgMet9',v=>v==='kg'||v==='n','kg'),ulgN=+mapLoadPref('ulgN9',v=>['7','14','30','0'].includes(v),'14');
 function ulgSet(k,v){if(k==='ser'){const i=ulgSer.indexOf(v);if(i>=0){if(ulgSer.length>1)ulgSer.splice(i,1)}else ulgSer.push(v);ulgSer.sort((a,b)=>URETIM_CATS.findIndex(c=>c.key===a)-URETIM_CATS.findIndex(c=>c.key===b));try{localStorage.setItem('ulgSer9',JSON.stringify(ulgSer))}catch(e){}}
-    else if(k==='met'){ulgMet=v;mapSavePref('ulgMet9',v)}else if(k==='grp'){ulgGrp=v;mapSavePref('ulgGrp9',v)}else if(k==='n'){ulgN=+v;mapSavePref('ulgN9',v)}renderUretimLogPanel()}
+    else if(k==='met'){ulgMet=v;mapSavePref('ulgMet9',v)}else if(k==='grp'){ulgGrp=v;mapSavePref('ulgGrp9',v)}else if(k==='dt'){ulgDT=v;mapSavePref('ulgDT9',v)}else if(k==='n'){ulgN=+v;mapSavePref('ulgN9',v)}renderUretimLogPanel()}
 function ulgFmt(v){return ulgMet==='kg'?(v>=10000?(v/1000).toLocaleString('tr-TR',{maximumFractionDigits:1})+'t':Math.round(v).toLocaleString('tr-TR')):String(v)}
 // gruplama: gün • vardiya (08–16 / 16–24 / 00–08) • saat (seçili gün) • saat ortalaması (seçili dönem, bugün hariç)
-const ULG_GRP=[['gun','Güne göre'],['vard','Vardiyaya göre (08–16 / 16–24 / 00–08)'],['saat','Saate göre — seçili gün'],['saatort','Saat ortalaması — seçili dönem']],ULG_VARD=['08–16','16–24','00–08'];
+const ULG_GRP=[['gun','Güne göre'],['vard','Vardiyaya göre (08–16 / 16–24 / 00–08)'],['saat','Saate göre — seçili gün'],['saatort','Saat ortalaması — seçili dönem'],['kiyas','16 saat / 24 saat çalışılan günler kıyası']],ULG_VARD=['08–16','16–24','00–08'];
 let ulgGrp=mapLoadPref('ulgGrp9',v=>ULG_GRP.some(x=>x[0]===v),'gun');
 function ulgVardOf(h){return h>=8&&h<16?0:h>=16?1:2}
+// gün tipi: gece vardiyasında (00–08) en az 3 parti üretim (KK / Sarım geçen) varsa 24 saat, yoksa 16 saat çalışılmış sayılır;
+// hiç üretim yoksa (ör. pazar) 0 = çalışılmadı. Gün etiketindeki rozete tıklayınca elle değiştirilir (bu cihazda saklanır).
+let ulgDT=mapLoadPref('ulgDT9',v=>v==='all'||v==='16'||v==='24','all'),ulgDTo=(()=>{try{const v=JSON.parse(localStorage.getItem('ulgDTo9')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return{}}})();
+function ulgDayAuto(d){const g=['kkGecen','sr1Gecen','sr2Gecen'].map(k=>uretimLogRows(d,k)),n=g.reduce((s,r)=>s+r.length,0);if(n<3)return 0;return g.reduce((s,rows)=>s+rows.filter(r=>r.ts&&new Date(r.ts).getHours()<8).length,0)>=3?24:16}
+function ulgDayType(d){const o=ulgDTo[d];return o===16||o===24?o:ulgDayAuto(d)}
+function ulgDTCycle(e,d){e.stopPropagation();const a=ulgDayAuto(d),cur=ulgDayType(d),nx=cur===16?24:16;if(nx===a)delete ulgDTo[d];else ulgDTo[d]=nx;try{localStorage.setItem('ulgDTo9',JSON.stringify(ulgDTo))}catch(e){}renderUretimLogPanel()}
+function ulgDTBadge(d){const t=ulgDayType(d);return t?'<i class="ulg-dt t'+t+(ulgDTo[d]?' man':'')+'" onclick="ulgDTCycle(event,&quot;'+d+'&quot;)" title="'+(t===24?'24 saat (gece vardiyası çalışmış)':'16 saat (gece vardiyası yok)')+(ulgDTo[d]?' — elle değiştirildi':' — otomatik')+' • tıkla: değiştir">'+t+'s</i>':''}
+// ── 📝 Analiz ve geri bildirim raporu: 16s / 24s günlerin verileri açıklamalı cümlelerle; eskiden yeniye (haftalık ve dönem
+//    dilimleri) iyileşme / gerileme; saat bazında güçlü ve zayıf saatler; geri bildirime hazır maddeler. Kopyala / paylaş.
+function ulgPct(a,b){return a?(b-a)/a*100:null}
+function ulgWord(p,up,dn){return p==null?'karşılaştırılamıyor':p>5?(up||'iyileşme')+' (+%'+Math.round(p)+')':p<-5?(dn||'gerileme')+' (−%'+Math.round(-p)+')':'yatay (%'+(p>=0?'+':'')+Math.round(p)+')'}
+function ulgWeekKey(d){const dt=new Date(d+'T00:00:00'),w=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-w);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')}
+function ulgReportHtml(L,today,cats,kg,D16,D24){
+    const agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length,u=kg?'kg':'parti',f=v=>kg?Math.round(v).toLocaleString('tr-TR')+' kg':(Math.round(v*10)/10).toLocaleString('tr-TR')+' parti';
+    const hr=r=>r.ts?new Date(r.ts).getHours():-1,C=cats.slice(0,3),fd=d=>{const dt=new Date(d+'T00:00:00');return String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0')};
+    const val=(d,c,fl)=>agg(uretimLogRows(d,c.key).filter(r=>!fl||fl(hr(r)))),mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+    const night=h=>h>=0&&h<8,dayT=h=>h>=8;
+    const DD=[...D16,...D24].sort();if(!DD.length)return '';
+    const first=DD[0],last=DD[DD.length-1];
+    let H='<div class="ulg-rep" id="ulgRep"><div class="ulg-rep-h"><b>📝 Analiz ve geri bildirim raporu</b><span><button type="button" onclick="ulgRepCopy()">📋 Metni kopyala</button><button type="button" onclick="ulgRepShare()">📱 Paylaş</button></span></div>';
+    H+='<p class="ulg-rep-i">Dönem <b>'+fd(first)+' – '+fd(last)+'</b> (bugün hariç): <b>'+D16.length+'</b> gün 16 saat (08–24), <b>'+D24.length+'</b> gün 24 saat (gece vardiyası dahil) çalışılmış. Ölçü: '+(kg?'üretilen kg':'parti sayısı')+' — kayıt: aşamadan geçiş (KK / Sarım).'+(D24.length<4?' <b>Not:</b> 24 saatlik gün sayısı az; 24s ile ilgili sonuçlar yön gösterir, kesin yargı için daha çok gün gerekir.':'')+'</p>';
+    const feed=[],big=Math.max(...C.map(c=>mean(DD.map(d=>val(d,c)))));
+    C.forEach(c=>{
+        const minor=mean(DD.map(d=>val(d,c)))<big*0.1,fp=x=>{if(!minor)feed.push(x)};
+        const a16=mean(D16.map(d=>val(d,c))),a24=mean(D24.map(d=>val(d,c))),day16=mean(D16.map(d=>val(d,c,dayT))),day24=mean(D24.map(d=>val(d,c,dayT))),n24=mean(D24.map(d=>val(d,c,night)));
+        const ph16=day16/16,ph24d=day24/16,ph24n=n24/8,ph24=a24/24;
+        let t='<div class="ulg-rep-s"><div class="ulg-rep-st">'+esc(c.label)+'</div><ul>';
+        if(D16.length)t+='<li><b>16 saatlik günler:</b> günde ortalama <b>'+f(a16)+'</b>, çalışılan saat başı <b>'+f(ph16)+'</b>.</li>';
+        if(D24.length)t+='<li><b>24 saatlik günler:</b> günde ortalama <b>'+f(a24)+'</b> — bunun <b>'+f(day24)+'</b>\'ı gündüz (08–24), <b>'+f(n24)+'</b>\'ı gece (00–08). Saat başı: gündüz <b>'+f(ph24d)+'</b>, gece <b>'+f(ph24n)+'</b>, 24 saat ortalaması <b>'+f(ph24)+'</b>.</li>';
+        if(D16.length&&D24.length){
+            const gD=ulgPct(a16,a24),gDay=ulgPct(day16,day24),nVsD=ph24d?ph24n/ph24d*100:null;
+            t+='<li><b>Kıyas:</b> 24 saatlik günde günlük üretim 16 saatliğe göre <b>'+ulgWord(gD,'fazla','az')+'</b>. '+(n24>0?'Gece vardiyası günde ortalama <b>'+f(n24)+'</b> ek üretim getiriyor'+(a16?' (16 saatlik günün üretimine göre +%'+Math.round(n24/a16*100)+')':'')+'.':'Bu aşamada gece (00–08) üretim yok.')+'</li>';
+            t+='<li><b>Gündüz etkisi:</b> 24 saatlik günlerin gündüz (08–24) üretimi, 16 saatlik günlerin gündüzüne göre <b>'+ulgWord(gDay,'yüksek','düşük')+'</b>'+(gDay!=null&&gDay<-5?' — gece çalışılan günlerde gündüz işi geceye kaymış olabilir (toplam artış gece kadar değil).':gDay!=null&&gDay>5?' — gece vardiyası gündüze hazır iş bırakıyor gibi görünüyor.':'.')+'</li>';
+            if(nVsD!=null&&n24>0)t+='<li><b>Gece verimi:</b> gece saat başı üretim gündüz hızının <b>%'+Math.round(nVsD)+'</b> düzeyinde'+(nVsD<70?' — gece belirgin şekilde yavaş.':nVsD<90?' — gece biraz daha yavaş.':' — gece gündüz kadar verimli.')+'</li>';
+            if(nVsD!=null&&n24>0&&nVsD<70)fp(esc(c.label)+': gece saat başı üretim gündüz hızının %'+Math.round(nVsD)+' düzeyinde ('+f(ph24n)+' / '+f(ph24d)+'). Gece ekibi sayısı, iş hazırlığı ve molalar gözden geçirilmeli.');
+            if(gDay!=null&&gDay<-10)fp(esc(c.label)+': gece çalışılan günlerde gündüz üretimi %'+Math.round(-gDay)+' düşük; iş geceye kayıyor olabilir, gündüz kapasitesi tam kullanılmıyor.');
+        }
+        // eskiden yeniye: her gün tipinde ilk ve son dilim (6+ gün: üçte bir, değilse yarı) saat başı
+        [[D16,16,'16s'],[D24,24,'24s']].forEach(([ds,hh,lb])=>{if(ds.length<4)return;const k=ds.length>=6?Math.floor(ds.length/3):Math.floor(ds.length/2),A=ds.slice(0,k),B=ds.slice(-k);
+            const pa=mean(A.map(d=>val(d,c)))/hh,pb=mean(B.map(d=>val(d,c)))/hh,ch=ulgPct(pa,pb);
+            t+='<li><b>Eskiden yeniye ('+lb+'):</b> ilk '+k+' gün ('+fd(A[0])+'–'+fd(A[A.length-1])+') saat başı <b>'+f(pa)+'</b> → son '+k+' gün ('+fd(B[0])+'–'+fd(B[B.length-1])+') <b>'+f(pb)+'</b>: <b class="'+(ch>5?'up':ch<-5?'dn':'eq')+'">'+ulgWord(ch)+'</b>.</li>';
+            if(ch!=null&&Math.abs(ch)>10)fp(esc(c.label)+' ('+lb+' günler): saat başı üretimde '+(ch>0?'iyileşme':'gerileme')+' %'+Math.round(Math.abs(ch))+' ('+f(pa)+' → '+f(pb)+')'+(ch>0?' — ekip bilgilendirilip teşekkür edilebilir.':' — sebebi (iş akışı, parti yapısı, personel) konuşulmalı.'));
+        });
+        // saatler: 16s günlerde gündüz saatlerinin en güçlü / en zayıf olanları
+        const ds=D16.length?D16:D24;if(ds.length){const hs=[...Array(14)].map((_,i)=>i+9).map(h=>({h,v:mean(ds.map(d=>val(d,c,x=>x===h)))})),avg=mean(hs.map(x=>x.v));
+            const srt=hs.slice().sort((a,b)=>b.v-a.v),best=srt.slice(0,2),worst=srt.slice(-2).reverse(),hh=x=>String(x.h).padStart(2,'0')+':00';
+            if(avg)t+='<li><b>Saatler ('+(D16.length?'16s':'24s')+' günler, 09–23 arası; vardiya başı ve sonu hariç):</b> en güçlü '+best.map(x=>hh(x)+' ('+f(x.v)+')').join(', ')+'; en zayıf '+worst.map(x=>hh(x)+' ('+f(x.v)+', saat ortalamasının %'+Math.round(x.v/avg*100)+' düzeyinde)').join(', ')+'.</li>';
+            if(avg&&worst[0].v<avg*0.5)fp(esc(c.label)+': '+hh(worst[0])+' saatinde üretim saat ortalamasının %'+Math.round(worst[0].v/avg*100)+' düzeyine düşüyor; mola / vardiya değişimi / iş beslemesi kontrol edilmeli.');
+        }
+        H+=t+(minor?'<li class="ulg-minor">Bu aşamanın üretimi diğerlerine göre çok küçük; geri bildirim maddelerine katılmadı.</li>':'')+'</ul></div>';
+    });
+    // haftalık tablo (ilk seri): eskiden yeniye
+    const c0=C[0],W=new Map();DD.forEach(d=>{const k=ulgWeekKey(d);if(!W.has(k))W.set(k,{d16:[],d24:[]});W.get(k)[ulgDayType(d)===24?'d24':'d16'].push(d)});
+    const wk=[...W.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,x])=>({k,n16:x.d16.length,n24:x.d24.length,p16:x.d16.length?mean(x.d16.map(d=>val(d,c0)))/16:null,p24:x.d24.length?mean(x.d24.map(d=>val(d,c0)))/24:null,tot:[...x.d16,...x.d24].reduce((s,d)=>s+val(d,c0),0)}));
+    if(wk.length>1){let pv=null;
+        H+='<div class="ulg-rep-s"><div class="ulg-rep-st">Hafta hafta — '+esc(c0.label)+' <small>çalışılan saat başı; ok bir önceki haftaya göre (16s ile 16s, 24s ile 24s)</small></div><table class="ulg-tb"><thead><tr><th>Hafta</th><th>Gün (16s / 24s)</th><th>16s saat başı</th><th>24s saat başı</th><th>Hafta toplamı</th></tr></thead><tbody>'
+            +wk.map(w=>{const r='<tr><td><b>'+fd(w.k)+'</b> haftası</td><td>'+w.n16+' / '+w.n24+'</td><td>'+(w.p16!=null?f(w.p16)+' '+(pv&&pv.p16!=null?ulgArrow(ulgPct(pv.p16,w.p16)):''):'—')+'</td><td>'+(w.p24!=null?f(w.p24)+' '+(pv&&pv.p24!=null?ulgArrow(ulgPct(pv.p24,w.p24)):''):'—')+'</td><td>'+f(w.tot)+'</td></tr>';if(w.p16!=null)pv=Object.assign(pv||{},{p16:w.p16});if(w.p24!=null)pv=Object.assign(pv||{},{p24:w.p24});return r}).join('')+'</tbody></table>';
+        const w16=wk.filter(w=>w.p16!=null);if(w16.length>=2){const b=w16.reduce((a,x)=>x.p16>a.p16?x:a),z=w16.reduce((a,x)=>x.p16<a.p16?x:a),fl=ulgPct(w16[0].p16,w16[w16.length-1].p16);
+            H+='<p class="ulg-rep-i">16 saatlik günlerde en iyi hafta <b>'+fd(b.k)+'</b> ('+f(b.p16)+'/saat), en zayıf <b>'+fd(z.k)+'</b> ('+f(z.p16)+'/saat). İlk haftadan son haftaya: <b>'+ulgWord(fl)+'</b>.</p>'}
+        H+='</div>';
+    }
+    H+='<div class="ulg-rep-s"><div class="ulg-rep-st">🗣 Geri bildirim için öne çıkanlar</div><ul>'+(feed.length?feed.map(x=>'<li>'+x+'</li>').join(''):'<li>Belirgin bir sorun ya da değişim çıkmadı; değerler dönem içinde dengeli.</li>')+'</ul></div>';
+    H+='<details class="ulg-rep-how"><summary>Nasıl hesaplandı?</summary><ul><li><b>Gün:</b> vardiya günü 08:00 → ertesi gün 08:00. Bugün sürdüğü için katılmaz.</li><li><b>16s / 24s:</b> gece (00–08) en az 3 parti geçiş varsa 24 saat; rozetten elle değiştirilebilir. Üretimsiz günler katılmaz.</li><li><b>Saat başı:</b> günlük üretim ÷ çalışılan saat (16 ya da 24). Gündüz saat başı = 08–24 üretimi ÷ 16, gece = 00–08 üretimi ÷ 8.</li><li><b>Eskiden yeniye:</b> her gün tipinin günleri tarih sırasıyla; ilk ve son üçte bir (6 günden azsa yarı) karşılaştırılır. ±%5 içi “yatay”.</li><li><b>Saat:</b> partinin aşamadan geçiş kaydının saati; “~” tahmini saatler en yakın veri güncellemesine göre.</li></ul></details></div>';
+    return H;
+}
+function ulgRepText(){const e=document.getElementById('ulgRep');if(!e)return'';const c=e.cloneNode(true);c.querySelectorAll('.ulg-rep-h,details').forEach(x=>x.remove());
+    c.querySelectorAll('li').forEach(x=>x.insertAdjacentText('afterbegin','• '));c.querySelectorAll('td,th').forEach(x=>x.insertAdjacentText('beforeend',' | '));
+    c.querySelectorAll('li,p,tr,.ulg-rep-st').forEach(x=>x.insertAdjacentText('beforeend','\n'));c.querySelectorAll('.ulg-rep-s').forEach(x=>x.insertAdjacentText('beforebegin','\n'));
+    return 'Üretim analizi (16 / 24 saat) — '+new Date().toLocaleDateString('tr-TR')+'\n'+c.textContent.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()}
+function ulgRepCopy(){const t=ulgRepText();if(!t)return;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📋 Analiz metni kopyalandı')).catch(()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');showToast('📋 Analiz metni kopyalandı')}catch(e){showToast('Kopyalanamadı','error')}a.remove()})}
+async function ulgRepShare(){const t=ulgRepText();if(!t)return;if(navigator.share){try{await navigator.share({title:'Üretim analizi',text:t});return}catch(e){if(e&&e.name==='AbortError')return}}window.open('https://wa.me/?text='+encodeURIComponent(t.slice(0,3500)),'_blank')}
+// ── 16 / 24 saat analizi: (1) bugün anlık — şu saate kadarki üretim, iki gün tipinin aynı saatteki ortalamasıyla; son 2 saatin
+//    hızı o saatlerin olağan hızıyla (2) gidişat — her gün tipinin kendi içinde günlük ve saat başı üretim artıyor mu azalıyor mu
+//    (en küçük kareler eğilimi, haftalık %; ilk yarı ↔ son yarı) (3) saat saat profil — aynı saatte 16s ve 24s günlerin ortalaması
+function ulgHourOff(ts){return((new Date(ts).getHours()-8)+24)%24+new Date(ts).getMinutes()/60}   // 08:00'den bu yana saat
+function ulgTrend(xs,ys){const n=ys.length;if(n<4)return null;const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;let sxy=0,sxx=0;xs.forEach((x,i)=>{sxy+=(x-mx)*(ys[i]-my);sxx+=(x-mx)*(x-mx)});
+    const sl=sxx?sxy/sxx:0,h=Math.floor(n/2),a=ys.slice(0,h).reduce((s,v)=>s+v,0)/h,b=ys.slice(n-h).reduce((s,v)=>s+v,0)/h;return{wk:my?sl*7/my*100:0,half:a?(b-a)/a*100:null,a,b,n,span:xs[n-1]-xs[0]}}
+function ulgArrow(p,th){th=th||5;return p>th?'<b class="up">▲ %'+Math.round(p)+'</b>':p<-th?'<b class="dn">▼ %'+Math.round(-p)+'</b>':'<b class="eq">≈ %'+(p>=0?'+':'')+Math.round(p)+'</b>'}
+function ulgAnalysisHtml(L,today,cats,kg,D16,D24){
+    const agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length,f=v=>kg?Math.round(v).toLocaleString('tr-TR')+' kg':(Math.round(v*10)/10).toLocaleString('tr-TR')+' parti';
+    const day0=d=>new Date(d+'T00:00:00').getTime()/86400000,C=cats.slice(0,3);let h='';
+    // (1) anlık
+    if(L.includes(today)||Object.keys(URETIM_LOG.days||{}).includes(today)){
+        const now=Date.now(),off=ulgHourOff(now),cum=(d,c,o)=>agg(uretimLogRows(d,c.key).filter(r=>r.ts&&ulgHourOff(r.ts)<=o)),avgCum=(ds,c,o)=>ds.length?ds.reduce((s,d)=>s+cum(d,c,o),0)/ds.length:0;
+        const win=(d,c,o)=>agg(uretimLogRows(d,c.key).filter(r=>r.ts&&ulgHourOff(r.ts)>o-2&&ulgHourOff(r.ts)<=o)),avgWin=(ds,c,o)=>ds.length?ds.reduce((s,d)=>s+win(d,c,o),0)/ds.length:0;
+        const tt=ulgDayType(today),nowS=new Date(now).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+        h+='<div class="ulg-an"><div class="ulg-ant">⏱ Bugün anlık <small>08:00 → '+nowS+' ('+off.toFixed(1).replace('.',',')+' saat) • '+(tt===24?'gece vardiyası çalışıyor (24s)':'şimdilik 16 saatlik gün')+'</small></div><table class="ulg-tb"><thead><tr><th></th><th>Bugün şu ana kadar</th><th>16s günler bu saatte</th><th>24s günler bu saatte</th><th>Son 2 saat</th><th>Olağan (16s / 24s)</th></tr></thead><tbody>'
+            +C.map(c=>{const t=cum(today,c,off),a16=avgCum(D16,c,off),a24=avgCum(D24,c,off),w=win(today,c,off),w16=avgWin(D16,c,off),w24=avgWin(D24,c,off);
+                return '<tr><td><b>'+esc(c.label)+'</b></td><td><b>'+f(t)+'</b></td><td>'+(D16.length?f(a16)+' '+(a16?ulgArrow((t-a16)/a16*100):''):'—')+'</td><td>'+(D24.length?f(a24)+' '+(a24?ulgArrow((t-a24)/a24*100):''):'—')+'</td><td><b>'+f(w)+'</b></td><td>'+(D16.length?f(w16):'—')+' / '+(D24.length?f(w24):'—')+'</td></tr>'}).join('')
+            +'</tbody></table><small class="ulg-ksm">Okların yüzdesi bugünün o gün tipinin aynı saatteki ortalamasından farkıdır. Sayfa açıkken her kayıt güncellemesinde (~7–12 dk) yenilenir.</small></div>';
+    }
+    // (2) gidişat: her gün tipinin kendi içinde
+    const tr=(ds,c,per)=>ulgTrend(ds.map(day0),ds.map(d=>agg(uretimLogRows(d,c.key))/(per||1)));
+    const rowT=(lab,ds,div)=>C.map(c=>{const T=tr(ds,c,div);if(!T)return '<td><small>yetersiz gün ('+ds.length+')</small></td>';
+        // 2 haftadan kısa dönemde haftalık eğilim abartılı çıkar: yalnız ilk yarı ↔ son yarı
+        const lng=T.span>=14,v=lng?T.wk:T.half;
+        return '<td>'+(v==null?'<b class="eq">—</b>':ulgArrow(v))+'<small>'+(lng?'/hafta • ':'ilk yarı → son yarı • ')+f(T.a)+' → '+f(T.b)+(lng&&T.half!=null?' ('+(T.half>=0?'+':'')+Math.round(T.half)+'%)':'')+' • '+T.n+' gün</small></td>'}).join('');
+    h+='<div class="ulg-an"><div class="ulg-ant">📈 Gidişat — gün tipinin kendi içinde <small>seçili dönem • en az 4 gün • eğilim: haftalık değişim</small></div><table class="ulg-tb"><thead><tr><th></th>'+C.map(c=>'<th>'+esc(c.label)+'</th>').join('')+'</tr></thead><tbody>'
+        +'<tr><td><b>16s günler</b> — günlük</td>'+rowT('16',D16,1)+'</tr><tr><td><b>16s günler</b> — saat başı</td>'+rowT('16',D16,16)+'</tr>'
+        +'<tr><td><b>24s günler</b> — günlük</td>'+rowT('24',D24,1)+'</tr><tr><td><b>24s günler</b> — saat başı</td>'+rowT('24',D24,24)+'</tr></tbody></table>';
+    // gün gün çizgi yerine sıralı mini çubuklar (her gün tipi kendi rengiyle) — ilk seçili seri
+    const c0=C[0],all=L.filter(d=>d!==today&&ulgDayType(d)),mx=Math.max(1,...all.map(d=>agg(uretimLogRows(d,c0.key))/ulgDayType(d)));
+    h+='<div class="ulg-seq"><div class="ulg-seqt">'+esc(c0.label)+' — çalışılan saat başı, gün gün <small>turuncu 16s • mor 24s</small></div><div class="ulg-seqb">'+all.map(d=>{const t=ulgDayType(d),v=agg(uretimLogRows(d,c0.key))/t,dt=new Date(d+'T00:00:00');
+        return '<div class="ulg-sq" title="'+esc(uretimLogDayLabel(d))+' • '+t+' saat • '+f(v)+'/saat"><i style="height:'+(v/mx*100).toFixed(1)+'%;background:'+(t===24?'#7986CB':'#FFB74D')+'"></i><small>'+String(dt.getDate()).padStart(2,'0')+'</small></div>'}).join('')+'</div></div></div>';
+    // (3) saat saat profil
+    const H=[...Array(24)].map((_,i)=>(i+8)%24),hr=r=>r.ts?new Date(r.ts).getHours():-1,prof=(ds,h)=>ds.length?ds.reduce((s,d)=>s+agg(uretimLogRows(d,c0.key).filter(r=>hr(r)===h)),0)/ds.length:0;
+    const P=H.map(h=>({h,a:prof(D16,h),b:prof(D24,h)})),pm=Math.max(1,...P.map(x=>Math.max(x.a,x.b)));
+    const sum=(k,from,to)=>P.filter(x=>x.h>=from&&x.h<to).reduce((s,x)=>s+x[k],0),d8=(sum('b',8,16)-sum('a',8,16))/Math.max(1,sum('a',8,16))*100,d16=(sum('b',16,24)-sum('a',16,24))/Math.max(1,sum('a',16,24))*100;
+    h+='<div class="ulg-an"><div class="ulg-ant">🕐 Saat saat profil — '+esc(c0.label)+' <small>aynı saatte 16s ve 24s günlerin ortalaması • 08–16: 24s günlerde '+ulgArrow(d8)+' • 16–24: '+ulgArrow(d16)+'</small></div><div class="ulg-prof">'
+        +P.map(x=>'<div class="ulg-pg" title="'+String(x.h).padStart(2,'0')+':00 • 16s ort. '+f(x.a)+' • 24s ort. '+f(x.b)+'"><div class="ulg-pb"><i style="height:'+(x.a/pm*100).toFixed(1)+'%;background:#FFB74D"></i><i style="height:'+(x.b/pm*100).toFixed(1)+'%;background:#7986CB"></i></div><small>'+String(x.h).padStart(2,'0')+'</small></div>').join('')+'</div>'
+        +'<small class="ulg-ksm">Gündüz saatlerinde (08–24) 24s günlerin daha yüksek olması gece vardiyasının gündüze iş hazırladığını, düşük olması işin geceye kaydığını gösterebilir.</small></div>';
+    return h;
+}
+// 16 / 24 saat kıyası: seçili dönemdeki (bugün hariç) iki gün tipinin günlük ve çalışılan saat başı ortalaması
+function ulgKiyasHtml(L,today,cats,kg){
+    const DD=L.filter(d=>d!==today),D16=DD.filter(d=>ulgDayType(d)===16),D24=DD.filter(d=>ulgDayType(d)===24),agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length;
+    const avgOf=(ds,c)=>ds.length?ds.reduce((s,d)=>s+agg(uretimLogRows(d,c.key)),0)/ds.length:0,fmt=v=>kg?Math.round(v).toLocaleString('tr-TR')+' kg':v.toFixed(1)+' parti';
+    const A=cats.map(c=>({c,a16:avgOf(D16,c),a24:avgOf(D24,c)}));A.forEach(x=>{x.h16=x.a16/16;x.h24=x.a24/24});
+    const S=[{l:'16 saat çalışılan günler ('+D16.length+')',col:'#FFB74D'},{l:'24 saat çalışılan günler ('+D24.length+')',col:'#7986CB'}];
+    const plot=(title,k1,k2,unit)=>{const mx=Math.max(1,...A.map(x=>Math.max(x[k1],x[k2])));
+        return '<div class="ulg-k"><div class="ulg-kt">'+title+'</div><div class="ulg-kb">'+A.map(x=>'<div class="ulg-kg"><div class="ulg-kbars">'+[[x[k1],S[0].col],[x[k2],S[1].col]].map(([v,col])=>'<div class="ulg-b" style="width:34px"><em>'+(v?ulgFmt(v):'—')+'</em><i style="height:'+(v/mx*100).toFixed(1)+'%;background:'+col+'"></i></div>').join('')
+            +'</div><div class="ulg-x"><b>'+esc(x.c.label.replace(/ \(geçen\)/,''))+'</b><small>'+(x[k1]&&x[k2]?(()=>{const ch=(x[k2]-x[k1])/x[k1]*100;return '24s: '+(ch>=0?'+':'')+Math.round(ch)+'%'})():'')+'</small></div></div>').join('')+'</div><div class="ulg-ku">'+unit+'</div></div>'};
+    const say=A.filter(x=>x.a16&&x.a24).map(x=>{const d=(x.a24-x.a16)/x.a16*100,hh=(x.h24-x.h16)/x.h16*100;return '<li><b>'+esc(x.c.label)+':</b> 24 saatlik günde günlük '+fmt(x.a24)+' (16 saatlikte '+fmt(x.a16)+', <b>'+(d>=0?'+':'')+Math.round(d)+'%</b>); çalışılan saat başı '+fmt(x.h24)+' / '+fmt(x.h16)+' (<b>'+(hh>=0?'+':'')+Math.round(hh)+'%</b>'+(hh<-5?' — gece saatleri daha az verimli':hh>5?' — 24 saatte saat başı daha verimli':' — saat başı benzer')+')</li>'}).join('');
+    return '<div class="ulg-kw">'+(D16.length&&D24.length?'':'<div class="ulg-warn">Seçili dönemde '+(D16.length?'24':'16')+' saat çalışılan gün yok; dönemi uzatın ya da gün rozetlerinden elle düzeltin.</div>')
+        +'<div class="ulg-kgrid">'+plot('Günlük ortalama','a16','a24',kg?'kg / gün':'parti / gün')+plot('Çalışılan saat başı','h16','h24',kg?'kg / saat (÷16 ya da ÷24)':'parti / saat')+'</div>'
+        +'<div class="ulg-f">'+S.map(x=>'<span><i style="background:'+x.col+'"></i>'+esc(x.l)+'</span>').join('')+'</div>'+(say?'<ul class="ulg-say">'+say+'</ul>':'')
+        +'<div class="ulg-days">'+DD.slice().reverse().map(d=>{const t=ulgDayType(d),dt=new Date(d+'T00:00:00');return '<span class="ulg-dchip">'+String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0')+' '+dt.toLocaleDateString('tr-TR',{weekday:'short'})+' '+(t?ulgDTBadge(d):'<i class="ulg-dt t0">—</i>')+'</span>'}).join('')+'</div>'
+        +ulgReportHtml(L,today,cats,kg,D16,D24)+ulgAnalysisHtml(L,today,cats,kg,D16,D24)
+        +'<small class="ulg-ksm">Gün tipi otomatik: gece vardiyasında (00–08) en az 3 parti üretim varsa 24 saat, yoksa 16 saat; üretimsiz günler (ör. pazar) katılmaz. Rozete tıklayarak elle düzeltebilirsiniz. Bugün katılmaz.</small></div>';
+}
 function ulgHtml(days,sel,today){
-    const D=days.slice().sort(),L=ulgN?D.slice(-ulgN):D,cats=URETIM_CATS.filter(c=>ulgSer.includes(c.key)),kg=ulgMet==='kg';
+    const D=days.slice().sort(),L0=ulgN?D.slice(-ulgN):D,L=ulgDT==='all'||ulgGrp==='kiyas'||ulgGrp==='saat'?L0:L0.filter(d=>ulgDayType(d)===+ulgDT||d===today&&false),cats=URETIM_CATS.filter(c=>ulgSer.includes(c.key)),kg=ulgMet==='kg';
     const agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length,hr=r=>r.ts?new Date(r.ts).getHours():-1,H=[...Array(24)].map((_,i)=>(i+8)%24),hh=h=>String(h).padStart(2,'0');
     const dl=d=>{const dt=new Date(d+'T00:00:00');return[String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0'),dt.toLocaleDateString('tr-TR',{weekday:'short'})]};
     let B=[],note='';
-    if(ulgGrp==='gun')B=L.map(d=>{const[l,w]=dl(d);return{lab:l,sub:w,day:d,today:d===today,sel:d===sel,tip:uretimLogDayLabel(d),v:cats.map(c=>agg(uretimLogRows(d,c.key)))}});
+    if(ulgGrp==='kiyas'){}
+    else if(ulgGrp==='gun')B=L.map(d=>{const[l,w]=dl(d);return{lab:l,sub:w,badge:ulgDTBadge(d),day:d,today:d===today,sel:d===sel,tip:uretimLogDayLabel(d),v:cats.map(c=>agg(uretimLogRows(d,c.key)))}});
     else if(ulgGrp==='vard')L.forEach(d=>{const[l]=dl(d),R=cats.map(c=>uretimLogRows(d,c.key));ULG_VARD.forEach((vn,i)=>B.push({lab:i===0?l:'',sub:vn,day:d,today:d===today,sel:d===sel,first:i===0,tip:uretimLogDayLabel(d)+' • '+vn,v:R.map(rows=>agg(rows.filter(r=>ulgVardOf(hr(r))===i)))}))});
     else if(ulgGrp==='saat'){const R=cats.map(c=>uretimLogRows(sel,c.key));B=H.map(h=>({lab:hh(h),sub:'',day:sel,tip:uretimLogDayLabel(sel)+' • '+hh(h)+':00–'+hh((h+1)%24)+':00',v:R.map(rows=>agg(rows.filter(r=>hr(r)===h)))}));note=uretimLogDayLabel(sel)+(sel===today?' (sürüyor)':'')}
     else{const DD=L.filter(d=>d!==today),R=DD.map(d=>cats.map(c=>uretimLogRows(d,c.key)));B=H.map(h=>({lab:hh(h),sub:'',tip:hh(h)+':00–'+hh((h+1)%24)+':00 • '+DD.length+' gün ortalaması',v:cats.map((c,j)=>DD.length?R.reduce((s,x)=>s+agg(x[j].filter(r=>hr(r)===h)),0)/DD.length:0)}));note=DD.length+' günün ortalaması (bugün hariç)'}
-    const V=B.map(b=>b.v),mx=Math.max(1,...V.flat()),step=(()=>{const r=mx/4,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return(m<=1?1:m<=2?2:m<=5?5:10)*p})(),top=Math.ceil(mx/step)*step;
+    const V=B.length?B.map(b=>b.v):[[0]],mx=Math.max(1,...V.flat()),step=(()=>{const r=mx/4,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return(m<=1?1:m<=2?2:m<=5?5:10)*p})(),top=Math.ceil(mx/step)*step;
     const many=B.length>20,bw=many?(cats.length>2?6:cats.length>1?9:14):(cats.length>3?12:cats.length>1?18:26),gw=cats.length*bw+(cats.length-1)*2,wide=gw>=40;
     const fmtV=v=>kg?Math.round(v).toLocaleString('tr-TR')+' kg':(Number.isInteger(v)?v:v.toFixed(1))+' parti';
     const avg=cats.map((c,j)=>{const a=B.filter(b=>!b.today).map(b=>b.v[j]).filter(v=>v>0);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0});
@@ -5318,14 +5449,16 @@ function ulgHtml(days,sel,today){
         +URETIM_CATS.map(c=>'<button type="button" class="ulg-ser'+(ulgSer.includes(c.key)?' on':'')+'" style="--c:'+c.color+'" onclick="ulgSet(&quot;ser&quot;,&quot;'+c.key+'&quot;)" title="Grafikte göster / gizle">'+c.icon+' '+esc(c.label)+'</button>').join('')
         +'<select onchange="ulgSet(&quot;grp&quot;,this.value)" title="Gruplama: çalışma saatlerine göre">'+ULG_GRP.map(([k,l])=>'<option value="'+k+'"'+(ulgGrp===k?' selected':'')+'>'+l+'</option>').join('')+'</select>'
         +'<select onchange="ulgSet(&quot;met&quot;,this.value)"><option value="kg"'+(kg?' selected':'')+'>kg</option><option value="n"'+(!kg?' selected':'')+'>parti sayısı</option></select>'
+        +(ulgGrp==='saat'||ulgGrp==='kiyas'?'':'<select onchange="ulgSet(&quot;dt&quot;,this.value)" title="Gün tipi: gece vardiyası (00–08) çalışılan günler 24 saat">'+[['all','Bütün günler'],['16','Yalnız 16 saat çalışılan günler'],['24','Yalnız 24 saat çalışılan günler']].map(([v,l])=>'<option value="'+v+'"'+(ulgDT===v?' selected':'')+'>'+l+'</option>').join('')+'</select>')
         +(ulgGrp==='saat'?'':'<select onchange="ulgSet(&quot;n&quot;,this.value)">'+[[7,'Son 7 gün'],[14,'Son 14 gün'],[30,'Son 30 gün'],[0,'Hepsi']].map(([v,l])=>'<option value="'+v+'"'+(ulgN===v?' selected':'')+'>'+l+'</option>').join('')+'</select>')
-        +(note?'<small class="ulg-note">'+esc(note)+'</small>':'')+'</div>'
-        +'<div class="ulg-plot"><div class="ulg-y">'+[4,3,2,1,0].map(i=>'<span style="bottom:'+(i*25)+'%">'+ulgFmt(top*i/4)+'</span>').join('')+'</div><div class="ulg-area">'
+        +(note?'<small class="ulg-note">'+esc(note)+'</small>':'')+'</div>';
+    if(ulgGrp==='kiyas')return h+ulgKiyasHtml(L,today,cats,kg)+'</div>';
+    h+='<div class="ulg-plot"><div class="ulg-y">'+[4,3,2,1,0].map(i=>'<span style="bottom:'+(i*25)+'%">'+ulgFmt(top*i/4)+'</span>').join('')+'</div><div class="ulg-area">'
         +'<div class="ulg-groups'+(many?' many':'')+'"><div class="ulg-gl">'+[1,2,3,4].map(i=>'<i style="bottom:'+(i*25)+'%"></i>').join('')+'</div>'+B.map(b=>{
             const click=b.day&&ulgGrp!=='saat'?' onclick="setUretimLogDay(&quot;'+b.day+'&quot;)"':'';
             return '<div class="ulg-g'+(b.sel?' sel':'')+(b.today?' today':'')+(b.first?' first':'')+(ulgGrp==='vard'?' v'+ULG_VARD.indexOf(b.sub):'')+'"'+click+' title="'+esc(b.tip)+(b.today?' (sürüyor)':'')+'&#10;'+cats.map((c,j)=>esc(c.label)+': '+fmtV(b.v[j])).join('&#10;')+'"><div class="ulg-bars">'
                 +cats.map((c,j)=>'<div class="ulg-b" style="width:'+bw+'px"><em>'+(wide&&b.v[j]?ulgFmt(b.v[j]):'')+'</em><i style="height:'+(b.v[j]/top*100).toFixed(1)+'%;background:'+c.color+'"></i></div>').join('')
-                +'</div><div class="ulg-x"><b>'+esc(b.lab)+'</b><small>'+esc(b.sub)+'</small></div></div>'}).join('')+'</div></div></div>'
+                +'</div><div class="ulg-x"><b>'+esc(b.lab)+'</b><small>'+esc(b.sub)+(b.badge||'')+'</small></div></div>'}).join('')+'</div></div></div>'
         +'<div class="ulg-f">'+cats.map((c,j)=>'<span><i style="background:'+c.color+'"></i>'+esc(c.label)+(avg[j]?' • ort. <b>'+fmtV(avg[j])+'</b>/'+unit:'')+'</span>').join('')
         +'<small>Vardiya günü 08:00–08:00 • saat, partinin kayıt (geçiş) saatidir; ~ tahmini saatler en yakın güncellemeye göre'+(ulgGrp==='gun'||ulgGrp==='vard'?' • bugün sürüyor (ortalamaya katılmaz) • tıkla: o günün listesi':'')+'</small></div></div>';
     return h;
@@ -5337,7 +5470,93 @@ function ulgHtml(days,sel,today){
  +'.ulg-groups{position:relative;display:flex;gap:6px;height:100%;min-width:min-content;align-items:stretch}.ulg-g{display:flex;flex-direction:column;flex:1 0 auto;cursor:pointer;border-radius:6px;padding:0 3px}.ulg-g:hover{background:rgba(255,255,255,.06)}.ulg-g.sel{background:rgba(77,208,225,.14);outline:1px solid rgba(77,208,225,.5)}'
  +'.ulg-bars{flex:1;display:flex;gap:2px;align-items:flex-end;justify-content:center;border-bottom:1px solid rgba(255,255,255,.3)}.ulg-b{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}.ulg-b i{display:block;width:100%;border-radius:3px 3px 0 0;min-height:1px}.ulg-b em{font-style:normal;font-size:9px;color:#CFD8DC;white-space:nowrap;margin-bottom:1px}'
  +'.ulg-g.today .ulg-b i{opacity:.55;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.25) 0 3px,transparent 3px 6px)}.ulg-x{height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.ulg-x b{font-size:11px;color:#ECEFF1}.ulg-x small{font-size:9.5px;color:#90A4AE}.ulg-g.sel .ulg-x b{color:#4DD0E1}'
- +'.ulg-f{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:#CFD8DC;margin-top:6px}.ulg-f i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.ulg-f small{flex-basis:100%;color:#90A4AE;font-size:10.5px}.ulg-note{color:#4DD0E1;font-size:11.5px}.ulg-groups.many{gap:2px}.ulg-groups.many .ulg-g{padding:0 1px}.ulg-g.first{margin-left:8px;border-left:1px dashed rgba(255,255,255,.18)}.ulg-g.v2 .ulg-x small{color:#7986CB}.ulg-g.v1 .ulg-x small{color:#FFB74D}';document.head.appendChild(st)})();
+ +'.ulg-f{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:#CFD8DC;margin-top:6px}.ulg-f i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.ulg-f small{flex-basis:100%;color:#90A4AE;font-size:10.5px}.ulg-note{color:#4DD0E1;font-size:11.5px}.ulg-dt{font-style:normal;font-size:9px;font-weight:800;border-radius:6px;padding:0 4px;margin-left:3px;cursor:pointer;color:#111}.ulg-dt.t16{background:#FFB74D}.ulg-dt.t24{background:#7986CB;color:#fff}.ulg-dt.t0{background:#455A64;color:#ccc;cursor:default}.ulg-dt.man{outline:1px dashed #fff}.ulg-kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.ulg-k{background:rgba(0,0,0,.15);border-radius:8px;padding:8px}.ulg-kt{font-weight:800;font-size:13px;color:#ECEFF1;margin-bottom:4px}.ulg-ku{font-size:10.5px;color:#90A4AE;text-align:right}.ulg-kb{display:flex;gap:10px;height:190px;justify-content:space-around}.ulg-kg{display:flex;flex-direction:column;flex:1;min-width:0}.ulg-kbars{flex:1;display:flex;gap:4px;align-items:flex-end;justify-content:center;border-bottom:1px solid rgba(255,255,255,.3)}.ulg-kg .ulg-x{height:34px}.ulg-kg .ulg-x b{font-size:11px;text-align:center}.ulg-say{margin:8px 0 4px 18px;font-size:12px;color:#ECEFF1;line-height:1.5}.ulg-warn{background:rgba(255,183,77,.15);border-left:3px solid #FFB74D;padding:5px 8px;border-radius:6px;font-size:12px;margin-bottom:8px}.ulg-days{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ulg-dchip{font-size:11px;background:rgba(255,255,255,.06);border-radius:8px;padding:2px 6px;color:#CFD8DC}.ulg-ksm{display:block;color:#90A4AE;font-size:10.5px}.ulg-rep{margin-top:10px;background:rgba(77,208,225,.07);border:1px solid rgba(77,208,225,.3);border-radius:8px;padding:10px 12px;color:#ECEFF1;font-size:12.5px;line-height:1.5}.ulg-rep-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.ulg-rep-h b{color:#4DD0E1;font-size:14px}.ulg-rep-h button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;margin-left:4px}.ulg-rep-i{margin:4px 0 8px}.ulg-rep-s{margin:8px 0}.ulg-rep-st{font-weight:800;color:#FFD54F;font-size:13px;margin-bottom:3px}.ulg-rep-st small{font-weight:400;color:#90A4AE;font-size:10.5px}.ulg-rep ul{margin:0 0 0 18px;padding:0}.ulg-rep li{margin:2px 0}.ulg-rep b.up{color:#66BB6A}.ulg-rep b.dn{color:#EF5350}.ulg-rep b.eq{color:#FFD54F}.ulg-minor{list-style:none;color:#90A4AE;font-size:11px}.ulg-rep-how summary{cursor:pointer;color:#90CAF9;font-size:12px}.ulg-rep-how{margin-top:6px;color:#B0BEC5;font-size:11.5px}.ulg-an{margin-top:10px;background:rgba(0,0,0,.15);border-radius:8px;padding:8px}.ulg-ant{font-weight:800;font-size:13px;color:#4DD0E1;margin-bottom:6px}.ulg-ant small{font-weight:400;color:#B0BEC5;font-size:11px;margin-left:6px}.ulg-tb{width:100%;border-collapse:collapse;font-size:12px}.ulg-tb th{font-size:11px;color:#90A4AE;text-align:left;padding:3px 6px;font-weight:600}.ulg-tb td{padding:4px 6px;border-top:1px solid rgba(255,255,255,.07);vertical-align:top;color:#ECEFF1}.ulg-tb td small{display:block;color:#90A4AE;font-size:10.5px}.ulg-tb b.up,.ulg-an b.up{color:#66BB6A}.ulg-tb b.dn,.ulg-an b.dn{color:#EF5350}.ulg-tb b.eq,.ulg-an b.eq{color:#FFD54F}.ulg-seq{margin-top:8px}.ulg-seqt{font-size:12px;font-weight:700;color:#ECEFF1}.ulg-seqt small{font-weight:400;color:#90A4AE}.ulg-seqb{display:flex;gap:2px;height:90px;align-items:flex-end;margin-top:4px;overflow-x:auto}.ulg-sq{flex:1 0 12px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}.ulg-sq i{display:block;width:100%;border-radius:2px 2px 0 0}.ulg-sq small{font-size:8.5px;color:#90A4AE}.ulg-prof{display:flex;gap:2px;height:130px;overflow-x:auto}.ulg-pg{flex:1 0 18px;display:flex;flex-direction:column}.ulg-pb{flex:1;display:flex;gap:1px;align-items:flex-end;border-bottom:1px solid rgba(255,255,255,.3)}.ulg-pb i{flex:1;border-radius:2px 2px 0 0;min-height:1px}.ulg-pg small{font-size:9px;color:#90A4AE;text-align:center}@media(max-width:600px){.ulg-tb{font-size:11px}.ulg-tb th:nth-child(6),.ulg-tb td:nth-child(6){display:none}}.ulg-groups.many{gap:2px}.ulg-groups.many .ulg-g{padding:0 1px}.ulg-g.first{margin-left:8px;border-left:1px dashed rgba(255,255,255,.18)}.ulg-g.v2 .ulg-x small{color:#7986CB}.ulg-g.v1 .ulg-x small{color:#FFB74D}';document.head.appendChild(st)})();
+// ── 🧮 KK çalışma programı (simülasyon): KK'da bekleyen partiler, kumaş tipinin geçmiş KK hızına (data/kk_hiz.json, urt'ten)
+//    göre tahmini sürelerle sıralanır ve günlük KK kapasitesine (geçmişteki günlük aktif iş saati) yerleştirilir.
+//    Stratejiler: ⚡ hızlı üretilenler önce (en kısa iş önce → kuyruk en hızlı erir) • ⚖️ dengeli (N günden uzun bekleyenler
+//    önce, sonra hızlılar) • ⏳ en uzun bekleyen önce (bugünkü alışkanlık, kıyas için). Yeni gelecek partiler hesaba katılmaz.
+let KKHIZ=null,KKHIZ_AT=0;
+let kkp={str:mapLoadPref('kkpStr9',v=>['hiz','kisa','denge','fifo'].includes(v),'hiz'),cap:+mapLoadPref('kkpCap9',v=>+v>=0&&+v<=200,'0'),wait:+mapLoadPref('kkpWait9',v=>['2','3','5','7'].includes(v),'3'),dt:+mapLoadPref('kkpDt9',v=>['0','16','24'].includes(v),'0'),day:0};
+function kkHizLoad(cb){
+    if(KKHIZ&&Date.now()-KKHIZ_AT<600000){cb&&cb();return}
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/kk_hiz.json'+ts,{cache:'no-store'});
+    (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/kk_hiz.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel)).then(r=>r&&r.ok?r.json():null)
+        .then(j=>{if(j&&j.ham){KKHIZ=j;KKHIZ_AT=Date.now()}cb&&cb()}).catch(()=>cb&&cb());
+}
+function kkpU(s){return String(s||'').trim().replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase().replace(/\s+/g,' ')}
+// kumaşın hızı: kumaş adı (≥3 parti) → kumaş kodu (≥3 parti) → genel ortanca; 80–2500 kg/sa arasına sınırlanır
+function kkpSpeed(k){
+    const D=KKHIZ,ham=kkpU(k.ham_adi),kod=(ham.match(/^[A-Z0-9]+/)||[''])[0],cl=v=>Math.min(2500,Math.max(80,v));
+    const a=D.ham[ham]||D.ham[ham.replace(/ /g,'  ')];if(a&&a[0]>=3)return{v:cl(a[1]),src:'kumaş',n:a[0]};
+    const b=kod.length>=3&&D.kod[kod];if(b&&b[0]>=3)return{v:cl(b[1]),src:'kumaş kodu '+kod,n:b[0]};
+    if(a)return{v:cl((a[1]*a[0]+D.all[1]*3)/(a[0]+3)),src:'kumaş (az örnek)',n:a[0]};
+    return{v:D.all[1],src:'genel ortalama',n:0};
+}
+// gün tipi: seçim yoksa bugünkü (gece vardiyası çalışıyorsa 24 saat)
+function kkpDayType(){if(kkp.dt)return kkp.dt;try{return typeof ulgDayType==='function'&&URETIM_LOG&&ulgDayType(liveProdLogKey())===24?24:16}catch(e){return 16}}
+// günlük kapasite: aynı gün tipindeki (gece 00–08 ≥ 10 top = 24 saat) son 14 çalışılan günün ortancası; 24 saatlik gün verisi
+// yoksa 16 saatlik kapasite × 1,5 (tahmini)
+function kkpAutoCap(dt){
+    const med=a=>{a=a.slice().sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:0},all=Object.values(KKHIZ.days||{}).filter(x=>x[0]>8);
+    const v=all.filter(x=>((x[2]||0)>=10?24:16)===dt).map(x=>x[0]).slice(-14);
+    if(v.length)return{v:Math.round(med(v)),n:v.length,est:false};
+    const b=all.filter(x=>(x[2]||0)<10).map(x=>x[0]).slice(-14);return{v:Math.round((med(b)||24)*(dt===24?1.5:1)),n:b.length,est:true};
+}
+function kkpJobs(){return liveKkCards().map(k=>{const sp=kkpSpeed(k),kg=num(k.kilo)||0,w=fifoAgeDays(k);return{k,kg,sp,h:(KKHIZ.setup||0)/60+(kg>0?kg/sp.v:0),w:w==null?0:w}})}   // aktif iş süresi = sabit parti payı + kg ÷ kumaş hızı
+function kkpOrder(J,str,wait){
+    const spt=(a,b)=>a.h-b.h||b.w-a.w,fifo=(a,b)=>b.w-a.w||a.h-b.h;
+    if(str==='fifo')return J.slice().sort(fifo);
+    if(str==='denge'){const old=J.filter(x=>x.w>=wait).sort(fifo),rest=J.filter(x=>x.w<wait).sort(spt);return old.concat(rest)}
+    if(str==='kisa')return J.slice().sort(spt);
+    // hızlı kumaşlar önce: kumaşın geçmiş KK hızı (kg/sa) yüksekten düşüğe, eşitse kısa iş önce
+    return J.slice().sort((a,b)=>b.sp.v-a.sp.v||a.h-b.h);
+}
+// günlere yerleştir: günün kapasitesi dolana kadar sırayla (iş günü aşarsa sığdığı kadar o gün, kalanı ertesi gün)
+function kkpPlan(order,cap){
+    const days=[];let d=null,left=0,t=0,sumDone=0;
+    order.forEach(x=>{let need=x.h;while(need>1e-9){if(!d||left<=1e-9){d={i:days.length,rows:[],kg:0,h:0};days.push(d);left=cap}const use=Math.min(need,left);need-=use;left-=use;d.h+=use;t+=use;
+        if(need<=1e-9){d.rows.push(Object.assign({},x,{day:d.i,cum:t}));d.kg+=x.kg;sumDone+=(d.i+1)}}});
+    return{days,avgDay:order.length?sumDone/order.length:0};
+}
+function kkpSet(k,v){if(k==='str'){kkp.str=v;mapSavePref('kkpStr9',v)}else if(k==='cap'){kkp.cap=+v;mapSavePref('kkpCap9',String(+v))}else if(k==='wait'){kkp.wait=+v;mapSavePref('kkpWait9',v)}else if(k==='dt'){kkp.dt=+v;mapSavePref('kkpDt9',String(+v))}else if(k==='day')kkp.day=+v;kkpRender()}
+function kkpOpen(){hmModalShow('<div id="kkpBox" class="kkp-box"><div class="pa-note">Hız verisi okunuyor…</div></div>');kkHizLoad(kkpRender)}
+function kkpDate(i){const d=new Date();if(d.getHours()<8)d.setDate(d.getDate()-1);d.setDate(d.getDate()+i);return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',weekday:'short'})}
+function kkpRender(){
+    const box=document.getElementById('kkpBox');if(!box)return;
+    if(!KKHIZ){box.innerHTML='<div class="pa-note">KK hız verisi (data/kk_hiz.json) yok. Çalışma bilgisayarında <b>update_kk_hiz.py urt.xlsx</b> çalıştırılmalı (GUNCELLE_VE_PUSH.bat urt.xlsx varsa kendisi yapar).</div>';return}
+    const J=kkpJobs(),dt=kkpDayType(),AC=kkpAutoCap(dt),auto=AC.v,cap=kkp.cap||auto,f0=v=>Math.round(v).toLocaleString('tr-TR'),fh=h=>h<1?Math.round(h*60)+' dk':(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa';
+    if(!J.length){box.innerHTML='<div class="kkp-t">🧮 KK çalışma programı</div><div class="pa-note">KK\'da bekleyen parti yok ✅</div>';return}
+    const tot=J.reduce((s,x)=>s+x.h,0),totKg=J.reduce((s,x)=>s+x.kg,0),S={hiz:'⚡ Hızlı üretilen kumaşlar önce',kisa:'⏱ En kısa iş önce (en çok parti)',denge:'⚖️ Dengeli ('+kkp.wait+'+ gün bekleyenler önce)',fifo:'⏳ En uzun bekleyen önce (bugünkü düzen)'};
+    const R={};Object.keys(S).forEach(s=>{R[s]=kkpPlan(kkpOrder(J,s,kkp.wait),cap)});const P=R[kkp.str],day=Math.min(kkp.day,P.days.length-1);
+    const d1=s=>R[s].days[0]?R[s].days[0].rows.length:0,d1kg=s=>R[s].days[0]?R[s].days[0].kg:0,old=J.filter(x=>x.w>=kkp.wait).length;
+    const sumT='<table class="ulg-tb kkp-cmp"><thead><tr><th>Strateji</th><th>1. gün biten</th><th>3 günde biten</th><th>Kuyruk erime</th><th>Partinin ort. bitiş günü</th></tr></thead><tbody>'+Object.keys(S).map(s=>{const r=R[s],in3=r.days.slice(0,3).reduce((a,d)=>a+d.rows.length,0);
+        return '<tr class="'+(s===kkp.str?'on':'')+'" onclick="kkpSet(&quot;str&quot;,&quot;'+s+'&quot;)"><td><b>'+S[s]+'</b></td><td>'+d1(s)+' parti • '+f0(d1kg(s))+' kg</td><td>'+in3+' parti</td><td>'+r.days.length+' gün</td><td>'+r.avgDay.toFixed(1).replace('.',',')+'. gün</td></tr>'}).join('')+'</tbody></table>';
+    const src=J.reduce((a,x)=>{a[x.sp.src.startsWith('kumaş kodu')?'kod':x.sp.src==='kumaş'?'ham':x.sp.src==='genel ortalama'?'gen':'az']++;return a},{ham:0,kod:0,az:0,gen:0});
+    const dd=P.days[day];
+    box.innerHTML='<div class="kkp-t">🧮 KK çalışma programı <small>simülasyon • '+J.length+' parti • '+f0(totKg)+' kg • tahmini toplam aktif iş '+fh(tot)+'</small></div>'
+        +'<div class="kkp-row"><b>Strateji</b><select onchange="kkpSet(&quot;str&quot;,this.value)">'+Object.keys(S).map(s=>'<option value="'+s+'"'+(kkp.str===s?' selected':'')+'>'+S[s]+'</option>').join('')+'</select>'
+        +'<b>Gün tipi</b><select onchange="kkpSet(&quot;dt&quot;,this.value)"><option value="0"'+(!kkp.dt?' selected':'')+'>Otomatik ('+dt+' saat)</option><option value="16"'+(kkp.dt===16?' selected':'')+'>16 saat (08–24)</option><option value="24"'+(kkp.dt===24?' selected':'')+'>24 saat (gece vardiyası)</option></select>'
+        +'<b>Günlük KK kapasitesi</b><select onchange="kkpSet(&quot;cap&quot;,this.value)" title="Bir günde KK\'da toplam aktif iş saati (birden çok kişi aynı anda çalıştığı için 16 saati aşar)"><option value="0"'+(!kkp.cap?' selected':'')+'>Otomatik: '+auto+' aktif iş saati ('+(AC.est?'tahmini: 16 saatlik günler × 1,5':dt+' saatlik son '+AC.n+' gün')+')</option>'+[16,20,24,28,32,36,40,48].map(v=>'<option value="'+v+'"'+(kkp.cap===v?' selected':'')+'>'+v+' iş saati / gün</option>').join('')+'</select>'
+        +(kkp.str==='denge'?'<b>Bekleme sınırı</b><select onchange="kkpSet(&quot;wait&quot;,this.value)">'+[2,3,5,7].map(v=>'<option value="'+v+'"'+(kkp.wait===v?' selected':'')+'>'+v+' gün</option>').join('')+'</select>':'')+'</div>'
+        +'<div class="kkp-sum">'+sumT+'<div class="kkp-say">'+(kkp.str==='hiz'||kkp.str==='kisa'?(kkp.str==='hiz'?'⚡ Geçmişte KK\'dan en hızlı geçen kumaşlar (kg/saat) önce alınır; aynı sürede en çok kg çıkar.':'⏱ Süresi en kısa işler (küçük parti × hızlı kumaş) önce alınır; kuyruktaki parti sayısı en hızlı bu sırayla düşer.')+' İlk gün <b>'+d1(kkp.str)+'</b> parti / <b>'+f0(d1kg(kkp.str))+' kg</b> biter; bugünkü düzene (en uzun bekleyen önce) göre <b>'+(d1(kkp.str)-d1('fifo')>=0?'+':'')+(d1(kkp.str)-d1('fifo'))+'</b> parti, <b>'+(d1kg(kkp.str)-d1kg('fifo')>=0?'+':'')+f0(d1kg(kkp.str)-d1kg('fifo'))+' kg</b>.'+(old?' <b>Dikkat:</b> '+old+' parti '+kkp.wait+' günden uzun bekliyor; bu sıralamada geriye kalabilir — gerekirse ⚖️ Dengeli\'yi seçin.':''):kkp.str==='denge'?'⚖️ Önce '+kkp.wait+' günden uzun bekleyen <b>'+old+'</b> parti (en eskiden), sonra kalanlar hızlıdan yavaşa.':'⏳ Bugünkü düzen: en uzun bekleyen önce. Kıyas içindir.')+' Toplam kg her stratejide aynı sürede biter; değişen, partilerin <b>ne kadar erken</b> çıktığıdır.</div></div>'
+        +'<div class="kkp-days">'+P.days.map((d,i)=>'<button type="button" class="'+(i===day?'on':'')+'" onclick="kkpSet(&quot;day&quot;,'+i+')">'+(i+1)+'. gün <small>'+kkpDate(i)+' • '+d.rows.length+' p • '+f0(d.kg)+' kg</small></button>').join('')+'</div>'
+        +'<div class="kkp-list"><table class="ulg-tb"><thead><tr><th>#</th><th>Parti</th><th>Firma</th><th>Kumaş</th><th>Kg</th><th>Hız</th><th title="Sabit parti payı + kg ÷ kumaş hızı; top kayıtları arası 20 dk\'dan uzun aralıklar (mola, bekleme) dahil değil">Aktif iş süresi</th><th>Bekliyor</th></tr></thead><tbody>'
+        +(dd?dd.rows.map(x=>{const n=P.days.slice(0,day).reduce((a,d)=>a+d.rows.length,0)+dd.rows.indexOf(x)+1;return '<tr'+(x.w>=kkp.wait?' class="old"':'')+' onclick="openDetailModal(&quot;'+esc(x.k.id)+'&quot;)"><td>'+n+'</td><td><b>'+esc(String(x.k.parti).replace(/^\s*\(\d{4}\)\s*/,''))+'</b></td><td>'+esc(String(x.k.line1||'').split(' / ')[0])+'</td><td>'+esc(x.k.ham_adi||'-')+'</td><td>'+f0(x.kg)+'</td><td title="'+esc(x.sp.src+(x.sp.n?' • '+x.sp.n+' parti':''))+'">'+f0(x.sp.v)+' kg/sa<small>'+esc(x.sp.src)+'</small></td><td>'+fh(x.h)+'</td><td>'+(x.w?(Math.round(x.w*10)/10).toLocaleString('tr-TR')+' gün':'-')+'</td></tr>'}).join(''):'')+'</tbody></table></div>'
+        +'<div class="kkp-btns"><button type="button" onclick="kkpCopy()">📋 Programı kopyala</button><button type="button" onclick="kkpExcel()">📥 Excel</button></div>'
+        +'<details class="ulg-rep-how"><summary>Nasıl hesaplandı?</summary><ul><li><b>Aktif süre:</b> urt KK top kayıtlarından ('+f0(KKHIZ.n)+' parti, '+esc(String(KKHIZ.to).slice(0,10))+'\'e kadar). Partide her kişinin kendi ardışık top kayıtları arası ≤ '+(KKHIZ.gapMax||20)+' dk aralıklar toplanır (aynı partide birden çok kişi çalışınca kayıtlar iç içe geçip süreyi kısaltmasın diye). 20 dk\'dan uzun aralıklar (mola, iş yokluğu, başka iş) sayılmaz; bu yüzden aktif süre, partinin KK\'da kalacağı saat süresinden kısadır.</li><li><b>Süre modeli:</b> aktif süre = <b>sabit parti payı '+(KKHIZ.setup!=null?(Math.round(KKHIZ.setup*10)/10).toLocaleString('tr-TR'):'?')+' dk</b> (tak-çıkar, başlama — bütün partilerden hesaplandı) + kg ÷ kumaş hızı. Böylece küçük partiler olduğundan hızlı görünmez.</li><li><b>Kumaş hızı:</b> sabit pay düşülerek kumaş adına göre ortanca kg/saat; az örnekte kumaş kodu, yoksa genel ortanca ('+f0(KKHIZ.all[1])+' kg/sa). Bu kuyruktaki partilerin hızları: '+src.ham+' kumaş adından, '+src.kod+' kumaş kodundan, '+src.az+' az örnekten, '+src.gen+' genel ortalamadan.</li><li><b>Kapasite:</b> bir günde KK\'da toplam aktif iş saati (aynı anda çalışan kişilerin toplamı, aynı ölçüyle). Otomatik değer seçili gün tipinin (gece 00–08 en az 10 top = 24 saat) son 14 gününün ortancası; o tipte gün yoksa tahmini.</li><li><b>Program:</b> sıradaki parti, günün kapasitesi dolana kadar o güne yazılır. Yeni gelecek partiler, tamir dönüşleri ve öncelikli siparişler hesaba katılmaz; program her güncellemede yeniden hesaplanır.</li></ul></details>';
+}
+function kkpRows(){const J=kkpJobs(),cap=kkp.cap||kkpAutoCap(kkpDayType()).v,P=kkpPlan(kkpOrder(J,kkp.str,kkp.wait),cap);let n=0;return P.days.flatMap((d,i)=>d.rows.map(x=>({sira:++n,gun:i+1,tarih:kkpDate(i),x})))}
+function kkpCopy(){const L=kkpRows();if(!L.length)return;let g=0,t='KK çalışma programı — '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n';
+    L.forEach(r=>{if(r.gun!==g){g=r.gun;t+='\n'+g+'. gün ('+r.tarih+')\n'}t+=r.sira+'. '+String(r.x.k.parti).replace(/^\s*\(\d{4}\)\s*/,'')+' • '+String(r.x.k.line1||'').split(' / ')[0]+' • '+(r.x.k.ham_adi||'-')+' • '+Math.round(r.x.kg)+' kg • ~'+(r.x.h<1?Math.round(r.x.h*60)+' dk':(Math.round(r.x.h*10)/10)+' sa')+'\n'});
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📋 Program kopyalandı')).catch(()=>showToast('Kopyalanamadı','error'))}
+function kkpExcel(){const L=kkpRows();if(!L.length||typeof XLSX==='undefined'){showToast('Excel oluşturulamadı','error');return}
+    const ws=XLSX.utils.json_to_sheet(L.map(r=>({'Sıra':r.sira,'Gün':r.gun,'Tarih':r.tarih,'Parti':r.x.k.parti,'Firma':r.x.k.line1||'','Kumaş':r.x.k.ham_adi||'','Kg':Math.round(r.x.kg),'Hız kg/sa':Math.round(r.x.sp.v),'Hız kaynağı':r.x.sp.src,'Tahmini süre (sa)':Math.round(r.x.h*100)/100,'Bekleme (gün)':Math.round(r.x.w*10)/10})));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'KK programı');XLSX.writeFile(wb,'kk_calisma_programi_'+new Date().toLocaleDateString('tr-TR').replace(/\./g,'_')+'.xlsx')}
+(function(){const st=document.createElement('style');st.textContent='.kkp-box{display:flex;flex-direction:column;gap:9px;min-width:min(760px,92vw);max-width:1000px;color:#fff;font-size:13px}.kkp-t{font-size:17px;font-weight:800}.kkp-t small{font-size:12px;font-weight:400;color:#b9b6d6;margin-left:6px}'
+ +'.kkp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.kkp-row b{color:#FFD54F;font-size:12.5px}.kkp-row select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 6px;font-size:12.5px;max-width:100%}'
+ +'.kkp-sum{background:rgba(255,255,255,.05);border-radius:8px;padding:8px}.kkp-cmp tr{cursor:pointer}.kkp-cmp tr.on td{background:rgba(255,213,79,.12)}.kkp-say{margin-top:6px;font-size:12.5px;line-height:1.5}'
+ +'.kkp-days{display:flex;gap:5px;flex-wrap:wrap}.kkp-days button{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:flex-start}.kkp-days button small{font-weight:400;color:#b9b6d6;font-size:10.5px}.kkp-days button.on{background:#00897B;border-color:#80CBC4}'
+ +'.kkp-list{max-height:44vh;overflow:auto}.kkp-list tr{cursor:pointer}.kkp-list tr:hover td{background:rgba(255,255,255,.06)}.kkp-list tr.old td:first-child{border-left:3px solid #FFB74D}.kkp-open{display:block;width:100%;margin:0 0 6px;background:#00897B;color:#fff;border:0;border-radius:7px;padding:5px;font-weight:800;font-size:12px;cursor:pointer}.kkp-btns{display:flex;gap:6px}.kkp-btns button{background:#1565C0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}';document.head.appendChild(st)})();
 function showUretimLogCards(){
     const set=new Set(uretimLogRows(uretimLogDay,uretimLogCat).map(r=>r.parti)),cards=getAllCards().filter(k=>set.has(String(k.parti).trim()));
     if(!cards.length){showToast('Bu listedeki partilerin hiçbiri şu an veride yok','warning');return}

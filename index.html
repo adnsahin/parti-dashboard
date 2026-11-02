@@ -5281,6 +5281,7 @@ function renderUretimLogPanel(){
         +'<button class="btn-fire-export" onclick="exportUretimLogWorkbook()">📊 Excel</button><button class="btn-all-export" onclick="showUretimLogCards()">🃏 Kartları göster</button><button class="btn-all-export" style="background:#006064" onclick="toggleSingleWatchPanel()">🖥️ Tek Pencere İzleme</button>'
         +'<button class="view-action-btn full" onclick="toggleElementFullscreen(&quot;uretimLogPanel&quot;,&quot;Üretim Kayıtları&quot;)">⛶ Tam Ekran</button></div>';
     h+='<div class="ulog-cats">'+URETIM_CATS.map(c=>{const t=uretimLogTotals(day,c.key);return'<button type="button" class="ulog-cat'+(c.key===cat.key?' active':'')+'" style="--c:'+c.color+'" onclick="setUretimLogCat(&quot;'+c.key+'&quot;)"><span>'+c.icon+' '+esc(c.label)+'</span><b>'+t.count+' parti</b><small>'+Math.round(t.kg).toLocaleString('tr-TR')+' kg</small></button>'}).join('')+'</div>';
+    h+=ulgHtml(days,day,today);
     h+='<h3 style="color:'+cat.color+';margin:12px 0 6px;font-size:15px">'+cat.icon+' '+esc(cat.label)+' — '+esc(uretimLogDayLabel(day))+' • '+rows.length+' parti • '+Math.round(rows.reduce((s,r)=>s+r.kg,0)).toLocaleString('tr-TR')+' kg</h3>';
     h+=rows.length?'<div class="ulog-list">'+rows.map((r,i)=>uretimLogItemHtml(r,i,cat.key.endsWith('Gelen'))).join('')+'</div>':'<div class="list-empty">Bu gün için kayıt yok</div>';
     h+='<details class="ulog-days"><summary>📅 Gün gün özet ('+days.length+' vardiya)</summary><div style="overflow:auto"><table class="sel-panel-table"><thead><tr><th>Vardiya</th>'+URETIM_CATS.map(c=>'<th>'+c.icon+' '+esc(c.label)+'</th>').join('')+'</tr></thead><tbody>'
@@ -5288,6 +5289,55 @@ function renderUretimLogPanel(){
         +'</tbody></table></div></details>';
     p.innerHTML=h;p.style.display='block';ensureElementFullscreenToolbar('uretimLogPanel','Üretim Kayıtları');
 }
+// ── 📊 Gün gün üretim grafiği: her vardiya günü bir grup, seçili kayıt türleri yan yana dikey çubuk (kg ya da parti).
+//    Gruba tıklayınca o gün açılır; seçimler bu cihazda hatırlanır.
+let ulgSer=(()=>{try{const v=JSON.parse(localStorage.getItem('ulgSer9')||'null');if(Array.isArray(v)&&v.length)return v}catch(e){}return['kkGecen','sr1Gecen','sr2Gecen']})();
+let ulgMet=mapLoadPref('ulgMet9',v=>v==='kg'||v==='n','kg'),ulgN=+mapLoadPref('ulgN9',v=>['7','14','30','0'].includes(v),'14');
+function ulgSet(k,v){if(k==='ser'){const i=ulgSer.indexOf(v);if(i>=0){if(ulgSer.length>1)ulgSer.splice(i,1)}else ulgSer.push(v);ulgSer.sort((a,b)=>URETIM_CATS.findIndex(c=>c.key===a)-URETIM_CATS.findIndex(c=>c.key===b));try{localStorage.setItem('ulgSer9',JSON.stringify(ulgSer))}catch(e){}}
+    else if(k==='met'){ulgMet=v;mapSavePref('ulgMet9',v)}else if(k==='grp'){ulgGrp=v;mapSavePref('ulgGrp9',v)}else if(k==='n'){ulgN=+v;mapSavePref('ulgN9',v)}renderUretimLogPanel()}
+function ulgFmt(v){return ulgMet==='kg'?(v>=10000?(v/1000).toLocaleString('tr-TR',{maximumFractionDigits:1})+'t':Math.round(v).toLocaleString('tr-TR')):String(v)}
+// gruplama: gün • vardiya (08–16 / 16–24 / 00–08) • saat (seçili gün) • saat ortalaması (seçili dönem, bugün hariç)
+const ULG_GRP=[['gun','Güne göre'],['vard','Vardiyaya göre (08–16 / 16–24 / 00–08)'],['saat','Saate göre — seçili gün'],['saatort','Saat ortalaması — seçili dönem']],ULG_VARD=['08–16','16–24','00–08'];
+let ulgGrp=mapLoadPref('ulgGrp9',v=>ULG_GRP.some(x=>x[0]===v),'gun');
+function ulgVardOf(h){return h>=8&&h<16?0:h>=16?1:2}
+function ulgHtml(days,sel,today){
+    const D=days.slice().sort(),L=ulgN?D.slice(-ulgN):D,cats=URETIM_CATS.filter(c=>ulgSer.includes(c.key)),kg=ulgMet==='kg';
+    const agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length,hr=r=>r.ts?new Date(r.ts).getHours():-1,H=[...Array(24)].map((_,i)=>(i+8)%24),hh=h=>String(h).padStart(2,'0');
+    const dl=d=>{const dt=new Date(d+'T00:00:00');return[String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0'),dt.toLocaleDateString('tr-TR',{weekday:'short'})]};
+    let B=[],note='';
+    if(ulgGrp==='gun')B=L.map(d=>{const[l,w]=dl(d);return{lab:l,sub:w,day:d,today:d===today,sel:d===sel,tip:uretimLogDayLabel(d),v:cats.map(c=>agg(uretimLogRows(d,c.key)))}});
+    else if(ulgGrp==='vard')L.forEach(d=>{const[l]=dl(d),R=cats.map(c=>uretimLogRows(d,c.key));ULG_VARD.forEach((vn,i)=>B.push({lab:i===0?l:'',sub:vn,day:d,today:d===today,sel:d===sel,first:i===0,tip:uretimLogDayLabel(d)+' • '+vn,v:R.map(rows=>agg(rows.filter(r=>ulgVardOf(hr(r))===i)))}))});
+    else if(ulgGrp==='saat'){const R=cats.map(c=>uretimLogRows(sel,c.key));B=H.map(h=>({lab:hh(h),sub:'',day:sel,tip:uretimLogDayLabel(sel)+' • '+hh(h)+':00–'+hh((h+1)%24)+':00',v:R.map(rows=>agg(rows.filter(r=>hr(r)===h)))}));note=uretimLogDayLabel(sel)+(sel===today?' (sürüyor)':'')}
+    else{const DD=L.filter(d=>d!==today),R=DD.map(d=>cats.map(c=>uretimLogRows(d,c.key)));B=H.map(h=>({lab:hh(h),sub:'',tip:hh(h)+':00–'+hh((h+1)%24)+':00 • '+DD.length+' gün ortalaması',v:cats.map((c,j)=>DD.length?R.reduce((s,x)=>s+agg(x[j].filter(r=>hr(r)===h)),0)/DD.length:0)}));note=DD.length+' günün ortalaması (bugün hariç)'}
+    const V=B.map(b=>b.v),mx=Math.max(1,...V.flat()),step=(()=>{const r=mx/4,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return(m<=1?1:m<=2?2:m<=5?5:10)*p})(),top=Math.ceil(mx/step)*step;
+    const many=B.length>20,bw=many?(cats.length>2?6:cats.length>1?9:14):(cats.length>3?12:cats.length>1?18:26),gw=cats.length*bw+(cats.length-1)*2,wide=gw>=40;
+    const fmtV=v=>kg?Math.round(v).toLocaleString('tr-TR')+' kg':(Number.isInteger(v)?v:v.toFixed(1))+' parti';
+    const avg=cats.map((c,j)=>{const a=B.filter(b=>!b.today).map(b=>b.v[j]).filter(v=>v>0);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0});
+    const unit=ulgGrp==='gun'?'gün':ulgGrp==='vard'?'vardiya':'saat';
+    let h='<div class="ulg"><div class="ulg-bar"><b>📊 Grafik</b>'
+        +URETIM_CATS.map(c=>'<button type="button" class="ulg-ser'+(ulgSer.includes(c.key)?' on':'')+'" style="--c:'+c.color+'" onclick="ulgSet(&quot;ser&quot;,&quot;'+c.key+'&quot;)" title="Grafikte göster / gizle">'+c.icon+' '+esc(c.label)+'</button>').join('')
+        +'<select onchange="ulgSet(&quot;grp&quot;,this.value)" title="Gruplama: çalışma saatlerine göre">'+ULG_GRP.map(([k,l])=>'<option value="'+k+'"'+(ulgGrp===k?' selected':'')+'>'+l+'</option>').join('')+'</select>'
+        +'<select onchange="ulgSet(&quot;met&quot;,this.value)"><option value="kg"'+(kg?' selected':'')+'>kg</option><option value="n"'+(!kg?' selected':'')+'>parti sayısı</option></select>'
+        +(ulgGrp==='saat'?'':'<select onchange="ulgSet(&quot;n&quot;,this.value)">'+[[7,'Son 7 gün'],[14,'Son 14 gün'],[30,'Son 30 gün'],[0,'Hepsi']].map(([v,l])=>'<option value="'+v+'"'+(ulgN===v?' selected':'')+'>'+l+'</option>').join('')+'</select>')
+        +(note?'<small class="ulg-note">'+esc(note)+'</small>':'')+'</div>'
+        +'<div class="ulg-plot"><div class="ulg-y">'+[4,3,2,1,0].map(i=>'<span style="bottom:'+(i*25)+'%">'+ulgFmt(top*i/4)+'</span>').join('')+'</div><div class="ulg-area">'
+        +'<div class="ulg-groups'+(many?' many':'')+'"><div class="ulg-gl">'+[1,2,3,4].map(i=>'<i style="bottom:'+(i*25)+'%"></i>').join('')+'</div>'+B.map(b=>{
+            const click=b.day&&ulgGrp!=='saat'?' onclick="setUretimLogDay(&quot;'+b.day+'&quot;)"':'';
+            return '<div class="ulg-g'+(b.sel?' sel':'')+(b.today?' today':'')+(b.first?' first':'')+(ulgGrp==='vard'?' v'+ULG_VARD.indexOf(b.sub):'')+'"'+click+' title="'+esc(b.tip)+(b.today?' (sürüyor)':'')+'&#10;'+cats.map((c,j)=>esc(c.label)+': '+fmtV(b.v[j])).join('&#10;')+'"><div class="ulg-bars">'
+                +cats.map((c,j)=>'<div class="ulg-b" style="width:'+bw+'px"><em>'+(wide&&b.v[j]?ulgFmt(b.v[j]):'')+'</em><i style="height:'+(b.v[j]/top*100).toFixed(1)+'%;background:'+c.color+'"></i></div>').join('')
+                +'</div><div class="ulg-x"><b>'+esc(b.lab)+'</b><small>'+esc(b.sub)+'</small></div></div>'}).join('')+'</div></div></div>'
+        +'<div class="ulg-f">'+cats.map((c,j)=>'<span><i style="background:'+c.color+'"></i>'+esc(c.label)+(avg[j]?' • ort. <b>'+fmtV(avg[j])+'</b>/'+unit:'')+'</span>').join('')
+        +'<small>Vardiya günü 08:00–08:00 • saat, partinin kayıt (geçiş) saatidir; ~ tahmini saatler en yakın güncellemeye göre'+(ulgGrp==='gun'||ulgGrp==='vard'?' • bugün sürüyor (ortalamaya katılmaz) • tıkla: o günün listesi':'')+'</small></div></div>';
+    return h;
+}
+(function(){const st=document.createElement('style');st.textContent='.ulg{margin:10px 0;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px}.ulg-bar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:8px}.ulg-bar b{color:#4DD0E1;margin-right:4px}'
+ +'.ulg-ser{background:transparent;border:1px solid var(--c);color:#fff;border-radius:12px;padding:2px 8px;font-size:11.5px;cursor:pointer;opacity:.55}.ulg-ser.on{background:color-mix(in srgb,var(--c) 35%,transparent);opacity:1;font-weight:700}.ulg-bar select{background:rgba(0,0,0,.3);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:3px 5px;font-size:12px}'
+ +'.ulg-plot{display:flex;gap:4px;height:230px}.ulg-y{position:relative;width:42px;flex:0 0 auto;margin-bottom:30px}.ulg-y span{position:absolute;right:2px;transform:translateY(50%);font-size:10px;color:#90A4AE}'
+ +'.ulg-area{position:relative;flex:1;min-width:0;overflow-x:auto;overflow-y:hidden}.ulg-gl{position:absolute;left:0;right:0;top:0;bottom:30px;pointer-events:none}.ulg-gl i{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.08)}'
+ +'.ulg-groups{position:relative;display:flex;gap:6px;height:100%;min-width:min-content;align-items:stretch}.ulg-g{display:flex;flex-direction:column;flex:1 0 auto;cursor:pointer;border-radius:6px;padding:0 3px}.ulg-g:hover{background:rgba(255,255,255,.06)}.ulg-g.sel{background:rgba(77,208,225,.14);outline:1px solid rgba(77,208,225,.5)}'
+ +'.ulg-bars{flex:1;display:flex;gap:2px;align-items:flex-end;justify-content:center;border-bottom:1px solid rgba(255,255,255,.3)}.ulg-b{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}.ulg-b i{display:block;width:100%;border-radius:3px 3px 0 0;min-height:1px}.ulg-b em{font-style:normal;font-size:9px;color:#CFD8DC;white-space:nowrap;margin-bottom:1px}'
+ +'.ulg-g.today .ulg-b i{opacity:.55;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.25) 0 3px,transparent 3px 6px)}.ulg-x{height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.ulg-x b{font-size:11px;color:#ECEFF1}.ulg-x small{font-size:9.5px;color:#90A4AE}.ulg-g.sel .ulg-x b{color:#4DD0E1}'
+ +'.ulg-f{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:#CFD8DC;margin-top:6px}.ulg-f i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.ulg-f small{flex-basis:100%;color:#90A4AE;font-size:10.5px}.ulg-note{color:#4DD0E1;font-size:11.5px}.ulg-groups.many{gap:2px}.ulg-groups.many .ulg-g{padding:0 1px}.ulg-g.first{margin-left:8px;border-left:1px dashed rgba(255,255,255,.18)}.ulg-g.v2 .ulg-x small{color:#7986CB}.ulg-g.v1 .ulg-x small{color:#FFB74D}';document.head.appendChild(st)})();
 function showUretimLogCards(){
     const set=new Set(uretimLogRows(uretimLogDay,uretimLogCat).map(r=>r.parti)),cards=getAllCards().filter(k=>set.has(String(k.parti).trim()));
     if(!cards.length){showToast('Bu listedeki partilerin hiçbiri şu an veride yok','warning');return}
@@ -9617,7 +9667,7 @@ function paTopStrip(r){
     return h+'</div>';
 }
 function paTopHtml(M){
-    const D=PERSTOP;if(!D)return '<div class="pa-note">Personel verisi okunuyor… Gelmezse çalışma bilgisayarında <b>update_personel_top.py urt.Xlsx [urt222.Xlsx]</b> çalıştırıp <b>data/personel_top.json</b> dosyasını gönderin.</div>';
+    const D=PERSTOP;if(!D)return '<div class="pa-note">Personel verisi okunuyor… Gelmezse çalışma bilgisayarında <b>update_personel_top.py urt.Xlsx</b> çalıştırıp <b>data/personel_top.json</b> dosyasını gönderin.</div>';
     const last=new Date(D.to.slice(0,10)),cut=new Date(last);cut.setDate(cut.getDate()-paRange+1);const ck=cut.getFullYear()+'-'+String(cut.getMonth()+1).padStart(2,'0')+'-'+String(cut.getDate()).padStart(2,'0');
     const rows=D.shifts.filter(r=>r.d>=ck),by={};rows.forEach(r=>(by[r.p]=by[r.p]||[]).push(r));
     const codes=Object.keys(by).filter(c=>by[c].length>=3).sort((a,b)=>by[b].reduce((x,r)=>x+r.kkg+r.skg,0)-by[a].reduce((x,r)=>x+r.kkg+r.skg,0));
@@ -9758,7 +9808,7 @@ function pkcCardHtml(c,D){
         +'<div><div class="pkc-h">Üretim devamlılığı <small>dk / vardiya</small></div><table class="pkc-tb"><thead><tr><th></th><th>Kişi</th><th>Takım</th></tr></thead><tbody>'+dv+'<tr class="t"><td><b>Toplam kayıp</b><small>≈ '+f0(A.m('loss')/60*s.kpa)+' kg/vardiya (kendi hızıyla)</small></td><td><b>'+f0(A.m('loss'))+' dk</b></td><td>'+f0(TA.m('loss'))+' dk</td></tr></tbody></table></div></div>'
         +'<div class="pkc-h">Vardiya çizelgesi <small>'+(R.length>MAXR?'son '+MAXR+' vardiya • ':'')+'yeşil kayıt var • turuncu boşluk (ekipte iş varken) • mavi ekip de boş • koyu kırmızı vardiya başı / sonu boş</small></div><div class="pkc-strips">'+strips+'</div>'
         +'<div class="pkc-two"><div><div class="pkc-h" style="color:#2E7D32">Güçlü yönler</div><ul>'+fb.good.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div><div><div class="pkc-h" style="color:#B7791F">Konuşulabilecek noktalar</div><ul>'+fb.imp.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div></div>'
-        +'<div class="pkc-ft">Kaynak: ERP KK / Sarım top kayıtları. Kıyas: aynı tarihlerde çalışan ekip ('+(T.rows.length)+' vardiya; Sarım ağırlıklı kişiler takım ortalamasına katılmaz). Boşluk iş yokluğu, mola ya da başka bir iş de olabilir — "bu saatte ne oldu?" diye konuşmak için ipucudur, suçlama değildir.</div></div>';
+        +'<div class="pkc-ft">Kaynak: ERP urt raporu (KK top kayıtları; kişi = kaydı giren). Kıyas: aynı tarihlerde çalışan ekip ('+(T.rows.length)+' vardiya; Sarım ağırlıklı kişiler takım ortalamasına katılmaz). Boşluk iş yokluğu, mola ya da başka bir iş de olabilir — "bu saatte ne oldu?" diye konuşmak için ipucudur, suçlama değildir.</div></div>';
 }
 // ── 📊 Kıyas: kart ölçüleri seçilen aralıkta, seçilen kişiler arasında çubuk grafik (adlar açıksa adla). Takım ortalaması = aralıkta çalışan ekip.
 function pkcCmpDefs(D,codes){
@@ -9960,6 +10010,8 @@ function paCmpHtml(M){
  +'.pa-cc-r{display:grid;grid-template-columns:44px minmax(0,1fr) 92px;gap:6px;align-items:center;margin:3px 0;font-size:12px}.pa-cc-r .n{font-weight:700}.pa-cc-r .n em{font-style:normal;background:#6f6c8e;border-radius:3px;padding:0 3px;margin-left:3px;font-size:10px}.pa-cc-r .bar{position:relative;height:14px;background:rgba(255,255,255,.07);border-radius:4px}.pa-cc-r .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}.pa-cc-r .bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;text-decoration:none}.pa-cc-r .v{text-align:right;font-weight:700}.pa-cc-r .v small{opacity:.6;font-weight:400}'
  +'.pa-cc-f{margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#c3c2b7}.pa-cc-f u{display:inline-block;width:2px;height:10px;background:#fff;vertical-align:middle;margin-right:4px}@media(max-width:700px){.pa-cc-grid{grid-template-columns:1fr}}';document.head.appendChild(st)})();
 function paLkTableHtml(M){
+    // personel verisi yalnız urt'ten (KK top kayıtları): zaman raporunda KK aşamasını KK dışındaki kişiler de okuttuğu için kişi tabloları gösterilmez
+    return'';
     const L=paLkModel();if(!L)return'';const day=paLkSel(L);
     return '<div class="pa-card"><div class="pa-card-t">Kayıp zaman avı — kişi bazında <small>KK & Sarım ekibi • seçili dönem • kod ile</small></div>'+paLkPerHtml(L,M)+'</div>'
         +'<div class="pa-card"><div class="pa-card-t">Kayıp zaman avı — yakalananlar <small>'+esc(paLkDayL(L,day))+'</small></div>'+paLkIncHtml(L,day,true)+'</div>';
@@ -9993,7 +10045,6 @@ function paBodyHtml(M){
         +'<div class="pa-card pa-wide" id="paDvCard"><div class="pa-card-t">Üretim devamlılığı <small>geç başlama • erken bırakma • parti içi duraksama ve fazla mola • dakika, yüzde ve ≈ kg olarak • satıra tıkla</small></div>'+paDvHtml(M)+'</div>'
         +'<div class="pa-card pa-wide" id="paCmpCard"><div class="pa-card-t">Personel karşılaştırma grafikleri <small>üretim • çalışma hızı • süreklilik • vardiya kapsamı • iş varken kayıtsız • erken bırakma • geç başlama</small></div>'+paCmpHtml(M)+'</div>'
         +'<div class="pa-card pa-wide" id="paTopCard"><div class="pa-card-t">Personel geri bildirimi <small>KK top kayıtları • kişi kodla • takıma göre 4 ölçü ve vardiya çizelgesi • kutuya tıkla</small><button type="button" class="pa-kart-btn" onclick="paKartOpen()" title="Seçtiğin gün / kişiler için A4 personel kartları; isimler şifreyle açılır">📄 Kartlar (PDF)</button></div>'+paTopHtml(M)+'</div>'
-        +'<div class="pa-card pa-wide"><div class="pa-card-t">Kayıp zaman avı <small>KK & Sarım ekibi • ERP zaman raporu • kişiler kodla • aşama seçiminden bağımsız</small></div>'+paLkHtml(M)+'</div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Saat × gün üretim <small>'+esc(M.unit)+' / saat • saatler veri güncellemelerinden çıkar, yaklaşıktır</small></div>'
             +'<div class="pa-two"><div><div class="pa-sub">Gün gün, saat saat <small>hücrede o saatte geçen miktar • sağda gün toplamı</small><span class="pa-seg pa-heat-tg"><button type="button" class="'+(paHeatAll?'':'on')+'" onclick="paHeatAllSet(0)">'+esc(M.R.name)+'</button><button type="button" class="'+(paHeatAll?'on':'')+'" onclick="paHeatAllSet(1)" title="KK + Sarım1 + Sarım2 toplamı: aynı kişi her ikisinde de çalışabilir">Hepsi</button></span></div>'+paHeatHtml(M)+'</div><div>'+paHourChartsHtml(M)+'</div></div></div>'
         +'<div class="pa-card pa-wide"><div class="pa-card-t">Aşamada kalış süresi <small>geliş → geçiş, o gün geçen partilerin ortancası</small></div><div class="pa-two"><div>'+paDwellSvg(M)+'</div><div>'+paWaitListHtml(M)+'</div></div></div>'

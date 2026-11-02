@@ -2,7 +2,8 @@
 """
 update_personel_top.py
 ----------------------
-ERP "urt" (KK top bazli) ve istege bagli "urt222" (Sarim1) raporlarindan personel uretim / bosluk ozeti.
+ERP "urt" (KK top bazli) raporundan personel uretim / bosluk ozeti. Kisiler YALNIZ urt'teki "Kaydeden"dir
+(KK top kaydi giren); zaman raporu ve urt222 (Sarim) kullanilmaz, cunku KK asamasini KK disindaki kisiler de okutabiliyor.
 
 Uretilenler
   data/personel_top.json : KISI KODUYLA (P1, P2 ...) vardiya bazli ozet -> pano "Personel geri bildirimi" karti.
@@ -12,7 +13,8 @@ Uretilenler
 Ad -> kod eslemesi update_zaman_json.py ile ayni dosyadir (personel_kodlari.json); GitHub'a GITMEZ.
 
 Kullanim:
-  python update_personel_top.py urt.Xlsx [urt222.Xlsx] [--out data/personel_top.json] [--klasor ..] [--kartlar kartlar.pdf]
+  python update_personel_top.py urt.Xlsx [--out data/personel_top.json] [--klasor ..] [--kartlar kartlar.pdf] [--yeniden 1]
+  --yeniden 1: onceki personel_top.json ile birlestirmeden bastan olusturur
 """
 import sys, os, json, glob
 from bisect import bisect_left, bisect_right
@@ -79,8 +81,8 @@ def col(head, *names):
     raise KeyError(names)
 
 
-def load_events(urt, urt222):
-    ev = []  # (kisi, zaman, tur, kg, metre)
+def load_events(urt):
+    ev = []  # (kisi, zaman, tur, kg, metre, parti) — yalniz KK top kayitlari
     head, rows = read_sheet(urt)
     iT, iK, iM, iU = col(head, "Tarih"), col(head, "Kilo"), col(head, "Net Metre"), None
     iU = next(i for i, h in enumerate(head) if h.startswith("Kaydeden"))
@@ -88,16 +90,6 @@ def load_events(urt, urt222):
         t = to_dt(r[iT])
         if t and clean(r[iU]):
             ev.append((clean(r[iU]), t, "kk", num(r[iK]), num(r[iM]), clean(r[0])))
-    if urt222:
-        head, rows = read_sheet(urt222)
-        iG = next(i for i, h in enumerate(head) if h.startswith("Giri") and "Tarih" in h)
-        iP = next(i for i, h in enumerate(head) if h.startswith("Giri") and "Personel" in h)
-        iK = col(head, "Kilo")
-        iA = next((i for i, h in enumerate(head) if h.startswith("A") and "Ad" in h and "Kodu" not in h and "Recete" not in h and "Re" not in h[:3]), None)
-        for r in rows:
-            t = to_dt(r[iG])
-            if t and clean(r[iP]):
-                ev.append((clean(r[iP]), t, "sr", num(r[iK]), 0.0, clean(r[0])))
     return ev
 
 
@@ -573,7 +565,9 @@ def main():
     if not pos:
         print(__doc__)
         sys.exit(1)
-    urt, urt222 = pos[0], (pos[1] if len(pos) > 1 else None)
+    urt = pos[0]
+    if len(pos) > 1:
+        print("Not: %s kullanilmadi — personel verisi yalniz urt (KK top kayitlari) dosyasindan olusturulur." % pos[1])
     out = opt.get("out", os.path.join("data", "personel_top.json"))
     folder = opt.get("klasor", "..")
     if not os.path.exists(os.path.join(folder, "personel_kodlari.json")) and os.path.exists(os.path.join("..", "yerel_personel", "personel_kodlari.json")):
@@ -581,9 +575,11 @@ def main():
     codes_path = os.path.join(folder, "personel_kodlari.json")
     cj = load_json(codes_path, {"note": "Ad -> kod eslemesi. GitHub'a GONDERMEYIN.", "codes": {}})
     codes = cj.setdefault("codes", {})
+    # kod listesinin kimligi: baska bir bilgisayarin kod listesiyle uretilmis eski veri birlestirilmez (ayni kod farkli kisi olabilir)
+    kid = cj.setdefault("kid", os.urandom(6).hex())
     norm = {tr_upper(k): v for k, v in codes.items()}
 
-    ev = load_events(urt, urt222)
+    ev = load_events(urt)
     tmax = max(e[1] for e in ev)
     queue = load_queue(opt.get("log", os.path.join(os.path.dirname(out) or ".", "uretim_log.json")))
     built = build(ev, tmax, queue)
@@ -599,7 +595,10 @@ def main():
         json.dump(cj, f, ensure_ascii=False, indent=1)
 
     # onceki kayitlarla birlestir
-    prev = load_json(out, {})
+    prev = {} if opt.get("yeniden") else load_json(out, {})
+    if prev and prev.get("kid") != kid:
+        print("Not: onceki %s baska bir kod listesiyle uretilmis; birlestirilmeden bastan olusturuluyor." % out)
+        prev = {}
     merged = {(r["p"], r["d"], r["a"]): r for r in prev.get("shifts", [])}
     for r in shifts:
         merged[(r["p"], r["d"], r["a"])] = r
@@ -608,7 +607,7 @@ def main():
     allr.sort(key=lambda r: (r["d"], r["a"], r["p"]))
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
-        json.dump({"v": 1, "generatedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "to": tmax.strftime("%Y-%m-%dT%H:%M"),
+        json.dump({"v": 1, "kid": kid, "generatedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "to": tmax.strftime("%Y-%m-%dT%H:%M"),
                    "gapMin": GAP_MIN, "earlyMin": EARLY_MIN, "lateMin": LATE_MIN, "breakMax": BREAK_MAX, "breaks": break_windows(ev), "days": len({e[1].date() for e in ev}), "shifts": allr}, f, ensure_ascii=False, separators=(",", ":"))
     print("%s: %d vardiya (bu çalıştırmada %d), kişi %d" % (out, len(allr), len(shifts), len({r["p"] for r in allr})))
     if "kartlar" in opt:

@@ -76,11 +76,7 @@ if exist "..\urt.xlsx" (
     echo UYARI: Python bulunamadi, personel top raporu atlandi.
   ) else (
     echo Personel top raporu isleniyor...
-    if exist "..\urt222.xlsx" (
-      python "update_personel_top.py" "..\urt.xlsx" "..\urt222.xlsx" --out "data\personel_top.json"
-    ) else (
-      python "update_personel_top.py" "..\urt.xlsx" --out "data\personel_top.json"
-    )
+    python "update_personel_top.py" "..\urt.xlsx" --out "data\personel_top.json"
     if errorlevel 1 echo UYARI: Personel top raporu islenemedi, devam ediliyor.
   )
 ) else (

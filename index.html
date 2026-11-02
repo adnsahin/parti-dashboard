@@ -5476,7 +5476,10 @@ function ulgHtml(days,sel,today){
 //    Stratejiler: ⚡ hızlı üretilenler önce (en kısa iş önce → kuyruk en hızlı erir) • ⚖️ dengeli (N günden uzun bekleyenler
 //    önce, sonra hızlılar) • ⏳ en uzun bekleyen önce (bugünkü alışkanlık, kıyas için). Yeni gelecek partiler hesaba katılmaz.
 let KKHIZ=null,KKHIZ_AT=0;
-let kkp={str:mapLoadPref('kkpStr9',v=>['hiz','kisa','denge','fifo'].includes(v),'hiz'),cap:+mapLoadPref('kkpCap9',v=>+v>=0&&+v<=200,'0'),wait:+mapLoadPref('kkpWait9',v=>['2','3','5','7'].includes(v),'3'),dt:+mapLoadPref('kkpDt9',v=>['0','16','24'].includes(v),'0'),day:0};
+let kkp={str:mapLoadPref('kkpStr9',v=>['hiz','kisa','denge','fifo'].includes(v),'hiz'),cap:+mapLoadPref('kkpCap9',v=>+v>=0&&+v<=200,'0'),wait:+mapLoadPref('kkpWait9',v=>['2','3','5','7'].includes(v),'3'),dt:+mapLoadPref('kkpDt9',v=>['0','16','24'].includes(v),'0'),view:mapLoadPref('kkpView9',v=>v==='list'||v==='mind','list'),day:0};
+const KKP_HG=['⚡ Çok hızlı (≥ 800 kg/sa)','🟢 Hızlı (500–800)','🟡 Orta (300–500)','🔴 Yavaş (< 300 kg/sa)'];
+function kkpHg(v){return v>=800?0:v>=500?1:v>=300?2:3}
+function kkpFh(h){return h<1?Math.round(h*60)+' dk':(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa'}
 function kkHizLoad(cb){
     if(KKHIZ&&Date.now()-KKHIZ_AT<600000){cb&&cb();return}
     const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/kk_hiz.json'+ts,{cache:'no-store'});
@@ -5518,7 +5521,7 @@ function kkpPlan(order,cap){
         if(need<=1e-9){d.rows.push(Object.assign({},x,{day:d.i,cum:t}));d.kg+=x.kg;sumDone+=(d.i+1)}}});
     return{days,avgDay:order.length?sumDone/order.length:0};
 }
-function kkpSet(k,v){if(k==='str'){kkp.str=v;mapSavePref('kkpStr9',v)}else if(k==='cap'){kkp.cap=+v;mapSavePref('kkpCap9',String(+v))}else if(k==='wait'){kkp.wait=+v;mapSavePref('kkpWait9',v)}else if(k==='dt'){kkp.dt=+v;mapSavePref('kkpDt9',String(+v))}else if(k==='day')kkp.day=+v;kkpRender()}
+function kkpSet(k,v){if(k==='str'){kkp.str=v;mapSavePref('kkpStr9',v)}else if(k==='cap'){kkp.cap=+v;mapSavePref('kkpCap9',String(+v))}else if(k==='wait'){kkp.wait=+v;mapSavePref('kkpWait9',v)}else if(k==='dt'){kkp.dt=+v;mapSavePref('kkpDt9',String(+v))}else if(k==='view'){kkp.view=v;mapSavePref('kkpView9',v)}else if(k==='day')kkp.day=+v;kkpRender()}
 function kkpOpen(){hmModalShow('<div id="kkpBox" class="kkp-box"><div class="pa-note">Hız verisi okunuyor…</div></div>');kkHizLoad(kkpRender)}
 function kkpDate(i){const d=new Date();if(d.getHours()<8)d.setDate(d.getDate()-1);d.setDate(d.getDate()+i);return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',weekday:'short'})}
 function kkpRender(){
@@ -5539,9 +5542,11 @@ function kkpRender(){
         +'<b>Günlük KK kapasitesi</b><select onchange="kkpSet(&quot;cap&quot;,this.value)" title="Bir günde KK\'da toplam aktif iş saati (birden çok kişi aynı anda çalıştığı için 16 saati aşar)"><option value="0"'+(!kkp.cap?' selected':'')+'>Otomatik: '+auto+' aktif iş saati ('+(AC.est?'tahmini: 16 saatlik günler × 1,5':dt+' saatlik son '+AC.n+' gün')+')</option>'+[16,20,24,28,32,36,40,48].map(v=>'<option value="'+v+'"'+(kkp.cap===v?' selected':'')+'>'+v+' iş saati / gün</option>').join('')+'</select>'
         +(kkp.str==='denge'?'<b>Bekleme sınırı</b><select onchange="kkpSet(&quot;wait&quot;,this.value)">'+[2,3,5,7].map(v=>'<option value="'+v+'"'+(kkp.wait===v?' selected':'')+'>'+v+' gün</option>').join('')+'</select>':'')+'</div>'
         +'<div class="kkp-sum">'+sumT+'<div class="kkp-say">'+(kkp.str==='hiz'||kkp.str==='kisa'?(kkp.str==='hiz'?'⚡ Geçmişte KK\'dan en hızlı geçen kumaşlar (kg/saat) önce alınır; aynı sürede en çok kg çıkar.':'⏱ Süresi en kısa işler (küçük parti × hızlı kumaş) önce alınır; kuyruktaki parti sayısı en hızlı bu sırayla düşer.')+' İlk gün <b>'+d1(kkp.str)+'</b> parti / <b>'+f0(d1kg(kkp.str))+' kg</b> biter; bugünkü düzene (en uzun bekleyen önce) göre <b>'+(d1(kkp.str)-d1('fifo')>=0?'+':'')+(d1(kkp.str)-d1('fifo'))+'</b> parti, <b>'+(d1kg(kkp.str)-d1kg('fifo')>=0?'+':'')+f0(d1kg(kkp.str)-d1kg('fifo'))+' kg</b>.'+(old?' <b>Dikkat:</b> '+old+' parti '+kkp.wait+' günden uzun bekliyor; bu sıralamada geriye kalabilir — gerekirse ⚖️ Dengeli\'yi seçin.':''):kkp.str==='denge'?'⚖️ Önce '+kkp.wait+' günden uzun bekleyen <b>'+old+'</b> parti (en eskiden), sonra kalanlar hızlıdan yavaşa.':'⏳ Bugünkü düzen: en uzun bekleyen önce. Kıyas içindir.')+' Toplam kg her stratejide aynı sürede biter; değişen, partilerin <b>ne kadar erken</b> çıktığıdır.</div></div>'
-        +'<div class="kkp-days">'+P.days.map((d,i)=>'<button type="button" class="'+(i===day?'on':'')+'" onclick="kkpSet(&quot;day&quot;,'+i+')">'+(i+1)+'. gün <small>'+kkpDate(i)+' • '+d.rows.length+' p • '+f0(d.kg)+' kg</small></button>').join('')+'</div>'
+        +'<div class="kkp-views"><button type="button" class="'+(kkp.view==='list'?'on':'')+'" onclick="kkpSet(&quot;view&quot;,&quot;list&quot;)">📋 Liste</button><button type="button" class="'+(kkp.view==='mind'?'on':'')+'" onclick="kkpSet(&quot;view&quot;,&quot;mind&quot;)">🧠 Mindmap</button></div>'
+        +(kkp.view==='mind'?'<div class="sr-mindw kkp-mindw">'+lbMindHtml('kkp',lbMindCards('kkp'))+'</div>':
+        '<div class="kkp-days">'+P.days.map((d,i)=>'<button type="button" class="'+(i===day?'on':'')+'" onclick="kkpSet(&quot;day&quot;,'+i+')">'+(i+1)+'. gün <small>'+kkpDate(i)+' • '+d.rows.length+' p • '+f0(d.kg)+' kg</small></button>').join('')+'</div>'
         +'<div class="kkp-list"><table class="ulg-tb"><thead><tr><th>#</th><th>Parti</th><th>Firma</th><th>Kumaş</th><th>Kg</th><th>Hız</th><th title="Sabit parti payı + kg ÷ kumaş hızı; top kayıtları arası 20 dk\'dan uzun aralıklar (mola, bekleme) dahil değil">Aktif iş süresi</th><th>Bekliyor</th></tr></thead><tbody>'
-        +(dd?dd.rows.map(x=>{const n=P.days.slice(0,day).reduce((a,d)=>a+d.rows.length,0)+dd.rows.indexOf(x)+1;return '<tr'+(x.w>=kkp.wait?' class="old"':'')+' onclick="openDetailModal(&quot;'+esc(x.k.id)+'&quot;)"><td>'+n+'</td><td><b>'+esc(String(x.k.parti).replace(/^\s*\(\d{4}\)\s*/,''))+'</b></td><td>'+esc(String(x.k.line1||'').split(' / ')[0])+'</td><td>'+esc(x.k.ham_adi||'-')+'</td><td>'+f0(x.kg)+'</td><td title="'+esc(x.sp.src+(x.sp.n?' • '+x.sp.n+' parti':''))+'">'+f0(x.sp.v)+' kg/sa<small>'+esc(x.sp.src)+'</small></td><td>'+fh(x.h)+'</td><td>'+(x.w?(Math.round(x.w*10)/10).toLocaleString('tr-TR')+' gün':'-')+'</td></tr>'}).join(''):'')+'</tbody></table></div>'
+        +(dd?dd.rows.map(x=>{const n=P.days.slice(0,day).reduce((a,d)=>a+d.rows.length,0)+dd.rows.indexOf(x)+1;return '<tr'+(x.w>=kkp.wait?' class="old"':'')+' onclick="openDetailModal(&quot;'+esc(x.k.id)+'&quot;)"><td>'+n+'</td><td><b>'+esc(String(x.k.parti).replace(/^\s*\(\d{4}\)\s*/,''))+'</b></td><td>'+esc(String(x.k.line1||'').split(' / ')[0])+'</td><td>'+esc(x.k.ham_adi||'-')+'</td><td>'+f0(x.kg)+'</td><td title="'+esc(x.sp.src+(x.sp.n?' • '+x.sp.n+' parti':''))+'">'+f0(x.sp.v)+' kg/sa<small>'+esc(x.sp.src)+'</small></td><td>'+fh(x.h)+'</td><td>'+(x.w?(Math.round(x.w*10)/10).toLocaleString('tr-TR')+' gün':'-')+'</td></tr>'}).join(''):'')+'</tbody></table></div>')
         +'<div class="kkp-btns"><button type="button" onclick="kkpCopy()">📋 Programı kopyala</button><button type="button" onclick="kkpExcel()">📥 Excel</button></div>'
         +'<details class="ulg-rep-how"><summary>Nasıl hesaplandı?</summary><ul><li><b>Aktif süre:</b> urt KK top kayıtlarından ('+f0(KKHIZ.n)+' parti, '+esc(String(KKHIZ.to).slice(0,10))+'\'e kadar). Partide her kişinin kendi ardışık top kayıtları arası ≤ '+(KKHIZ.gapMax||20)+' dk aralıklar toplanır (aynı partide birden çok kişi çalışınca kayıtlar iç içe geçip süreyi kısaltmasın diye). 20 dk\'dan uzun aralıklar (mola, iş yokluğu, başka iş) sayılmaz; bu yüzden aktif süre, partinin KK\'da kalacağı saat süresinden kısadır.</li><li><b>Süre modeli:</b> aktif süre = <b>sabit parti payı '+(KKHIZ.setup!=null?(Math.round(KKHIZ.setup*10)/10).toLocaleString('tr-TR'):'?')+' dk</b> (tak-çıkar, başlama — bütün partilerden hesaplandı) + kg ÷ kumaş hızı. Böylece küçük partiler olduğundan hızlı görünmez.</li><li><b>Kumaş hızı:</b> sabit pay düşülerek kumaş adına göre ortanca kg/saat; az örnekte kumaş kodu, yoksa genel ortanca ('+f0(KKHIZ.all[1])+' kg/sa). Bu kuyruktaki partilerin hızları: '+src.ham+' kumaş adından, '+src.kod+' kumaş kodundan, '+src.az+' az örnekten, '+src.gen+' genel ortalamadan.</li><li><b>Kapasite:</b> bir günde KK\'da toplam aktif iş saati (aynı anda çalışan kişilerin toplamı, aynı ölçüyle). Otomatik değer seçili gün tipinin (gece 00–08 en az 10 top = 24 saat) son 14 gününün ortancası; o tipte gün yoksa tahmini.</li><li><b>Program:</b> sıradaki parti, günün kapasitesi dolana kadar o güne yazılır. Yeni gelecek partiler, tamir dönüşleri ve öncelikli siparişler hesaba katılmaz; program her güncellemede yeniden hesaplanır.</li></ul></details>';
 }
@@ -5556,7 +5561,7 @@ function kkpExcel(){const L=kkpRows();if(!L.length||typeof XLSX==='undefined'){s
  +'.kkp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.kkp-row b{color:#FFD54F;font-size:12.5px}.kkp-row select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 6px;font-size:12.5px;max-width:100%}'
  +'.kkp-sum{background:rgba(255,255,255,.05);border-radius:8px;padding:8px}.kkp-cmp tr{cursor:pointer}.kkp-cmp tr.on td{background:rgba(255,213,79,.12)}.kkp-say{margin-top:6px;font-size:12.5px;line-height:1.5}'
  +'.kkp-days{display:flex;gap:5px;flex-wrap:wrap}.kkp-days button{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:flex-start}.kkp-days button small{font-weight:400;color:#b9b6d6;font-size:10.5px}.kkp-days button.on{background:#00897B;border-color:#80CBC4}'
- +'.kkp-list{max-height:44vh;overflow:auto}.kkp-list tr{cursor:pointer}.kkp-list tr:hover td{background:rgba(255,255,255,.06)}.kkp-list tr.old td:first-child{border-left:3px solid #FFB74D}.kkp-open{display:block;width:100%;margin:0 0 6px;background:#00897B;color:#fff;border:0;border-radius:7px;padding:5px;font-weight:800;font-size:12px;cursor:pointer}.kkp-btns{display:flex;gap:6px}.kkp-btns button{background:#1565C0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}';document.head.appendChild(st)})();
+ +'.kkp-list{max-height:44vh;overflow:auto}.kkp-list tr{cursor:pointer}.kkp-list tr:hover td{background:rgba(255,255,255,.06)}.kkp-list tr.old td:first-child{border-left:3px solid #FFB74D}.kkp-open{display:block;width:100%;margin:0 0 6px;background:#00897B;color:#fff;border:0;border-radius:7px;padding:5px;font-weight:800;font-size:12px;cursor:pointer}.kkp-views{display:flex;gap:4px}.kkp-views button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer}.kkp-views button.on{background:#FF9800;color:#1a1a2e;border-color:#FFB74D}.kkp-mindw{height:62vh}.kkp-btns{display:flex;gap:6px}.kkp-btns button{background:#1565C0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}';document.head.appendChild(st)})();
 function showUretimLogCards(){
     const set=new Set(uretimLogRows(uretimLogDay,uretimLogCat).map(r=>r.parti)),cards=getAllCards().filter(k=>set.has(String(k.parti).trim()));
     if(!cards.length){showToast('Bu listedeki partilerin hiçbiri şu an veride yok','warning');return}
@@ -6036,9 +6041,9 @@ function lbSelCardModeNext(){
 function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
 // ── 🧠 Pano mindmap'leri: ☑ Seçilenler, ✅ Üretim (bugün geçenler) ve 🛠 Tamirler (devam eden) — her biri kendi seviyeleri ve
 //    hazır düzenleriyle A4 mindmap; panoda sayfa okunurluğa göre otomatik yatay / dikey A4, 📄 ile önizleme → PDF / PNG / yazdır
-const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot']};
+const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','psira']};
 const lbMindSt={};
-['sel','p','t','kay'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
+['sel','p','t','kay','kkp'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
 const lbSelMind=lbMindSt.sel;
 function lbMindSave(K){try{localStorage.setItem(K==='sel'?'lbSelMind9':'lbMind9_'+K,JSON.stringify(lbMindSt[K]))}catch(e){}}
 // Üretim / Tamirler görünümünde kutular ↔ mindmap (cihaz başına)
@@ -6050,6 +6055,10 @@ const LB_T_YAS=['0–1 gün','1–3 gün','3–7 gün','7–30 gün','30+ gün']
 // kayıttan gelen (güncel veride olmayan) partilerde firma uzun adla gelir → kısa ada birleştir
 const LB_MIND_FIRMA={label:'Firma',get:k=>{const v=HEATMAP_DIMENSIONS.firma.get(k);try{return upShortCompany(v)||v}catch(e){return v}}},LB_MIND_MUS={label:'Müşteri (sipariş)',get:k=>lbGroupName(k)};
 const LB_MIND_EXTRA={
+    kkp:{gun:{label:'Program günü',get:k=>k._pGun||'?',sortKey:k=>k._pGunI},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,kumas:{label:'Kumaş',get:k=>String(k.ham_adi||'-').trim()||'-'},
+        hiz:{label:'Hız grubu',get:k=>KKP_HG[kkpHg(k._pHiz)],ord:KKP_HG},
+        psira:{label:'Sıra + parti + süre',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+kkpFh(k._pSure),sortKey:k=>k._pSira},
+        pkumas:{label:'Sıra + parti + kumaş',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+String(k.ham_adi||'-').trim(),sortKey:k=>k._pSira}},
     kay:{kat:{label:'Kategori',get:k=>k._kKat||'Kategorisiz',get ord(){return DURUM_KAT.concat(['Kategorisiz'])}},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
         simdi:{label:'Şu anki / son aşama',get:k=>k.id?normalizeStageName(k._asama||k.asama)||'?':'Sistemde yok'+(k._kSon?' (son: '+k._kSon+')':'')},
         partinot:{label:'Parti + not',get:k=>heatmapShortParti(k)+(k._kNot?' • '+k._kNot:'')},
@@ -6070,12 +6079,13 @@ const LB_MIND_EXTRA={
         tparti:{label:'Parti + tamir yaşı',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0),byAge:true}}
 };
 const LB_MIND_PRE={
+    kkp:[['gun','📅 Gün › Firma › Parti',['gun','firma','psira']],['gunkumas','📅 Gün › Kumaş › Parti',['gun','kumas','psira']],['gunhiz','📅 Gün › Hız grubu › Parti',['gun','hiz','pkumas']],['hiz','⚡ Hız grubu › Kumaş › Parti',['hiz','kumas','psira']]],
     kay:[['kat','🏷 Kategori › Firma',['kat','firma','partinot']],['katsimdi','🏷 Kategori › Şu anki aşama',['kat','simdi','partinot']],['firma','👤 Firma › Kategori',['firma','kat','partinot']],['ay','📅 Ay › Kategori',['ay','kat','partinot']]],
     sel:[['asama','🏭 Aşamaya göre',['asama','firma','parti']],['makine','🛠 KK makinesine göre',['makine','parti']],['makfir','🛠 Makine › Firma',['makine','firma','parti']]],
     p:[['gecis','✅ Geçtiği aşamaya göre',['gecis','firma','parti']],['gidis','➡ Gittiği aşamaya göre',['gidis','firma','parti']],['firma','👤 Firmaya göre',['firma','gecis','parti']],['saat','🕐 Saate göre',['saat','gecis','parti']]],
     t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','ttip','parti']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','parti']],['firma','👤 Firmaya göre',['firma','ttip','parti']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','parti']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
 };
-const LB_MIND_T={kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
+const LB_MIND_T={kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
 function lbMindDim(K,k){return (LB_MIND_EXTRA[K]||{})[k]||HEATMAP_DIMENSIONS[k]}
 function lbSelMindDim(k){return lbMindDim('sel',k)}
 function lbMindLv(K){const l=lbMindSt[K].lv.filter(k=>lbMindDim(K,k));return l.length?l:[LB_MIND_DEF[K][0]]}
@@ -6083,6 +6093,7 @@ function lbMindKey(){return lbView==='sel'?'sel':lbView}
 // veri: seçili kartlar / bugünkü üretim kayıtları / açık tamirler (kart biçiminde; güncel veride yoksa kayıttaki bilgiyle)
 function lbMindCards(K){
     if(K==='sel')return lbSelCustFilter(getAllCards().filter(k=>lbSel.has(lbPn(k))));
+    if(K==='kkp'){if(!KKHIZ)return[];return kkpRows().map(r=>Object.assign({},r.x.k,{_pGun:r.gun+'. gün • '+r.tarih,_pGunI:r.gun,_pSira:r.sira,_pSure:r.x.h,_pHiz:r.x.sp.v}))}
     if(K==='kay')return srFiltered(srRows()).map(r=>lbTvCard(r.parti,{kg:r.kilo,firma:r.firma,extra:{_kKat:r.durum||'',_kNot:r.not||'',_kAt:r.added_at||'',_kSon:r.asama||''}}));
     if(K==='p'){const stats=liveProdStats(),out=[];SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{};Object.keys(o).forEach(pn=>{const e=o[pn];
         out.push(lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mGecis:LB_P_GEC[R.key]||R.name,_mGidis:e.a||'?',_mTs:e.ts||0}}))})});return out}
@@ -6101,6 +6112,7 @@ function lbMindRows(K,cs,key,parentKey){
     else if(K==='sel'&&parentKey==='makine'&&key==='parti'){const pos=r=>lbMachPos(lbPn(r.cards[0]))||999;rows.sort((a,b)=>pos(a)-pos(b)||b.kg-a.kg);rows.forEach(r=>{const n=lbMachPos(lbPn(r.cards[0]));if(n)r.name=n+'. '+r.name})}
     else if(dim.ord){const o=n=>{const i=dim.ord.indexOf(n);return i<0?99:i};rows.sort((a,b)=>o(a.name)-o(b.name)||b.kg-a.kg)}
     else if(dim.byName)rows.sort((a,b)=>String(a.name).localeCompare(String(b.name),'tr'));
+    else if(dim.sortKey)rows.sort((a,b)=>dim.sortKey(a.cards[0])-dim.sortKey(b.cards[0]));
     else if(dim.byAge)rows.sort((a,b)=>(a.cards[0]._mAgeH||0)-(b.cards[0]._mAgeH||0));
     else rows.sort((a,b)=>b.kg-a.kg);
     return rows;
@@ -6138,7 +6150,7 @@ function lbMindSetLv(K,i,v){
     st.depth=0;lbMindSave(K);lbMindAfter(K);
 }
 function lbMindOn(){const K=lbMindKey();return K==='sel'?lbSelCardMode==='mind':(K==='p'||K==='t')&&!!lbTvMind[K]}
-function lbMindBoardRefresh(){if(srView==='mind'&&srPanelOpen())renderSelectionPanel();if(lbMindOn()&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
+function lbMindBoardRefresh(){if(srView==='mind'&&srPanelOpen())renderSelectionPanel();if(kkp.view==='mind'&&document.getElementById('kkpBox'))kkpRender();if(lbMindOn()&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
 const lbSelMindBoardRefresh=lbMindBoardRefresh;
 function lbMindOri(v){hmA4.ori=v;hmA4Save();lbMindBoardRefresh()}
 function lbMindFont(v){hmA4.font=v;hmA4Save();lbMindBoardRefresh()}
@@ -8347,6 +8359,7 @@ function lbRender(){
         +'<button type="button" class="'+(lbWaitMode?'on':'')+'" title="Bekleme renkleri: son hareketten beri geçen süreye göre yeşilden kırmızıya" data-l="Bekleme renkleri" onclick="lbToggleWait()">⏱</button>'
         +'<button type="button" class="lb-annb'+(lbAnnActive()?' on':'')+'" title="Pano duyurusu: bütün ekranlarda üst şeritte görünen mesaj" data-l="Pano duyurusu" onclick="lbAnnOpen()">📢</button>'
         +'<button type="button" data-l="KK günlük tablo (A4)" title="📄 KK günlük tablo: solda KK\'da bekleyenler, sağda bugün geçenler — tek A4, PDF / yazdır" onclick="kkDailyOpen()">📄</button>'
+        +'<button type="button" data-l="KK çalışma programı" title="🧮 KK çalışma programı: KK\'da bekleyenler, kumaşın geçmiş hızına göre önceliklendirilmiş günlük program (simülasyon)" onclick="kkpOpen()">🧮</button>'
         +'<button type="button" data-l="Sarım günlük tablo (A4)" title="📄 Sarım günlük tablo: Sarım1 ve Sarım2 tek sayfada — bekleyenler ve bugün geçenler" onclick="srDailyOpen()">🧵</button>'
         +shiftAutoBtn()
         +'<button type="button" class="lb-exp" style="background:#1565C0" data-l="PNG indir" title="PNG indir" onclick="lbExport(&quot;png&quot;)">🖼️<span class="lb-bl"> PNG</span></button>'
@@ -8394,7 +8407,7 @@ function lbRender(){
             +(hA.length||hP.length?'<b class="a">'+hA.length+'<span class="lb-hm"> geldi</span><span class="lb-ph">↓</span></b><span class="lb-hm"> ·</span> <b class="p">'+hP.length+'<span class="lb-hm"> geçti</span><span class="lb-ph">↑</span></b>':'<span class="lb-hm">hareket </span>yok')+'</button>'
             // kayıt güncel değilken de yeri belli olsun (sessizce kaybolmasın)
             :'<button type="button" class="lb-hour none" onclick="showToast(&quot;Son 1 saatin hareketi sunucudaki üretim kaydından gelir; kayıt 45 dakikadan eski olduğu için gösterilemiyor&quot;,&quot;warning&quot;)" title="Sunucudaki üretim kaydı 45 dakikadan eski; saatler güvenilir olmadığı için sayı gösterilmiyor"><span class="lb-hm">son </span>1 sa: kayıt <span class="lb-hm">güncel değil</span><span class="lb-ph">eski</span></button>';
-        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
+        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck+(R.key==='kk'?'<button type="button" class="lb-hour lb-kkp" onclick="event.stopPropagation();kkpOpen()" title="KK çalışma programı: kumaşın geçmiş KK hızına göre önceliklendirilmiş günlük sıra (simülasyon)">🧮 <span class="lb-hm">program</span></button>':'')):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
     });
     g+='</div>';
     }

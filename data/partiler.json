@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T08:31:50.093403",
+  "generatedAt": "2026-11-02T08:38:52.531568",
   "source": {
     "mainFile": "partiler.xlsx",
     "repairFile": "tamir.xlsx"
@@ -245,9 +245,9 @@
     {
       "id": "p9",
       "parti": "(2026) 5000",
-      "stage": "POLISH 2",
+      "stage": "TRAŞ 2",
       "kg": 220.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2023) 935",
@@ -261,8 +261,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, SUB. BASKI, SARIM 1, LAMİNASYON, KK, SEVK",
       "machine": "SL250-3",
-      "lastStage": "RAM APRE",
-      "hareket": "31.10.2026 14:55",
+      "lastStage": "POLISH 2",
+      "hareket": "02.11.2026 08:29",
       "repairs": []
     },
     {
@@ -636,9 +636,9 @@
     {
       "id": "p27",
       "parti": "(2026) 8776",
-      "stage": "RAM APRE",
+      "stage": "SARIM 1",
       "kg": 100.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2025) 466",
@@ -652,8 +652,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ZMPR 1, BOYA, Y.AÇMA, FIRÇA, BOYA, Y.AÇMA, FIRÇA, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, M.AÇMA, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "SL500-8",
-      "lastStage": "RAM FENOLK",
-      "hareket": "31.10.2026 11:08",
+      "lastStage": "RAM APRE",
+      "hareket": "02.11.2026 08:32",
       "repairs": [
         {
           "uid": "ext_200",
@@ -1605,9 +1605,9 @@
     {
       "id": "p67",
       "parti": "(2026) 10269",
-      "stage": "AKTARMA",
+      "stage": "SARIM 1",
       "kg": 220.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "HAKTAN KUMAŞ TİC.A.Ş.",
       "order": "(2025) 446",
@@ -1621,8 +1621,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ZMPR 1, KK, PARTİ, PFD AÇMA, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "DSL250-2",
-      "lastStage": "RAM FENOLK",
-      "hareket": "31.10.2026 11:08",
+      "lastStage": "RAM APRE",
+      "hareket": "02.11.2026 08:32",
       "repairs": []
     },
     {
@@ -2504,9 +2504,9 @@
     {
       "id": "p103",
       "parti": "(2026) 10287",
-      "stage": "FİZİKSEL KONTROL",
+      "stage": "SEVK TESLİM",
       "kg": 220.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "AŞANTEKS TEKSTİL SAN.VE TİC.A.Ş",
       "order": "(2026) 5",
@@ -2520,8 +2520,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ZMPR 1, BOYA, Y.AÇMA, FIRÇA, RAMKURUTMA, RAM FENOLK, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "DSL250-1",
-      "lastStage": "KALİTE KONTROL",
-      "hareket": "31.10.2026 23:28",
+      "lastStage": "FİZİKSEL KONTROL",
+      "hareket": "02.11.2026 08:32",
       "repairs": []
     },
     {
@@ -5449,7 +5449,7 @@
       "parti": "(2026) 10371",
       "stage": "KALİTE KONTROL",
       "kg": 78.0,
-      "wait": 12,
+      "wait": 13,
       "sev": "warn",
       "firma": "HEFA SUNİ DERİ",
       "order": "(2026) 349",
@@ -8552,7 +8552,7 @@
       "parti": "(2026) 10191",
       "stage": "LAMİNASYON",
       "kg": 26.0,
-      "wait": 8,
+      "wait": 9,
       "sev": "warn",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2026) 471",
@@ -9052,9 +9052,9 @@
     {
       "id": "p356",
       "parti": "(2026) 10008",
-      "stage": "FİZİKSEL KONTROL",
+      "stage": "RAM",
       "kg": 48.0,
-      "wait": 2,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "DMRTEKS TEKSTİL SAN VE TİC LTD ŞTİ",
       "order": "(2025) 361",
@@ -9064,12 +9064,12 @@
       "term": "21.10.2026",
       "due": -12,
       "pri": "1000",
-      "inner": "",
+      "inner": "İç Tamir",
       "blocked": "",
-      "flow": "PARTİ, M.AÇMA, BRN YIKAMA, ÖNFİKSE 1, YIKAMA, Y.AÇMA, RAMKURUTMA, ZMPR 1, ZMPR 2, RAM APRE, KK, RAM, KK, FZK.KNT, SEVK",
+      "flow": "PARTİ, M.AÇMA, BRN YIKAMA, ÖNFİKSE 1, YIKAMA, Y.AÇMA, RAMKURUTMA, ZMPR 1, ZMPR 2, RAM APRE, KK, RAM, KK, RAM, KK, FZK.KNT, SEVK",
       "machine": "",
       "lastStage": "KALİTE KONTROL",
-      "hareket": "30.10.2026 14:22",
+      "hareket": "02.11.2026 08:30",
       "repairs": [
         {
           "uid": "ext_263",
@@ -9174,7 +9174,7 @@
     {
       "id": "p360",
       "parti": "(2026) 10050",
-      "stage": "RAM",
+      "stage": "KALİTE KONTROL",
       "kg": 50.0,
       "wait": 1,
       "sev": "ok",

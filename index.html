@@ -5476,7 +5476,8 @@ function ulgHtml(days,sel,today){
 //    Stratejiler: ⚡ hızlı üretilenler önce (en kısa iş önce → kuyruk en hızlı erir) • ⚖️ dengeli (N günden uzun bekleyenler
 //    önce, sonra hızlılar) • ⏳ en uzun bekleyen önce (bugünkü alışkanlık, kıyas için). Yeni gelecek partiler hesaba katılmaz.
 let KKHIZ=null,KKHIZ_AT=0;
-let kkp={str:mapLoadPref('kkpStr9',v=>['hiz','kisa','denge','fifo'].includes(v),'hiz'),cap:+mapLoadPref('kkpCap9',v=>+v>=0&&+v<=200,'0'),wait:+mapLoadPref('kkpWait9',v=>['2','3','5','7'].includes(v),'3'),dt:+mapLoadPref('kkpDt9',v=>['0','16','24'].includes(v),'0'),view:mapLoadPref('kkpView9',v=>v==='list'||v==='mind','list'),day:0};
+let kkp={str:mapLoadPref('kkpStr9',v=>['hiz','kisa','denge','fifo'].includes(v),'hiz'),cap:+mapLoadPref('kkpCap9',v=>+v>=0&&+v<=200,'0'),wait:+mapLoadPref('kkpWait9',v=>['2','3','5','7'].includes(v),'3'),dt:+mapLoadPref('kkpDt9',v=>['0','16','24'].includes(v),'0'),view:mapLoadPref('kkpView9',v=>v==='list'||v==='mind','list'),tab:mapLoadPref('kkpTab9',v=>['akis','kk','gel','sr1','sr2'].includes(v),'kk'),day:0,ad:'',am:'kg',as:'',ah:null};
+const KKP_STR_L={hiz:'⚡ Hızlı kumaşlar önce',kisa:'⏱ En kısa iş önce',denge:'⚖️ Dengeli',fifo:'⏳ En uzun bekleyen önce'};
 const KKP_HG=['⚡ Çok hızlı (≥ 800 kg/sa)','🟢 Hızlı (500–800)','🟡 Orta (300–500)','🔴 Yavaş (< 300 kg/sa)'];
 function kkpHg(v){return v>=800?0:v>=500?1:v>=300?2:3}
 function kkpFh(h){return h<1?Math.round(h*60)+' dk':(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa'}
@@ -5521,14 +5522,15 @@ function kkpPlan(order,cap){
         if(need<=1e-9){d.rows.push(Object.assign({},x,{day:d.i,cum:t}));d.kg+=x.kg;sumDone+=(d.i+1)}}});
     return{days,avgDay:order.length?sumDone/order.length:0};
 }
-function kkpSet(k,v){if(k==='str'){kkp.str=v;mapSavePref('kkpStr9',v)}else if(k==='cap'){kkp.cap=+v;mapSavePref('kkpCap9',String(+v))}else if(k==='wait'){kkp.wait=+v;mapSavePref('kkpWait9',v)}else if(k==='dt'){kkp.dt=+v;mapSavePref('kkpDt9',String(+v))}else if(k==='view'){kkp.view=v;mapSavePref('kkpView9',v)}else if(k==='day')kkp.day=+v;kkpRender()}
-function kkpOpen(){hmModalShow('<div id="kkpBox" class="kkp-box"><div class="pa-note">Hız verisi okunuyor…</div></div>');kkHizLoad(kkpRender)}
+function kkpSet(k,v){if(k==='str'){kkp.str=v;mapSavePref('kkpStr9',v)}else if(k==='cap'){kkp.cap=+v;mapSavePref('kkpCap9',String(+v))}else if(k==='wait'){kkp.wait=+v;mapSavePref('kkpWait9',v)}else if(k==='dt'){kkp.dt=+v;mapSavePref('kkpDt9',String(+v))}else if(k==='view'){kkp.view=v;mapSavePref('kkpView9',v)}else if(k==='tab'){kkp.tab=v;kkp.day=0;mapSavePref('kkpTab9',v)}else if(k==='ad'){kkp.ad=v;kkp.ah=null}else if(k==='am')kkp.am=v;else if(k==='day')kkp.day=+v;kkpRender()}
+function kkpOpen(tab){if(tab)kkp.tab=tab;hmModalShow('<div id="kkpBox" class="kkp-box"><div class="pa-note">Hız verisi okunuyor…</div></div>');kkHizLoad(kkpRender);uretimLogRefresh(()=>{if(document.getElementById('kkpBox'))kkpRender()})}
 function kkpDate(i){const d=new Date();if(d.getHours()<8)d.setDate(d.getDate()-1);d.setDate(d.getDate()+i);return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',weekday:'short'})}
 function kkpRender(){
     const box=document.getElementById('kkpBox');if(!box)return;
+    if(kkp.tab!=='kk'){box.innerHTML=kkpTabsHtml()+(kkp.tab==='akis'?kkpAkisHtml():kkp.tab==='gel'?kkpGelHtml():kkpSrHtml(SW_ROWS.find(R=>R.key===kkp.tab)));return}
     if(!KKHIZ){box.innerHTML='<div class="pa-note">KK hız verisi (data/kk_hiz.json) yok. Çalışma bilgisayarında <b>update_kk_hiz.py urt.xlsx</b> çalıştırılmalı (GUNCELLE_VE_PUSH.bat urt.xlsx varsa kendisi yapar).</div>';return}
     const J=kkpJobs(),dt=kkpDayType(),AC=kkpAutoCap(dt),auto=AC.v,cap=kkp.cap||auto,f0=v=>Math.round(v).toLocaleString('tr-TR'),fh=h=>h<1?Math.round(h*60)+' dk':(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa';
-    if(!J.length){box.innerHTML='<div class="kkp-t">🧮 KK çalışma programı</div><div class="pa-note">KK\'da bekleyen parti yok ✅</div>';return}
+    if(!J.length){box.innerHTML=kkpTabsHtml()+'<div class="kkp-t">🧮 KK çalışma programı</div><div class="pa-note">KK\'da bekleyen parti yok ✅</div>';return}
     const tot=J.reduce((s,x)=>s+x.h,0),totKg=J.reduce((s,x)=>s+x.kg,0),S={hiz:'⚡ Hızlı üretilen kumaşlar önce',kisa:'⏱ En kısa iş önce (en çok parti)',denge:'⚖️ Dengeli ('+kkp.wait+'+ gün bekleyenler önce)',fifo:'⏳ En uzun bekleyen önce (bugünkü düzen)'};
     const R={};Object.keys(S).forEach(s=>{R[s]=kkpPlan(kkpOrder(J,s,kkp.wait),cap)});const P=R[kkp.str],day=Math.min(kkp.day,P.days.length-1);
     const d1=s=>R[s].days[0]?R[s].days[0].rows.length:0,d1kg=s=>R[s].days[0]?R[s].days[0].kg:0,old=J.filter(x=>x.w>=kkp.wait).length;
@@ -5536,7 +5538,7 @@ function kkpRender(){
         return '<tr class="'+(s===kkp.str?'on':'')+'" onclick="kkpSet(&quot;str&quot;,&quot;'+s+'&quot;)"><td><b>'+S[s]+'</b></td><td>'+d1(s)+' parti • '+f0(d1kg(s))+' kg</td><td>'+in3+' parti</td><td>'+r.days.length+' gün</td><td>'+r.avgDay.toFixed(1).replace('.',',')+'. gün</td></tr>'}).join('')+'</tbody></table>';
     const src=J.reduce((a,x)=>{a[x.sp.src.startsWith('kumaş kodu')?'kod':x.sp.src==='kumaş'?'ham':x.sp.src==='genel ortalama'?'gen':'az']++;return a},{ham:0,kod:0,az:0,gen:0});
     const dd=P.days[day];
-    box.innerHTML='<div class="kkp-t">🧮 KK çalışma programı <small>simülasyon • '+J.length+' parti • '+f0(totKg)+' kg • tahmini toplam aktif iş '+fh(tot)+'</small></div>'
+    box.innerHTML=kkpTabsHtml()+'<div class="kkp-t">🧮 KK çalışma programı <small>simülasyon • '+J.length+' parti • '+f0(totKg)+' kg • tahmini toplam aktif iş '+fh(tot)+'</small></div>'
         +'<div class="kkp-row"><b>Strateji</b><select onchange="kkpSet(&quot;str&quot;,this.value)">'+Object.keys(S).map(s=>'<option value="'+s+'"'+(kkp.str===s?' selected':'')+'>'+S[s]+'</option>').join('')+'</select>'
         +'<b>Gün tipi</b><select onchange="kkpSet(&quot;dt&quot;,this.value)"><option value="0"'+(!kkp.dt?' selected':'')+'>Otomatik ('+dt+' saat)</option><option value="16"'+(kkp.dt===16?' selected':'')+'>16 saat (08–24)</option><option value="24"'+(kkp.dt===24?' selected':'')+'>24 saat (gece vardiyası)</option></select>'
         +'<b>Günlük KK kapasitesi</b><select onchange="kkpSet(&quot;cap&quot;,this.value)" title="Bir günde KK\'da toplam aktif iş saati (birden çok kişi aynı anda çalıştığı için 16 saati aşar)"><option value="0"'+(!kkp.cap?' selected':'')+'>Otomatik: '+auto+' aktif iş saati ('+(AC.est?'tahmini: 16 saatlik günler × 1,5':dt+' saatlik son '+AC.n+' gün')+')</option>'+[16,20,24,28,32,36,40,48].map(v=>'<option value="'+v+'"'+(kkp.cap===v?' selected':'')+'>'+v+' iş saati / gün</option>').join('')+'</select>'
@@ -5550,6 +5552,97 @@ function kkpRender(){
         +'<div class="kkp-btns"><button type="button" onclick="kkpCopy()">📋 Programı kopyala</button><button type="button" onclick="kkpExcel()">📥 Excel</button></div>'
         +'<details class="ulg-rep-how"><summary>Nasıl hesaplandı?</summary><ul><li><b>Aktif süre:</b> urt KK top kayıtlarından ('+f0(KKHIZ.n)+' parti, '+esc(String(KKHIZ.to).slice(0,10))+'\'e kadar). Partide her kişinin kendi ardışık top kayıtları arası ≤ '+(KKHIZ.gapMax||20)+' dk aralıklar toplanır (aynı partide birden çok kişi çalışınca kayıtlar iç içe geçip süreyi kısaltmasın diye). 20 dk\'dan uzun aralıklar (mola, iş yokluğu, başka iş) sayılmaz; bu yüzden aktif süre, partinin KK\'da kalacağı saat süresinden kısadır.</li><li><b>Süre modeli:</b> aktif süre = <b>sabit parti payı '+(KKHIZ.setup!=null?(Math.round(KKHIZ.setup*10)/10).toLocaleString('tr-TR'):'?')+' dk</b> (tak-çıkar, başlama — bütün partilerden hesaplandı) + kg ÷ kumaş hızı. Böylece küçük partiler olduğundan hızlı görünmez.</li><li><b>Kumaş hızı:</b> sabit pay düşülerek kumaş adına göre ortanca kg/saat; az örnekte kumaş kodu, yoksa genel ortanca ('+f0(KKHIZ.all[1])+' kg/sa). Bu kuyruktaki partilerin hızları: '+src.ham+' kumaş adından, '+src.kod+' kumaş kodundan, '+src.az+' az örnekten, '+src.gen+' genel ortalamadan.</li><li><b>Kapasite:</b> bir günde KK\'da toplam aktif iş saati (aynı anda çalışan kişilerin toplamı, aynı ölçüyle). Otomatik değer seçili gün tipinin (gece 00–08 en az 10 top = 24 saat) son 14 gününün ortancası; o tipte gün yoksa tahmini.</li><li><b>Program:</b> sıradaki parti, günün kapasitesi dolana kadar o güne yazılır. Yeni gelecek partiler, tamir dönüşleri ve öncelikli siparişler hesaba katılmaz; program her güncellemede yeniden hesaplanır.</li></ul></details>';
 }
+// ── Program penceresinin bölümleri: ⏱ saatlik akış (bugün gelen / geçen) • 🧮 KK üzerindekiler • 📥 KK gelecekler dahil • 🧵 Sarım1 / Sarım2
+const KKP_TABS=[['akis','⏱ Saatlik akış'],['kk','🧮 KK üzerindekiler'],['gel','📥 KK + gelecekler'],['sr1','🟣 Sarım1'],['sr2','🟢 Sarım2']];
+function kkpTabsHtml(){return '<div class="kkp-tabs">'+KKP_TABS.map(([k,l])=>'<button type="button" class="'+(kkp.tab===k?'on':'')+'" onclick="kkpSet(&quot;tab&quot;,&quot;'+k+'&quot;)">'+l+'</button>').join('')+'</div>'}
+function kkpDay0(){const d=new Date();if(d.getHours()<8)d.setDate(d.getDate()-1);d.setHours(8,0,0,0);return d.getTime()}
+// beklenen geliş: canlı izlemenin geliş tahmini (aşama süreleri); tahmini olmayan parti "bilinmiyor"
+function kkpArr(k,R){const x=lbEtaTarget(k);if(!x||(x.T&&x.T.key!==R.key))return null;const at=x.late?Math.max(Date.now(),x.hi):x.at;return{at,day:Math.max(0,Math.floor((at-kkpDay0())/86400000))}}
+// genel kuyruk simülasyonu: iş (rem: saat ya da kg) gününe gelince havuza girer; havuz sıralanır, başlanmış iş önce biter
+function kkpSim(jobs,cap,ord){
+    const pend=jobs.map(x=>Object.assign({},x,{rem:x.h})).sort((a,b)=>a.arr-b.arr),days=[];let pool=[],cur=null;
+    for(let d=0;d<90&&(pend.length||pool.length||cur);d++){
+        let arrived=0;while(pend.length&&pend[0].arr<=d){pool.push(pend.shift());arrived++}
+        const startQ=pool.length+(cur?1:0);pool=ord(pool);let left=cap;const rows=[];let kg=0;
+        while(left>1e-9&&(cur||pool.length)){if(!cur)cur=pool.shift();const t=Math.min(cur.rem,left);cur.rem-=t;left-=t;if(cur.rem<=1e-9){rows.push(cur);kg+=cur.kg;cur=null}}
+        days.push({i:d,rows,kg,arrived,startQ,endQ:pool.length+(cur?1:0),idle:left});
+    }
+    return days;
+}
+function kkpOrdFn(str,unitKg){
+    const fifo=(a,b)=>b.w-a.w||a.h-b.h,spt=(a,b)=>a.h-b.h||b.w-a.w,wait=kkp.wait;
+    if(str==='fifo')return p=>p.sort(fifo);
+    if(str==='denge')return p=>{const o=p.filter(x=>x.w>=wait).sort(fifo),r=p.filter(x=>x.w<wait).sort(spt);return o.concat(r)};
+    if(str==='kisa'||unitKg)return p=>p.sort(spt);
+    return p=>p.sort((a,b)=>b.sp.v-a.sp.v||a.h-b.h);
+}
+function kkpViewsHtml(){return '<div class="kkp-views"><button type="button" class="'+(kkp.view==='list'?'on':'')+'" onclick="kkpSet(&quot;view&quot;,&quot;list&quot;)">📋 Liste</button><button type="button" class="'+(kkp.view==='mind'?'on':'')+'" onclick="kkpSet(&quot;view&quot;,&quot;mind&quot;)">🧠 Mindmap</button></div>'}
+function kkpMindHtml(K){return '<div class="sr-mindw kkp-mindw">'+lbMindHtml(K,lbMindCards(K))+'</div>'}
+function kkpDaysTable(days,unit){
+    const f0=v=>Math.round(v).toLocaleString('tr-TR');
+    return '<table class="ulg-tb"><thead><tr><th>Gün</th><th>Gün başı kuyruk</th><th>Gelmesi beklenen</th><th>İşlenen</th><th>Gün sonu kuyruk</th></tr></thead><tbody>'
+        +days.map(d=>'<tr'+(d.i===kkp.day?' class="on"':'')+' onclick="kkpSet(&quot;day&quot;,'+d.i+')" style="cursor:pointer"><td><b>'+(d.i+1)+'. gün</b> <small>'+kkpDate(d.i)+'</small></td><td>'+d.startQ+'</td><td>'+(d.arrived?'+'+d.arrived:'—')+'</td><td><b>'+d.rows.length+'</b> parti • '+f0(d.kg)+' kg</td><td>'+(d.endQ?'<b style="color:'+(d.endQ>d.startQ?'#EF5350':'#FFD54F')+'">'+d.endQ+'</b>':'<b style="color:#66BB6A">0 ✅</b>')+'</td></tr>').join('')+'</tbody></table>';
+}
+function kkpRowsTable(d,unitKg){
+    const f0=v=>Math.round(v).toLocaleString('tr-TR');if(!d)return'';
+    return '<div class="kkp-list"><table class="ulg-tb"><thead><tr><th>#</th><th>Parti</th><th>Durum</th><th>Firma</th><th>Kumaş</th><th>Kg</th>'+(unitKg?'':'<th>Aktif iş</th>')+'<th>Bekliyor / geliş</th></tr></thead><tbody>'
+        +d.rows.map((x,i)=>'<tr onclick="openDetailModal(&quot;'+esc(x.k.id)+'&quot;)"><td>'+(i+1)+'</td><td><b>'+esc(String(x.k.parti).replace(/^\s*\(\d{4}\)\s*/,''))+'</b></td><td>'+(x.inc?'<span class="kkp-inc">📥 gelecek</span>':'🔹 üzerinde')+'</td><td>'+esc(String(x.k.line1||'').split(' / ')[0])+'</td><td>'+esc(x.k.ham_adi||'-')+'</td><td>'+f0(x.kg)+'</td>'+(unitKg?'':'<td>'+kkpFh(x.h)+'</td>')+'<td>'+(x.inc?esc(lbEtaWhen(x.at)):(x.w?(Math.round(x.w*10)/10).toLocaleString('tr-TR')+' gün':'-'))+'</td></tr>').join('')+'</tbody></table></div>';
+}
+// 📥 KK: üzerindekiler + gelmesi beklenenler (geliş tahminiyle)
+function kkpGelHtml(){
+    if(!KKHIZ)return '<div class="pa-note">KK hız verisi yok.</div>';
+    const R=SW_ROWS[0],dt=kkpDayType(),cap=kkp.cap||kkpAutoCap(dt).v,S=KKHIZ.setup||0;
+    const now=kkpJobs().map(x=>Object.assign(x,{arr:0,inc:false}));let unk=0;
+    const inc=getAllCards().filter(k=>R.coming(k)).map(k=>{const a=kkpArr(k,R);if(!a){unk++;return null}const sp=kkpSpeed(k),kg=num(k.kilo)||0,w=fifoAgeDays(k);return{k,kg,sp,h:S/60+(kg>0?kg/sp.v:0),w:w==null?0:w,arr:a.day,at:a.at,inc:true}}).filter(Boolean);
+    const days=kkpSim(now.concat(inc),cap,kkpOrdFn(kkp.str,false)),f0=v=>Math.round(v).toLocaleString('tr-TR'),day=Math.min(kkp.day,days.length-1),last=days[days.length-1];
+    const peak=days.reduce((a,d)=>d.endQ>a.endQ?d:a,days[0]);
+    return '<div class="kkp-t">📥 KK — üzerindekiler + gelmesi beklenenler <small>'+now.length+' üzerinde • '+inc.length+' gelecek (geliş tahminli)'+(unk?' • '+unk+' gelecek partinin geliş tahmini yok, katılmadı':'')+' • kapasite '+cap+' aktif iş saati/gün • strateji: '+esc((KKP_STR_L[kkp.str]||kkp.str))+'</small></div>'
+        +'<div class="kkp-say">Bu tempoda KK kuyruğu <b>'+days.length+'. günün sonunda</b> '+(last&&last.endQ===0?'<b style="color:#66BB6A">sıfırlanıyor</b>':'bitmiyor')+'. '+(peak&&peak.endQ>now.length?'En yüksek birikim <b>'+(peak.i+1)+'. gün</b> sonunda <b>'+peak.endQ+'</b> parti.':'Gelenlerle birlikte kuyruk her gün azalıyor.')+' Günlerin satırına tıklayınca o günün sırası açılır.</div>'
+        +kkpViewsHtml()+(kkp.view==='mind'?(kkp._last={days},kkpMindHtml('kkp2')):kkpDaysTable(days,false)+kkpRowsTable(days[day],false))
+        +'<small class="ulg-ksm">Geliş zamanı canlı izlemenin geliş tahmininden (önündeki aşamaların olağan süreleri); gecikmişlerde tahmin aralığının sonu. Gelecek parti geldiği günden önce işlenmez. Strateji ve kapasite 🧮 KK üzerindekiler bölümündekiyle aynı.</small>';
+}
+// 🧵 Sarım: kumaş hızı verisi olmadığından aşamanın günlük ortalama üretimi (kg) kapasite; küçük parti önce ya da en uzun bekleyen önce
+function kkpSrCap(R,dt){
+    if(typeof URETIM_LOG==='undefined'||!URETIM_LOG)return{v:0,n:0};const key=R.key==='sr1'?'sr1Gecen':'sr2Gecen',today=liveProdLogKey();
+    const all=Object.keys(URETIM_LOG.days||{}).sort().filter(d=>d!==today&&ulgDayType(d)),same=all.filter(d=>ulgDayType(d)===dt),ds=(same.length>=3?same:all).slice(-14);
+    const v=ds.map(d=>uretimLogRows(d,key).reduce((s,r)=>s+num(r.kg),0)).filter(x=>x>0);return{v:v.length?v.reduce((a,b)=>a+b,0)/v.length:0,n:v.length};
+}
+function kkpSrHtml(R){
+    const dt=kkpDayType(),C=kkpSrCap(R,dt),f0=v=>Math.round(v).toLocaleString('tr-TR');
+    if(!C.v)return '<div class="pa-note">'+esc(R.name)+' için üretim kaydında yeterli gün yok.</div>';
+    let unk=0;const job=(k,inc)=>{const kg=num(k.kilo)||0,w=fifoAgeDays(k);if(inc){const a=kkpArr(k,R);if(!a){unk++;return null}return{k,kg,h:kg,w:w==null?0:w,arr:a.day,at:a.at,inc:true,sp:{v:0}}}return{k,kg,h:kg,w:w==null?0:w,arr:0,inc:false,sp:{v:0}}};
+    const now=getAllCards().filter(k=>R.is(k)).map(k=>job(k,false)),inc=getAllCards().filter(k=>R.coming(k)).map(k=>job(k,true)).filter(Boolean);
+    const ord=kkp.str==='fifo'||kkp.str==='denge'?kkpOrdFn(kkp.str,true):p=>p.sort((a,b)=>a.kg-b.kg||b.w-a.w);
+    const days=kkpSim(now.concat(inc),C.v,ord),day=Math.min(kkp.day,days.length-1),last=days[days.length-1],totKg=now.reduce((s,x)=>s+x.kg,0);
+    return '<div class="kkp-t">'+R.icon+' '+esc(R.name)+' programı <small>'+now.length+' üzerinde ('+f0(totKg)+' kg) • '+inc.length+' gelecek'+(unk?' • '+unk+' gelecek partinin geliş tahmini yok':'')+' • kapasite '+f0(C.v)+' kg/gün ('+dt+' saatlik son '+C.n+' günün ortalaması)</small></div>'
+        +'<div class="kkp-say">'+(kkp.str==='fifo'||kkp.str==='denge'?'Sıra: en uzun bekleyen önce'+(kkp.str==='denge'?' ('+kkp.wait+'+ gün)':'')+'.':'Sıra: küçük partiler önce (kuyruktaki parti sayısı en hızlı düşer) — '+esc(R.name)+' için kumaş hızı verisi olmadığından parti kg\'ı esas alınır.')+' Kuyruk <b>'+days.length+'. günün sonunda</b> '+(last&&last.endQ===0?'<b style="color:#66BB6A">sıfırlanıyor</b>.':'bitmiyor.')+' Strateji seçimi 🧮 KK üzerindekiler bölümünden.</div>'
+        +kkpViewsHtml()+(kkp.view==='mind'?(kkp._last={days},kkpMindHtml('kkp2')):kkpDaysTable(days,true)+kkpRowsTable(days[day],true))
+        +'<small class="ulg-ksm">Kapasite: üretim kaydında '+esc(R.name)+'\'den günde geçen ortalama kg (aynı gün tipi). Gelecek partilerin geliş zamanı canlı izlemenin tahmininden.</small>';
+}
+// ⏱ saatlik akış: seçili vardiya gününde KK / Sarım1 / Sarım2'ye saat saat gelen ve geçen; saate tıkla → liste
+function kkpAkisHtml(){
+    if(typeof URETIM_LOG==='undefined'||!URETIM_LOG)return '<div class="pa-note">Üretim kaydı yükleniyor…</div>';
+    const days=Object.keys(URETIM_LOG.days||{}).sort(),today=liveProdLogKey();if(!kkp.ad||!days.includes(kkp.ad))kkp.ad=days.includes(today)?today:days[days.length-1];
+    const d=kkp.ad,di=days.indexOf(d),H=[...Array(24)].map((_,i)=>(i+8)%24),hr=r=>r.ts?new Date(r.ts).getHours():-1,f0=v=>Math.round(v).toLocaleString('tr-TR'),kg=kkp.am!=='n';
+    const nowH=d===today?new Date().getHours():-1,agg=rows=>kg?rows.reduce((s,r)=>s+num(r.kg),0):rows.length;
+    const stg=[['kk','kkGelen','kkGecen','Kalite Kontrol','#42A5F5'],['sr1','sr1Gelen','sr1Gecen','Sarım1','#9575CD'],['sr2','sr2Gelen','sr2Gecen','Sarım2','#26A69A']];
+    let h='<div class="kkp-t">⏱ Saatlik akış <small>gelen ve geçen partiler, saat saat • '+(d===today?'bugün, sürüyor — her kayıt güncellemesinde yenilenir':esc(uretimLogDayLabel(d)))+'</small></div>'
+        +'<div class="kkp-row"><button type="button" onclick="kkpSet(&quot;ad&quot;,&quot;'+(days[di-1]||d)+'&quot;)"'+(di>0?'':' disabled')+'>◀</button><b>'+esc(uretimLogDayLabel(d))+(d===today?' (bugün)':'')+'</b><button type="button" onclick="kkpSet(&quot;ad&quot;,&quot;'+(days[di+1]||d)+'&quot;)"'+(di<days.length-1?'':' disabled')+'>▶</button>'
+        +'<select onchange="kkpSet(&quot;am&quot;,this.value)"><option value="kg"'+(kg?' selected':'')+'>kg</option><option value="n"'+(!kg?' selected':'')+'>parti sayısı</option></select></div>'+kkpViewsHtml();
+    if(kkp.view==='mind')return h+kkpMindHtml('kak')+'<small class="ulg-ksm">Seçili günün gelen ve geçen kayıtları; ◀ ▶ ile gün değişir. Seviyeler ve hazır düzenler üstten seçilir; 📄 A4 / PDF ile çıktı.</small>';
+    stg.forEach(([key,gk,pk,name,col])=>{
+        const G=uretimLogRows(d,gk),P=uretimLogRows(d,pk),gv=H.map(x=>agg(G.filter(r=>hr(r)===x))),pv=H.map(x=>agg(P.filter(r=>hr(r)===x))),mx=Math.max(1,...gv,...pv);
+        let cum=0;const net=H.map((x,i)=>{cum+=(G.filter(r=>hr(r)===x).length-P.filter(r=>hr(r)===x).length);return cum});
+        const lastH=(()=>{const t=Date.now()-3600000;return{g:G.filter(r=>r.ts>=t).length,p:P.filter(r=>r.ts>=t).length}})();
+        h+='<div class="kkp-ak"><div class="kkp-akh"><b style="color:'+col+'">'+esc(name)+'</b><span>gelen <b>'+G.length+'</b> ('+f0(G.reduce((s,r)=>s+num(r.kg),0))+' kg) • geçen <b>'+P.length+'</b> ('+f0(P.reduce((s,r)=>s+num(r.kg),0))+' kg) • fark <b style="color:'+(G.length>P.length?'#EF5350':'#66BB6A')+'">'+(G.length-P.length>0?'+':'')+(G.length-P.length)+'</b> parti'+(d===today?' • son 1 saat: '+lastH.g+' geldi / '+lastH.p+' geçti':'')+'</span></div>'
+            +'<div class="kkp-akc">'+H.map((x,i)=>'<div class="kkp-akg'+(x===nowH?' now':'')+(kkp.as===key&&kkp.ah===x?' sel':'')+'" onclick="kkpAkSel(&quot;'+key+'&quot;,'+x+')" title="'+String(x).padStart(2,'0')+':00–'+String((x+1)%24).padStart(2,'0')+':00 • gelen '+(kg?f0(gv[i])+' kg':gv[i])+' • geçen '+(kg?f0(pv[i])+' kg':pv[i])+' • gün içi birikim '+(net[i]>0?'+':'')+net[i]+' parti"><div class="kkp-akb"><i style="height:'+(gv[i]/mx*100).toFixed(1)+'%;background:'+col+'55;border:1px solid '+col+'"></i><i style="height:'+(pv[i]/mx*100).toFixed(1)+'%;background:'+col+'"></i></div><small>'+String(x).padStart(2,'0')+'</small><em class="'+(net[i]>0?'up':net[i]<0?'dn':'')+'">'+(net[i]>0?'+':'')+net[i]+'</em></div>').join('')+'</div>';
+        if(kkp.as===key&&kkp.ah!=null){const li=(L,lbl)=>'<div><div class="kkp-akl">'+lbl+' ('+L.length+')</div>'+(L.length?L.slice().sort((a,b)=>a.ts-b.ts).map(r=>'<div class="kkp-akr"><span>'+esc(new Date(r.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}))+(r.est?'~':'')+'</span><b>'+esc(String(r.parti).replace(/^\s*\(\d{4}\)\s*/,''))+'</b><span>'+f0(r.kg)+' kg</span><small>'+esc(String(r.line1||'').split(' / ')[0])+(r.a?' • '+(lbl.startsWith('📥')?'← ':'→ ')+esc(r.a):'')+'</small></div>').join(''):'<small>—</small>')+'</div>';
+            h+='<div class="kkp-akd"><div class="kkp-akl" style="flex-basis:100%">'+String(kkp.ah).padStart(2,'0')+':00–'+String((kkp.ah+1)%24).padStart(2,'0')+':00 <button type="button" onclick="kkpAkSel(&quot;&quot;,null)">✕</button></div>'+li(G.filter(r=>hr(r)===kkp.ah),'📥 Gelen')+li(P.filter(r=>hr(r)===kkp.ah),'✅ Geçen')+'</div>'}
+        h+='</div>';
+    });
+    return h+'<small class="ulg-ksm">Açık çubuk gelen, koyu çubuk geçen; altındaki sayı gün başından o saate kadar birikim (gelen − geçen parti; + kuyruk büyüyor). Saate tıkla: o saatte gelen ve geçen partiler. Saat, kayıt güncellemesindeki geçiş saatidir (~ tahmini).</small>';
+}
+function kkpAkSel(s,h){if(kkp.as===s&&kkp.ah===h){kkp.as='';kkp.ah=null}else{kkp.as=s;kkp.ah=h}kkpRender()}
 function kkpRows(){const J=kkpJobs(),cap=kkp.cap||kkpAutoCap(kkpDayType()).v,P=kkpPlan(kkpOrder(J,kkp.str,kkp.wait),cap);let n=0;return P.days.flatMap((d,i)=>d.rows.map(x=>({sira:++n,gun:i+1,tarih:kkpDate(i),x})))}
 function kkpCopy(){const L=kkpRows();if(!L.length)return;let g=0,t='KK çalışma programı — '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n';
     L.forEach(r=>{if(r.gun!==g){g=r.gun;t+='\n'+g+'. gün ('+r.tarih+')\n'}t+=r.sira+'. '+String(r.x.k.parti).replace(/^\s*\(\d{4}\)\s*/,'')+' • '+String(r.x.k.line1||'').split(' / ')[0]+' • '+(r.x.k.ham_adi||'-')+' • '+Math.round(r.x.kg)+' kg • ~'+(r.x.h<1?Math.round(r.x.h*60)+' dk':(Math.round(r.x.h*10)/10)+' sa')+'\n'});
@@ -5561,7 +5654,7 @@ function kkpExcel(){const L=kkpRows();if(!L.length||typeof XLSX==='undefined'){s
  +'.kkp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.kkp-row b{color:#FFD54F;font-size:12.5px}.kkp-row select{background:#2d2359;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 6px;font-size:12.5px;max-width:100%}'
  +'.kkp-sum{background:rgba(255,255,255,.05);border-radius:8px;padding:8px}.kkp-cmp tr{cursor:pointer}.kkp-cmp tr.on td{background:rgba(255,213,79,.12)}.kkp-say{margin-top:6px;font-size:12.5px;line-height:1.5}'
  +'.kkp-days{display:flex;gap:5px;flex-wrap:wrap}.kkp-days button{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 9px;cursor:pointer;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:flex-start}.kkp-days button small{font-weight:400;color:#b9b6d6;font-size:10.5px}.kkp-days button.on{background:#00897B;border-color:#80CBC4}'
- +'.kkp-list{max-height:44vh;overflow:auto}.kkp-list tr{cursor:pointer}.kkp-list tr:hover td{background:rgba(255,255,255,.06)}.kkp-list tr.old td:first-child{border-left:3px solid #FFB74D}.kkp-open{display:block;width:100%;margin:0 0 6px;background:#00897B;color:#fff;border:0;border-radius:7px;padding:5px;font-weight:800;font-size:12px;cursor:pointer}.kkp-views{display:flex;gap:4px}.kkp-views button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer}.kkp-views button.on{background:#FF9800;color:#1a1a2e;border-color:#FFB74D}.kkp-mindw{height:62vh}.kkp-btns{display:flex;gap:6px}.kkp-btns button{background:#1565C0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}';document.head.appendChild(st)})();
+ +'.kkp-list{max-height:44vh;overflow:auto}.kkp-list tr{cursor:pointer}.kkp-list tr:hover td{background:rgba(255,255,255,.06)}.kkp-list tr.old td:first-child{border-left:3px solid #FFB74D}.kkp-open{display:block;width:100%;margin:0 0 6px;background:#00897B;color:#fff;border:0;border-radius:7px;padding:5px;font-weight:800;font-size:12px;cursor:pointer}.kkp-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:6px}.kkp-tabs button{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px 8px 0 0;padding:6px 11px;font-weight:700;font-size:12.5px;cursor:pointer}.kkp-tabs button.on{background:#00897B;border-color:#80CBC4}.kkp-row button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:3px 9px;cursor:pointer}.kkp-row button:disabled{opacity:.4}.ulg-tb tr.on td{background:rgba(0,137,123,.25)}.kkp-inc{color:#4FC3F7;font-size:11.5px;font-weight:700}.kkp-ak{background:rgba(255,255,255,.04);border-radius:8px;padding:8px}.kkp-akh{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:12px;margin-bottom:4px}.kkp-akh b{font-size:13px}.kkp-akc{display:flex;gap:2px;height:120px;overflow-x:auto}.kkp-akg{flex:1 0 20px;display:flex;flex-direction:column;cursor:pointer;border-radius:4px}.kkp-akg:hover{background:rgba(255,255,255,.07)}.kkp-akg.now{background:rgba(255,213,79,.12)}.kkp-akg.sel{outline:1px solid #FFD54F}.kkp-akb{flex:1;display:flex;gap:1px;align-items:flex-end;border-bottom:1px solid rgba(255,255,255,.3)}.kkp-akb i{flex:1;border-radius:2px 2px 0 0;min-height:1px;box-sizing:border-box}.kkp-akg small{font-size:9.5px;color:#90A4AE;text-align:center}.kkp-akg em{font-style:normal;font-size:9px;text-align:center;color:#90A4AE}.kkp-akg em.up{color:#EF5350}.kkp-akg em.dn{color:#66BB6A}.kkp-akd{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px;padding:6px;background:rgba(0,0,0,.2);border-radius:6px}.kkp-akd>div{flex:1 1 260px;min-width:0}.kkp-akl{font-weight:800;font-size:12px;color:#FFD54F;margin-bottom:3px}.kkp-akl button{background:none;border:0;color:#fff;cursor:pointer}.kkp-akr{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:12px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.06)}.kkp-akr small{flex-basis:100%;color:#90A4AE;font-size:10.5px}.kkp-akr b{color:#FFD700}.kkp-views{display:flex;gap:4px}.kkp-views button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer}.kkp-views button.on{background:#FF9800;color:#1a1a2e;border-color:#FFB74D}.kkp-mindw{height:62vh}.kkp-btns{display:flex;gap:6px}.kkp-btns button{background:#1565C0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}';document.head.appendChild(st)})();
 function showUretimLogCards(){
     const set=new Set(uretimLogRows(uretimLogDay,uretimLogCat).map(r=>r.parti)),cards=getAllCards().filter(k=>set.has(String(k.parti).trim()));
     if(!cards.length){showToast('Bu listedeki partilerin hiçbiri şu an veride yok','warning');return}
@@ -6041,9 +6134,9 @@ function lbSelCardModeNext(){
 function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
 // ── 🧠 Pano mindmap'leri: ☑ Seçilenler, ✅ Üretim (bugün geçenler) ve 🛠 Tamirler (devam eden) — her biri kendi seviyeleri ve
 //    hazır düzenleriyle A4 mindmap; panoda sayfa okunurluğa göre otomatik yatay / dikey A4, 📄 ile önizleme → PDF / PNG / yazdır
-const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','psira']};
+const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','psira'],kkp2:['gun','durum','psira'],kak:['asama','yon','saat','asaat']};
 const lbMindSt={};
-['sel','p','t','kay','kkp'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
+['sel','p','t','kay','kkp','kkp2','kak'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
 const lbSelMind=lbMindSt.sel;
 function lbMindSave(K){try{localStorage.setItem(K==='sel'?'lbSelMind9':'lbMind9_'+K,JSON.stringify(lbMindSt[K]))}catch(e){}}
 // Üretim / Tamirler görünümünde kutular ↔ mindmap (cihaz başına)
@@ -6055,6 +6148,11 @@ const LB_T_YAS=['0–1 gün','1–3 gün','3–7 gün','7–30 gün','30+ gün']
 // kayıttan gelen (güncel veride olmayan) partilerde firma uzun adla gelir → kısa ada birleştir
 const LB_MIND_FIRMA={label:'Firma',get:k=>{const v=HEATMAP_DIMENSIONS.firma.get(k);try{return upShortCompany(v)||v}catch(e){return v}}},LB_MIND_MUS={label:'Müşteri (sipariş)',get:k=>lbGroupName(k)};
 const LB_MIND_EXTRA={
+    kkp2:{gun:{label:'Program günü',get:k=>k._pGun||'?',sortKey:k=>k._pGunI},durum:{label:'Üzerinde / gelecek',get:k=>k._pInc?'📥 Gelecek':'🔹 Üzerinde',ord:['🔹 Üzerinde','📥 Gelecek']},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
+        kumas:{label:'Kumaş',get:k=>String(k.ham_adi||'-').trim()||'-'},psira:{label:'Sıra + parti + kg',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg'+(k._pInc?' 📥':''),sortKey:k=>k._pSira}},
+    kak:{asama:{label:'Aşama',get:k=>k._aSt,ord:['Kalite Kontrol','Sarım1','Sarım2']},yon:{label:'Gelen / geçen',get:k=>k._aYon,ord:['📥 Gelen','✅ Geçen']},
+        saat:{label:'Saat',get:k=>k._aSaat,sortKey:k=>k._aSaatI},firma:LB_MIND_FIRMA,
+        asaat:{label:'Parti + saat',get:k=>heatmapShortParti(k)+' • '+k._aHm,sortKey:k=>k._aTs}},
     kkp:{gun:{label:'Program günü',get:k=>k._pGun||'?',sortKey:k=>k._pGunI},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,kumas:{label:'Kumaş',get:k=>String(k.ham_adi||'-').trim()||'-'},
         hiz:{label:'Hız grubu',get:k=>KKP_HG[kkpHg(k._pHiz)],ord:KKP_HG},
         psira:{label:'Sıra + parti + süre',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+kkpFh(k._pSure),sortKey:k=>k._pSira},
@@ -6079,13 +6177,15 @@ const LB_MIND_EXTRA={
         tparti:{label:'Parti + tamir yaşı',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0),byAge:true}}
 };
 const LB_MIND_PRE={
+    kkp2:[['gun','📅 Gün › Üzerinde/gelecek › Parti',['gun','durum','psira']],['gunfirma','📅 Gün › Firma › Parti',['gun','firma','psira']],['gunkumas','📅 Gün › Kumaş › Parti',['gun','kumas','psira']]],
+    kak:[['asama','🏭 Aşama › Gelen/geçen › Saat › Parti',['asama','yon','saat','asaat']],['saat','🕐 Saat › Aşama › Gelen/geçen › Parti',['saat','asama','yon','asaat']],['firma','👤 Aşama › Gelen/geçen › Firma › Parti',['asama','yon','firma','asaat']]],
     kkp:[['gun','📅 Gün › Firma › Parti',['gun','firma','psira']],['gunkumas','📅 Gün › Kumaş › Parti',['gun','kumas','psira']],['gunhiz','📅 Gün › Hız grubu › Parti',['gun','hiz','pkumas']],['hiz','⚡ Hız grubu › Kumaş › Parti',['hiz','kumas','psira']]],
     kay:[['kat','🏷 Kategori › Firma',['kat','firma','partinot']],['katsimdi','🏷 Kategori › Şu anki aşama',['kat','simdi','partinot']],['firma','👤 Firma › Kategori',['firma','kat','partinot']],['ay','📅 Ay › Kategori',['ay','kat','partinot']]],
     sel:[['asama','🏭 Aşamaya göre',['asama','firma','parti']],['makine','🛠 KK makinesine göre',['makine','parti']],['makfir','🛠 Makine › Firma',['makine','firma','parti']]],
     p:[['gecis','✅ Geçtiği aşamaya göre',['gecis','firma','parti']],['gidis','➡ Gittiği aşamaya göre',['gidis','firma','parti']],['firma','👤 Firmaya göre',['firma','gecis','parti']],['saat','🕐 Saate göre',['saat','gecis','parti']]],
     t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','ttip','parti']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','parti']],['firma','👤 Firmaya göre',['firma','ttip','parti']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','parti']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
 };
-const LB_MIND_T={kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
+const LB_MIND_T={kkp2:['Program (üzerindekiler + gelecekler)','Program','program_mindmap'],kak:['Saatlik akış — gelen ve geçen','Saatlik akış','saatlik_akis_mindmap'],kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
 function lbMindDim(K,k){return (LB_MIND_EXTRA[K]||{})[k]||HEATMAP_DIMENSIONS[k]}
 function lbSelMindDim(k){return lbMindDim('sel',k)}
 function lbMindLv(K){const l=lbMindSt[K].lv.filter(k=>lbMindDim(K,k));return l.length?l:[LB_MIND_DEF[K][0]]}
@@ -6093,6 +6193,10 @@ function lbMindKey(){return lbView==='sel'?'sel':lbView}
 // veri: seçili kartlar / bugünkü üretim kayıtları / açık tamirler (kart biçiminde; güncel veride yoksa kayıttaki bilgiyle)
 function lbMindCards(K){
     if(K==='sel')return lbSelCustFilter(getAllCards().filter(k=>lbSel.has(lbPn(k))));
+    if(K==='kkp2'){const L=kkp._last;if(!L)return[];let n=0;return L.days.flatMap(d=>d.rows.map(x=>Object.assign({},x.k,{_pGun:(d.i+1)+'. gün • '+kkpDate(d.i),_pGunI:d.i,_pSira:++n,_pInc:x.inc})))}
+    if(K==='kak'){if(typeof URETIM_LOG==='undefined'||!URETIM_LOG||!kkp.ad)return[];const out=[],hh=h=>String(h).padStart(2,'0');
+        [['kkGelen','Kalite Kontrol','📥 Gelen'],['kkGecen','Kalite Kontrol','✅ Geçen'],['sr1Gelen','Sarım1','📥 Gelen'],['sr1Gecen','Sarım1','✅ Geçen'],['sr2Gelen','Sarım2','📥 Gelen'],['sr2Gecen','Sarım2','✅ Geçen']].forEach(([c,st,yon])=>uretimLogRows(kkp.ad,c).forEach(r=>{if(!r.ts)return;const d=new Date(r.ts),h=d.getHours();
+            out.push(lbTvCard(r.parti,{kg:r.kg,firma:r.line1,siparis:r.siparis,extra:{_aSt:st,_aYon:yon,_aSaat:hh(h)+':00–'+hh((h+1)%24)+':00',_aSaatI:(h-8+24)%24,_aTs:r.ts,_aHm:(r.est?'~':'')+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}}))}));return out}
     if(K==='kkp'){if(!KKHIZ)return[];return kkpRows().map(r=>Object.assign({},r.x.k,{_pGun:r.gun+'. gün • '+r.tarih,_pGunI:r.gun,_pSira:r.sira,_pSure:r.x.h,_pHiz:r.x.sp.v}))}
     if(K==='kay')return srFiltered(srRows()).map(r=>lbTvCard(r.parti,{kg:r.kilo,firma:r.firma,extra:{_kKat:r.durum||'',_kNot:r.not||'',_kAt:r.added_at||'',_kSon:r.asama||''}}));
     if(K==='p'){const stats=liveProdStats(),out=[];SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{};Object.keys(o).forEach(pn=>{const e=o[pn];
@@ -8407,7 +8511,7 @@ function lbRender(){
             +(hA.length||hP.length?'<b class="a">'+hA.length+'<span class="lb-hm"> geldi</span><span class="lb-ph">↓</span></b><span class="lb-hm"> ·</span> <b class="p">'+hP.length+'<span class="lb-hm"> geçti</span><span class="lb-ph">↑</span></b>':'<span class="lb-hm">hareket </span>yok')+'</button>'
             // kayıt güncel değilken de yeri belli olsun (sessizce kaybolmasın)
             :'<button type="button" class="lb-hour none" onclick="showToast(&quot;Son 1 saatin hareketi sunucudaki üretim kaydından gelir; kayıt 45 dakikadan eski olduğu için gösterilemiyor&quot;,&quot;warning&quot;)" title="Sunucudaki üretim kaydı 45 dakikadan eski; saatler güvenilir olmadığı için sayı gösterilmiyor"><span class="lb-hm">son </span>1 sa: kayıt <span class="lb-hm">güncel değil</span><span class="lb-ph">eski</span></button>';
-        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck+(R.key==='kk'?'<button type="button" class="lb-hour lb-kkp" onclick="event.stopPropagation();kkpOpen()" title="KK çalışma programı: kumaşın geçmiş KK hızına göre önceliklendirilmiş günlük sıra (simülasyon)">🧮 <span class="lb-hm">program</span></button>':'')):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
+        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming)):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck+'<button type="button" class="lb-hour lb-kkp" onclick="event.stopPropagation();kkpOpen(&quot;'+(R.key==='kk'?'kk':R.key)+'&quot;)" title="'+esc(R.name)+' çalışma programı (simülasyon) ve saatlik akış">🧮 <span class="lb-hm">program</span></button><button type="button" class="lb-hour" onclick="event.stopPropagation();kkpOpen(&quot;akis&quot;)" title="Bugün saat saat gelen ve geçen partiler (grafik ve liste)">⏱ <span class="lb-hm">saatlik</span></button>'):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
     });
     g+='</div>';
     }

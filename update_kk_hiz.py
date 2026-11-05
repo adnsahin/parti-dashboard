@@ -55,6 +55,8 @@ def main():
     iK = idx(low, lambda h: h == "kilo")
     iN = idx(low, lambda h: h == "net metre")
     iU = idx(low, lambda h: h.startswith("kaydeden"))
+    iG = idx(low, lambda h: h.startswith("parti grup ad"))
+    grp = defaultdict(lambda: [0, 0])   # ham -> [doseme grubu parti, toplam parti]
     tops = defaultdict(list)
     info = {}
     for r in rows:
@@ -63,6 +65,11 @@ def main():
         if not t or not p:
             continue
         tops[p].append((t, num(r[iK]), num(r[iN]), clean(r[iM]), clean(r[iU])))
+        if p not in info:
+            g_ = grp[tr_upper(clean(r[iH]))]
+            g_[1] += 1
+            if "DÖŞEME" in tr_upper(clean(r[iG])) or "DOSEME" in tr_upper(clean(r[iG])):
+                g_[0] += 1
         info[p] = (clean(r[iH]), clean(r[iHT]))
     # bir top payi: butun kisi-ici kisa araliklarin ortancasi (partide tek top giren kisi icin)
     allg = []
@@ -100,7 +107,7 @@ def main():
         d = (tl[0][0] - timedelta(hours=8)).date().isoformat()
         day_act[d] += act / 60
         ham, tip = info[p]
-        raw.append({"ham": tr_upper(ham), "kod": ham_kod(ham), "tip": tr_upper(tip), "kg": kg, "act": act, "n": len(tl), "t": tl[-1][0]})
+        raw.append({"ham": tr_upper(ham), "kod": ham_kod(ham), "tip": tr_upper(tip), "kg": kg, "act": act, "n": len(tl), "t": tl[-1][0], "d": d})
     # sabit parti payi: aktif dk = a + b * kg (asiri buyuk partiler disarida)
     fit = [x for x in raw if x["kg"] < 2000]
     mx = sum(x["kg"] for x in fit) / len(fit)
@@ -123,13 +130,61 @@ def main():
 
     days = sorted(day_act)
     tmax = max(x["t"] for x in parts)
+    H, K = agg("ham"), agg("kod")
+    allv = median(x["kgph"] for x in parts)
+
+    # --- iyilesme gostergeleri icin gunluk seriler (kisi bilgisi yok) ---
+    # hiz endeksi: o gun islenen partilerin kumas normuna gore beklenen aktif suresi / gercek aktif suresi (100 = norm)
+    def exp_min(x):
+        a_, b_ = H.get(x["ham"]), K.get(x["kod"])
+        v = a_[1] if a_ and a_[0] >= 3 else b_[1] if b_ and b_[0] >= 3 else allv
+        return setup + x["kg"] / v * 60
+    ds = defaultdict(lambda: [0.0, 0.0, 0.0, 0])
+    for x in parts:
+        r_ = ds[x["d"]]
+        r_[0] += x["kg"]
+        r_[1] += x["act"] / 60
+        r_[2] += exp_min(x) / 60
+        r_[3] += 1
+    # bosluk: kisi-gun bazinda ilk-son kayit araligi icinde 20 dk'dan uzun bosluklarin payi
+    pd_ = defaultdict(list)
+    for tl in tops.values():
+        for x in tl:
+            pd_[(x[4], (x[0] - timedelta(hours=8)).date().isoformat())].append(x[0])
+    dg = defaultdict(lambda: [0.0, 0.0, 0])
+    for (u, d), ts in pd_.items():
+        if not u or len(ts) < 5:
+            continue
+        ts.sort()
+        gaps = [(ts[i + 1] - ts[i]).total_seconds() / 60 for i in range(len(ts) - 1)]
+        span = (ts[-1] - ts[0]).total_seconds() / 60 + one
+        dg[d][0] += span / 60
+        dg[d][1] += sum(g for g in gaps if g > GAP_MAX) / 60
+        dg[d][2] += 1
+    # en cok calisilan kumaslarin haftalik hizi (ortanca kg/sa)
+    wk = lambda d: (datetime.strptime(d, "%Y-%m-%d") - timedelta(days=datetime.strptime(d, "%Y-%m-%d").weekday())).date().isoformat()
+    topk = [k for k, v in sorted(H.items(), key=lambda kv: -kv[1][0])[:15] if v[0] >= 8]
+    hw = {}
+    for k in topk:
+        g = defaultdict(list)
+        for x in parts:
+            if x["ham"] == k:
+                g[wk(x["d"])].append(x["kgph"])
+        hw[k] = {w: [len(v), round(median(v), 1)] for w, v in sorted(g.items())}
     res = {
         "v": 1, "generatedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "to": tmax.strftime("%Y-%m-%dT%H:%M"),
         "gapMax": GAP_MAX, "n": len(parts), "setup": round(setup, 1), "oneTop": round(one, 1),
         "all": [len(parts), round(median(x["kgph"] for x in parts), 1), round(median(x["kg"] for x in parts)), round(median(x["act"] for x in parts), 1)],
         # gunluk KK aktif is saati (kisi toplami), makine sayisi, gece (00-08) top sayisi (>= 10: 24 saat calisilmis gun)
         "days": {d: [round(day_act[d], 1), len(day_mach.get(d, ())), day_night.get(d, 0)] for d in days},
-        "ham": agg("ham"), "kod": agg("kod"), "tip": agg("tip"),
+        "ham": H, "kod": K, "tip": agg("tip"),
+        # gun: [kg, aktif saat, kumas normuna gore beklenen aktif saat, parti]
+        "ds": {d: [round(v[0]), round(v[1], 2), round(v[2], 2), v[3]] for d, v in sorted(ds.items())},
+        # gun: [kisilerin ilk-son kayit araligi toplami (saat), 20 dk'dan uzun bosluk toplami (saat), kisi sayisi]
+        "dg": {d: [round(v[0], 2), round(v[1], 2), v[2]] for d, v in sorted(dg.items())},
+        "hw": hw,
+        # doseme makinelerinde islenen kumaslar (partilerinin cogu "Doseme" parti grubunda)
+        "dos": sorted(k for k, v in grp.items() if k and v[1] and v[0] / v[1] >= 0.5),
     }
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:

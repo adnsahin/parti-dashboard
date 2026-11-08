@@ -5481,6 +5481,21 @@ const KKP_STR_L={hiz:'⚡ En çok kg',kisa:'⏱ En çok parti',denge:'⚖️ Den
 const KKP_HG=['⚡ Çok hızlı (≥ 800 kg/sa)','🟢 Hızlı (500–800)','🟡 Orta (300–500)','🔴 Yavaş (< 300 kg/sa)'];
 function kkpHg(v){return v>=800?0:v>=500?1:v>=300?2:3}
 function kkpFh(h){return h<1?Math.round(h*60)+' dk':(Math.round(h*10)/10).toLocaleString('tr-TR')+' sa'}
+// Sarım hızı (data/sarim_hiz.json, update_sarim_hiz.py — zaman / urt222 raporundaki SARIM kayıtlarından)
+let SRHIZ=null,SRHIZ_AT=0,SRHIZ_TRY=0;
+function srHizLoad(cb){
+    if(SRHIZ&&Date.now()-SRHIZ_AT<600000||!SRHIZ&&Date.now()-SRHIZ_TRY<60000){cb&&cb();return}SRHIZ_TRY=Date.now();
+    const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/sarim_hiz.json'+ts,{cache:'no-store'});
+    (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/sarim_hiz.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel)).then(r=>r&&r.ok?r.json():null)
+        .then(j=>{if(j&&j.ham){SRHIZ=j;SRHIZ_AT=Date.now()}cb&&cb()}).catch(()=>cb&&cb());
+}
+function srSpeed(k){
+    const D=SRHIZ,ham=kkpU(k.ham_adi),kod=(ham.match(/^[A-Z0-9]+/)||[''])[0],cl=v=>Math.min(6000,Math.max(60,v));
+    const a=D.ham[ham];if(a&&a[0]>=3)return{v:cl(a[1]),src:'Sarım • kumaş',n:a[0]};
+    const b=kod.length>=3&&D.kod[kod];if(b&&b[0]>=3)return{v:cl(b[1]),src:'Sarım • kumaş kodu '+kod,n:b[0]};
+    if(a)return{v:cl((a[1]*a[0]+D.all[1]*3)/(a[0]+3)),src:'Sarım • kumaş (az örnek)',n:a[0]};
+    return{v:D.all[1],src:'Sarım • genel ortalama',n:0};
+}
 function kkHizLoad(cb){
     if(KKHIZ&&Date.now()-KKHIZ_AT<600000){cb&&cb();return}
     const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/kk_hiz.json'+ts,{cache:'no-store'});
@@ -8251,7 +8266,7 @@ function lbCellModel(d){
     // başlık: ad (ya da "RAM'dan") + adet ya da toplam kg; kg görünümünde gruplar ve partiler kg'a göre sıralı
     const cellNames=new Set([...m.keys()].map(x=>String(x).split('\u0001')[0]));
     const groups=[...m.entries()].map(([gid,list])=>{const name=String(gid).split('\u0001')[0];
-        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):lbSubTitle(name,cellNames,d),t=title+' '+lab;
+        const kg=list.reduce((s,x)=>s+num(x.k.kilo),0),mw=wg?Math.max(0,...list.map(x=>lbWaitH(x.k)||0)):0,lab=(d.groupBy?list.length+' p • '+lbShortKg(kg)+' kg':kgv?list.length+' p • '+lbShortKg(kg)+' kg':String(list.length))+(wg?' • en uzun '+lbWaitShort(mw):''),title=from?(name==='?'?'Bilinmiyor':trAblative(name)):lbSubTitle(name,cellNames,d),t=title+' '+lab;
         if(d.tv);else if(wg)list=list.slice().sort((a,b)=>(lbWaitH(b.k)||0)-(lbWaitH(a.k)||0));else if(kgv)list=list.slice().sort((a,b)=>num(b.k.kilo)-num(a.k.kilo));
         return{name,title,lab,kg,mw,list,nm:head?lbMw(t):0,nl:t.length};
     });
@@ -9856,56 +9871,119 @@ function paLkHtml(M){
 //    Her kayıt kendinden önceki "eşik" kadar süreyi dolu sayar (o partinin işlendiği süre); iki kayıt arası eşikten uzunsa aradaki fazlası boşluktur.
 //    Doluluk mesai penceresinde (08:00–24:00; bugün şu ana kadar) hesaplanır; gece kayıtları çubukta görünür ama orana katılmaz.
 let paWkDay='',paWkGap=+mapLoadPref('paWkGap9',v=>['20','30','45','60','90'].includes(v),'45');
-function paWkSet(k,v){if(k==='day')paWkDay=v||'';else{paWkGap=+v;mapSavePref('paWkGap9',String(v))}paRender()}
+// 📊 Günleri kıyasla: seçilen aşamanın çalışma saati çubuğu, seçilen günler için alt alta (aynı saat ekseninde)
+let paWkCmp=mapLoadPref('paWkCmp9',v=>v==='1'||v==='0','0')==='1',paWkCst=mapLoadPref('paWkCst9',v=>['kk','sr1','sr2','all'].includes(v),'kk'),paWkCd=null;
+try{const v=JSON.parse(localStorage.getItem('paWkCd9')||'null');if(Array.isArray(v))paWkCd=v}catch(e){}
+function paWkCdSave(){try{localStorage.setItem('paWkCd9',JSON.stringify(paWkCd||[]))}catch(e){}}
+function paWkCdList(ds){if(!paWkCd)paWkCd=ds.slice(-7);const L=paWkCd.filter(d=>ds.includes(d)).sort();return L.length?L:ds.slice(-7)}
+function paWkSet(k,v){
+    if(k==='model'){paWkModel=v;mapSavePref('paWkModel9',v)}
+    else if(k==='day'){if(paWkCmp){const ds=paWkDays(),L=paWkCdList(ds),i=L.indexOf(v);if(i>=0)L.splice(i,1);else L.push(v);paWkCd=L.length?L:[v];paWkCdSave()}else paWkDay=v||''}
+    else if(k==='cmp'){paWkCmp=!!+v;mapSavePref('paWkCmp9',paWkCmp?'1':'0')}
+    else if(k==='cst'){paWkCst=v;mapSavePref('paWkCst9',v)}
+    else if(k==='cq'){const ds=paWkDays();if(v==='none')paWkCd=[ds[ds.length-1]];else if(v==='dow'){const w=new Date(paWkD0(ds[ds.length-1])).getDay();paWkCd=ds.filter(d=>new Date(paWkD0(d)).getDay()===w).slice(-8)}else paWkCd=ds.slice(-(+v));paWkCdSave()}
+    else{paWkGap=+v;mapSavePref('paWkGap9',String(v))}
+    paRender()}
 function paWkDays(){const L=URETIM_LOG;return L&&L.days?Object.keys(L.days).sort():[]}
 function paWkSel(ds){return ds.includes(paWkDay)?paWkDay:ds[ds.length-1]}
 function paWkStep(dir){const ds=paWkDays(),i=ds.indexOf(paWkSel(ds))+dir;if(i>=0&&i<ds.length){paWkDay=ds[i];paRender()}}
 function paWkD0(d){const L=URETIM_LOG,sh=L&&L.shiftStartHour!=null?+L.shiftStartHour:LB_WORK_S,m=d.match(/^(\d{4})-(\d\d)-(\d\d)$/);return new Date(+m[1],+m[2]-1,+m[3],sh,0).getTime()}
 function paWkDayL(d){const t=paWkD0(d);return paLkDm(t)+' '+PA_DOW[new Date(t).getDay()]+(d===liveProdLogKey()?' (bugün)':'')}
+// Dolu süre modeli: 'norm' = KK kaydı, partinin kumaş normuna göre gereken süreyi (sabit parti payı + kg ÷ kumaş hızı, urt geçmişi)
+// kayıttan geriye doğru dolu sayar; aynı anda gelen kayıtlar KK_LANES makineye sırayla yerleşir (üst üste binip kaybolmasın).
+// Sarım için kumaş hızı verisi yok: Sarım kayıtları her iki modelde de eşik kadar dolu sayılır. 'esik' = eski model (her kayıt eşik kadar).
+let paWkModel=mapLoadPref('paWkModel9',v=>v==='norm'||v==='esik','norm');const PA_WK_KK_LANES=3;
+let paWkPc=null;
+function paWkCard(pn){const all=getAllCards();if(!paWkPc||paWkPc.n!==all.length){const m=new Map();all.forEach(k=>{const p=String(k.parti).trim();if(!m.has(p))m.set(p,k)});paWkPc={n:all.length,m}}return paWkPc.m.get(String(pn).trim())}
+function paWkNorm(r){
+    // kumaş: güncel parti listesinden, parti listeden çıkmışsa üretim kaydının kendi parti bilgisinden
+    const c=paWkCard(r.pn),li=URETIM_LOG&&URETIM_LOG.partiler&&URETIM_LOG.partiler[r.pn],k=c||(li&&li.kumas?{ham_adi:li.kumas}:null),kk=r.st==='kk',D=kk?KKHIZ:SRHIZ;
+    const sp=k?(kk?kkpSpeed(k):srSpeed(k)):{v:D.all[1],src:(kk?'':'Sarım • ')+'kumaş bilinmiyor → genel ortalama'};
+    return{m:Math.min(360,Math.max(5,(D.setup||0)+r.kg/sp.v*60)),v:sp.v,src:sp.src,ham:k?k.ham_adi:''}}
+function paWkUseNorm(){if(paWkModel!=='norm')return false;if(!SRHIZ)srHizLoad(()=>{if(SRHIZ&&paVisible())paRender()});if(!KKHIZ){kkHizLoad(()=>{if(KKHIZ&&paVisible())paRender()});return false}return true}
+function paWkGapSel(){if(paWkSrNorm())return'';return '<span class="pa-cmp-vs">'+(paWkModel==='norm'?'Sarım eşiği':'Boşluk eşiği')+'</span><select onchange="paWkSet(&quot;gap&quot;,this.value)" aria-label="Boşluk eşiği" title="Her kayıt kendinden önceki bu kadar süreyi dolu sayar">'+[20,30,45,60,90].map(v=>'<option value="'+v+'"'+(v===paWkGap?' selected':'')+'>'+v+' dk</option>').join('')+'</select>'}
+function paWkSrNorm(){return paWkUseNorm()&&!!SRHIZ}
 function paWkCalc(d,st){
-    const H=3600000,G=paWkGap*60000,s0=paWkD0(d),e0=s0+(LB_WORK_E-LB_WORK_S)*H,end=Math.min(e0,Date.now());
+    const H=3600000,G=paWkGap*60000,s0=paWkD0(d),e0=s0+(LB_WORK_E-LB_WORK_S)*H,end=Math.min(e0,Date.now()),useN=paWkUseNorm();
     const one=k=>{const q=((URETIM_LOG.days[d]||{})[k+'Gecen'])||{};return Object.keys(q).map(pn=>({pn,st:k,t:uretimLogParseTs(q[pn].t),kg:num(q[pn].kg),e:!!q[pn].e,a:q[pn].a||''}))};
     const recs=(st==='all'?['kk','sr1','sr2'].map(one).flat():one(st)).filter(r=>r.t>=s0).sort((a,b)=>a.t-b.t);
-    // dolu dilimler: [kayıt − eşik, kayıt] birleşimi
-    const segs=[];recs.forEach(r=>{const a=Math.max(s0,r.t-G),L=segs[segs.length-1];if(L&&a<=L.b){L.b=Math.max(L.b,r.t);L.r.push(r)}else segs.push({a,b:r.t,r:[r]})});
+    // her kaydın dolu aralığı
+    const iv=[];
+    ['kk','sr1','sr2'].forEach(k=>{const R=recs.filter(r=>r.st===k);if(!R.length)return;
+        if(useN&&(k==='kk'||SRHIZ)){const lanes=Array(k==='kk'?PA_WK_KK_LANES:1).fill(Infinity);R.slice().sort((a,b)=>b.t-a.t).forEach(r=>{const n=paWkNorm(r);r.nm=n;let li=0;lanes.forEach((v,i)=>{if(v>lanes[li])li=i});const b=Math.min(r.t,lanes[li]),a=b-n.m*60000;lanes[li]=a;iv.push({a,b,r})})}
+        else R.forEach(r=>iv.push({a:r.t-G,b:r.t,r}))});
+    iv.sort((x,y)=>x.a-y.a);
+    // dolu dilimler: aralıkların birleşimi (mesai başından önceki kısım kırpılır)
+    const segs=[];iv.forEach(o=>{const a=Math.max(s0,o.a),b=Math.max(s0,o.b),L=segs[segs.length-1];if(L&&a<=L.b){L.b=Math.max(L.b,b);L.r.push(o.r)}else segs.push({a,b,r:[o.r]})});
+    segs.forEach(g=>g.r.sort((x,y)=>x.t-y.t));
     const clip=(a,b)=>Math.max(0,Math.min(b,end)-Math.max(a,s0)),busy=segs.reduce((s,x)=>s+clip(x.a,x.b),0),total=Math.max(0,end-s0);
     const gaps=[];let t=s0;segs.forEach(x=>{if(x.a>t&&t<end)gaps.push({a:t,b:Math.min(x.a,end)});t=Math.max(t,x.b)});if(t<end)gaps.push({a:t,b:end,open:end<e0});
     const longest=gaps.reduce((m,g)=>g.b-g.a>m.b-m.a?g:m,{a:0,b:0});
     return{d,st,s0,e0,end,recs,segs,gaps,busy,total,pct:total>0?busy/total:null,longest:longest.b>longest.a?longest:null,kg:recs.reduce((s,r)=>s+r.kg,0),night:recs.filter(r=>r.t>=e0).length};
 }
-function paWkSvg(C){
-    const H=3600000,MN=60000,s0=C[0].s0,e0=C[0].e0,now=Date.now();
-    let t1=e0;C.forEach(c=>c.recs.forEach(r=>{if(r.t>t1)t1=r.t}));t1=Math.min(s0+24*H,s0+Math.ceil((t1-s0)/H)*H);
-    const W=paWide?1160:680,m={l:paWide?92:74,r:10,t:22,b:6},rh=36,Hh=m.t+C.length*rh+m.b,x=t=>m.l+(t-s0)/(t1-s0)*(W-m.l-m.r),f=t=>x(t).toFixed(1);
+function paWkSvg(C,cmp){
+    const H=3600000,MN=60000,s0=C[0].s0,e0=C[0].e0,now=Date.now(),off=c=>cmp?c.s0-s0:0;
+    let t1=e0;C.forEach(c=>c.recs.forEach(r=>{if(r.t-off(c)>t1)t1=r.t-off(c)}));t1=Math.min(s0+24*H,s0+Math.ceil((t1-s0)/H)*H);
+    const W=paWide?1160:680,m={l:paWide?92:74,r:10,t:22,b:6},rh=36,Hh=m.t+C.length*rh+m.b,x0_=t=>m.l+(t-s0)/(t1-s0)*(W-m.l-m.r);
+    let x=x0_,f=t=>x(t).toFixed(1);
     let s='<defs><pattern id="paWkHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#47437a" stroke-width="2"/></pattern></defs>';
     // mesai dışı (24:00 sonrası) ve henüz gelmemiş saatler taralı
     if(t1>e0)s+='<rect data-t="'+paTip('Mesai dışı',[{l:paLkHm(e0)+'–'+paLkHm(t1),v:'gece kaydı; doluluğa katılmaz'}])+'" x="'+f(e0)+'" y="'+m.t+'" width="'+(x(t1)-x(e0)).toFixed(1)+'" height="'+(Hh-m.t-m.b)+'" fill="url(#paWkHatch)" opacity=".5"/>';
-    if(now<e0&&now>s0)s+='<rect x="'+f(now)+'" y="'+m.t+'" width="'+(x(Math.min(t1,e0))-x(now)).toFixed(1)+'" height="'+(Hh-m.t-m.b)+'" fill="url(#paWkHatch)" opacity=".35"/>';
+    if(!cmp&&now<e0&&now>s0)s+='<rect x="'+f(now)+'" y="'+m.t+'" width="'+(x(Math.min(t1,e0))-x(now)).toFixed(1)+'" height="'+(Hh-m.t-m.b)+'" fill="url(#paWkHatch)" opacity=".35"/>';
     for(let t=s0,k=0;t<=t1;t+=H,k++){
         const h=new Date(t).getHours(),major=k%4===0,xx=f(t);
         s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+(m.t-4)+'" y2="'+(Hh-m.b)+'" stroke="'+(major?PA_C.axis:PA_C.grid)+'" stroke-width="'+(major?1.5:1)+'"/>';
         if(major||k%(W<900?2:1)===0)s+=paTxt(x(t),m.t-9,String(h).padStart(2,'0')+(major?':00':''),{a:'middle',f:major?PA_C.ink2:PA_C.mute,w:major?700:400});
     }
     C.forEach((c,i)=>{
-        const y=m.t+i*rh,mid=y+rh/2,S=c.st==='all'?PA_WK_ALL:PA_LK_ST[c.st],y0=y+6,hh=rh-12;
-        if(c.st==='all')s+='<line x1="0" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="'+PA_C.axis+'" stroke-width="1.5"/>';
-        s+=paTxt(4,mid-1,S.s,{f:PA_C.ink,w:800,s:12.5})+paTxt(4,mid+12,c.pct==null?'-':'%'+Math.round(c.pct*100)+' dolu',{f:S.c,w:700,s:10.5});
+        const y=m.t+i*rh,mid=y+rh/2,S=c.st==='all'?PA_WK_ALL:PA_LK_ST[c.st],y0=y+6,hh=rh-12,o=off(c);x=t=>x0_(t-o);f=t=>x(t).toFixed(1);
+        if(cmp){if(i)s+='<line x1="0" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="'+PA_C.grid+'" stroke-width="1"/>';if(now<c.e0&&now>c.s0)s+='<rect x="'+f(now)+'" y="'+y+'" width="'+(x(c.e0)-x(now)).toFixed(1)+'" height="'+rh+'" fill="url(#paWkHatch)" opacity=".35"/>'}
+        else if(c.st==='all')s+='<line x1="0" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="'+PA_C.axis+'" stroke-width="1.5"/>';
+        const dt=new Date(c.s0);s+=paTxt(4,mid-1,cmp?paLkDm(c.s0)+' '+PA_DOW[dt.getDay()]:S.s,{f:c.d===liveProdLogKey()&&cmp?'#FFD54F':PA_C.ink,w:800,s:12.5})+paTxt(4,mid+12,c.pct==null?'-':'%'+Math.round(c.pct*100)+' dolu',{f:S.c,w:700,s:10.5});
         c.gaps.forEach(g=>{const w=x(g.b)-x(g.a);if(w<.5)return;
             s+='<rect data-t="'+paTip(S.l+' • boşluk',[{l:paLkHm(g.a)+'–'+paLkHm(g.b),v:paLkMin((g.b-g.a)/MN)+(g.open?' (şu ana kadar)':'')}])+'" x="'+f(g.a)+'" y="'+(mid-3)+'" width="'+w.toFixed(1)+'" height="6" rx="3" fill="'+PA_LK_T.idle.c+'" fill-opacity=".85"/>'});
         c.segs.forEach(g=>{const x0=x(g.a),x1=Math.max(x0+3,x(g.b)),kg=g.r.reduce((a,r)=>a+r.kg,0);
             s+='<rect data-t="'+paTip(S.l+' • dolu',[{l:paLkHm(g.a)+'–'+paLkHm(g.b),v:paLkMin((g.b-g.a)/MN)},{l:'Kayıt',v:g.r.length+' parti • '+paNum0(kg)+' kg'}])+'" x="'+x0.toFixed(1)+'" y="'+y0+'" width="'+(x1-x0).toFixed(1)+'" height="'+hh+'" rx="3" fill="'+S.c+'" fill-opacity=".75"/>'});
         c.recs.forEach(r=>{const xx=f(r.t);
-            s+='<line data-t="'+paTip(PA_LK_ST[r.st].l+' • '+(r.e?'~':'')+paLkHm(r.t),[{l:'Parti',v:paLkPn(r.pn)},{l:'Kg',v:paNum0(r.kg)},{l:'Sonraki aşama',v:r.a||'-'}].concat(r.e?[{l:'Saat',v:'tahmini (veri güncellemesinden)'}]:[]))+'" x1="'+xx+'" x2="'+xx+'" y1="'+(y0-2)+'" y2="'+(y0+hh+2)+'" stroke="'+(c.st==='all'?PA_LK_ST[r.st].c:'#ffffff')+'" stroke-width="2.2"'+(r.e?' stroke-dasharray="3 2" opacity=".7"':'')+'/>'});
+            s+='<line data-t="'+paTip(PA_LK_ST[r.st].l+' • '+(r.e?'~':'')+paLkHm(r.t),[{l:'Parti',v:paLkPn(r.pn)},{l:'Kg',v:paNum0(r.kg)},{l:'Sonraki aşama',v:r.a||'-'}].concat(r.nm?[{l:'Norm süre',v:paLkMin(r.nm.m)+' ('+Math.round(r.nm.v)+' kg/sa • '+r.nm.src+')'}]:[]).concat(r.e?[{l:'Saat',v:'tahmini (veri güncellemesinden)'}]:[]))+'" x1="'+xx+'" x2="'+xx+'" y1="'+(y0-2)+'" y2="'+(y0+hh+2)+'" stroke="'+(c.st==='all'?PA_LK_ST[r.st].c:'#ffffff')+'" stroke-width="2.2"'+(r.e?' stroke-dasharray="3 2" opacity=".7"':'')+'/>'});
     });
-    if(now>s0&&now<t1){const xx=f(now);s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+(m.t-4)+'" y2="'+(Hh-m.b)+'" stroke="#FFD54F" stroke-width="1.5"/>'+paTxt(x(now)+3,Hh-m.b-2,'şimdi',{f:'#FFD54F',w:700,s:10})}
+    x=x0_;f=t=>x(t).toFixed(1);
+    if(!cmp&&now>s0&&now<t1){const xx=f(now);s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+(m.t-4)+'" y2="'+(Hh-m.b)+'" stroke="#FFD54F" stroke-width="1.5"/>'+paTxt(x(now)+3,Hh-m.b-2,'şimdi',{f:'#FFD54F',w:700,s:10})}
     return '<div class="pa-lk-gw"><svg class="pa-svg pa-lk-g" viewBox="0 0 '+W+' '+Hh+'" style="min-width:'+(paWide?0:W)+'px" role="img" aria-label="Çalışma saati çubuğu">'+s+'</svg></div>';
+}
+function paWkModelNote(){
+    return paWkUseNorm()?'<b>KK</b>: her kayıt, o partinin <b>kumaş normuna</b> göre gereken süreyi (sabit parti payı '+(Math.round((KKHIZ.setup||0)*10)/10).toLocaleString('tr-TR')+' dk + kg ÷ kumaşın ortanca KK hızı; urt geçmişi) kayıttan geriye doğru dolu sayar. Aynı anda gelen kayıtlar '+PA_WK_KK_LANES+' KK makinesine sırayla yerleştirilir. Kumaşı bilinmeyen partide genel ortalama hız ('+Math.round(KKHIZ.all[1])+' kg/sa) kullanılır. '+(SRHIZ?'<b>Sarım</b>: her kayıt, kumaşın Sarım hızına göre (zaman raporundaki Sarım kayıtları, '+esc(SRHIZ.from.slice(8,10)+'.'+SRHIZ.from.slice(5,7))+'–'+esc(SRHIZ.to.slice(8,10)+'.'+SRHIZ.to.slice(5,7))+', '+SRHIZ.all[0]+' parti; genel '+Math.round(SRHIZ.all[1])+' kg/sa) gereken süreyi dolu sayar; en az 5 dk. Sarım1 ve Sarım2 aynı hızları kullanır (Sarım2 kaydı az), her biri tek makine.':'<b>Sarım</b>: Sarım hız verisi (data/sarim_hiz.json) yok; her kayıt <b>'+paWkGap+' dk</b> dolu sayılır.')+' Dolu aralıkların dışında kalan süre <b>boşluk</b>tur.'
+        :'Her kayıt kendinden önceki <b>'+paWkGap+' dk</b>\'yı dolu sayar; iki kayıt arası bundan uzunsa fazlası <b>boşluk</b>tur.';
+}
+function paWkCmpHtml(M,ds){
+    const L=paWkCdList(ds),st=paWkCst,S=st==='all'?PA_WK_ALL:PA_LK_ST[st],C=L.map(d=>paWkCalc(d,st)),MN=60000,today=liveProdLogKey();
+    const sel=new Set(L),stB=['kk','sr1','sr2','all'].map(k=>{const X=k==='all'?PA_WK_ALL:PA_LK_ST[k];return '<button type="button" class="'+(k===st?'on':'')+'" onclick="paWkSet(&quot;cst&quot;,&quot;'+k+'&quot;)">'+X.s+'</button>'}).join('');
+    let h='<div class="pa-cmpbar"><span class="pa-cmp-vs">Aşama</span><span class="pa-seg">'+stB+'</span>'
+        +'<span class="pa-cmp-vs">Dolu süre</span><select onchange="paWkSet(&quot;model&quot;,this.value)" aria-label="Dolu süre modeli" title="KK kaydı için dolu sayılan süre"><option value="norm"'+(paWkModel==='norm'?' selected':'')+'>Kumaş normu</option><option value="esik"'+(paWkModel==='esik'?' selected':'')+'>Sabit eşik</option></select>'+paWkGapSel()+'</div>'
+        +'<div class="pa-cmpbar"><span class="pa-cmp-vs">Günler</span><span class="pa-seg">'+[['7','Son 7'],['14','Son 14'],['dow','Aynı gün (haftalık)'],['none','Temizle']].map(([v,l])=>'<button type="button" onclick="paWkSet(&quot;cq&quot;,&quot;'+v+'&quot;)">'+l+'</button>').join('')+'</span><span class="pa-na">'+L.length+' gün seçili • günlere tıklayarak ekleyin / çıkarın</span></div>'
+        +'<div class="pa-wk-days">'+ds.map(d=>{const t=paWkD0(d);return '<button type="button" class="'+(sel.has(d)?'on':'')+(d===today?' td':'')+'" onclick="paWkSet(&quot;day&quot;,&quot;'+d+'&quot;)" title="'+esc(paWkDayL(d))+'">'+paLkDm(t)+'<small>'+PA_DOW[new Date(t).getDay()]+'</small></button>'}).join('')+'</div>';
+    const lg=(c,l,cls)=>'<span><i class="'+(cls||'')+'" style="background:'+c+'"></i>'+l+'</span>';
+    h+='<div class="pa-leg">'+lg(S.c,S.l+' dolu')+lg(PA_LK_T.idle.c,'Boşluk','ln')+lg('#ffffff','Kayıt (kesik: saati tahmini)','tk')+'<span>her satır bir gün • hepsi kendi gününün 08:00\'inden başlar • sarı tarih bugün</span></div>'+paWkSvg(C,true);
+    const done=C.filter(c=>c.d!==today&&c.pct>0),noRec=C.filter(c=>c.d!==today&&!(c.pct>0)).length,avg=f=>done.length?done.reduce((a,c)=>a+f(c),0)/done.length:null,ap=avg(c=>c.pct),ak=avg(c=>c.kg),ar=avg(c=>c.recs.length),ab=avg(c=>c.busy/MN),al=avg(c=>c.longest?(c.longest.b-c.longest.a)/MN:0);
+    const best=done.length?done.reduce((a,c)=>c.pct>a.pct?c:a):null,worst=done.length?done.reduce((a,c)=>c.pct<a.pct?c:a):null;
+    const dv=(v,a,good)=>{if(v==null||a==null||!a)return'';const p=(v-a)/Math.abs(a)*100;if(Math.abs(p)<5)return' <span class="pa-na">≈</span>';return' <small style="color:'+((p>0)===(good>0)?'#5ecf8a':'#ff8a80')+'">'+(p>0?'▲':'▼')+Math.abs(Math.round(p))+'%</small>'};
+    h+='<div class="pa-tw"><table class="pa-tbl"><thead><tr><th>Gün</th><th>Kayıt</th><th>Kg</th><th>İlk – son kayıt</th><th>Dolu</th><th>Boş</th><th>Doluluk</th><th>En uzun boşluk</th></tr></thead><tbody>'
+        +C.map(c=>{const lg_=c.longest?(c.longest.b-c.longest.a)/MN:0;return '<tr'+(c===best?' class="pa-wk-best"':c===worst&&done.length>1?' class="pa-wk-worst"':'')+'><td><b>'+esc(paWkDayL(c.d))+'</b>'+(c===best?' 🏆':'')+'</td><td>'+c.recs.length+(c.night?' <span class="pa-na">(gece '+c.night+')</span>':'')+dv(c.recs.length,ar,1)+'</td><td>'+paNum0(c.kg)+dv(c.kg,ak,1)+'</td><td>'+(c.recs.length?paLkHm(c.recs[0].t)+' – '+paLkHm(c.recs[c.recs.length-1].t):'-')+'</td>'
+            +'<td>'+paLkMin(c.busy/MN)+'</td><td>'+paLkMin((c.total-c.busy)/MN)+'</td><td><b>'+(c.pct==null?'-':'%'+Math.round(c.pct*100))+'</b>'+(c.pct!=null?dv(c.pct,ap,1):'')+'</td><td>'+(c.longest?paLkHm(c.longest.a)+'–'+paLkHm(c.longest.b)+' <b>'+paLkMin(lg_)+'</b>'+dv(lg_,al,-1):'-')+'</td></tr>'}).join('')
+        +(done.length>1?'<tr class="pa-wk-all"><td><b>Ortalama</b> <span class="pa-na">('+done.length+' gün'+(L.includes(today)?', bugün hariç':'')+(noRec?', kayıtsız '+noRec+' gün hariç':'')+')</span></td><td>'+Math.round(ar)+'</td><td>'+paNum0(ak)+'</td><td></td><td>'+paLkMin(ab)+'</td><td></td><td><b>%'+Math.round(ap*100)+'</b></td><td>'+paLkMin(al)+'</td></tr>':'')
+        +'</tbody></table></div>';
+    if(done.length>1)h+='<div class="pa-note"><b>'+S.l+':</b> seçili '+done.length+' günde doluluk ortalama <b>%'+Math.round(ap*100)+'</b>; en iyi <b>'+esc(paWkDayL(best.d))+'</b> (%'+Math.round(best.pct*100)+'), en düşük <b>'+esc(paWkDayL(worst.d))+'</b> (%'+Math.round(worst.pct*100)+'). Oklar her günü ortalamayla kıyaslar (±%5 içi ≈). Çubuklarda aynı saatlerde tekrar eden turuncu boşluklar düzenli bir duruşa (mola, iş bekleme, vardiya değişimi) işaret eder.</div>';
+    h+='<div class="pa-note"><b>Dolu süre:</b> '+paWkModelNote()+'</div>';
+    return h;
 }
 function paWkHtml(M){
     const ds=paWkDays();if(!ds.length)return '<div class="pa-note">Üretim kaydı yok.</div>';
     const day=paWkSel(ds),di=ds.indexOf(day),C=['kk','sr1','sr2','all'].map(st=>paWkCalc(day,st)),MN=60000;
-    let h='<div class="pa-cmpbar"><button type="button" class="pa-stp" onclick="paWkStep(-1)"'+(di<=0?' disabled':'')+' title="Önceki gün">◀</button><select onchange="paWkSet(&quot;day&quot;,this.value)" aria-label="Gün">'
+    const tg='<span class="pa-seg pa-wk-mode"><button type="button" class="'+(paWkCmp?'':'on')+'" onclick="paWkSet(&quot;cmp&quot;,0)">Tek gün</button><button type="button" class="'+(paWkCmp?'on':'')+'" onclick="paWkSet(&quot;cmp&quot;,1)">📊 Günleri kıyasla</button></span>';
+    if(paWkCmp)return tg+paWkCmpHtml(M,ds);
+    let h=tg+'<div class="pa-cmpbar"><button type="button" class="pa-stp" onclick="paWkStep(-1)"'+(di<=0?' disabled':'')+' title="Önceki gün">◀</button><select onchange="paWkSet(&quot;day&quot;,this.value)" aria-label="Gün">'
         +ds.map(d=>'<option value="'+d+'"'+(d===day?' selected':'')+'>'+esc(paWkDayL(d))+'</option>').join('')+'</select><button type="button" class="pa-stp" onclick="paWkStep(1)"'+(di>=ds.length-1?' disabled':'')+' title="Sonraki gün">▶</button>'
-        +'<span class="pa-cmp-vs">Boşluk eşiği</span><select onchange="paWkSet(&quot;gap&quot;,this.value)" aria-label="Boşluk eşiği" title="İki kayıt arası bu süreden uzunsa fazlası boşluk sayılır">'+[20,30,45,60,90].map(v=>'<option value="'+v+'"'+(v===paWkGap?' selected':'')+'>'+v+' dk</option>').join('')+'</select></div>';
+        +'<span class="pa-cmp-vs">Dolu süre</span><select onchange="paWkSet(&quot;model&quot;,this.value)" aria-label="Dolu süre modeli" title="KK kaydı için dolu sayılan süre"><option value="norm"'+(paWkModel==='norm'?' selected':'')+'>Kumaş normu</option><option value="esik"'+(paWkModel==='esik'?' selected':'')+'>Sabit eşik</option></select>'+paWkGapSel()+'</div>';
     const lg=(c,l,cls)=>'<span><i class="'+(cls||'')+'" style="background:'+c+'"></i>'+l+'</span>';
     h+='<div class="pa-leg">'+lg(PA_LK_ST.kk.c,'KK dolu')+lg(PA_LK_ST.sr1.c,'Sarım1 dolu')+lg(PA_LK_ST.sr2.c,'Sarım2 dolu')+lg(PA_WK_ALL.c,'Hepsi: herhangi biri dolu')+lg(PA_LK_T.idle.c,'Boşluk','ln')+lg('#ffffff','Kayıt (kesik: saati tahmini)','tk')+'</div>'+paWkSvg(C);
     h+='<div class="pa-tw"><table class="pa-tbl"><thead><tr><th>Aşama</th><th>Kayıt</th><th>Kg</th><th>İlk – son kayıt</th><th>Dolu</th><th>Boş</th><th>Doluluk</th><th>En uzun boşluk</th></tr></thead><tbody>'
@@ -9917,13 +9995,13 @@ function paWkHtml(M){
     if(keys.length){
         const col=p=>p==null?PA_C.zero:PA_SEQ[Math.min(PA_SEQ.length-1,Math.round(p*(PA_SEQ.length-1)))],ink=p=>p!=null&&p>.62?'#0d0b24':'#fff';
         const avg=j=>{const v=G.filter((_,i)=>keys[i]!==liveProdLogKey()).map(r=>r[j].pct).filter(p=>p!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
-        h+='<div class="pa-sub">Gün gün doluluk <small>mesai 08:00–24:00 • hücreye tıklayınca o gün yukarıda açılır • ortalamaya bugün katılmaz</small></div><div class="pa-tw"><table class="pa-tbl pa-wk-grid"><thead><tr><th>Aşama</th>'
+        h+='<div class="pa-sub">Gün gün doluluk <small>mesai 08:00–24:00 • hücreye tıklayınca o gün yukarıda açılır • ortalamaya bugün katılmaz • 📊 Günleri kıyasla ile seçtiğiniz günleri alt alta görün</small></div><div class="pa-tw"><table class="pa-tbl pa-wk-grid"><thead><tr><th>Aşama</th>'
             +keys.map(d=>'<th'+(d===day?' class="on"':'')+'>'+esc(paLkDm(paWkD0(d)))+'</th>').join('')+'<th>Ort.</th></tr></thead><tbody>'
             +['kk','sr1','sr2','all'].map((st,j)=>{const S=st==='all'?PA_WK_ALL:PA_LK_ST[st];return '<tr'+(st==='all'?' class="pa-wk-all"':'')+'><td><b style="color:'+S.c+'">'+S.s+'</b></td>'+G.map((r,i)=>{const p=r[j].pct;
                 return '<td class="c'+(keys[i]===day?' on':'')+'" style="background:'+col(p)+';color:'+ink(p)+'" onclick="paWkSet(&quot;day&quot;,&quot;'+keys[i]+'&quot;)" title="'+esc(paWkDayL(keys[i])+' • '+S.l+': '+(p==null?'-':'%'+Math.round(p*100)+' dolu, '+r[j].recs.length+' kayıt'))+'">'+(p==null?'-':Math.round(p*100))+'</td>'}).join('')
                 +'<td><b>'+(avg(j)==null?'-':'%'+Math.round(avg(j)*100))+'</b></td></tr>'}).join('')+'</tbody></table></div>';
     }
-    h+='<div class="pa-note"><b>Nasıl hesaplanıyor:</b> kaynak üretim kaydındaki geçiş (kayıt giriş) saatleri. Her kayıt kendinden önceki <b>'+paWkGap+' dk</b>\'yı dolu sayar; iki kayıt arası bundan uzunsa fazlası <b>boşluk</b>tur. Doluluk = dolu süre ÷ mesai süresi (08:00–24:00, bugün şu ana kadar). <b>Hepsi</b> satırı üç aşamadan herhangi birinin dolu olduğu süredir (aynı kişi KK\'dan Sarım\'a geçebildiği için ekibin gerçek doluluğu buna daha yakındır). Gece (24:00 sonrası) kayıtları çubukta taralı alanda görünür, orana katılmaz. Kesik çizgili kayıtların saati veri güncellemesinden tahmin edilmiştir.</div>';
+    h+='<div class="pa-note"><b>Nasıl hesaplanıyor:</b> kaynak üretim kaydındaki geçiş (kayıt giriş) saatleri. '+paWkModelNote()+' Doluluk = dolu süre ÷ mesai süresi (08:00–24:00, bugün şu ana kadar). <b>Hepsi</b> satırı üç aşamadan herhangi birinin dolu olduğu süredir (aynı kişi KK\'dan Sarım\'a geçebildiği için ekibin gerçek doluluğu buna daha yakındır). Gece (24:00 sonrası) kayıtları çubukta taralı alanda görünür, orana katılmaz. Kesik çizgili kayıtların saati veri güncellemesinden tahmin edilmiştir.</div>';
     return h;
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-wk-grid th,.pa-wk-grid td.c{text-align:center;padding:5px 4px;min-width:34px}.pa-wk-grid td.c{cursor:pointer;font-weight:800;border:2px solid transparent}.pa-wk-grid td.c:hover{filter:brightness(1.25)}.pa-wk-grid td.on{border-color:#FFD54F}.pa-wk-grid th.on{color:#FFD54F}.pa-tbl tr.pa-wk-all td{border-top:2px solid #47437a}.pa-heat-tg{margin-left:8px;vertical-align:middle}.pa-heat-tg button{padding:2px 9px;font-size:11.5px}';document.head.appendChild(st)})();
@@ -10005,7 +10083,9 @@ function paTopSet(c){paTopSel=paTopSel===c?'':c;paRender()}
 function paTopStats(rows){
     const n=rows.length,S=k=>rows.reduce((a,r)=>a+r[k],0),act=Math.max(1,S('act')),idle=S('idle'),tkg=S('kkg')+S('skg');
     return{n,wg:rows.reduce((a,r)=>a+(r.wg||0),0)/n,haswg:rows.every(r=>r.wg!=null),srShare:tkg>0?S('skg')/tkg:0,kn:S('kn'),kg:S('kkg')+S('skg'),kkg:S('kkg'),km:S('km'),kgv:(S('kkg')+S('skg'))/n,knv:S('kn')/n,mv:S('km')/n,kpa:S('kkg')/(act/60),tpa:S('kn')/(act/60),
-        idle:100*idle/Math.max(1,idle+act),late:S('f')/n,early:S('l')/n,ne:rows.filter(r=>r.l>(PERSTOP.earlyMin||45)).length,nl:rows.filter(r=>r.f>(PERSTOP.lateMin||30)).length};
+        idle:100*idle/Math.max(1,idle+act),late:S('f')/n,early:S('l')/n,ne:rows.filter(r=>r.l>(PERSTOP.earlyMin||45)).length,nl:rows.filter(r=>r.f>(PERSTOP.lateMin||30)).length,
+        // norm süresi (nm): ürettiği kg'ın kumaş normuna göre olması gereken aktif süresi; ilk–son kayıt arasından farkı "norm dışı süre"
+        hasNm:n>0&&rows.every(r=>r.nm!=null),...(()=>{const sp=rows.reduce((a,r)=>a+Math.max(0,480-r.f-r.l),0),nm=rows.reduce((a,r)=>a+(r.nm||0),0);return{nmSp:sp,nmT:nm,nmPct:sp?nm/sp*100:0,ndv:(sp-nm)/Math.max(1,n),nmv:nm/Math.max(1,n)}})()};
 }
 function paTopHm(min,a){const t=((a*60+min)%1440+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
 function paTopFb(s,T){
@@ -10013,6 +10093,10 @@ function paTopFb(s,T){
     if(s.kpa>=T.kpa*1.1)good.push('Aktif çalıştığı sürede hızı takım ortalamasının üstünde ('+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+').');
     if(s.idle<=T.idle-5)good.push('Kayıt aralarındaki boşluk payı takımdan düşük (%'+r0(s.idle)+', takım %'+r0(T.idle)+').');
     if(Q.ne===0)good.push(rf?'Hiçbir vardiyada ekibin en geç biten kişisinden erken bırakmadı.':'Hiçbir vardiyada erken bırakma görülmedi.');
+    if(s.hasNm&&T.hasNm&&T.nmPct>0){
+        if(s.nmPct>=T.nmPct*1.1)good.push('Ürettiği kg, kumaş normuna göre ilk–son kaydı arasındaki sürenin %'+r0(s.nmPct)+' kadarını dolduruyor (takım %'+r0(T.nmPct)+'); norm dışı süre vardiyada '+r0(s.ndv)+' dk (takım '+r0(T.ndv)+').');
+        else if(s.nmPct<=T.nmPct*0.9)imp.push('Kumaş normuna göre ürettiği iş, ilk–son kaydı arasındaki sürenin %'+r0(s.nmPct)+' kadarı (takım %'+r0(T.nmPct)+'): vardiyada ≈ '+r0(s.ndv)+' dk norm dışı süre (takım '+r0(T.ndv)+')'+(s.idle<=T.idle?'. Kayıt arası boşluğu az olduğu hâlde; top başına süre uzun olabilir.':'.'));
+    }
     if(s.kgv>=T.kgv*1.1)good.push('Vardiya başına üretimi takım ortalamasının üstünde ('+r0(s.kgv)+' kg, takım '+r0(T.kgv)+').');
     if(s.idle>=T.idle+5)imp.push('Kayıt aralarında %'+r0(s.idle)+' boşluk var (takım %'+r0(T.idle)+'); bir kısmı iş yokluğu / mola olabilir.');
     if(s.kpa<=T.kpa*0.9)imp.push('Aktif çalışırken hız '+r0(s.kpa)+' kg/sa, takım '+r0(T.kpa)+': top başına süre / küçük top yapısı gözden geçirilebilir.');
@@ -10034,12 +10118,13 @@ function paTopMeters(s,T){
         {k:'Vardiya kapsamı',sub:paDvMode==='ref'?'ekibin çalışma penceresinin yüzde kaçı (en erken başlayan → en geç biten)':'vardiyanın ilk–son kayıt arası',pts:cov-tcov,v:cov/Math.max(1,tcov),txt:'%'+Math.round(cov),ref:'takım %'+Math.round(tcov)}
     ];
     if(s.haswg&&T.haswg)M.push({k:'İş varken kayıtsız',sub:'ekipte kayıt sürerken kendi boşluğu',v:(T.wg+5)/(s.wg+5),txt:Math.round(s.wg)+' dk/vardiya',ref:'takım '+Math.round(T.wg)});
+    if(s.hasNm&&T.hasNm&&T.nmPct>0)M.push({k:'Norm verimi',sub:'ürettiği kg\'ın kumaş normuna göre süresi ÷ ilk–son kayıt arası',v:s.nmPct/T.nmPct,txt:'%'+Math.round(s.nmPct)+' • '+Math.round(s.ndv)+' dk norm dışı',ref:'takım %'+Math.round(T.nmPct)+' • '+Math.round(T.ndv)+' dk'});
     if(hv)M.forEach((m,i)=>{if(i>0)m.na=true});
     return M;
 }
 function paTopMsg(s,T,M){
     if(s.srShare>=0.4)return 'Ağırlıklı Sarım yaptığı için KK süreklilik / kapsam ölçüleri yanıltıcı olabilir; yalnız üretime bakın.';
-    const hz=M[1].v,sk=M[2].v,kp=M[3].pts,out=[],wk=M[4];
+    const hz=M[1].v,sk=M[2].v,kp=M[3].pts,out=[],wk=M.find(m=>m.k==='İş varken kayıtsız');
     const pos=hz>=1.1?'çalıştığı sürede hızlı':(M[0].v>=1.1?'üretimi yüksek':'');
     if(pos)out.push(pos);
     if(wk&&wk.v<0.8)out.push('ekipte iş sürerken vardiyada ortalama '+Math.round(s.wg)+' dk kayıt yok');
@@ -10067,13 +10152,13 @@ function paTopHtml(M){
     const St={},Me={},PV={},pk=new Date(cut);pk.setDate(pk.getDate()-paRange);const pck=pk.getFullYear()+'-'+String(pk.getMonth()+1).padStart(2,'0')+'-'+String(pk.getDate()).padStart(2,'0'),pby={};
     D.shifts.filter(r=>r.d>=pck&&r.d<ck).forEach(r=>(pby[r.p]=pby[r.p]||[]).push(r));
     codes.forEach(c=>{St[c]=paTopStats(by[c]);St[c].rows=by[c];Me[c]=paTopMeters(St[c],T);if((pby[c]||[]).length>=3){const q=paTopStats(pby[c]);q.rows=pby[c];PV[c]=q}});
-    const raw=(q,i)=>[q.kgv,q.kpa,100-q.idle,paTopCov(q.rows),q.wg][i],dirs=[1,1,1,1,-1];
+    const RW={'Üretim':q=>q.kgv,'Çalışma hızı':q=>q.kpa,'Süreklilik':q=>100-q.idle,'Vardiya kapsamı':q=>paTopCov(q.rows),'İş varken kayıtsız':q=>q.wg,'Norm verimi':q=>q.hasNm?q.nmPct:0},raw=(q,k)=>RW[k]?RW[k](q):0,dirs=k=>k==='İş varken kayıtsız'?-1:1;
     const f0=v=>Math.round(v).toLocaleString('tr-TR');
     let h='<div class="pa-note" style="margin:0 0 8px"><b>Nasıl okunur:</b> her kutu bir kişidir (kod). Çubuğun üzerindeki beyaz çizgi <b>takım ortalamasıdır</b>; çubuk çizgiyi geçiyorsa kişi takımdan iyi. 🟢 iyi • 🟡 ortalama • 🔴 geliştirilmeli. Kutuya tıklayınca vardiya vardiya çalışma çizelgesi açılır.</div>'
         +'<div class="pa-pk-grid">'+codes.map(c=>{
             const s=St[c],M4=Me[c];
             return '<div class="pa-pk'+(paTopSel===c?' on':'')+'" onclick="paTopSet(&quot;'+c+'&quot;)"><div class="pa-pk-h"><span>'+paNm(c)+'</span><small>'+s.n+' vardiya • '+f0(s.knv)+' top/vardiya</small></div>'
-                +M4.map(m=>{const g=m.na?{c:'#9e9e9e',e:'⚪'}:paTopGrade(m.pts!=null?m.pts:m.v,m.pts!=null);return '<div class="pa-pk-m"><div class="pa-pk-l"><span>'+m.k+'</span><b style="color:'+g.c+'">'+g.e+' '+m.txt+'</b></div><div class="pa-pk-b"><i style="width:'+Math.min(100,Math.max(3,m.v/1.5*100)).toFixed(0)+'%;background:'+g.c+'"></i><u></u></div><div class="pa-pk-r">'+m.sub+' • '+m.ref+'</div>'+((PV[c]&&!m.na&&raw(PV[c],M4.indexOf(m))>0)?(()=>{const i=M4.indexOf(m),a=raw(s,i),b=raw(PV[c],i),ch=(a-b)/b*100,good=(a-b)*dirs[i]>=0;return '<div class="pa-pk-r" style="color:'+(Math.abs(ch)<3?'#928fb0':good?'#5ecf8a':'#ff8a80')+'">kendi önceki dönemi: '+f0(b)+' → '+f0(a)+' ('+(ch>=0?'↑':'↓')+'%'+Math.abs(Math.round(ch))+')</div>'})():'')+'</div>'}).join('')
+                +M4.map(m=>{const g=m.na?{c:'#9e9e9e',e:'⚪'}:paTopGrade(m.pts!=null?m.pts:m.v,m.pts!=null);return '<div class="pa-pk-m"><div class="pa-pk-l"><span>'+m.k+'</span><b style="color:'+g.c+'">'+g.e+' '+m.txt+'</b></div><div class="pa-pk-b"><i style="width:'+Math.min(100,Math.max(3,m.v/1.5*100)).toFixed(0)+'%;background:'+g.c+'"></i><u></u></div><div class="pa-pk-r">'+m.sub+' • '+m.ref+'</div>'+((PV[c]&&!m.na&&raw(PV[c],m.k)>0)?(()=>{const a=raw(s,m.k),b=raw(PV[c],m.k),ch=(a-b)/b*100,good=(a-b)*dirs(m.k)>=0;return '<div class="pa-pk-r" style="color:'+(Math.abs(ch)<3?'#928fb0':good?'#5ecf8a':'#ff8a80')+'">kendi önceki dönemi: '+f0(b)+' → '+f0(a)+' ('+(ch>=0?'↑':'↓')+'%'+Math.abs(Math.round(ch))+')</div>'})():'')+'</div>'}).join('')
                 +'<div class="pa-pk-s">'+esc(paTopMsg(s,T,M4))+'</div></div>'}).join('')+'</div>';
     if(paTopSel&&St[paTopSel]){
         const c=paTopSel,s=St[c],R=by[c].slice().sort((a,b)=>(a.d<b.d?-1:a.d>b.d?1:0)||(a.a===0?-1:b.a===0?1:a.a-b.a)),fb=paTopFb(s,T);
@@ -10184,7 +10269,7 @@ function pkcCardHtml(c,D){
     const R=D.by[c].slice().sort((a,b)=>(a.d<b.d?-1:a.d>b.d?1:0)||(a.a===0?-1:b.a===0?1:a.a-b.a)),T=D.T,s=paTopStats(R);s.rows=R;
     const M=paTopMeters(s,T),A=paDvAgg(R),TA=paDvAgg(T.rows),fb=paTopFb(s,T),f0=v=>Math.round(v).toLocaleString('tr-TR'),fd=d=>d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4);
     const nm=paAdName(c),gc=['#C62828','#B7791F','#2E7D32'],one=pkc.from===pkc.to;
-    const tiles=[['Üretim',f0(s.kg)+' kg',s.n+' vardiya'+(s.n>1?' • '+f0(s.kgv)+' kg/vardiya':'')],['Top',f0(s.kn)+' adet',f0(s.knv)+' top/vardiya'],['Metre',f0(s.km)+' m','bilgi amaçlı (kumaşa bağlı)'],['Çalışma hızı',f0(s.kpa)+' kg/sa','takım '+f0(T.kpa)],['Devamlılık','%'+Math.round(A.pct),'takım %'+Math.round(TA.pct)]];
+    const tiles=[['Üretim',f0(s.kg)+' kg',s.n+' vardiya'+(s.n>1?' • '+f0(s.kgv)+' kg/vardiya':'')],['Top',f0(s.kn)+' adet',f0(s.knv)+' top/vardiya'],['Metre',f0(s.km)+' m','bilgi amaçlı (kumaşa bağlı)'],['Çalışma hızı',f0(s.kpa)+' kg/sa','takım '+f0(T.kpa)],['Devamlılık','%'+Math.round(A.pct),'takım %'+Math.round(TA.pct)]].concat(s.hasNm&&T.hasNm?[['Norm verimi','%'+Math.round(s.nmPct),'takım %'+Math.round(T.nmPct)+' • norm dışı '+f0(s.ndv)+' dk/vard.']]:[]);
     const met=M.map(m=>{const g=m.na?{c:'#9e9e9e',e:'⚪',t:'—'}:paTopGrade(m.pts!=null?m.pts:m.v,m.pts!=null),col=m.na?'#9e9e9e':gc[g.g];
         return '<div class="pkc-m"><div class="pkc-ml"><span>'+m.k+'</span><b style="color:'+col+'">'+m.txt+' · '+(m.na?'—':g.t)+'</b></div><div class="pkc-mb"><i style="width:'+Math.min(100,Math.max(3,m.v/1.5*100)).toFixed(0)+'%;background:'+col+'"></i><u></u></div><div class="pkc-mr">'+m.sub+' • '+m.ref+(m.na?' • Sarım ağırlıklı: KK ölçüsü yanıltıcı':'')+'</div></div>'}).join('');
     const dv=[['Geç başlama','late','ekipte en erken başlayana göre, '+paDvLate+' dk pay düşülmüş'],['Erken bırakma','early','ekipte en geç bitirene göre, '+paDvEarly+' dk pay düşülmüş'],['Fazla mola','fm',paDvMola+' dk mola payını aşan kayıtsız süre'],['Parti içi duraksama','pd','aynı partide '+(PERSTOP.gapMin||20)+' dk üstü ara']]
@@ -10199,7 +10284,7 @@ function pkcCardHtml(c,D){
         +'<div><div class="pkc-h">Üretim devamlılığı <small>dk / vardiya</small></div><table class="pkc-tb"><thead><tr><th></th><th>Kişi</th><th>Takım</th></tr></thead><tbody>'+dv+'<tr class="t"><td><b>Toplam kayıp</b><small>≈ '+f0(A.m('loss')/60*s.kpa)+' kg/vardiya (kendi hızıyla)</small></td><td><b>'+f0(A.m('loss'))+' dk</b></td><td>'+f0(TA.m('loss'))+' dk</td></tr></tbody></table></div></div>'
         +'<div class="pkc-h">Vardiya çizelgesi <small>'+(R.length>MAXR?'son '+MAXR+' vardiya • ':'')+'yeşil kayıt var • turuncu boşluk (ekipte iş varken) • mavi ekip de boş • koyu kırmızı vardiya başı / sonu boş</small></div><div class="pkc-strips">'+strips+'</div>'
         +'<div class="pkc-two"><div><div class="pkc-h" style="color:#2E7D32">Güçlü yönler</div><ul>'+fb.good.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div><div><div class="pkc-h" style="color:#B7791F">Konuşulabilecek noktalar</div><ul>'+fb.imp.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div></div>'
-        +'<div class="pkc-ft">Kaynak: ERP urt raporu (KK top kayıtları; kişi = kaydı giren). Kıyas: aynı tarihlerde çalışan ekip ('+(T.rows.length)+' vardiya; Sarım ağırlıklı kişiler takım ortalamasına katılmaz). Boşluk iş yokluğu, mola ya da başka bir iş de olabilir — "bu saatte ne oldu?" diye konuşmak için ipucudur, suçlama değildir.</div></div>';
+        +'<div class="pkc-ft">Kaynak: ERP urt raporu (KK top kayıtları; kişi = kaydı giren). Kıyas: aynı tarihlerde çalışan ekip ('+(T.rows.length)+' vardiya; Sarım ağırlıklı kişiler takım ortalamasına katılmaz).'+(s.hasNm?' Norm verimi: girdiği topların kumaşa göre ortanca hızla (urt geçmişi, sabit parti payı dahil) gereken süresi ÷ ilk–son kayıt arası.':'')+' Boşluk iş yokluğu, mola ya da başka bir iş de olabilir — "bu saatte ne oldu?" diye konuşmak için ipucudur, suçlama değildir.</div></div>';
 }
 // ── 📊 Kıyas: kart ölçüleri seçilen aralıkta, seçilen kişiler arasında çubuk grafik (adlar açıksa adla). Takım ortalaması = aralıkta çalışan ekip.
 function pkcCmpDefs(D,codes){
@@ -10210,6 +10295,7 @@ function pkcCmpDefs(D,codes){
         ['Üretim','vardiya başına kg',c=>S[c].kgv,T.kgv,'kg',1,0],
         ['Çalışma hızı','çalıştığı sürede kg / saat',c=>S[c].kpa,T.kpa,'kg/sa',1,1],
         ['Süreklilik','vardiyada kayıt bırakmadığı süre, %',c=>100-S[c].idle,100-T.idle,'%',1,1],
+        ...(T.hasNm?[['Norm verimi','ürettiği kg\'ın kumaş normundaki süresi ÷ ilk–son kayıt arası, %',c=>S[c].nmPct,T.nmPct,'%',1,1],['Norm dışı süre','ilk–son kayıt arası − kumaş normuna göre gereken süre, dk / vardiya',c=>S[c].ndv,T.ndv,'dk',-1,1]]:[]),
         ['Vardiya kapsamı',paDvMode==='ref'?'ekibin çalışma penceresinin %':'ilk–son kayıt arası, vardiyanın %',c=>paTopCov(D.by[c]),paTopCov(T.rows),'%',1,1],
         ['Devamlılık','kayıpsız süre, % (geç + erken + fazla mola düşülür)',c=>A[c].pct,TA.pct,'%',1,1],
         ['İş varken kayıtsız','ekipte iş sürerken kendi boşluğu, dk / vardiya',c=>S[c].wg,T.wg,'dk',-1,1],
@@ -10239,6 +10325,12 @@ function pkcCmpPages(D,codes){
         +'<div class="pkc-msg" style="font-weight:500;font-size:12.5px">'+pkcCmpLegend()+'</div><div class="pkc-cc">'+P.map(d=>pkcCmpChart(d,codes,hv,true)).join('')+'</div>'
         +'<div class="pkc-ft">Geç başlama / erken bırakma: o vardiyada ekipte en erken başlayan / en geç bitirene göre, paylar düşülmüş. Tek gün ya da az vardiyada sonuçlar kesin yargı değil, konuşma için ipucudur.</div></div>');
 }
+// kart A4'e sığmazsa vardiya çizelgesinden en eski vardiyaları çıkarır (alt bölümler — güçlü yönler, açıklama — kesilmesin)
+function pkcFitPage(pg){
+    if(!pg||pg.classList.contains('pkc-cmp'))return;const sr=[...pg.querySelectorAll('.pkc-sr')];let i=0;
+    while(pg.scrollHeight>pg.clientHeight+1&&i<sr.length-3)sr[i++].remove();
+    if(i){const st=pg.querySelector('.pkc-strips'),sm=st&&st.previousElementSibling&&st.previousElementSibling.querySelector('small');if(sm)sm.innerHTML=sm.innerHTML.replace(/^(son \d+ vardiya • )?/,'son '+(sr.length-i)+' vardiya • ')}
+}
 async function paKartPdf(onlyCmp){
     const D=pkcData(),sel=pkc.sel||new Set(D.codes),codes=D.codes.filter(c=>sel.has(c));if(!codes.length||!D.T)return;
     if(onlyCmp&&codes.length<2){showToast('Kıyas için en az 2 kişi seçin','warning');return}
@@ -10250,6 +10342,7 @@ async function paKartPdf(onlyCmp){
         for(let i=0;i<htmls.length;i++){
             if(htmls.length>2)showToast('📄 Sayfa '+(i+1)+' / '+htmls.length+' hazırlanıyor…','warning');
             outer.innerHTML='<div class="pkc-wrap">'+(typeof htmls[i]==='function'?htmls[i]():htmls[i])+'</div>';
+            pkcFitPage(outer.querySelector('.pkc-page'));
             const cv=await html2canvas(outer.firstChild.firstChild,{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollY:0,onclone:sanitizeOklchColors});
             if(!pdf)pdf=await html2pdf().set({margin:0,image:{type:'jpeg',quality:.92},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(cv,'canvas').toPdf().get('pdf');
             else{pdf.addPage('a4','portrait');const ih=Math.min(297,210*cv.height/cv.width);pdf.addImage(cv.toDataURL('image/jpeg',0.92),'JPEG',0,0,210,ih)}
@@ -10268,7 +10361,7 @@ async function paKartPdf(onlyCmp){
  +'.pkc-btns{display:flex;gap:6px}.pkc-btns button{border:0;border-radius:8px;padding:9px 14px;font-weight:800;font-size:13.5px;cursor:pointer;background:#455A64;color:#fff}.pkc-btns button.pdf{background:#C62828}.pkc-btns button:disabled{opacity:.45;cursor:default}'
  +'.pkc-wrap{position:absolute;left:0;top:0}.pkc-page{width:794px;height:1120px;box-sizing:border-box;padding:34px 38px;background:#fff;color:#1a1a1a;font-family:"Segoe UI",Arial,sans-serif;font-size:12.5px;display:flex;flex-direction:column;gap:11px;overflow:hidden}'
  +'.pkc-hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #263238;padding-bottom:8px}.pkc-code{font-size:28px;font-weight:800;color:#263238}.pkc-code span{font-size:22px;color:#37474F;margin-left:6px}.pkc-per{font-size:13px;color:#555;margin-top:2px}.pkc-gen{text-align:right;font-size:11px;color:#777}'
- +'.pkc-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.pkc-tiles div{border:1px solid #cfd8dc;border-radius:8px;padding:7px 8px;background:#f7f9fa}.pkc-tiles small{display:block;font-size:11px;color:#607D8B;font-weight:700}.pkc-tiles b{display:block;font-size:19px;color:#1a1a1a;margin:2px 0}.pkc-tiles em{font-style:normal;font-size:10.5px;color:#666}'
+ +'.pkc-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px}.pkc-tiles div{border:1px solid #cfd8dc;border-radius:8px;padding:7px 8px;background:#f7f9fa}.pkc-tiles small{display:block;font-size:11px;color:#607D8B;font-weight:700}.pkc-tiles b{display:block;font-size:19px;color:#1a1a1a;margin:2px 0}.pkc-tiles em{font-style:normal;font-size:10.5px;color:#666}'
  +'.pkc-msg{padding:8px 11px;border-left:5px solid #1565C0;background:#eef4fb;border-radius:6px;font-size:13.5px;font-weight:600;line-height:1.4}'
  +'.pkc-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pkc-h{font-size:14px;font-weight:800;color:#263238;margin-bottom:4px}.pkc-h small{font-weight:500;color:#777;font-size:10.5px;margin-left:4px}'
  +'.pkc-m{margin-bottom:8px}.pkc-ml{display:flex;justify-content:space-between;gap:6px;font-size:13px}.pkc-ml span{font-weight:700}.pkc-ml small{color:#888;font-size:10px}.pkc-mb{position:relative;height:11px;background:#e6e9eb;border-radius:5px;margin-top:2px}.pkc-mb i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.pkc-mb u{position:absolute;left:66.67%;top:-3px;bottom:-3px;width:2px;background:#263238}.pkc-mr{font-size:10.5px;color:#666;margin-top:2px}'
@@ -10374,9 +10467,9 @@ function paKpiSet(v){paKpiG=v;mapSavePref('paKpiG9',v);paRender()}
 function paKpiWk(d){const t=new Date(d+'T12:00:00'),w=(t.getDay()+6)%7;t.setDate(t.getDate()-w);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
 function paKpiSeries(){
     const D=KKHIZ,B=new Map(),key=paKpiG==='w'?paKpiWk:d=>d;
-    Object.entries(D.ds||{}).forEach(([d,v])=>{const k=key(d);if(!B.has(k))B.set(k,{k,kg:0,act:0,exp:0,n:0,span:0,gap:0,pp:0,days:new Set()});const b=B.get(k);b.kg+=v[0];b.act+=v[1];b.exp+=v[2];b.n+=v[3];b.days.add(d)});
-    Object.entries(D.dg||{}).forEach(([d,v])=>{const k=key(d);if(!B.has(k))return;const b=B.get(k);b.span+=v[0];b.gap+=v[1];b.pp+=v[2]});
-    return[...B.values()].sort((a,b)=>a.k.localeCompare(b.k)).map(b=>Object.assign(b,{idx:b.act?b.exp/b.act*100:null,kph:b.act?b.kg/b.act:null,gp:b.span?b.gap/b.span*100:null,ah:b.pp?(b.span-b.gap)/b.pp:null,full:paKpiG==='w'?b.days.size>=4:b.n>=5}));
+    Object.entries(D.ds||{}).forEach(([d,v])=>{const k=key(d);if(!B.has(k))B.set(k,{k,kg:0,act:0,exp:0,n:0,span:0,gap:0,pp:0,nmh:0,nmn:0,days:new Set()});const b=B.get(k);b.kg+=v[0];b.act+=v[1];b.exp+=v[2];b.n+=v[3];b.days.add(d)});
+    Object.entries(D.dg||{}).forEach(([d,v])=>{const k=key(d);if(!B.has(k))return;const b=B.get(k);b.span+=v[0];b.gap+=v[1];b.pp+=v[2];if(v[3]!=null){b.nmh+=v[3];b.nmn++}});
+    return[...B.values()].sort((a,b)=>a.k.localeCompare(b.k)).map(b=>Object.assign(b,{idx:b.act?b.exp/b.act*100:null,kph:b.act?b.kg/b.act:null,gp:b.span?b.gap/b.span*100:null,np:b.span&&b.nmn?Math.max(0,b.span-b.nmh)/b.span*100:null,ah:b.pp?(b.span-b.gap)/b.pp:null,full:paKpiG==='w'?b.days.size>=4:b.n>=5}));
 }
 function paKpiCmp(S,f){const F=S.filter(x=>x.full&&f(x)!=null),m=a=>a.length?a.reduce((s,x)=>s+f(x),0)/a.length:null;if(F.length<3)return null;
     const k=paKpiG==='w'?2:7,b=paKpiG==='w'?4:14,base=m(F.slice(0,Math.min(b,Math.max(1,F.length-k)))),last=m(F.slice(-k)),prev=m(F.slice(-2*k,-k));return{base,last,prev}}
@@ -10401,6 +10494,7 @@ function paKpiHtml(M){
         {l:'KK hız endeksi',s:'kumaş karmasından bağımsız • 100 = kumaşın normal hızı',f:x=>x.idx,fmt:v=>f0(v),g:1,ref:100},
         {l:'KK hızı',s:'kg / aktif çalışma saati (ham)',f:x=>x.kph,fmt:v=>f0(v),u:' kg/sa',g:1},
         {l:'Çalışma boşluğu payı',s:'ilk–son kayıt arası, 20 dk\'dan uzun boşluk',f:x=>x.gp,fmt:v=>'%'+f0(v),g:-1},
+        ...(Object.values(KKHIZ.dg||{}).some(v=>v[3]!=null)?[{l:'Norm dışı süre payı',s:'ilk–son kayıt arası − üretilen kg\'ın kumaş normuna göre süresi',f:x=>x.np,fmt:v=>'%'+f0(v),g:-1}]:[]),
         {l:'Kişi başı aktif çalışma',s:'kişi-gün başına aktif saat',f:x=>x.ah,fmt:v=>f1(v)+' sa',g:1}];
     const L=paKpiLive();
     let h='<div class="pa-cmpbar"><span class="pa-cmp-vs">Dönem</span><select onchange="paKpiSet(this.value)"><option value="w"'+(paKpiG==='w'?' selected':'')+'>Haftalık</option><option value="d"'+(paKpiG==='d'?' selected':'')+'>Günlük</option></select><span class="pa-note" style="margin:0;padding:2px 8px">Veri: urt KK top kayıtları, '+esc(String(KKHIZ.to).replace('T',' '))+'\'e kadar • yeşil ok iyileşme, kırmızı ok gerileme</span></div>';
@@ -10416,7 +10510,7 @@ function paKpiHtml(M){
         h+='<div class="pa-sub">Kumaş kumaş KK hızı — eskiden yeniye <small>en çok çalışılan kumaşlar • haftalık ortanca kg/sa (sabit parti payı düşülmüş) • ilk yarı → son yarı</small></div><div class="pa-tw"><table class="pa-tbl pa-kpi-tb"><thead><tr><th>Kumaş</th><th>Parti</th><th>İlk yarı</th><th>Son yarı</th><th>Değişim</th><th>Haftalar</th></tr></thead><tbody>'
             +rows.map(r=>{const mx=Math.max(...r.w.map(x=>x[1][1]));return '<tr><td><b>'+esc(r.k)+'</b></td><td>'+r.n+'</td><td>'+(r.a!=null?f0(r.a):'—')+'</td><td>'+(r.b!=null?f0(r.b):'—')+'</td><td>'+paKpiArrow(r.a,r.b,1)+'</td><td><span class="pa-kpi-sp">'+allW.map(w=>{const x=r.w.find(y=>y[0]===w);return '<i title="'+esc(w+' haftası'+(x?' • '+f0(x[1][1])+' kg/sa • '+x[1][0]+' parti':' • yok'))+'" style="height:'+(x?Math.max(8,x[1][1]/mx*100):0).toFixed(0)+'%"></i>'}).join('')+'</span></td></tr>'}).join('')+'</tbody></table></div>';
     }
-    return h+'<div class="pa-note"><b>Nasıl okunur:</b> <b>Hız endeksi</b> o dönemde işlenen partilerin, kendi kumaşlarının geçmiş normal hızına göre ne kadar sürmesi gerektiğinin gerçek süreye oranıdır; kolay/zor kumaş karışımı değişse de adil kıyas verir (110 = normalden %10 hızlı). <b>Aktif süre</b>: aynı kişinin ardışık top kayıtları arası ≤ 20 dk aralıklar; daha uzun aralık <b>boşluk</b> sayılır (mola dahil — mola düzeni değişmedikçe kıyas geçerlidir). <b>Başlangıca göre</b>: ilk '+(paKpiG==='w'?'4 hafta':'14 gün')+'; soluk çubuk eksik dönem (kıyasa katılmaz). Veri urt dosyası güncellendikçe (GUNCELLE_VE_PUSH.bat) ilerler; <b>canlı</b> kutu üretim kaydından her güncellemede yenilenir.</div>';
+    return h+'<div class="pa-note"><b>Nasıl okunur:</b> <b>Hız endeksi</b> o dönemde işlenen partilerin, kendi kumaşlarının geçmiş normal hızına göre ne kadar sürmesi gerektiğinin gerçek süreye oranıdır; kolay/zor kumaş karışımı değişse de adil kıyas verir (110 = normalden %10 hızlı). <b>Aktif süre</b>: aynı kişinin ardışık top kayıtları arası ≤ 20 dk aralıklar; daha uzun aralık <b>boşluk</b> sayılır (mola dahil — mola düzeni değişmedikçe kıyas geçerlidir). <b>Norm dışı süre</b> ise kısa aralıklara bakmaz: kişinin ilk–son kaydı arasındaki süreden, girdiği topların kumaş normuna göre (kumaşın ortanca hızı + sabit parti payı) gereken süre düşülür; 20 dk\'dan kısa ama yavaş geçen süreyi de yakalar, uzun ama gerekli (ağır top) aralıkları boşluk saymaz. <b>Başlangıca göre</b>: ilk '+(paKpiG==='w'?'4 hafta':'14 gün')+'; soluk çubuk eksik dönem (kıyasa katılmaz). Veri urt dosyası güncellendikçe (GUNCELLE_VE_PUSH.bat) ilerler; <b>canlı</b> kutu üretim kaydından her güncellemede yenilenir.</div>';
 }
 (function(){const st=document.createElement('style');st.textContent='.pa-kpi-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:8px 0}.pa-kpi-t{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px}.pa-kpi-t.live{border-color:rgba(239,83,80,.5)}'
  +'.pa-kpi-l{font-size:12px;color:#c3c2b7;font-weight:700}.pa-kpi-v{font-size:22px;font-weight:800;margin:2px 0}.pa-kpi-s{font-size:10.5px;color:#928fb0}.pa-kpi-c{font-size:12px;margin:4px 0;line-height:1.5}.pa-kpi-up{color:#5ecf8a;font-weight:800}.pa-kpi-dn{color:#ff8a80;font-weight:800}.pa-kpi-eq{color:#ffd54f;font-weight:700}'
@@ -10438,6 +10532,7 @@ function paCmpHtml(M){
         ['Üretim','vardiya başına kg',c=>S[c].kgv,T.kgv,'kg',1,0],
         ['Çalışma hızı','çalıştığı sürede kg / saat',c=>S[c].kpa,T.kpa,'kg/sa',1,1],
         ['Süreklilik','vardiyada kayıt bırakmadığı süre, %',c=>100-S[c].idle,100-T.idle,'%',1,1],
+        ...(T.hasNm?[['Norm verimi','ürettiği kg\'ın kumaş normundaki süresi ÷ ilk–son kayıt arası, %',c=>S[c].nmPct,T.nmPct,'%',1,1],['Norm dışı süre','ilk–son kayıt arası − kumaş normuna göre gereken süre, dk / vardiya',c=>S[c].ndv,T.ndv,'dk',-1,1]]:[]),
         ['Vardiya kapsamı',paDvMode==='ref'?'ekibin çalışma penceresinin %':'ilk–son kayıt arası, vardiyanın %',c=>paTopCov(by[c]),paTopCov(teamRows),'%',1,1],
         ['İş varken kayıtsız','ekipte iş sürerken kendi boşluğu, dk / vardiya',c=>S[c].wg,T.wg,'dk',-1,1],
         ['Erken bırakma','payı aşan, dk / vardiya',c=>A[c].m('early'),TA.m('early'),'dk',-1,1],
@@ -10571,7 +10666,7 @@ function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExpor
         +'.pa-rep{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);gap:8px 22px}'
         // ısı haritası: hücreler arasında 2 px yüzey boşluğu
         +'.pa-heat{display:grid;gap:2px;align-items:center;margin-top:8px}.pa-heat-h{font-size:10px;color:#928fb0;text-align:left}.pa-heat-d{font-size:10.5px;color:#928fb0;padding-right:6px;white-space:nowrap;text-align:right}'
-        +'.pa-heat i{display:flex;align-items:center;justify-content:center;height:20px;border-radius:3px;font-style:normal;font-size:10.5px;font-weight:700;overflow:hidden}.pa-heat-s{font-size:11px;font-weight:700;color:#e8e7f0;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}.pa-heat-sh{font-size:10px;font-weight:500;color:#928fb0}.pa-leg i.dot{width:9px;height:9px;border-radius:50%}.pa-leg i.ring{width:9px;height:9px;border-radius:50%;background:transparent;border:2px solid;box-sizing:border-box}.pa-cmpbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.pa-cmpbar select{background:#1b1740;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:13px;font-weight:700;padding:6px 8px;max-width:190px}.pa-stp{background:transparent;color:#c3c2b7;border:1px solid rgba(255,255,255,.22);border-radius:8px;min-width:32px;height:32px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px}.pa-stp:hover{background:rgba(255,255,255,.1);color:#fff}.pa-stp:disabled{opacity:.35;cursor:default}.pa-stp-t{color:#fff;background:#3987e5;border-color:#3987e5}.pa-cmp-vs{font-size:12px;color:#928fb0;margin-left:4px}.pa-cmp-vs b{color:#e8e7f0}.pa-leg-t button{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:12px;color:#c3c2b7;font-size:12px;padding:2px 9px;cursor:pointer;font-family:inherit}.pa-leg-t button:hover{background:rgba(255,255,255,.08)}.pa-leg-t button.off{opacity:.45;text-decoration:line-through}.pa-heat-dc{cursor:pointer;border-radius:4px}.pa-heat-dc:hover{color:#fff}.pa-heat-dc.sel{color:#0b0b0b;background:#cde2fb;font-weight:800;padding-left:4px}.pa-heat-dc.prev{color:#fff;box-shadow:inset 0 0 0 1px #6da7ec;padding-left:4px}.pa-cmp-d td{color:#c3c2b7;font-size:11.5px;border-bottom-color:#47437a}.pa-cmp-d td:first-child{font-weight:500;padding-left:22px}.pa-export .pa-cmpbar{display:none}.pa-cmp{margin-top:2px}.pa-cmp th small,.pa-cmp td small{display:block;font-weight:500;color:#928fb0;font-size:10.5px}.pa-cmp td:first-child{color:#c3c2b7;font-weight:700}.pa-cmp td:first-child i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}.pa-cmp b{color:#fff;font-size:13.5px}.pa-cmp .up{color:#0ca30c;font-weight:800}.pa-cmp .dn{color:#e66767;font-weight:800}.pa-cmp .pa-eq{color:#928fb0}.pa-cmp td{white-space:normal}.pa-note-b{font-size:13px;color:#c3c2b7;line-height:1.5;margin-top:6px}.pa-note-b b{color:#fff}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
+        +'.pa-wk-mode{margin:0 0 8px}.pa-wk-days{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 8px}.pa-wk-days button{background:rgba(255,255,255,.06);color:#c3c2b7;border:1px solid rgba(255,255,255,.15);border-radius:7px;padding:3px 7px;font-size:11.5px;font-weight:700;cursor:pointer;line-height:1.15;display:flex;flex-direction:column;align-items:center}.pa-wk-days button small{font-size:9.5px;font-weight:400;opacity:.75}.pa-wk-days button.on{background:rgba(57,135,229,.35);border-color:#64B5F6;color:#fff}.pa-wk-days button.td{box-shadow:inset 0 -2px 0 #FFD54F}.pa-wk-best td{background:rgba(94,207,138,.08)}.pa-wk-worst td{background:rgba(255,138,128,.07)}.pa-heat i{display:flex;align-items:center;justify-content:center;height:20px;border-radius:3px;font-style:normal;font-size:10.5px;font-weight:700;overflow:hidden}.pa-heat-s{font-size:11px;font-weight:700;color:#e8e7f0;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}.pa-heat-sh{font-size:10px;font-weight:500;color:#928fb0}.pa-leg i.dot{width:9px;height:9px;border-radius:50%}.pa-leg i.ring{width:9px;height:9px;border-radius:50%;background:transparent;border:2px solid;box-sizing:border-box}.pa-cmpbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.pa-cmpbar select{background:#1b1740;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:13px;font-weight:700;padding:6px 8px;max-width:190px}.pa-stp{background:transparent;color:#c3c2b7;border:1px solid rgba(255,255,255,.22);border-radius:8px;min-width:32px;height:32px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px}.pa-stp:hover{background:rgba(255,255,255,.1);color:#fff}.pa-stp:disabled{opacity:.35;cursor:default}.pa-stp-t{color:#fff;background:#3987e5;border-color:#3987e5}.pa-cmp-vs{font-size:12px;color:#928fb0;margin-left:4px}.pa-cmp-vs b{color:#e8e7f0}.pa-leg-t button{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:12px;color:#c3c2b7;font-size:12px;padding:2px 9px;cursor:pointer;font-family:inherit}.pa-leg-t button:hover{background:rgba(255,255,255,.08)}.pa-leg-t button.off{opacity:.45;text-decoration:line-through}.pa-heat-dc{cursor:pointer;border-radius:4px}.pa-heat-dc:hover{color:#fff}.pa-heat-dc.sel{color:#0b0b0b;background:#cde2fb;font-weight:800;padding-left:4px}.pa-heat-dc.prev{color:#fff;box-shadow:inset 0 0 0 1px #6da7ec;padding-left:4px}.pa-cmp-d td{color:#c3c2b7;font-size:11.5px;border-bottom-color:#47437a}.pa-cmp-d td:first-child{font-weight:500;padding-left:22px}.pa-export .pa-cmpbar{display:none}.pa-cmp{margin-top:2px}.pa-cmp th small,.pa-cmp td small{display:block;font-weight:500;color:#928fb0;font-size:10.5px}.pa-cmp td:first-child{color:#c3c2b7;font-weight:700}.pa-cmp td:first-child i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}.pa-cmp b{color:#fff;font-size:13.5px}.pa-cmp .up{color:#0ca30c;font-weight:800}.pa-cmp .dn{color:#e66767;font-weight:800}.pa-cmp .pa-eq{color:#928fb0}.pa-cmp td{white-space:normal}.pa-note-b{font-size:13px;color:#c3c2b7;line-height:1.5;margin-top:6px}.pa-note-b b{color:#fff}.pa-heat i.fut{background:transparent;box-shadow:inset 0 0 0 1px #2b2850}.pa-heat i[data-t]:hover{outline:2px solid #fff;outline-offset:-1px}'
         +'.pa-scale{display:flex;align-items:center;gap:2px;margin-top:8px;font-size:11px;color:#928fb0}.pa-scale i{display:inline-block;width:18px;height:10px;border-radius:2px}.pa-scale span{margin:0 6px}'
         +'.pa-wait{display:flex;flex-direction:column;gap:4px;margin-top:6px}.pa-wait button{display:grid;grid-template-columns:64px minmax(0,1fr) auto 84px;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e8e7f0;padding:6px 10px;font-size:13px;text-align:left;cursor:pointer}'
         +'.pa-wait button:hover{background:rgba(255,255,255,.1)}.pa-wait b{font-weight:800}.pa-wait span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c2b7}.pa-wait em{font-style:normal;font-weight:800;text-align:right}'

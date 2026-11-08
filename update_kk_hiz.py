@@ -147,11 +147,20 @@ def main():
         r_[2] += exp_min(x) / 60
         r_[3] += 1
     # bosluk: kisi-gun bazinda ilk-son kayit araligi icinde 20 dk'dan uzun bosluklarin payi
+    # norm: kisinin girdigi her topun kumas hizina gore olmasi gereken suresi (top kg / hiz + sabit pay / partinin top sayisi)
+    def v_of(p):
+        ham = tr_upper(info[p][0])
+        a_, b_ = H.get(ham), K.get(ham_kod(info[p][0]))
+        return a_[1] if a_ and a_[0] >= 3 else b_[1] if b_ and b_[0] >= 3 else allv
     pd_ = defaultdict(list)
-    for tl in tops.values():
+    pn_ = defaultdict(float)
+    for p, tl in tops.items():
+        v_ = v_of(p)
         for x in tl:
-            pd_[(x[4], (x[0] - timedelta(hours=8)).date().isoformat())].append(x[0])
-    dg = defaultdict(lambda: [0.0, 0.0, 0])
+            k_ = (x[4], (x[0] - timedelta(hours=8)).date().isoformat())
+            pd_[k_].append(x[0])
+            pn_[k_] += x[1] / v_ * 60 + setup / len(tl)
+    dg = defaultdict(lambda: [0.0, 0.0, 0, 0.0])
     for (u, d), ts in pd_.items():
         if not u or len(ts) < 5:
             continue
@@ -161,6 +170,7 @@ def main():
         dg[d][0] += span / 60
         dg[d][1] += sum(g for g in gaps if g > GAP_MAX) / 60
         dg[d][2] += 1
+        dg[d][3] += pn_[(u, d)] / 60
     # en cok calisilan kumaslarin haftalik hizi (ortanca kg/sa)
     wk = lambda d: (datetime.strptime(d, "%Y-%m-%d") - timedelta(days=datetime.strptime(d, "%Y-%m-%d").weekday())).date().isoformat()
     topk = [k for k, v in sorted(H.items(), key=lambda kv: -kv[1][0])[:15] if v[0] >= 8]
@@ -180,8 +190,9 @@ def main():
         "ham": H, "kod": K, "tip": agg("tip"),
         # gun: [kg, aktif saat, kumas normuna gore beklenen aktif saat, parti]
         "ds": {d: [round(v[0]), round(v[1], 2), round(v[2], 2), v[3]] for d, v in sorted(ds.items())},
-        # gun: [kisilerin ilk-son kayit araligi toplami (saat), 20 dk'dan uzun bosluk toplami (saat), kisi sayisi]
-        "dg": {d: [round(v[0], 2), round(v[1], 2), v[2]] for d, v in sorted(dg.items())},
+        # gun: [kisilerin ilk-son kayit araligi toplami (saat), 20 dk'dan uzun bosluk toplami (saat), kisi sayisi,
+        #       urettikleri kg'in kumas normuna gore olmasi gereken aktif suresi (saat)]
+        "dg": {d: [round(v[0], 2), round(v[1], 2), v[2], round(v[3], 2)] for d, v in sorted(dg.items())},
         "hw": hw,
         # doseme makinelerinde islenen kumaslar (partilerinin cogu "Doseme" parti grubunda)
         "dos": sorted(k for k, v in grp.items() if k and v[1] and v[0] / v[1] >= 0.5),

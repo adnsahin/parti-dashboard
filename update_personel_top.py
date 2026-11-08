@@ -29,6 +29,35 @@ BREAK_MAX = 90        # ekibin tamaminin durdugu aralik bu kadar dakikayi gecmez
 MIN_REC = 8           # bir vardiya blogunda en az bu kadar kayit -> o vardiya calisilmis sayilir
 BLOCKS = (8, 16, 0)   # vardiya baslangic saatleri: 08-16, 16-24, 00-08
 KEEP_DAYS = 120
+PARTY_HAM = {}        # parti -> ham adi (load_events doldurur; norm suresi icin)
+
+
+def norm_model(ev, kkhiz_path):
+    """data/kk_hiz.json'daki kumas hizlarina gore bir topun 'olmasi gereken' aktif suresi (dk):
+    top kg / kumas hizi + sabit parti payi / partinin top sayisi. Hiz: kumas adi (>= 3 parti), yoksa kumas kodu, yoksa genel ortanca."""
+    kh = load_json(kkhiz_path, None)
+    if not kh or "ham" not in kh:
+        return None
+    import re
+    H, K, allv, setup = kh.get("ham", {}), kh.get("kod", {}), kh["all"][1], kh.get("setup", 0) or 0
+    nt = defaultdict(int)
+    for e in ev:
+        nt[e[5]] += 1
+    cache = {}
+
+    def speed(pa):
+        ham = tr_upper(PARTY_HAM.get(pa, ""))
+        if ham not in cache:
+            m = re.match(r"[A-Z0-9]+", ham)
+            kod = m.group(0) if m and len(m.group(0)) >= 3 else ""
+            a, b = H.get(ham), K.get(kod)
+            cache[ham] = a[1] if a and a[0] >= 3 else b[1] if b and b[0] >= 3 else allv
+        return cache[ham]
+
+    def f(pa, kg):
+        v = speed(pa)
+        return (kg / v * 60 if v > 0 else 0) + setup / max(1, nt[pa])
+    return f
 
 
 def clean(v):
@@ -86,10 +115,13 @@ def load_events(urt):
     head, rows = read_sheet(urt)
     iT, iK, iM, iU = col(head, "Tarih"), col(head, "Kilo"), col(head, "Net Metre"), None
     iU = next(i for i, h in enumerate(head) if h.startswith("Kaydeden"))
+    iH = next((i for i, h in enumerate(head) if h.lower().startswith("ham ad")), None)
     for r in rows:
         t = to_dt(r[iT])
         if t and clean(r[iU]):
             ev.append((clean(r[iU]), t, "kk", num(r[iK]), num(r[iM]), clean(r[0])))
+            if iH is not None and clean(r[0]) not in PARTY_HAM:
+                PARTY_HAM[clean(r[0])] = clean(r[iH])
     return ev
 
 
@@ -136,7 +168,7 @@ def load_queue(path):
     return q
 
 
-def build(ev, tmax, queue=None):
+def build(ev, tmax, queue=None, norm=None):
     allkk = sorted(t for p, t, k, kg, m, pa in ev if k == "kk")
     idle_iv = [(allkk[i], allkk[i + 1]) for i in range(len(allkk) - 1) if (allkk[i + 1] - allkk[i]).total_seconds() >= GAP_MIN * 60]
     iv_end = [b for a, b in idle_iv]
@@ -196,6 +228,9 @@ def build(ev, tmax, queue=None):
             "pd": round(pdw), "pc": sum(1 for g, i in inp if g - min(g, team_idle(ts[i], ts[i + 1])) >= GAP_MIN * 0.5),
             "h": [round(x) for x in hrs],
         }
+        if norm:
+            # nm: urettigi kg'in kumas normuna gore olmasi gereken aktif suresi (dk); ilk-son kayit araligindan farki gercek kayip
+            out[(p, d, a)]["nm"] = round(sum(norm(x[4], x[2]) for x in kk))
     return out
 
 
@@ -582,7 +617,10 @@ def main():
     ev = load_events(urt)
     tmax = max(e[1] for e in ev)
     queue = load_queue(opt.get("log", os.path.join(os.path.dirname(out) or ".", "uretim_log.json")))
-    built = build(ev, tmax, queue)
+    nmf = norm_model(ev, opt.get("hiz", os.path.join(os.path.dirname(out) or ".", "kk_hiz.json")))
+    if not nmf:
+        print("Not: kk_hiz.json yok; norm suresi (nm) hesaplanmadi. Once update_kk_hiz.py calistirin.")
+    built = build(ev, tmax, queue, nmf)
     shifts = []
     for (p, d, a_), r in built.items():
         k = tr_upper(p)

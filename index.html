@@ -4363,7 +4363,9 @@ function hmA4Layout(root,cols,mode){
     hmA4Walk(root,n=>{x1=Math.min(x1,n.x);y1=Math.min(y1,n.y);x2=Math.max(x2,n.x+n.w);y2=Math.max(y2,n.y+n.h)});
     return{x1,y1,W:x2-x1,H:y2-y1};
 }
-function hmA4Fit(box,ori){const[pw,ph]=HM_A4_PAGE[ori];return Math.min((pw-2*HM_A4_M)/box.W,(ph-2*HM_A4_M-HM_A4_HEAD)/box.H)}
+// ikinci bilgi satırı (sub2): yatay sayfada tek satır, dikey sayfada her madde kendi satırında
+function hmA4HeadH(src,ori){return HM_A4_HEAD+(src&&src.sub2?(ori==='port'?3:1)*10+1:0)}
+function hmA4Fit(box,ori){const[pw,ph]=HM_A4_PAGE[ori];return Math.min((pw-2*HM_A4_M)/box.W,(ph-2*HM_A4_M-hmA4HeadH(hmA4Src,ori))/box.H)}
 // En iyi yerleşimi seç (otomatik) — seçili olanlar sabit
 function hmA4Plan(){
     if(hmA4Src&&hmA4Src.multi){
@@ -4397,7 +4399,7 @@ function hmA4Plan(){
         for(const c of b.alts){
             const key=c.ori+c.mode;if(tried.has(key))continue;tried.add(key);if(tried.size>2)break;
             groups.forEach(g=>{g.lc=g.children.length>=4?Math.min(c.cols,Math.ceil(g.children.length/3)):1});
-            const[pw,ph]=HM_A4_PAGE[c.ori],aw=pw-2*HM_A4_M,ah=ph-2*HM_A4_M-HM_A4_HEAD;
+            const[pw,ph]=HM_A4_PAGE[c.ori],aw=pw-2*HM_A4_M,ah=ph-2*HM_A4_M-hmA4HeadH(hmA4Src,c.ori);
             let box=null;const ev=()=>{box=hmA4Layout(root,c.cols,c.mode);return hmA4Fit(box,c.ori)};let cur=ev();
             for(let it=0;it<50;it++){
                 let bg=null,bv=0,bs=cur*1.002;const hLim=box.H/ah>=box.W/aw,dirs=hLim?[1]:[-1];
@@ -4470,7 +4472,7 @@ function hmA4Chunks(kids,w,k){
 function hmA4Col(c,dark){if(!hmA4.color)return dark?'#333':'#666';try{return dark?heatmapMindDarkColor(c):c}catch(e){return c}}
 function hmA4Svg(P,pxW){
     const[pw,ph]=HM_A4_PAGE[P.ori],s=P.s,box=P.box,cw=box.W*s,ch=box.H*s;
-    const ox=HM_A4_M+((pw-2*HM_A4_M)-cw)/2-box.x1*s,oy=HM_A4_M+HM_A4_HEAD+((ph-2*HM_A4_M-HM_A4_HEAD)-ch)/2-box.y1*s;
+    const ox=HM_A4_M+((pw-2*HM_A4_M)-cw)/2-box.x1*s,HD=hmA4HeadH(P.src,P.ori),oy=HM_A4_M+HD+((ph-2*HM_A4_M-HD)-ch)/2-box.y1*s;
     const X=v=>(ox+v*s).toFixed(2),Y=v=>(oy+v*s).toFixed(2),F='font-family="Segoe UI,Arial,sans-serif"';
     let lines='',nodes='';
     const curve=(x1,y1,x2,y2,col,wd)=>{const mx=(x1+x2)/2;lines+='<path d="M'+X(x1)+' '+Y(y1)+' C'+X(mx)+' '+Y(y1)+' '+X(mx)+' '+Y(y2)+' '+X(x2)+' '+Y(y2)+'" fill="none" stroke="'+col+'" stroke-width="'+wd+'" stroke-linecap="round"/>'};
@@ -4515,7 +4517,10 @@ function hmA4Svg(P,pxW){
     const head='<text x="'+HM_A4_M+'" y="'+(HM_A4_M+14)+'" '+F+' font-size="15" font-weight="800" fill="#111">'+esc((P.src?P.src.title:'Isı Haritası — '+P.root.name)+(P.root.pg?'  •  sayfa '+P.root.pg:''))+'</text>'
         +'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+26)+'" '+F+' font-size="8.5" fill="#333">'+esc(P.src?P.src.sub(P):lv.slice(from,from+P.depth).join(' › ')+' • '+(heatmapMetric==='count'?'adete':'kg\'a')+' göre, her dalda ilk '+heatmapTopN+' • '+P.root.count.toLocaleString('tr-TR')+' parti • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg')+'</text>'
         +'<text x="'+(pw-HM_A4_M)+'" y="'+(HM_A4_M+14)+'" text-anchor="end" '+F+' font-size="8.5" fill="#333">'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</text>'
-        +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+31)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+31)+'" stroke="#ccc" stroke-width="0.8"/>';
+        +(()=>{const L=P.src&&P.src.sub2?P.src.sub2():null;if(!L||!L.length)return'';const n=L.reduce((a,x)=>a+x.t.length+x.b.length+5,0),aw=pw-2*HM_A4_M,fit=n*8.5*0.5>aw;
+            if(P.ori==='port')return L.slice(0,3).map((x,i)=>'<text x="'+HM_A4_M+'" y="'+(HM_A4_M+37+i*10)+'" '+F+' font-size="8.5" font-weight="700" fill="#111">⏱ '+esc(x.t)+'<tspan fill="'+x.c+'" font-weight="800">'+esc(x.b)+'</tspan></text>').join('');
+            return '<text x="'+HM_A4_M+'" y="'+(HM_A4_M+37)+'" '+F+' font-size="8.5" font-weight="700" fill="#111"'+(fit?' textLength="'+aw+'" lengthAdjust="spacingAndGlyphs"':'')+'>⏱ '+L.map((x,i)=>(i?'   |   ':'')+esc(x.t)+'<tspan fill="'+x.c+'" font-weight="800">'+esc(x.b)+'</tspan>').join('')+'</text>'})()
+        +'<line x1="'+HM_A4_M+'" y1="'+(HM_A4_M+HD-5)+'" x2="'+(pw-HM_A4_M)+'" y2="'+(HM_A4_M+HD-5)+'" stroke="#ccc" stroke-width="0.8"/>';
     const foot=P._marked?'<text x="'+HM_A4_M+'" y="'+(ph-5)+'" '+F+' font-size="8" fill="#333"><tspan fill="#E65100" font-weight="800">Turuncu</tspan>: bu aşamada '+hmA4Thr()+' günden uzun   •   <tspan fill="#C62828" font-weight="800">Kırmızı</tspan>: '+hmA4Thr2()+' günden uzun bekliyor   •   ⏱n: o daldaki uzun bekleyen sayısı   •   ⚠: açık tamiri var</text>':'';
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pw+' '+ph+'"'+(pxW?' width="'+pxW+'" height="'+Math.round(pxW*ph/pw)+'"':'')+'><rect width="'+pw+'" height="'+ph+'" fill="#fff"/>'+head+lines+nodes+foot+'</svg>';
 }
@@ -6291,7 +6296,7 @@ function lbMindCards(K){
     if(K==='kkp'){if(!KKHIZ)return[];return kkpRows().map(r=>Object.assign({},r.x.k,{_pGun:r.gun+'. gün • '+r.tarih,_pGunI:r.gun,_pSira:r.sira,_pSure:r.x.h,_pHiz:r.x.sp.v,_pM:r.x.m}))}
     if(K==='kay')return srFiltered(srRows()).map(r=>lbTvCard(r.parti,{kg:r.kilo,firma:r.firma,extra:{_kKat:r.durum||'',_kNot:r.not||'',_kAt:r.added_at||'',_kSon:r.asama||''}}));
     if(K==='p'){const stats=liveProdStats(),out=[];SW_ROWS.forEach(R=>{const o=stats.log[R.log]||{};Object.keys(o).forEach(pn=>{const e=o[pn];
-        out.push(lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mGecis:LB_P_GEC[R.key]||R.name,_mGidis:e.a||'?',_mTs:e.ts||0}}))})});return out}
+        out.push(lbTvCard(pn,{kg:e.kg,firma:e.line1,siparis:e.siparis,extra:{_mGecis:LB_P_GEC[R.key]||R.name,_mGidis:e.a||'?',_mTs:e.ts||0,_mSt:R.key,_mKg:num(e.kg),_mNm:lbNormMin(R.key,pn,e.kg,e.kumas)}}))})});return out}
     if(K==='t'){const now=Date.now();return (window.TAMIR_ALL||[]).filter(t=>!String(t.durum||'').trim()).map(t=>{const ts=lbTvTs(t.tarih);
         return lbTvCard(t.parti,{kg:t.kg,firma:t.firma,extra:{_mTip:t.tip||'Tamir',_mTAsama:t.stage,_mNeden:t.neden,_mAgeH:ts?(now-ts)/3600000:0,_mEst:!!t.est}})})}
     return[];
@@ -6326,6 +6331,8 @@ function lbMindSrc(K,cards){
         setDepth:v=>{st.depth=v;src.depth=v;lbMindSave(K)},
         changed:()=>lbMindBoardRefresh(),
         sub:P=>lv.slice(0,P.depth).map(k=>lbMindDim(K,k).label).join(' › ')+' • '+P.root.count.toLocaleString('tr-TR')+' '+(K==='t'?'tamir':'parti')+' • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg',
+        sub2:K==='p'?()=>SW_ROWS.map(R=>{const cs=cards.filter(k=>k._mSt===R.key),Pc=lbNormPace(R.key,cs.map(k=>({ts:k._mTs,nm:k._mNm,kg:k._mKg})));
+            return Pc?{t:lbNormPaceLine(R,Pc),b:lbNormPaceTxt(Pc),c:Math.abs(Pc.pct)<3?'#555':Pc.pct>0?'#2E7D32':'#C62828'}:null}).filter(Boolean):null,
         optHtml:()=>'<label>Hazır düzen<span class="hm-a4-lv">'+lbMindPresetHtml(K)+'</span></label><label>Seviyeler<span class="hm-a4-lv">'+lbMindLvHtml(K)+'</span></label>'};
     return src;
 }
@@ -7301,6 +7308,42 @@ function lbSelMachKanbanHtml(selAll,tile){
 }
 // ── ✅ Üretim ve 🛠 Tamirler görünümleri (pano tablosu biçiminde, en yeni önde) ──
 // kutu için kart: güncel veride varsa o (tıklayınca ayrıntı), yoksa kayıttaki bilgilerle (sevk edilmiş / bitmiş)
+// ── ⏱ Üretim normu (canlı): bugün KK / Sarım'dan geçen partilerin kumaş normuna göre gereken süresi ve tempo
+//    norm dk: KK = sabit parti payı + kg ÷ kumaşın KK hızı (urt); Sarım = kg ÷ kumaşın Sarım hızı (zaman raporu).
+//    tempo: gereken süre (norm toplamı ÷ makine sayısı; KK 3, Sarım 1) ile 08:00'den şimdiye geçen mesai süresi kıyaslanır:
+//    gereken > geçen → norma göre ileride (erken), küçükse geride (geç).
+let lbNormLd=0,lbNormLdAt=0;
+function lbNormEnsure(){
+    if(typeof KKHIZ==='undefined'||typeof SRHIZ==='undefined')return;
+    if((!KKHIZ||!SRHIZ)&&!lbNormLd&&Date.now()-lbNormLdAt>60000){lbNormLd=2;lbNormLdAt=Date.now();const hadK=!!KKHIZ,hadS=!!SRHIZ,done=()=>{if(--lbNormLd>0)return;lbNormLd=0;
+        if(!!KKHIZ!==hadK||!!SRHIZ!==hadS){try{if(typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}catch(e){}}};
+        if(KKHIZ)done();else kkHizLoad(done);if(SRHIZ)done();else srHizLoad(done)}
+}
+function lbNormMin(st,pn,kg,ham){
+    lbNormEnsure();const kk=st==='kk';if(typeof KKHIZ==='undefined'||(kk?!KKHIZ:!SRHIZ)||!(num(kg)>0))return null;
+    try{return paWkNorm({pn:String(pn||'').trim(),kg:num(kg),st,ham:ham||''}).m}catch(e){return null}
+}
+function lbNormFmt(m){m=Math.round(m);return m<60?m+' dk':Math.floor(m/60)+' sa'+(m%60?' '+(m%60)+' dk':'')}
+function lbNormLanes(st){return st==='kk'?(typeof PA_WK_KK_LANES==='number'?PA_WK_KK_LANES:3):1}
+// recs: [{ts, nm}] aynı aşamanın bugünkü geçişleri
+function lbNormPace(st,recs){
+    const L=recs.filter(r=>r.nm!=null);if(!L.length)return null;
+    const nm=L.reduce((s,r)=>s+r.nm,0),kg=L.reduce((s,r)=>s+num(r.kg),0),lanes=lbNormLanes(st),H=3600000,s0=todayShiftWindow().start.getTime(),mes=s0+(LB_WORK_E-LB_WORK_S)*H;
+    const night=recs.some(r=>r.ts>mes),el=Math.max(0.25,(Math.min(Date.now(),night?s0+24*H:mes)-s0)/H);
+    // tot: toplam süre = geçen mesai × makine sayısı (saat). exp: bu sürede, bugünkü kumaş karmasının norm hızıyla çıkması gereken kg
+    const tot=el*lanes,rate=nm>0?kg/(nm/60):0,exp=rate*tot,pct=exp>0?(kg-exp)/exp*100:0;
+    return{nm,kg,exp,tot,rate,el,pct,lanes,n:L.length,all:L.length===recs.length};
+}
+function lbNormPaceTxt(P){if(!P)return'';const a=Math.abs(Math.round(P.pct));return a<3?'≈ normda':P.pct>0?'▲ %'+a+' ileride':'▼ %'+a+' geride'}
+function lbNormKg(v){return Math.round(v).toLocaleString('tr-TR')+' kg'}
+// tek satır özet: toplam süre • olması gereken • gerçekleşen
+function lbNormPaceLine(R,P){return R.name+': toplam süre '+lbNormFmt(P.tot*60)+(P.lanes>1?' ('+P.lanes+' makine × '+lbNormFmt(P.el*60)+')':'')+' • olması gereken '+lbNormKg(P.exp)+' • gerçekleşen '+lbNormKg(P.kg)+' • '}
+function lbNormPaceTip(R,P){
+    return R.name+' — kumaş normuna göre bugün\nToplam süre: '+lbNormFmt(P.tot*60)+(P.lanes>1?' ('+P.lanes+' makine × 08:00\'den şimdiye '+lbNormFmt(P.el*60)+')':' (08:00\'den şimdiye)')
+        +'\nBu sürede olması gereken: '+lbNormKg(P.exp)+' (bugünkü kumaşların norm hızı ≈ '+Math.round(P.rate)+' kg/saat, makine başına)'
+        +'\nGerçekleşen: '+lbNormKg(P.kg)+' • '+P.n+' parti (norm süresi '+lbNormFmt(P.nm)+')'
+        +'\nFark: '+(P.pct>=0?'%'+Math.round(P.pct)+' ileride':'%'+Math.round(-P.pct)+' geride ('+lbNormKg(P.exp-P.kg)+' eksik)')+(P.all?'':'\n(kg bilgisi olmayan partiler hariç)');
+}
 function lbTvCard(pn,o){
     const p=String(pn||'').trim(),k=getAllCards().find(c=>String(c.parti).trim()===p);
     return Object.assign({},k||{id:'',parti:p,kilo:num(o.kg),firma:o.firma||o.line1||'',line1:o.firma||o.line1||'',musteri_siparis:o.siparis||'',_asama:'güncel veride yok'},o.extra||{});
@@ -8172,7 +8215,15 @@ function lbGoalSave(clear){
 function lbOpenProd(i){
     const x=lbReg[i];if(!x)return;if(!x.rows.length){showToast('Bugün henüz kayıt yok','warning');return}
     const kg=x.rows.reduce((s,r)=>s+num(r.kg),0);
-    hmModalShow('<div class="hm-card-title">✅ '+esc(x.title)+'<small>'+x.rows.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div><div class="ulog-list">'+x.rows.map((r,j)=>uretimLogItemHtml(r,j,false)).join('')+'</div>');
+    let np='';
+    if(x.R){const P=lbNormPace(x.R.key,x.rows.map(r=>({ts:r.ts||0,kg:r.kg,nm:lbNormMin(x.R.key,r.parti,r.kg,r.kumas)})));
+        if(P){const c=Math.abs(P.pct)<3?'#FFD54F':P.pct>0?'#69F0AE':'#FF8A80';
+            np='<div class="lb-npbox" style="--c:'+c+'"><div class="lb-np-t">⏱ Kumaş normuna göre bugün <b>'+lbNormPaceTxt(P)+'</b></div><div class="lb-np-g">'
+                +'<span>Toplam süre</span><b>'+lbNormFmt(P.tot*60)+'</b><small>'+(P.lanes>1?P.lanes+' makine × 08:00\'den şimdiye '+lbNormFmt(P.el*60):'08:00\'den şimdiye')+'</small>'
+                +'<span>Olması gereken</span><b>'+lbNormKg(P.exp)+'</b><small>bugünkü kumaşların norm hızı ≈ '+Math.round(P.rate)+' kg/saat'+(P.lanes>1?' (makine başına)':'')+'</small>'
+                +'<span>Gerçekleşen</span><b>'+lbNormKg(P.kg)+'</b><small>'+P.n+' parti • norm süresi '+lbNormFmt(P.nm)+'</small>'
+                +'<span>Fark</span><b style="color:'+c+'">'+(P.pct>=0?'+':'−')+lbNormKg(Math.abs(P.kg-P.exp))+'</b><small>'+(P.pct>=0?'norma göre fazla':'norma göre eksik')+'</small></div></div>'}}
+    hmModalShow('<div class="hm-card-title">✅ '+esc(x.title)+'<small>'+x.rows.length+' parti • '+Math.round(kg).toLocaleString('tr-TR')+' kg</small></div>'+np+'<div class="ulog-list">'+x.rows.map((r,j)=>uretimLogItemHtml(r,j,false)).join('')+'</div>');
 }
 // Müşteri = kartın firma alanı (ÖZPOLAR, HEFA SUNİ DERİ, VEFA…). Sipariş metni serbest yazıldığı için ondan ad
 // tahmin edilmez; tek istisna FAYTEKS'in düzenli FSA kalıbı: "BELLONA_FSA_2633", "ROYAL YATAK.FSA_2432",
@@ -8232,7 +8283,7 @@ function lbCellHtml(key,title,items,color,extra,cls,tot){
         +'<div class="lb-body" data-cell="'+key+'" data-row="'+key.replace(/[gu]$/,'')+'"></div></div>';
 }
 function lbProdCellHtml(R,rows){
-    const kg=rows.reduce((s,r)=>s+num(r.kg),0);lbReg.push({title:R.prod+' (bugün)',rows});const idx=lbReg.length-1;
+    const kg=rows.reduce((s,r)=>s+num(r.kg),0);lbReg.push({title:R.prod+' (bugün)',rows,R});const idx=lbReg.length-1;
     const n=rows.length,goal=+lbGoal[R.key]||0,s=lbProdStats(rows),hm=t=>new Date(t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
     let eta='';
     if(goal){
@@ -8252,13 +8303,15 @@ function lbProdCellHtml(R,rows){
             +'<div class="lb-px lb-px-l">Dün toplam '+fv(y.total)+'</div>';
         yTip='\nDün aynı saatte: '+fv(y.same)+' '+unit+' • dün toplam: '+fv(y.total)+' '+unit;
     }
-    const tip='Bugün geçen partilerin listesi\nOrtalama hız: '+rateT.replace('/sa',kgv?'/saat':' parti/saat')+' (08:00\'den)\nBu hızla gün sonunda ('+hm(s.end)+'): ~'+fv(s.est)+' '+unit+(goal?'\nHedef: '+goal+' parti':'')+yTip;
+    const NP=lbNormPace(R.key,rows.map(r=>({ts:r.ts||0,kg:r.kg,nm:lbNormMin(R.key,r.parti,r.kg,r.kumas)})));
+    const npHtml=NP?'<div class="lb-px lb-px-m lb-px-norm '+(Math.abs(NP.pct)<3?'':NP.pct>0?'up':'dn')+'"><span class="lb-nx">olması gereken<br>'+lbShortKg(NP.exp)+' kg<br></span><b>'+lbNormPaceTxt(NP)+'</b></div>':'';
+    const tip=(NP?lbNormPaceTip(R,NP)+'\n\n':'')+'Bugün geçen partilerin listesi\nOrtalama hız: '+rateT.replace('/sa',kgv?'/saat':' parti/saat')+' (08:00\'den)\nBu hızla gün sonunda ('+hm(s.end)+'): ~'+fv(s.est)+' '+unit+(goal?'\nHedef: '+goal+' parti':'')+yTip;
     return '<div class="lb-cell lb-prod'+(kgv?' kgv':'')+'" data-prod="'+R.key+'" style="--c:#66BB6A" onclick="lbOpenProd('+idx+')" title="'+esc(tip)+'">'
         +'<button type="button" class="lb-goal-b" onclick="event.stopPropagation();lbGoalOpen()" title="Günlük hedef ve gün sonu saati">🎯</button>'
         +'<div class="lb-prod-t">✅ '+esc(R.name)+'</div><div class="lb-prod-n"><b>'+(kgv?kgT:n)+'</b><small>'+(kgv?'kg':goal?'/ '+goal+' parti':'parti')+'</small></div>'
         +(goal?'<div class="lb-prod-bar'+(n>=goal?' done':'')+'"><i style="width:'+Math.min(100,n/goal*100).toFixed(0)+'%"></i></div>':'')
         +'<div class="lb-prod-kg">'+(kgv?n+(goal?' / '+goal:'')+' parti':kgT+' kg')+'</div>'
-        +'<div class="lb-px lb-px-m">ort. '+rateT+'</div>'
+        +'<div class="lb-px lb-px-m">ort. '+rateT+'</div>'+npHtml
         +(eta?'<div class="lb-px lb-px-m lb-px-eta'+(n>=goal?' ok':'')+'">'+eta+'</div>':'')
         +yHtml
         +'<div class="lb-px lb-px-l">Gün sonu ~'+fv(s.est)+'</div>'
@@ -8886,7 +8939,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-grpbox{position:absolute;border-radius:8px;overflow:hidden;background:var(--tc);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}'
         +'.lb:not(.cust) .lb-grpbox{border-radius:6px;box-shadow:none}'
         +'.lb-grp-h{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;justify-content:center;padding:0 5px;background:rgba(0,0,0,.38);color:#FFE0B2;font-weight:900;letter-spacing:.2px;white-space:nowrap;overflow:hidden;line-height:1.12}'
-        +'.lb-pct{display:inline-block;background:rgba(255,213,79,.18);border:1px solid rgba(255,213,79,.55);color:#FFD54F;border-radius:999px;padding:0 .45em;margin-right:.25em;font-size:.82em;font-weight:900;vertical-align:.08em}.lb-grp-h span{display:block}.lb-grp-h i{font-style:normal;color:#ECEFF1;opacity:.85;font-weight:700}'
+        +'.lb-prod .lb-px-norm{display:block;line-height:1.2}.lb-prod .lb-px-norm b{white-space:nowrap}.lb-prod .lb-nx{display:none}.lb-prod[data-sz="m"] .lb-nx,.lb-prod[data-sz="l"] .lb-nx,.lb-prod[data-sz="xl"] .lb-nx{display:inline}.lb-px-norm b{font-weight:900}.lb-px-norm.up b{color:#69F0AE}.lb-px-norm.dn b{color:#FF8A80}.lb-npbox{border:1px solid var(--c);border-left-width:5px;border-radius:10px;background:rgba(255,255,255,.05);padding:8px 12px;margin:0 0 10px;color:#fff}.lb-np-t{font-size:13.5px;font-weight:700;margin-bottom:6px}.lb-np-t b{color:var(--c);font-weight:900;margin-left:4px}.lb-np-g{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:3px 12px;align-items:baseline;font-size:13px}.lb-np-g span{color:#B0BEC5}.lb-np-g b{font-weight:900;white-space:nowrap}.lb-np-g small{color:#90A4AE;font-size:11px}@media(max-width:560px){.lb-np-g{grid-template-columns:auto 1fr}.lb-np-g small{grid-column:1/-1;margin-top:-3px}}.lb-pct{display:inline-block;background:rgba(255,213,79,.18);border:1px solid rgba(255,213,79,.55);color:#FFD54F;border-radius:999px;padding:0 .45em;margin-right:.25em;font-size:.82em;font-weight:900;vertical-align:.08em}.lb-grp-h span{display:block}.lb-grp-h i{font-style:normal;color:#ECEFF1;opacity:.85;font-weight:700}'
         +'.lb-t{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer;line-height:1.02;box-shadow:inset -1px -1px 0 rgba(0,0,0,.45);background:var(--tc);overflow:hidden}'
         +'.lb-t b{font-weight:900;letter-spacing:.2px}.lb-t span{font-size:.74em;opacity:.92;font-weight:700}.lb-t.in{flex-direction:row;gap:.35em}.lb-t:hover{filter:brightness(1.3)}'
         +'.lb-t.uyari::after,.lb-t.kritik::after{content:"";position:absolute;left:12%;right:12%;bottom:2px;height:3px;border-radius:2px;background:#FFB74D}.lb-t.kritik::after{background:#EF5350}'
@@ -9926,7 +9979,7 @@ let paWkPc=null;
 function paWkCard(pn){const all=getAllCards();if(!paWkPc||paWkPc.n!==all.length){const m=new Map();all.forEach(k=>{const p=String(k.parti).trim();if(!m.has(p))m.set(p,k)});paWkPc={n:all.length,m}}return paWkPc.m.get(String(pn).trim())}
 function paWkNorm(r){
     // kumaş: güncel parti listesinden, parti listeden çıkmışsa üretim kaydının kendi parti bilgisinden
-    const c=paWkCard(r.pn),li=URETIM_LOG&&URETIM_LOG.partiler&&URETIM_LOG.partiler[r.pn],k=c||(li&&li.kumas?{ham_adi:li.kumas}:null),kk=r.st==='kk',D=kk?KKHIZ:SRHIZ;
+    const c=paWkCard(r.pn),li=URETIM_LOG&&URETIM_LOG.partiler&&URETIM_LOG.partiler[r.pn],k=c||(r.ham?{ham_adi:r.ham}:null)||(li&&li.kumas?{ham_adi:li.kumas}:null),kk=r.st==='kk',D=kk?KKHIZ:SRHIZ;
     const sp=k?(kk?kkpSpeed(k):srSpeed(k)):{v:D.all[1],src:(kk?'':'Sarım • ')+'kumaş bilinmiyor → genel ortalama'};
     return{m:Math.min(360,Math.max(5,(D.setup||0)+r.kg/sp.v*60)),v:sp.v,src:sp.src,ham:k?k.ham_adi:''}}
 let paWkLd=0,paWkLdAt=0;

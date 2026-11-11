@@ -234,6 +234,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 
 .flash-card{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border-radius:14px;width:350px;border:2px solid rgba(255,255,255,.15);transition:all .25s;overflow:hidden;cursor:pointer;position:relative}
 .flash-card:hover{transform:translateY(-5px);box-shadow:0 16px 32px rgba(0,0,0,.35);border-color:rgba(255,215,0,.5)}
+.kilo-w{display:flex;flex-direction:column;align-items:flex-end;gap:3px}.kk-norm{font-size:12px;font-weight:700;color:#80DEEA;white-space:nowrap}.kk-norm:empty{display:none}
 .flash-card.kritik{border-left:6px solid #FF4444}
 .flash-card.uyari{border-left:6px solid #FFC300}
 .flash-card.normal{border-left:6px solid #4CAF50}
@@ -2111,6 +2112,23 @@ function cardInfoLines(k){
 /* ── CARDS VIEW ── */
 // Flash kart (ana görünüm ve Isı Haritası açılır penceresi ortak). popup: kimliksiz, not/fire formu yerine ayrıntı düğmesi
 // (aynı kart ana görünümde de varsa note_/firekg_ kimlikleri çakışmasın).
+// ⏱ KK norm süresi: partinin kg'ı ve kumaşının geçmiş KK hızına göre kalite kontrolde gereken aktif süre (sabit parti payı + kg ÷ kumaş hızı)
+function kkNormOf(k){
+    if(typeof KKHIZ==='undefined'||!KKHIZ||!k||!(num(k.kilo)>0))return null;
+    const sp=kkpSpeed(k),m=(KKHIZ.setup||0)+num(k.kilo)/sp.v*60,r=Math.round(m);
+    return{m,txt:r<60?r+' dk':Math.floor(r/60)+' sa'+(r%60?' '+(r%60)+' dk':''),tip:'KK norm süresi: sabit parti payı '+(Math.round((KKHIZ.setup||0)*10)/10).toLocaleString('tr-TR')+' dk + '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg ÷ '+Math.round(sp.v)+' kg/sa ('+sp.src+(sp.n?', '+sp.n+' parti':'')+')'};
+}
+function kkNormHtml(k){
+    const n=kkNormOf(k);if(n)return '<div class="kk-norm" title="'+esc(n.tip)+'">⏱ KK ≈ '+n.txt+'</div>';
+    // hız verisi henüz inmediyse yer tutucu; inince doldurulur
+    if(typeof KKHIZ!=='undefined'&&!KKHIZ&&typeof kkHizLoad==='function'&&!KKHIZ_Q)kkHizLoad(kkNormFill);
+    return '<div class="kk-norm" data-kn="'+esc(k.id)+'"></div>';
+}
+function kkNormFill(){
+    if(!KKHIZ)return;const els=document.querySelectorAll('.kk-norm[data-kn]');if(!els.length)return;
+    const m=new Map();getAllCards().forEach(k=>m.set(String(k.id),k));
+    els.forEach(el=>{const n=kkNormOf(m.get(el.dataset.kn));el.removeAttribute('data-kn');if(n){el.textContent='⏱ KK ≈ '+n.txt;el.title=n.tip}});
+}
 function flashCardHtml(k,popup){
     const ic=checkedCards.has(k.id),sev=k.seviye,bt=waitHoursText(k),bl=sev==='kritik'?'KRİTİK':sev==='uyari'?'UYARI':'NORMAL';
     const fl=getFireList(k.id),ftk=fl.reduce((a,b)=>a+num(b.fire_kg),0),fp=fl.length?'<div class="fire-pill">🔥 '+fl.length+' • '+ftk.toLocaleString('tr-TR')+' kg</div>':'';
@@ -2126,7 +2144,7 @@ function flashCardHtml(k,popup){
     const alarmBtnH='<span class="alarm-btn '+(hasAl?'active':'')+'" onclick="event.stopPropagation();openAlarmModal(\''+k.id+'\')" title="Alarm">'+(hasAl?'🔔':'🔕')+'</span>';
     const ro=['<option value="">Sebep</option>'].concat(FIRE_REASONS.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>')).join('');
     let fml='';if(fl.length){fml='<div class="fire-mini-list">';fl.forEach((fr,i)=>{fml+='<div class="fire-mini-item"><b>'+(i+1)+') '+esc(fr.fire_sebebi||'')+'</b> '+num(fr.fire_kg).toLocaleString('tr-TR')+'kg<button onclick="deleteFireLine(event,\''+k.id+'\',\''+fr.uid+'\')">Sil</button></div>'});fml+='</div>'}
-    return '<div class="flash-card '+sev+' '+(ic?'is-checked':'')+' '+(hasAl?'has-alarm':'')+(lbMainSelOn(k)?' lbsel':'')+'"'+(popup?'':' id="card_'+k.id+'"')+' onclick="this.classList.toggle(\'flipped\')"><div class="card-header"><div style="display:flex;align-items:center;gap:5px">'+starH+alarmBtnH+lbMainSelBtn(k)+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"><div class="parti" style="margin-left:5px">'+esc(k.parti)+'</div></div><div class="kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <span>kg</span></div></div><div class="card-body"><div class="asama-badge">'+esc(k._asama)+'</div>'+alBadge+tamirBadge+nb+'<div class="line1">'+esc(k.line1||'')+'</div>'+(k.recete_adi?'<div class="recipe-pill">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+(typeof lbSelNoteOf==='function'&&lbSelNoteOf(k)?'<div class="sel-note-pill" title="Seçim notu (canlı izleme)">📌 '+esc(lbSelNoteOf(k))+'</div>':'')+(typeof lbEtaPill==='function'?lbEtaPill(k):'')+tamirLineHtml(k,'tamir-pill')+'<div class="line2">'+esc(k.line2||'')+'</div>'+pipe+np2+fp+'</div><div class="card-detail"><div class="det-row"><span class="det-label">Bekliyor:</span><span>'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+cardNextHtml(k,'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div><div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span>'+esc(bt)+'</span></div>'+(popup?'<div class="hm-card-more" onclick="event.stopPropagation()"><button type="button" onclick="openDetailModal(&quot;'+k.id+'&quot;)">📝 Not · 🔔 Alarm · ayrıntı</button></div>':'<div class="note-form" onclick="event.stopPropagation()"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="note_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNote(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNote(event,\''+k.id+'\')">Sil</button></div></div><div class="fire-form" onclick="event.stopPropagation()"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="firekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="firemt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="firesebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="firenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFire(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFire(event,\''+k.id+'\')">Hepsini Sil</button></div></div>')+'</div><div class="card-footer"><div class="bekleme '+sev+'">'+esc(bt)+'</div><div class="badge '+sev+'">'+bl+'</div></div></div>';
+    return '<div class="flash-card '+sev+' '+(ic?'is-checked':'')+' '+(hasAl?'has-alarm':'')+(lbMainSelOn(k)?' lbsel':'')+'"'+(popup?'':' id="card_'+k.id+'"')+' onclick="this.classList.toggle(\'flipped\')"><div class="card-header"><div style="display:flex;align-items:center;gap:5px">'+starH+alarmBtnH+lbMainSelBtn(k)+'<input type="checkbox" class="parti-checkbox" '+(ic?'checked':'')+' onclick="toggleCheck(event,\''+k.id+'\')"><div class="parti" style="margin-left:5px">'+esc(k.parti)+'</div></div><div class="kilo-w"><div class="kilo">'+Math.round(k.kilo).toLocaleString('tr-TR')+' <span>kg</span></div>'+kkNormHtml(k)+'</div></div><div class="card-body"><div class="asama-badge">'+esc(k._asama)+'</div>'+alBadge+tamirBadge+nb+'<div class="line1">'+esc(k.line1||'')+'</div>'+(k.recete_adi?'<div class="recipe-pill">🎨 Reçete: '+esc(k.recete_adi)+'</div>':'')+(typeof lbSelNoteOf==='function'&&lbSelNoteOf(k)?'<div class="sel-note-pill" title="Seçim notu (canlı izleme)">📌 '+esc(lbSelNoteOf(k))+'</div>':'')+(typeof lbEtaPill==='function'?lbEtaPill(k):'')+tamirLineHtml(k,'tamir-pill')+'<div class="line2">'+esc(k.line2||'')+'</div>'+pipe+np2+fp+'</div><div class="card-detail"><div class="det-row"><span class="det-label">Bekliyor:</span><span>'+esc(k._asama)+'</span></div><div class="det-row"><span class="det-label">Bir Sonraki:</span><span style="color:#FFB74D;font-weight:bold">'+cardNextHtml(k,'Son/Yok')+'</span></div><div class="det-row"><span class="det-label">Üretim Sırası:</span><span style="font-size:10px">'+esc(k.uretim_asamalari||'-')+'</span></div><div class="det-row"><span class="det-label">Firma:</span><span>'+esc(k.line1||'-')+'</span></div><div class="det-row"><span class="det-label">Kumaş:</span><span>'+esc(k.ham_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Reçete:</span><span>'+esc(k.recete_adi||'-')+'</span></div><div class="det-row"><span class="det-label">Bekleme:</span><span>'+esc(bt)+'</span></div>'+(popup?'<div class="hm-card-more" onclick="event.stopPropagation()"><button type="button" onclick="openDetailModal(&quot;'+k.id+'&quot;)">📝 Not · 🔔 Alarm · ayrıntı</button></div>':'<div class="note-form" onclick="event.stopPropagation()"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="note_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNote(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNote(event,\''+k.id+'\')">Sil</button></div></div><div class="fire-form" onclick="event.stopPropagation()"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="firekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="firemt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="firesebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="firenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFire(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFire(event,\''+k.id+'\')">Hepsini Sil</button></div></div>')+'</div><div class="card-footer"><div class="bekleme '+sev+'">'+esc(bt)+'</div><div class="badge '+sev+'">'+bl+'</div></div></div>';
 }
 function renderCardsView(kartlar){
     const c=document.getElementById('cardsContainer');if(!kartlar.length){c.innerHTML='<div class="no-results">Sonuç bulunamadı</div>';return}
@@ -5496,8 +5514,12 @@ function srSpeed(k){
     if(a)return{v:cl((a[1]*a[0]+D.all[1]*3)/(a[0]+3)),src:'Sarım • kumaş (az örnek)',n:a[0]};
     return{v:D.all[1],src:'Sarım • genel ortalama',n:0};
 }
+let KKHIZ_Q=null;
 function kkHizLoad(cb){
     if(KKHIZ&&Date.now()-KKHIZ_AT<600000){cb&&cb();return}
+    // indirme sürerken gelen çağrılar yeni indirme başlatmaz, sıraya girer (yoksa yüzlerce indirme + yeniden çizim ekranı dondurur)
+    if(KKHIZ_Q){if(cb)KKHIZ_Q.push(cb);return}
+    KKHIZ_Q=cb?[cb]:[];cb=()=>{const q=KKHIZ_Q||[];KKHIZ_Q=null;q.forEach(f=>{try{f()}catch(e){console.error(e)}})};
     const h=location.hostname,local=!h||h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h),ts='?ts='+Date.now(),rel=()=>fetch('data/kk_hiz.json'+ts,{cache:'no-store'});
     (local?rel():fetch('https://raw.githubusercontent.com/adnsahin/parti-dashboard/main/data/kk_hiz.json'+ts,{cache:'no-store'}).then(r=>r.ok?r:rel()).catch(rel)).then(r=>r&&r.ok?r.json():null)
         .then(j=>{if(j&&j.ham){KKHIZ=j;KKHIZ_AT=Date.now()}cb&&cb()}).catch(()=>cb&&cb());
@@ -9002,6 +9024,7 @@ function lbPvCardHtml(k,notes){
         +'<div class="lb-pc-b">'
             +row('👤','Müşteri',esc(cust)+(firm&&firm!==cust?' <small>'+esc(firm)+'</small>':''))
             +row('🧵','Kumaş',esc(k.ham_adi||'-'),'kum')
+            +(n=>n?row('⏱','KK normu','<span title="'+esc(n.tip)+'">≈ '+n.txt+'</span>'):'')(kkNormOf(k))
             +row('🎨','Reçete',k.recete_adi?esc(k.recete_adi):'')
             +row('↩','Geldiği',k.son_asama?esc(k.son_asama):'')
             +row('📅','Termin',lbPvTermHtml(k))
@@ -9906,7 +9929,13 @@ function paWkNorm(r){
     const c=paWkCard(r.pn),li=URETIM_LOG&&URETIM_LOG.partiler&&URETIM_LOG.partiler[r.pn],k=c||(li&&li.kumas?{ham_adi:li.kumas}:null),kk=r.st==='kk',D=kk?KKHIZ:SRHIZ;
     const sp=k?(kk?kkpSpeed(k):srSpeed(k)):{v:D.all[1],src:(kk?'':'Sarım • ')+'kumaş bilinmiyor → genel ortalama'};
     return{m:Math.min(360,Math.max(5,(D.setup||0)+r.kg/sp.v*60)),v:sp.v,src:sp.src,ham:k?k.ham_adi:''}}
-function paWkUseNorm(){if(paWkModel!=='norm')return false;if(!SRHIZ)srHizLoad(()=>{if(SRHIZ&&paVisible())paRender()});if(!KKHIZ){kkHizLoad(()=>{if(KKHIZ&&paVisible())paRender()});return false}return true}
+let paWkLd=0,paWkLdAt=0;
+function paWkUseNorm(){
+    if(paWkModel!=='norm')return false;
+    // hız verileri yoksa bir kez istenir (her hesapta değil); ikisi de bitince tek yeniden çizim. Başarısızsa 60 sn sonra yeniden denenir.
+    if((!KKHIZ||!SRHIZ)&&!paWkLd&&Date.now()-paWkLdAt>60000){paWkLd=2;paWkLdAt=Date.now();const hadK=!!KKHIZ,hadS=!!SRHIZ,done=()=>{if(--paWkLd>0)return;paWkLd=0;if((!!KKHIZ!==hadK||!!SRHIZ!==hadS)&&paVisible())paRender()};
+        if(KKHIZ)done();else kkHizLoad(done);if(SRHIZ)done();else srHizLoad(done)}
+    return !!KKHIZ}
 function paWkGapSel(){if(paWkSrNorm())return'';return '<span class="pa-cmp-vs">'+(paWkModel==='norm'?'Sarım eşiği':'Boşluk eşiği')+'</span><select onchange="paWkSet(&quot;gap&quot;,this.value)" aria-label="Boşluk eşiği" title="Her kayıt kendinden önceki bu kadar süreyi dolu sayar">'+[20,30,45,60,90].map(v=>'<option value="'+v+'"'+(v===paWkGap?' selected':'')+'>'+v+' dk</option>').join('')+'</select>'}
 function paWkSrNorm(){return paWkUseNorm()&&!!SRHIZ}
 function paWkCalc(d,st){
@@ -10493,7 +10522,7 @@ function paKpiLive(){
     const avg=ds.reduce((s,d)=>s+cum(d),0)/ds.length;return{t:cum(today),avg,off,n:ds.length};
 }
 function paKpiHtml(M){
-    if(!KKHIZ){kkHizLoad(()=>{if(KKHIZ&&paVisible())paRender()});return '<div class="pa-note">KK hız verisi okunuyor…</div>'}
+    if(!KKHIZ){if(!KKHIZ_Q)kkHizLoad(()=>{if(KKHIZ&&paVisible())paRender()});return '<div class="pa-note">KK hız verisi okunuyor…</div>'}
     if(!KKHIZ.ds)return '<div class="pa-note">KK hız verisi eski biçimde; çalışma bilgisayarında <b>update_kk_hiz.py urt.xlsx</b> bir kez daha çalıştırılmalı.</div>';
     const S=paKpiSeries(),f0=v=>Math.round(v).toLocaleString('tr-TR'),f1=v=>(Math.round(v*10)/10).toLocaleString('tr-TR'),per=paKpiG==='w'?'hafta':'gün';
     const K=[

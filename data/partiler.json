@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-12T17:20:40.433527",
+  "generatedAt": "2026-11-12T17:27:26.028225",
   "source": {
     "mainFile": "partiler.xlsx",
     "repairFile": "tamir.xlsx"
@@ -1711,7 +1711,7 @@
       "parti": "(2026) 10795",
       "stage": "POLISH 2",
       "kg": 440.0,
-      "wait": 0.7083333333333334,
+      "wait": 0.75,
       "sev": "ok",
       "firma": "OTURAKÇI TOYS SAN.TİC.A.Ş",
       "order": "(2023) 210",
@@ -1943,7 +1943,7 @@
       "parti": "(2026) 11005",
       "stage": "SARIM 1",
       "kg": 150.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "ŞAHİNLER TİC.LTD.ŞTİ. (APEX)",
       "order": "(2022) 916",
@@ -3439,7 +3439,7 @@
     {
       "id": "p140",
       "parti": "(2026) 10843",
-      "stage": "FIRÇA",
+      "stage": "RAM APRE",
       "kg": 480.0,
       "wait": 0.0,
       "sev": "ok",
@@ -3455,8 +3455,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, İNCELTME, Y.AÇMA, ÖN FİKSE 2, ZMPR 1, ZMPR 2, BOYA, Y.AÇMA, FIRÇA, RAM APRE, THUMPLER, RAM FIRÇA, KK, FZK.KNT, SEVK",
       "machine": "SL500-4",
-      "lastStage": "YAŞ AÇMA",
-      "hareket": "12.11.2026 16:37",
+      "lastStage": "FIRÇA",
+      "hareket": "12.11.2026 17:20",
       "repairs": []
     },
     {
@@ -4419,7 +4419,7 @@
     {
       "id": "p180",
       "parti": "(2026) 11040",
-      "stage": "AKTARMA",
+      "stage": "FIRÇA",
       "kg": 240.0,
       "wait": 0.0,
       "sev": "ok",
@@ -4435,8 +4435,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, İNCELTME, Y.AÇMA, ÖNFİKSE 1, ZMPR 1, BOYA, Y.AÇMA, FIRÇA, RAM, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "SL250-3",
-      "lastStage": "BOYAMA",
-      "hareket": "12.11.2026 16:59",
+      "lastStage": "YAŞ AÇMA",
+      "hareket": "12.11.2026 17:20",
       "repairs": []
     },
     {
@@ -4651,7 +4651,7 @@
       "parti": "(2026) 11068",
       "stage": "YUMUŞATMA",
       "kg": 180.0,
-      "wait": 0.16666666666666666,
+      "wait": 0.20833333333333334,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2023) 1367",
@@ -4902,9 +4902,9 @@
     {
       "id": "p201",
       "parti": "(2026) 11115",
-      "stage": "LAMİNASYON",
+      "stage": "KALİTE KONTROL",
       "kg": 180.0,
-      "wait": 0.9583333333333334,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "AŞANTEKS TEKSTİL SAN.VE TİC.A.Ş",
       "order": "(2026) 10",
@@ -4918,8 +4918,8 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, BOYA, YUMUŞATMA, Y.AÇMA, FIRÇA, RAM APRE, POLISH 2, TRAŞ 2, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
       "machine": "SL500-9",
-      "lastStage": "SARIM 1",
-      "hareket": "11.11.2026 17:29",
+      "lastStage": "LAMİNASYON",
+      "hareket": "12.11.2026 17:22",
       "repairs": []
     },
     {
@@ -5180,7 +5180,7 @@
       "parti": "(2026) 11154",
       "stage": "POLISH 2",
       "kg": 180.0,
-      "wait": 0.5416666666666666,
+      "wait": 0.5833333333333334,
       "sev": "ok",
       "firma": "AŞANTEKS TEKSTİL SAN.VE TİC.A.Ş",
       "order": "(2026) 10",
@@ -5847,7 +5847,7 @@
       "parti": "(2026) 11225",
       "stage": "YAŞ AÇMA",
       "kg": 240.0,
-      "wait": 1,
+      "wait": 2,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2020) 875",
@@ -7860,6 +7860,29 @@
     {
       "id": "p324",
       "parti": "(2026) 10908",
+      "stage": "SEVK TESLİM",
+      "kg": 300.0,
+      "wait": 0.0,
+      "sev": "ok",
+      "firma": "MATROLUXE LTD",
+      "order": "(2026) 273",
+      "customer": "MATTROLUXE_FSA_2813_26/10/2026",
+      "fabric": "YJB020178",
+      "recipe": "",
+      "term": "14.08.2026",
+      "due": -90,
+      "pri": "1000",
+      "inner": "",
+      "blocked": "",
+      "flow": "PARTİ, M.AÇMA, RAM, KK, FZK.KNT, SEVK",
+      "machine": "",
+      "lastStage": "FİZİKSEL KONTROL",
+      "hareket": "12.11.2026 17:18",
+      "repairs": []
+    },
+    {
+      "id": "p325",
+      "parti": "(2026) 10908",
       "stage": "KALİTE KONTROL",
       "kg": 60.0,
       "wait": 2,
@@ -7881,7 +7904,7 @@
       "repairs": []
     },
     {
-      "id": "p325",
+      "id": "p326",
       "parti": "(2026) 10909",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -7904,7 +7927,7 @@
       "repairs": []
     },
     {
-      "id": "p326",
+      "id": "p327",
       "parti": "(2026) 10910",
       "stage": "MAL AÇMA",
       "kg": 720.0,
@@ -7927,7 +7950,7 @@
       "repairs": []
     },
     {
-      "id": "p327",
+      "id": "p328",
       "parti": "(2026) 10911",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -7950,7 +7973,7 @@
       "repairs": []
     },
     {
-      "id": "p328",
+      "id": "p329",
       "parti": "(2026) 10912",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -7973,7 +7996,7 @@
       "repairs": []
     },
     {
-      "id": "p329",
+      "id": "p330",
       "parti": "(2026) 10930",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -7996,7 +8019,7 @@
       "repairs": []
     },
     {
-      "id": "p330",
+      "id": "p331",
       "parti": "(2026) 10931",
       "stage": "KALİTE KONTROL",
       "kg": 360.0,
@@ -8019,7 +8042,7 @@
       "repairs": []
     },
     {
-      "id": "p331",
+      "id": "p332",
       "parti": "(2026) 10932",
       "stage": "RAM",
       "kg": 360.0,
@@ -8042,7 +8065,7 @@
       "repairs": []
     },
     {
-      "id": "p332",
+      "id": "p333",
       "parti": "(2026) 10933",
       "stage": "RAM",
       "kg": 360.0,
@@ -8065,7 +8088,7 @@
       "repairs": []
     },
     {
-      "id": "p333",
+      "id": "p334",
       "parti": "(2026) 10934",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -8088,7 +8111,7 @@
       "repairs": []
     },
     {
-      "id": "p334",
+      "id": "p335",
       "parti": "(2026) 10935",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -8111,7 +8134,7 @@
       "repairs": []
     },
     {
-      "id": "p335",
+      "id": "p336",
       "parti": "(2026) 11034",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -8134,7 +8157,7 @@
       "repairs": []
     },
     {
-      "id": "p336",
+      "id": "p337",
       "parti": "(2026) 11035",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -8157,7 +8180,7 @@
       "repairs": []
     },
     {
-      "id": "p337",
+      "id": "p338",
       "parti": "(2026) 11036",
       "stage": "RAM",
       "kg": 360.0,
@@ -8180,7 +8203,7 @@
       "repairs": []
     },
     {
-      "id": "p338",
+      "id": "p339",
       "parti": "(2026) 11037",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -8203,7 +8226,7 @@
       "repairs": []
     },
     {
-      "id": "p339",
+      "id": "p340",
       "parti": "(2026) 11038",
       "stage": "SEVK TESLİM",
       "kg": 270.0,
@@ -8226,7 +8249,7 @@
       "repairs": []
     },
     {
-      "id": "p340",
+      "id": "p341",
       "parti": "(2026) 11038",
       "stage": "KALİTE KONTROL",
       "kg": 90.0,
@@ -8249,7 +8272,7 @@
       "repairs": []
     },
     {
-      "id": "p341",
+      "id": "p342",
       "parti": "(2026) 11051",
       "stage": "RAM",
       "kg": 360.0,
@@ -8272,7 +8295,7 @@
       "repairs": []
     },
     {
-      "id": "p342",
+      "id": "p343",
       "parti": "(2026) 11052",
       "stage": "RAM",
       "kg": 360.0,
@@ -8295,7 +8318,7 @@
       "repairs": []
     },
     {
-      "id": "p343",
+      "id": "p344",
       "parti": "(2026) 11053",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -8318,7 +8341,7 @@
       "repairs": []
     },
     {
-      "id": "p344",
+      "id": "p345",
       "parti": "(2026) 11054",
       "stage": "RAM",
       "kg": 360.0,
@@ -8341,7 +8364,7 @@
       "repairs": []
     },
     {
-      "id": "p345",
+      "id": "p346",
       "parti": "(2026) 11055",
       "stage": "SEVK TESLİM",
       "kg": 215.0,
@@ -8364,7 +8387,7 @@
       "repairs": []
     },
     {
-      "id": "p346",
+      "id": "p347",
       "parti": "(2026) 11055",
       "stage": "KALİTE KONTROL",
       "kg": 145.0,
@@ -8387,7 +8410,7 @@
       "repairs": []
     },
     {
-      "id": "p347",
+      "id": "p348",
       "parti": "(2026) 11097",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -8410,7 +8433,7 @@
       "repairs": []
     },
     {
-      "id": "p348",
+      "id": "p349",
       "parti": "(2026) 11099",
       "stage": "KALİTE KONTROL",
       "kg": 360.0,
@@ -8433,11 +8456,11 @@
       "repairs": []
     },
     {
-      "id": "p349",
+      "id": "p350",
       "parti": "(2026) 11100",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
-      "wait": 0.7916666666666666,
+      "wait": 0.8333333333333334,
       "sev": "ok",
       "firma": "MATROLUXE LTD",
       "order": "(2026) 273",
@@ -8456,11 +8479,11 @@
       "repairs": []
     },
     {
-      "id": "p350",
+      "id": "p351",
       "parti": "(2026) 11101",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
-      "wait": 0.7916666666666666,
+      "wait": 0.8333333333333334,
       "sev": "ok",
       "firma": "MATROLUXE LTD",
       "order": "(2026) 273",
@@ -8479,7 +8502,7 @@
       "repairs": []
     },
     {
-      "id": "p351",
+      "id": "p352",
       "parti": "(2026) 11102",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
@@ -8502,7 +8525,7 @@
       "repairs": []
     },
     {
-      "id": "p352",
+      "id": "p353",
       "parti": "(2026) 11166",
       "stage": "FİZİKSEL KONTROL",
       "kg": 300.0,
@@ -8525,7 +8548,7 @@
       "repairs": []
     },
     {
-      "id": "p353",
+      "id": "p354",
       "parti": "(2026) 11166",
       "stage": "FİZİKSEL KONTROL",
       "kg": 60.0,
@@ -8548,7 +8571,7 @@
       "repairs": []
     },
     {
-      "id": "p354",
+      "id": "p355",
       "parti": "(2026) 11168",
       "stage": "KALİTE KONTROL",
       "kg": 360.0,
@@ -8571,7 +8594,7 @@
       "repairs": []
     },
     {
-      "id": "p355",
+      "id": "p356",
       "parti": "(2026) 11169",
       "stage": "SEVK TESLİM",
       "kg": 330.0,
@@ -8594,7 +8617,7 @@
       "repairs": []
     },
     {
-      "id": "p356",
+      "id": "p357",
       "parti": "(2026) 11169",
       "stage": "KALİTE KONTROL",
       "kg": 30.0,
@@ -8617,7 +8640,7 @@
       "repairs": []
     },
     {
-      "id": "p357",
+      "id": "p358",
       "parti": "(2026) 11170",
       "stage": "FİZİKSEL KONTROL",
       "kg": 60.0,
@@ -8640,7 +8663,7 @@
       "repairs": []
     },
     {
-      "id": "p358",
+      "id": "p359",
       "parti": "(2026) 11170",
       "stage": "FİZİKSEL KONTROL",
       "kg": 300.0,
@@ -8663,11 +8686,11 @@
       "repairs": []
     },
     {
-      "id": "p359",
+      "id": "p360",
       "parti": "(2026) 11171",
       "stage": "SEVK TESLİM",
       "kg": 360.0,
-      "wait": 0.625,
+      "wait": 0.6666666666666666,
       "sev": "ok",
       "firma": "MATROLUXE LTD",
       "order": "(2026) 273",
@@ -8686,7 +8709,7 @@
       "repairs": []
     },
     {
-      "id": "p360",
+      "id": "p361",
       "parti": "(2026) 11181",
       "stage": "RAM",
       "kg": 360.0,
@@ -8709,7 +8732,7 @@
       "repairs": []
     },
     {
-      "id": "p361",
+      "id": "p362",
       "parti": "(2026) 11182",
       "stage": "RAM",
       "kg": 360.0,
@@ -8732,7 +8755,7 @@
       "repairs": []
     },
     {
-      "id": "p362",
+      "id": "p363",
       "parti": "(2026) 11183",
       "stage": "RAM",
       "kg": 360.0,
@@ -8755,7 +8778,7 @@
       "repairs": []
     },
     {
-      "id": "p363",
+      "id": "p364",
       "parti": "(2026) 11184",
       "stage": "RAM",
       "kg": 360.0,
@@ -8778,7 +8801,7 @@
       "repairs": []
     },
     {
-      "id": "p364",
+      "id": "p365",
       "parti": "(2026) 11254",
       "stage": "RAM",
       "kg": 360.0,
@@ -8801,7 +8824,7 @@
       "repairs": []
     },
     {
-      "id": "p365",
+      "id": "p366",
       "parti": "(2026) 11255",
       "stage": "RAM",
       "kg": 360.0,
@@ -8824,7 +8847,7 @@
       "repairs": []
     },
     {
-      "id": "p366",
+      "id": "p367",
       "parti": "(2026) 11256",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -8847,7 +8870,7 @@
       "repairs": []
     },
     {
-      "id": "p367",
+      "id": "p368",
       "parti": "(2026) 8515",
       "stage": "KALİTE KONTROL",
       "kg": 592.0,
@@ -8870,7 +8893,7 @@
       "repairs": []
     },
     {
-      "id": "p368",
+      "id": "p369",
       "parti": "(2026) 8516",
       "stage": "ZIMPARA 1",
       "kg": 592.0,
@@ -8893,7 +8916,7 @@
       "repairs": []
     },
     {
-      "id": "p369",
+      "id": "p370",
       "parti": "(2026) 9181",
       "stage": "KALİTE KONTROL",
       "kg": 54.0,
@@ -8916,7 +8939,7 @@
       "repairs": []
     },
     {
-      "id": "p370",
+      "id": "p371",
       "parti": "(2026) 10355",
       "stage": "SEVK TESLİM",
       "kg": 32.0,
@@ -8939,7 +8962,7 @@
       "repairs": []
     },
     {
-      "id": "p371",
+      "id": "p372",
       "parti": "(2026) 9887",
       "stage": "SEVK TESLİM",
       "kg": 34.0,
@@ -8977,7 +9000,7 @@
       ]
     },
     {
-      "id": "p372",
+      "id": "p373",
       "parti": "(2026) 10075",
       "stage": "RAM",
       "kg": 120.0,
@@ -9029,7 +9052,7 @@
       ]
     },
     {
-      "id": "p375",
+      "id": "p376",
       "parti": "(2026) 9591",
       "stage": "SEVK TESLİM",
       "kg": 100.0,
@@ -9052,7 +9075,7 @@
       "repairs": []
     },
     {
-      "id": "p376",
+      "id": "p377",
       "parti": "(2026) 9598",
       "stage": "SARIM 1",
       "kg": 33.0,
@@ -9090,7 +9113,7 @@
       ]
     },
     {
-      "id": "p377",
+      "id": "p378",
       "parti": "(2026) 9599",
       "stage": "SARIM 1",
       "kg": 33.0,
@@ -9128,7 +9151,7 @@
       ]
     },
     {
-      "id": "p378",
+      "id": "p379",
       "parti": "(2026) 9600",
       "stage": "SARIM 1",
       "kg": 34.0,
@@ -9166,7 +9189,7 @@
       ]
     },
     {
-      "id": "p379",
+      "id": "p380",
       "parti": "(2026) 9524",
       "stage": "KALİTE KONTROL",
       "kg": 142.5,
@@ -9189,7 +9212,7 @@
       "repairs": []
     },
     {
-      "id": "p380",
+      "id": "p381",
       "parti": "(2026) 9478",
       "stage": "SEVK TESLİM",
       "kg": 332.0,
@@ -9227,7 +9250,7 @@
       ]
     },
     {
-      "id": "p381",
+      "id": "p382",
       "parti": "(2026) 9552",
       "stage": "KALİTE KONTROL",
       "kg": 200.0,
@@ -9250,7 +9273,7 @@
       "repairs": []
     },
     {
-      "id": "p382",
+      "id": "p383",
       "parti": "(2026) 10739",
       "stage": "BOYAMA",
       "kg": 450.0,
@@ -9273,7 +9296,7 @@
       "repairs": []
     },
     {
-      "id": "p383",
+      "id": "p384",
       "parti": "(2026) 11434",
       "stage": "KALİTE KONTROL",
       "kg": 220.0,
@@ -9296,7 +9319,7 @@
       "repairs": []
     },
     {
-      "id": "p384",
+      "id": "p385",
       "parti": "(2026) 9752",
       "stage": "KALİTE KONTROL",
       "kg": 161.0,
@@ -9319,7 +9342,7 @@
       "repairs": []
     },
     {
-      "id": "p385",
+      "id": "p386",
       "parti": "(2026) 9855",
       "stage": "SEVK TESLİM",
       "kg": 120.0,
@@ -9357,7 +9380,7 @@
       ]
     },
     {
-      "id": "p386",
+      "id": "p387",
       "parti": "(2026) 10149",
       "stage": "KALİTE KONTROL",
       "kg": 400.0,
@@ -9380,7 +9403,7 @@
       "repairs": []
     },
     {
-      "id": "p387",
+      "id": "p388",
       "parti": "(2026) 10150",
       "stage": "SEVK TESLİM",
       "kg": 45.0,
@@ -9432,7 +9455,7 @@
       ]
     },
     {
-      "id": "p388",
+      "id": "p389",
       "parti": "(2026) 10150",
       "stage": "SEVK TESLİM",
       "kg": 355.0,
@@ -9484,7 +9507,7 @@
       ]
     },
     {
-      "id": "p389",
+      "id": "p390",
       "parti": "(2026) 10151",
       "stage": "SEVK TESLİM",
       "kg": 212.0,
@@ -9522,7 +9545,7 @@
       ]
     },
     {
-      "id": "p390",
+      "id": "p391",
       "parti": "(2026) 10823",
       "stage": "KALİTE KONTROL",
       "kg": 230.0,
@@ -9545,7 +9568,7 @@
       "repairs": []
     },
     {
-      "id": "p391",
+      "id": "p392",
       "parti": "(2026) 9633",
       "stage": "MAL AÇMA",
       "kg": 70.0,
@@ -9597,7 +9620,7 @@
       ]
     },
     {
-      "id": "p392",
+      "id": "p393",
       "parti": "(2026) 10031",
       "stage": "SEVK TESLİM",
       "kg": 25.0,
@@ -9649,7 +9672,7 @@
       ]
     },
     {
-      "id": "p393",
+      "id": "p394",
       "parti": "(2026) 10367",
       "stage": "KALİTE KONTROL",
       "kg": 720.0,
@@ -9672,7 +9695,7 @@
       "repairs": []
     },
     {
-      "id": "p394",
+      "id": "p395",
       "parti": "(2026) 10400",
       "stage": "KALİTE KONTROL",
       "kg": 360.0,
@@ -9695,7 +9718,7 @@
       "repairs": []
     },
     {
-      "id": "p395",
+      "id": "p396",
       "parti": "(2026) 10401",
       "stage": "KALİTE KONTROL",
       "kg": 360.0,
@@ -9718,7 +9741,7 @@
       "repairs": []
     },
     {
-      "id": "p396",
+      "id": "p397",
       "parti": "(2026) 10490",
       "stage": "SEVK TESLİM",
       "kg": 390.0,
@@ -9741,7 +9764,7 @@
       "repairs": []
     },
     {
-      "id": "p397",
+      "id": "p398",
       "parti": "(2026) 9662",
       "stage": "KALİTE KONTROL",
       "kg": 100.0,
@@ -9764,7 +9787,7 @@
       "repairs": []
     },
     {
-      "id": "p398",
+      "id": "p399",
       "parti": "(2026) 10183",
       "stage": "SEVK TESLİM",
       "kg": 200.0,
@@ -9802,7 +9825,7 @@
       ]
     },
     {
-      "id": "p399",
+      "id": "p400",
       "parti": "(2026) 10012",
       "stage": "SEVK TESLİM",
       "kg": 90.0,
@@ -9840,7 +9863,7 @@
       ]
     },
     {
-      "id": "p400",
+      "id": "p401",
       "parti": "(2026) 10012",
       "stage": "SEVK TESLİM",
       "kg": 390.0,
@@ -9878,7 +9901,7 @@
       ]
     },
     {
-      "id": "p401",
+      "id": "p402",
       "parti": "(2026) 10104",
       "stage": "SEVK TESLİM",
       "kg": 457.0,
@@ -9901,7 +9924,7 @@
       "repairs": []
     },
     {
-      "id": "p402",
+      "id": "p403",
       "parti": "(2026) 10105",
       "stage": "SEVK TESLİM",
       "kg": 305.0,
@@ -9953,7 +9976,7 @@
       ]
     },
     {
-      "id": "p403",
+      "id": "p404",
       "parti": "(2026) 10105",
       "stage": "ŞARDON",
       "kg": 90.0,
@@ -10005,7 +10028,7 @@
       ]
     },
     {
-      "id": "p404",
+      "id": "p405",
       "parti": "(2026) 9984",
       "stage": "PARTİLEME",
       "kg": 55.0,
@@ -10028,7 +10051,7 @@
       "repairs": []
     },
     {
-      "id": "p405",
+      "id": "p406",
       "parti": "(2026) 10006",
       "stage": "SEVK TESLİM",
       "kg": 473.0,
@@ -10047,11 +10070,11 @@
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, BOYA, Y.AÇMA, RAM, ZMPR 1, ZMPR 1, RAM APRE, KK, FZK.KNT, SEVK",
       "machine": "SL500-5",
       "lastStage": "FİZİKSEL KONTROL",
-      "hareket": "12.11.2026 17:15",
+      "hareket": "12.11.2026 17:22",
       "repairs": []
     },
     {
-      "id": "p406",
+      "id": "p407",
       "parti": "(2026) 10119",
       "stage": "BRONZİNG 1",
       "kg": 37.0,
@@ -10074,7 +10097,7 @@
       "repairs": []
     },
     {
-      "id": "p407",
+      "id": "p408",
       "parti": "(2026) 10120",
       "stage": "BRONZİNG 1",
       "kg": 40.0,
@@ -10097,7 +10120,7 @@
       "repairs": []
     },
     {
-      "id": "p408",
+      "id": "p409",
       "parti": "(2026) 10208",
       "stage": "SEVK TESLİM",
       "kg": 129.0,
@@ -10120,7 +10143,7 @@
       "repairs": []
     },
     {
-      "id": "p409",
+      "id": "p410",
       "parti": "(2026) 10209",
       "stage": "SEVK TESLİM",
       "kg": 87.0,
@@ -10143,7 +10166,7 @@
       "repairs": []
     },
     {
-      "id": "p411",
+      "id": "p412",
       "parti": "(2026) 9981",
       "stage": "SEVK TESLİM",
       "kg": 50.0,
@@ -10181,7 +10204,7 @@
       ]
     },
     {
-      "id": "p412",
+      "id": "p413",
       "parti": "(2026) 9981",
       "stage": "MAL AÇMA",
       "kg": 150.0,
@@ -10219,7 +10242,7 @@
       ]
     },
     {
-      "id": "p413",
+      "id": "p414",
       "parti": "(2026) 10048",
       "stage": "LAMİNASYON",
       "kg": 29.0,
@@ -10242,7 +10265,7 @@
       "repairs": []
     },
     {
-      "id": "p414",
+      "id": "p415",
       "parti": "(2026) 10116",
       "stage": "LAMİNASYON",
       "kg": 35.0,
@@ -10265,7 +10288,7 @@
       "repairs": []
     },
     {
-      "id": "p415",
+      "id": "p416",
       "parti": "(2026) 10191",
       "stage": "LAMİNASYON",
       "kg": 26.0,
@@ -10288,7 +10311,7 @@
       "repairs": []
     },
     {
-      "id": "p416",
+      "id": "p417",
       "parti": "(2026) 10193",
       "stage": "LAMİNASYON",
       "kg": 57.0,
@@ -10311,7 +10334,7 @@
       "repairs": []
     },
     {
-      "id": "p417",
+      "id": "p418",
       "parti": "(2026) 10217",
       "stage": "BOYAMA",
       "kg": 69.0,
@@ -10334,7 +10357,7 @@
       "repairs": []
     },
     {
-      "id": "p418",
+      "id": "p419",
       "parti": "(2026) 10280",
       "stage": "SEVK TESLİM",
       "kg": 60.0,
@@ -10372,7 +10395,7 @@
       ]
     },
     {
-      "id": "p419",
+      "id": "p420",
       "parti": "(2026) 10280",
       "stage": "KALİTE KONTROL",
       "kg": 110.0,
@@ -10410,7 +10433,7 @@
       ]
     },
     {
-      "id": "p420",
+      "id": "p421",
       "parti": "(2026) 10281",
       "stage": "KALİTE KONTROL",
       "kg": 120.0,
@@ -10448,7 +10471,7 @@
       ]
     },
     {
-      "id": "p421",
+      "id": "p422",
       "parti": "(2026) 10282",
       "stage": "SEVK TESLİM",
       "kg": 30.0,
@@ -10500,7 +10523,7 @@
       ]
     },
     {
-      "id": "p423",
+      "id": "p424",
       "parti": "(2026) 10283",
       "stage": "KALİTE KONTROL",
       "kg": 40.0,
@@ -10552,7 +10575,7 @@
       ]
     },
     {
-      "id": "p424",
+      "id": "p425",
       "parti": "(2026) 10293",
       "stage": "KALİTE KONTROL",
       "kg": 52.0,
@@ -10575,7 +10598,7 @@
       "repairs": []
     },
     {
-      "id": "p425",
+      "id": "p426",
       "parti": "(2026) 10354",
       "stage": "KALİTE KONTROL",
       "kg": 20.0,
@@ -10598,7 +10621,7 @@
       "repairs": []
     },
     {
-      "id": "p426",
+      "id": "p427",
       "parti": "(2026) 10398",
       "stage": "KALİTE KONTROL",
       "kg": 30.0,
@@ -10636,7 +10659,7 @@
       ]
     },
     {
-      "id": "p427",
+      "id": "p428",
       "parti": "(2026) 11435",
       "stage": "MAL AÇMA",
       "kg": 230.0,
@@ -10659,7 +10682,7 @@
       "repairs": []
     },
     {
-      "id": "p428",
+      "id": "p429",
       "parti": "(2026) 11436",
       "stage": "BOYAMA",
       "kg": 235.0,
@@ -10682,7 +10705,7 @@
       "repairs": []
     },
     {
-      "id": "p429",
+      "id": "p430",
       "parti": "(2026) 11437",
       "stage": "MAL AÇMA",
       "kg": 263.0,
@@ -10705,7 +10728,7 @@
       "repairs": []
     },
     {
-      "id": "p430",
+      "id": "p431",
       "parti": "(2026) 11438",
       "stage": "MAL AÇMA",
       "kg": 190.0,
@@ -10728,7 +10751,7 @@
       "repairs": []
     },
     {
-      "id": "p431",
+      "id": "p432",
       "parti": "(2026) 10008",
       "stage": "SEVK TESLİM",
       "kg": 48.0,
@@ -10780,7 +10803,7 @@
       ]
     },
     {
-      "id": "p432",
+      "id": "p433",
       "parti": "(2026) 10072",
       "stage": "KALİTE KONTROL",
       "kg": 45.0,
@@ -10818,7 +10841,7 @@
       ]
     },
     {
-      "id": "p433",
+      "id": "p434",
       "parti": "(2026) 10204",
       "stage": "SEVK TESLİM",
       "kg": 20.0,
@@ -10841,7 +10864,7 @@
       "repairs": []
     },
     {
-      "id": "p434",
+      "id": "p435",
       "parti": "(2026) 10204",
       "stage": "SEVK TESLİM",
       "kg": 205.0,
@@ -10864,7 +10887,7 @@
       "repairs": []
     },
     {
-      "id": "p435",
+      "id": "p436",
       "parti": "(2026) 10205",
       "stage": "SEVK TESLİM",
       "kg": 20.0,
@@ -10887,7 +10910,7 @@
       "repairs": []
     },
     {
-      "id": "p436",
+      "id": "p437",
       "parti": "(2026) 10205",
       "stage": "KALİTE KONTROL",
       "kg": 205.0,
@@ -10910,7 +10933,7 @@
       "repairs": []
     },
     {
-      "id": "p437",
+      "id": "p438",
       "parti": "(2026) 10100",
       "stage": "SEVK TESLİM",
       "kg": 50.0,
@@ -10962,7 +10985,7 @@
       ]
     },
     {
-      "id": "p438",
+      "id": "p439",
       "parti": "(2026) 10383",
       "stage": "SEVK TESLİM",
       "kg": 65.0,
@@ -10985,7 +11008,7 @@
       "repairs": []
     },
     {
-      "id": "p439",
+      "id": "p440",
       "parti": "(2026) 10384",
       "stage": "SEVK TESLİM",
       "kg": 65.0,
@@ -11008,7 +11031,7 @@
       "repairs": []
     },
     {
-      "id": "p440",
+      "id": "p441",
       "parti": "(2026) 10502",
       "stage": "ZIMPARA 1",
       "kg": 30.0,
@@ -11031,7 +11054,7 @@
       "repairs": []
     },
     {
-      "id": "p441",
+      "id": "p442",
       "parti": "(2026) 10503",
       "stage": "BOYAMA",
       "kg": 25.0,
@@ -11054,7 +11077,7 @@
       "repairs": []
     },
     {
-      "id": "p442",
+      "id": "p443",
       "parti": "(2026) 10506",
       "stage": "BOYAMA",
       "kg": 5.0,
@@ -11077,7 +11100,7 @@
       "repairs": []
     },
     {
-      "id": "p443",
+      "id": "p444",
       "parti": "(2026) 10507",
       "stage": "ZIMPARA 1",
       "kg": 30.0,
@@ -11100,7 +11123,7 @@
       "repairs": []
     },
     {
-      "id": "p444",
+      "id": "p445",
       "parti": "(2026) 10508",
       "stage": "BOYAMA",
       "kg": 25.0,
@@ -11123,7 +11146,7 @@
       "repairs": []
     },
     {
-      "id": "p445",
+      "id": "p446",
       "parti": "(2026) 10509",
       "stage": "BOYAMA",
       "kg": 5.0,
@@ -11146,7 +11169,7 @@
       "repairs": []
     },
     {
-      "id": "p446",
+      "id": "p447",
       "parti": "(2026) 10199",
       "stage": "SEVK TESLİM",
       "kg": 25.0,
@@ -11184,7 +11207,7 @@
       ]
     },
     {
-      "id": "p447",
+      "id": "p448",
       "parti": "(2026) 10512",
       "stage": "BOYAMA",
       "kg": 27.0,
@@ -11207,7 +11230,7 @@
       "repairs": []
     },
     {
-      "id": "p448",
+      "id": "p449",
       "parti": "(2026) 10581",
       "stage": "SEVK TESLİM",
       "kg": 23.0,
@@ -11230,7 +11253,7 @@
       "repairs": []
     },
     {
-      "id": "p449",
+      "id": "p450",
       "parti": "(2026) 10813",
       "stage": "SEVK TESLİM",
       "kg": 22.0,
@@ -11253,7 +11276,7 @@
       "repairs": []
     },
     {
-      "id": "p450",
+      "id": "p451",
       "parti": "(2026) 10374",
       "stage": "ALTBEZ LAMİNASYON",
       "kg": 220.0,
@@ -11276,7 +11299,7 @@
       "repairs": []
     },
     {
-      "id": "p451",
+      "id": "p452",
       "parti": "(2026) 10375",
       "stage": "KALİTE KONTROL",
       "kg": 220.0,
@@ -11299,7 +11322,7 @@
       "repairs": []
     },
     {
-      "id": "p452",
+      "id": "p453",
       "parti": "(2026) 10438",
       "stage": "ŞARDON",
       "kg": 20.0,
@@ -11337,7 +11360,7 @@
       ]
     },
     {
-      "id": "p453",
+      "id": "p454",
       "parti": "(2026) 10483",
       "stage": "KALİTE KONTROL",
       "kg": 243.1,
@@ -11360,7 +11383,7 @@
       "repairs": []
     },
     {
-      "id": "p454",
+      "id": "p455",
       "parti": "(2026) 10484",
       "stage": "SEVK TESLİM",
       "kg": 304.1,
@@ -11383,7 +11406,7 @@
       "repairs": []
     },
     {
-      "id": "p455",
+      "id": "p456",
       "parti": "(2026) 10486",
       "stage": "SEVK TESLİM",
       "kg": 300.0,
@@ -11406,7 +11429,7 @@
       "repairs": []
     },
     {
-      "id": "p456",
+      "id": "p457",
       "parti": "(2026) 10488",
       "stage": "YAŞ AÇMA",
       "kg": 300.0,
@@ -11429,7 +11452,7 @@
       "repairs": []
     },
     {
-      "id": "p457",
+      "id": "p458",
       "parti": "(2026) 10489",
       "stage": "KALİTE KONTROL",
       "kg": 292.1,
@@ -11452,7 +11475,7 @@
       "repairs": []
     },
     {
-      "id": "p458",
+      "id": "p459",
       "parti": "(2026) 10530",
       "stage": "TARAK",
       "kg": 821.3,
@@ -11475,7 +11498,7 @@
       "repairs": []
     },
     {
-      "id": "p459",
+      "id": "p460",
       "parti": "(2026) 10676",
       "stage": "RAM YAŞ APRE",
       "kg": 90.0,
@@ -11513,7 +11536,7 @@
       ]
     },
     {
-      "id": "p460",
+      "id": "p461",
       "parti": "(2026) 10812",
       "stage": "KALİTE KONTROL",
       "kg": 465.0,
@@ -11536,7 +11559,7 @@
       "repairs": []
     },
     {
-      "id": "p461",
+      "id": "p462",
       "parti": "(2026) 11178",
       "stage": "RAM APRE",
       "kg": 110.0,
@@ -11559,7 +11582,7 @@
       "repairs": []
     },
     {
-      "id": "p462",
+      "id": "p463",
       "parti": "(2026) 11179",
       "stage": "RAM APRE",
       "kg": 110.0,
@@ -11582,7 +11605,7 @@
       "repairs": []
     },
     {
-      "id": "p464",
+      "id": "p465",
       "parti": "(2026) 10343",
       "stage": "SEVK TESLİM",
       "kg": 390.0,
@@ -11605,7 +11628,7 @@
       "repairs": []
     },
     {
-      "id": "p465",
+      "id": "p466",
       "parti": "(2026) 11095",
       "stage": "TRAŞ 1",
       "kg": 462.0,
@@ -11628,7 +11651,7 @@
       "repairs": []
     },
     {
-      "id": "p466",
+      "id": "p467",
       "parti": "(2026) 11399",
       "stage": "MAL AÇMA",
       "kg": 240.0,
@@ -11651,7 +11674,7 @@
       "repairs": []
     },
     {
-      "id": "p467",
+      "id": "p468",
       "parti": "(2026) 11400",
       "stage": "MAL AÇMA",
       "kg": 240.0,
@@ -11674,7 +11697,7 @@
       "repairs": []
     },
     {
-      "id": "p470",
+      "id": "p471",
       "parti": "(2026) 10718",
       "stage": "KALİTE KONTROL",
       "kg": 182.0,
@@ -11697,11 +11720,11 @@
       "repairs": []
     },
     {
-      "id": "p471",
+      "id": "p472",
       "parti": "(2026) 10765",
       "stage": "SEVK TESLİM",
       "kg": 37.0,
-      "wait": 0.625,
+      "wait": 0.6666666666666666,
       "sev": "ok",
       "firma": "TEMPO TEKSTİL ÜRÜNLERİ SAN TİC LTD ŞTİ",
       "order": "(2026) 512",
@@ -11720,7 +11743,7 @@
       "repairs": []
     },
     {
-      "id": "p472",
+      "id": "p473",
       "parti": "(2026) 10986",
       "stage": "ÇİFT BOYAMA",
       "kg": 360.0,
@@ -11743,11 +11766,11 @@
       "repairs": []
     },
     {
-      "id": "p473",
+      "id": "p474",
       "parti": "(2026) 10987",
       "stage": "FİZİKSEL KONTROL",
       "kg": 360.0,
-      "wait": 0.5,
+      "wait": 0.5416666666666666,
       "sev": "ok",
       "firma": "GUIDE GİYİM TEKSTİL SAN. TİC.LTD.ŞTİ.",
       "order": "(2026) 529",
@@ -11766,7 +11789,7 @@
       "repairs": []
     },
     {
-      "id": "p474",
+      "id": "p475",
       "parti": "(2026) 10988",
       "stage": "ÇİFT BOYAMA",
       "kg": 360.0,
@@ -11789,7 +11812,7 @@
       "repairs": []
     },
     {
-      "id": "p475",
+      "id": "p476",
       "parti": "(2026) 11357",
       "stage": "MAL AÇMA",
       "kg": 60.0,
@@ -11812,7 +11835,7 @@
       "repairs": []
     },
     {
-      "id": "p476",
+      "id": "p477",
       "parti": "(2026) 11060",
       "stage": "FİZİKSEL KONTROL",
       "kg": 425.0,
@@ -11835,7 +11858,7 @@
       "repairs": []
     },
     {
-      "id": "p477",
+      "id": "p478",
       "parti": "(2026) 11110",
       "stage": "MAL AÇMA",
       "kg": 553.0,
@@ -11858,7 +11881,7 @@
       "repairs": []
     },
     {
-      "id": "p478",
+      "id": "p479",
       "parti": "(2026) 10939",
       "stage": "TRAŞ 1",
       "kg": 240.0,
@@ -11881,7 +11904,7 @@
       "repairs": []
     },
     {
-      "id": "p479",
+      "id": "p480",
       "parti": "(2026) 10716",
       "stage": "TARAK",
       "kg": 870.0,
@@ -11904,7 +11927,7 @@
       "repairs": []
     },
     {
-      "id": "p480",
+      "id": "p481",
       "parti": "(2026) 10717",
       "stage": "TARAK",
       "kg": 870.0,
@@ -11927,11 +11950,11 @@
       "repairs": []
     },
     {
-      "id": "p481",
+      "id": "p482",
       "parti": "(2026) 10817",
       "stage": "RAM",
       "kg": 85.0,
-      "wait": 0.125,
+      "wait": 0.16666666666666666,
       "sev": "ok",
       "firma": "KNİTTED FABRİC TEKS.ÜRÜN.SAN.VE TİC.A.Ş",
       "order": "(2026) 436",
@@ -11950,7 +11973,7 @@
       "repairs": []
     },
     {
-      "id": "p482",
+      "id": "p483",
       "parti": "(2026) 10818",
       "stage": "MAL AÇMA",
       "kg": 55.0,
@@ -11973,7 +11996,7 @@
       "repairs": []
     },
     {
-      "id": "p483",
+      "id": "p484",
       "parti": "(2026) 10819",
       "stage": "KALİTE KONTROL",
       "kg": 407.0,
@@ -11996,7 +12019,7 @@
       "repairs": []
     },
     {
-      "id": "p484",
+      "id": "p485",
       "parti": "(2026) 10820",
       "stage": "KALİTE KONTROL",
       "kg": 407.0,
@@ -12019,7 +12042,7 @@
       "repairs": []
     },
     {
-      "id": "p485",
+      "id": "p486",
       "parti": "(2026) 10821",
       "stage": "KALİTE KONTROL",
       "kg": 408.1,
@@ -12042,7 +12065,7 @@
       "repairs": []
     },
     {
-      "id": "p486",
+      "id": "p487",
       "parti": "(2026) 10822",
       "stage": "KALİTE KONTROL",
       "kg": 420.0,
@@ -12065,7 +12088,7 @@
       "repairs": []
     },
     {
-      "id": "p487",
+      "id": "p488",
       "parti": "(2026) 10825",
       "stage": "KALİTE KONTROL",
       "kg": 102.0,
@@ -12088,7 +12111,7 @@
       "repairs": []
     },
     {
-      "id": "p488",
+      "id": "p489",
       "parti": "(2026) 10826",
       "stage": "BOYAMA",
       "kg": 406.0,
@@ -12111,7 +12134,7 @@
       "repairs": []
     },
     {
-      "id": "p489",
+      "id": "p490",
       "parti": "(2026) 10827",
       "stage": "SEVK TESLİM",
       "kg": 220.0,
@@ -12134,7 +12157,7 @@
       "repairs": []
     },
     {
-      "id": "p490",
+      "id": "p491",
       "parti": "(2026) 10929",
       "stage": "EMBOSS",
       "kg": 220.0,
@@ -12157,7 +12180,7 @@
       "repairs": []
     },
     {
-      "id": "p491",
+      "id": "p492",
       "parti": "(2026) 10954",
       "stage": "SEVK TESLİM",
       "kg": 201.5,
@@ -12180,7 +12203,7 @@
       "repairs": []
     },
     {
-      "id": "p492",
+      "id": "p493",
       "parti": "(2026) 10976",
       "stage": "KALİTE KONTROL",
       "kg": 210.0,
@@ -12203,11 +12226,11 @@
       "repairs": []
     },
     {
-      "id": "p493",
+      "id": "p494",
       "parti": "(2026) 10977",
       "stage": "SEVK TESLİM",
       "kg": 420.0,
-      "wait": 0.20833333333333334,
+      "wait": 0.25,
       "sev": "ok",
       "firma": "RT ÖRME KUMAŞ SAN VE TİC LTD ŞTİ",
       "order": "(2025) 106",
@@ -12226,7 +12249,7 @@
       "repairs": []
     },
     {
-      "id": "p494",
+      "id": "p495",
       "parti": "(2026) 10978",
       "stage": "KALİTE KONTROL",
       "kg": 420.0,
@@ -12249,7 +12272,7 @@
       "repairs": []
     },
     {
-      "id": "p495",
+      "id": "p496",
       "parti": "(2026) 10979",
       "stage": "FİZİKSEL KONTROL",
       "kg": 30.0,
@@ -12287,7 +12310,7 @@
       ]
     },
     {
-      "id": "p496",
+      "id": "p497",
       "parti": "(2026) 11142",
       "stage": "YAŞ AÇMA",
       "kg": 296.0,
@@ -12310,7 +12333,7 @@
       "repairs": []
     },
     {
-      "id": "p497",
+      "id": "p498",
       "parti": "(2026) 11232",
       "stage": "MAL AÇMA",
       "kg": 125.0,
@@ -12333,11 +12356,11 @@
       "repairs": []
     },
     {
-      "id": "p498",
+      "id": "p499",
       "parti": "(2026) 11233",
       "stage": "AÇIK EN SANFOR",
       "kg": 991.0,
-      "wait": 0.8333333333333334,
+      "wait": 0.875,
       "sev": "ok",
       "firma": "EKT KUMAŞ SAN.VE TİC.LTD.ŞTİ.",
       "order": "(2026) 470",
@@ -12356,7 +12379,7 @@
       "repairs": []
     },
     {
-      "id": "p499",
+      "id": "p500",
       "parti": "(2026) 11234",
       "stage": "SEVK TESLİM",
       "kg": 471.0,
@@ -12379,7 +12402,7 @@
       "repairs": []
     },
     {
-      "id": "p500",
+      "id": "p501",
       "parti": "(2026) 11234",
       "stage": "SEVK TESLİM",
       "kg": 50.0,
@@ -12402,7 +12425,7 @@
       "repairs": []
     },
     {
-      "id": "p501",
+      "id": "p502",
       "parti": "(2026) 11235",
       "stage": "BOYAMA",
       "kg": 354.0,
@@ -12425,7 +12448,7 @@
       "repairs": []
     },
     {
-      "id": "p502",
+      "id": "p503",
       "parti": "(2026) 11236",
       "stage": "SEVK TESLİM",
       "kg": 229.0,
@@ -12448,7 +12471,7 @@
       "repairs": []
     },
     {
-      "id": "p503",
+      "id": "p504",
       "parti": "(2026) 11236",
       "stage": "RAM",
       "kg": 225.0,
@@ -12471,7 +12494,7 @@
       "repairs": []
     },
     {
-      "id": "p504",
+      "id": "p505",
       "parti": "(2026) 11237",
       "stage": "YAŞ AÇMA",
       "kg": 403.0,
@@ -12494,7 +12517,7 @@
       "repairs": []
     },
     {
-      "id": "p505",
+      "id": "p506",
       "parti": "(2026) 11275",
       "stage": "ÇİFT BOYAMA",
       "kg": 600.0,
@@ -12517,7 +12540,7 @@
       "repairs": []
     },
     {
-      "id": "p506",
+      "id": "p507",
       "parti": "(2026) 11276",
       "stage": "YAŞ AÇMA",
       "kg": 611.0,
@@ -12540,7 +12563,7 @@
       "repairs": []
     },
     {
-      "id": "p507",
+      "id": "p508",
       "parti": "(2026) 11274",
       "stage": "TRAŞ 2",
       "kg": 18.0,
@@ -12563,7 +12586,7 @@
       "repairs": []
     },
     {
-      "id": "p508",
+      "id": "p509",
       "parti": "(2026) 11321",
       "stage": "BOYAMA",
       "kg": 614.0,
@@ -12586,7 +12609,7 @@
       "repairs": []
     },
     {
-      "id": "p509",
+      "id": "p510",
       "parti": "(2026) 11322",
       "stage": "ÖN FİKSE 1",
       "kg": 704.0,
@@ -12609,7 +12632,7 @@
       "repairs": []
     },
     {
-      "id": "p510",
+      "id": "p511",
       "parti": "(2026) 11362",
       "stage": "ÖN FİKSE 1",
       "kg": 490.0,
@@ -12632,7 +12655,7 @@
       "repairs": []
     },
     {
-      "id": "p511",
+      "id": "p512",
       "parti": "(2026) 11363",
       "stage": "BOYAMA",
       "kg": 30.0,
@@ -12655,7 +12678,7 @@
       "repairs": []
     },
     {
-      "id": "p512",
+      "id": "p513",
       "parti": "(2026) 11404",
       "stage": "ÖN FİKSE 1",
       "kg": 491.0,
@@ -12678,7 +12701,7 @@
       "repairs": []
     },
     {
-      "id": "p513",
+      "id": "p514",
       "parti": "(2026) 11408",
       "stage": "BOYAMA",
       "kg": 29.0,
@@ -12701,7 +12724,7 @@
       "repairs": []
     },
     {
-      "id": "p514",
+      "id": "p515",
       "parti": "(2026) 11427",
       "stage": "MAL AÇMA",
       "kg": 16.0,
@@ -12724,7 +12747,7 @@
       "repairs": []
     },
     {
-      "id": "p515",
+      "id": "p516",
       "parti": "(2026) 11428",
       "stage": "MAL AÇMA",
       "kg": 15.0,
@@ -12747,7 +12770,7 @@
       "repairs": []
     },
     {
-      "id": "p516",
+      "id": "p517",
       "parti": "(2026) 11429",
       "stage": "MAL AÇMA",
       "kg": 16.0,
@@ -12770,7 +12793,7 @@
       "repairs": []
     },
     {
-      "id": "p517",
+      "id": "p518",
       "parti": "(2026) 11430",
       "stage": "MAL AÇMA",
       "kg": 15.0,
@@ -12793,7 +12816,7 @@
       "repairs": []
     },
     {
-      "id": "p518",
+      "id": "p519",
       "parti": "(2026) 11431",
       "stage": "MAL AÇMA",
       "kg": 16.0,
@@ -12816,7 +12839,7 @@
       "repairs": []
     },
     {
-      "id": "p519",
+      "id": "p520",
       "parti": "(2026) 11432",
       "stage": "MAL AÇMA",
       "kg": 16.0,
@@ -12839,7 +12862,7 @@
       "repairs": []
     },
     {
-      "id": "p520",
+      "id": "p521",
       "parti": "(2026) 11433",
       "stage": "MAL AÇMA",
       "kg": 16.0,
@@ -12862,7 +12885,7 @@
       "repairs": []
     },
     {
-      "id": "p521",
+      "id": "p522",
       "parti": "(2026) 10859",
       "stage": "KALİTE KONTROL",
       "kg": 484.0,
@@ -12885,11 +12908,11 @@
       "repairs": []
     },
     {
-      "id": "p522",
+      "id": "p523",
       "parti": "(2026) 10861",
       "stage": "KALİTE KONTROL",
       "kg": 500.0,
-      "wait": 0.6666666666666666,
+      "wait": 0.7083333333333334,
       "sev": "ok",
       "firma": "SASTEKS ÖRME KUMAŞ SAN.VE DIŞ. TİC.LTD.ŞTİ.",
       "order": "(2026) 383",
@@ -12908,7 +12931,7 @@
       "repairs": []
     },
     {
-      "id": "p523",
+      "id": "p524",
       "parti": "(2026) 10863",
       "stage": "ZIMPARA 1",
       "kg": 482.0,
@@ -12931,7 +12954,7 @@
       "repairs": []
     },
     {
-      "id": "p524",
+      "id": "p525",
       "parti": "(2026) 10983",
       "stage": "MAL AÇMA",
       "kg": 157.0,
@@ -12954,7 +12977,7 @@
       "repairs": []
     },
     {
-      "id": "p525",
+      "id": "p526",
       "parti": "(2026) 11341",
       "stage": "RAM",
       "kg": 128.9,
@@ -12977,7 +13000,7 @@
       "repairs": []
     },
     {
-      "id": "p526",
+      "id": "p527",
       "parti": "(2026) 11342",
       "stage": "RAM",
       "kg": 44.8,
@@ -13000,7 +13023,7 @@
       "repairs": []
     },
     {
-      "id": "p527",
+      "id": "p528",
       "parti": "(2026) 11368",
       "stage": "RAM",
       "kg": 81.5,
@@ -13023,7 +13046,7 @@
       "repairs": []
     },
     {
-      "id": "p528",
+      "id": "p529",
       "parti": "(2026) 11279",
       "stage": "ZIMPARA 1",
       "kg": 2.0,
@@ -13046,7 +13069,7 @@
       "repairs": []
     },
     {
-      "id": "p529",
+      "id": "p530",
       "parti": "(2026) 11280",
       "stage": "ZIMPARA 1",
       "kg": 2.0,
@@ -13069,7 +13092,7 @@
       "repairs": []
     },
     {
-      "id": "p530",
+      "id": "p531",
       "parti": "(2026) 11281",
       "stage": "ZIMPARA 1",
       "kg": 2.0,
@@ -13092,7 +13115,7 @@
       "repairs": []
     },
     {
-      "id": "p531",
+      "id": "p532",
       "parti": "(2026) 11442",
       "stage": "PARTİLEME",
       "kg": 14.0,
@@ -13115,7 +13138,7 @@
       "repairs": []
     },
     {
-      "id": "p532",
+      "id": "p533",
       "parti": "(2026) 11443",
       "stage": "PARTİLEME",
       "kg": 15.0,
@@ -13138,7 +13161,7 @@
       "repairs": []
     },
     {
-      "id": "p533",
+      "id": "p534",
       "parti": "(2026) 10947",
       "stage": "MAL AÇMA",
       "kg": 235.0,
@@ -13161,7 +13184,7 @@
       "repairs": []
     },
     {
-      "id": "p534",
+      "id": "p535",
       "parti": "(2026) 10948",
       "stage": "MAL AÇMA",
       "kg": 325.0,
@@ -13184,7 +13207,7 @@
       "repairs": []
     },
     {
-      "id": "p535",
+      "id": "p536",
       "parti": "(2026) 10958",
       "stage": "MAL AÇMA",
       "kg": 200.0,
@@ -13207,7 +13230,7 @@
       "repairs": []
     },
     {
-      "id": "p536",
+      "id": "p537",
       "parti": "(2026) 10959",
       "stage": "MAL AÇMA",
       "kg": 300.0,
@@ -13230,7 +13253,7 @@
       "repairs": []
     },
     {
-      "id": "p537",
+      "id": "p538",
       "parti": "(2026) 10967",
       "stage": "MAL AÇMA",
       "kg": 200.0,
@@ -13253,7 +13276,7 @@
       "repairs": []
     },
     {
-      "id": "p538",
+      "id": "p539",
       "parti": "(2026) 10968",
       "stage": "MAL AÇMA",
       "kg": 314.0,
@@ -13276,7 +13299,7 @@
       "repairs": []
     },
     {
-      "id": "p539",
+      "id": "p540",
       "parti": "(2026) 10973",
       "stage": "KALİTE KONTROL",
       "kg": 420.0,
@@ -13299,7 +13322,7 @@
       "repairs": []
     },
     {
-      "id": "p540",
+      "id": "p541",
       "parti": "(2026) 11325",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 22.0,
@@ -13322,7 +13345,7 @@
       "repairs": []
     },
     {
-      "id": "p541",
+      "id": "p542",
       "parti": "(2026) 11329",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 21.0,
@@ -13345,7 +13368,7 @@
       "repairs": []
     },
     {
-      "id": "p542",
+      "id": "p543",
       "parti": "(2026) 11330",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 22.0,
@@ -13368,7 +13391,7 @@
       "repairs": []
     },
     {
-      "id": "p543",
+      "id": "p544",
       "parti": "(2026) 11331",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 23.0,
@@ -13391,7 +13414,7 @@
       "repairs": []
     },
     {
-      "id": "p544",
+      "id": "p545",
       "parti": "(2026) 11332",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 22.0,
@@ -13414,7 +13437,7 @@
       "repairs": []
     },
     {
-      "id": "p545",
+      "id": "p546",
       "parti": "(2026) 11333",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 23.0,
@@ -13437,7 +13460,7 @@
       "repairs": []
     },
     {
-      "id": "p546",
+      "id": "p547",
       "parti": "(2026) 11334",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 22.0,
@@ -13460,7 +13483,7 @@
       "repairs": []
     },
     {
-      "id": "p547",
+      "id": "p548",
       "parti": "(2026) 11335",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 23.0,
@@ -13483,7 +13506,7 @@
       "repairs": []
     },
     {
-      "id": "p548",
+      "id": "p549",
       "parti": "(2026) 10989",
       "stage": "KALİTE KONTROL",
       "kg": 30.0,
@@ -13506,7 +13529,7 @@
       "repairs": []
     },
     {
-      "id": "p549",
+      "id": "p550",
       "parti": "(2026) 11000",
       "stage": "SEVK TESLİM",
       "kg": 239.0,
@@ -13529,9 +13552,9 @@
       "repairs": []
     },
     {
-      "id": "p550",
+      "id": "p551",
       "parti": "(2026) 11043",
-      "stage": "ŞARDON",
+      "stage": "TARAK",
       "kg": 800.0,
       "wait": 5,
       "sev": "ok",
@@ -13547,12 +13570,12 @@
       "blocked": "",
       "flow": "PARTİ, M.AÇMA, BOYA, Y.AÇMA, RAMKURUTMA, ŞARDON, TRK, POLISH 1, RAM, KK, FZK.KNT, SEVK",
       "machine": "MTS1050-2",
-      "lastStage": "RAM KURUTMA",
+      "lastStage": "ŞARDON",
       "hareket": "07.11.2026 03:09",
       "repairs": []
     },
     {
-      "id": "p551",
+      "id": "p552",
       "parti": "(2026) 11044",
       "stage": "MAL AÇMA",
       "kg": 850.0,
@@ -13575,7 +13598,7 @@
       "repairs": []
     },
     {
-      "id": "p552",
+      "id": "p553",
       "parti": "(2026) 11045",
       "stage": "MAL AÇMA",
       "kg": 850.0,
@@ -13598,7 +13621,7 @@
       "repairs": []
     },
     {
-      "id": "p553",
+      "id": "p554",
       "parti": "(2026) 11046",
       "stage": "RAM KURUTMA",
       "kg": 799.5,
@@ -13621,7 +13644,7 @@
       "repairs": []
     },
     {
-      "id": "p554",
+      "id": "p555",
       "parti": "(2026) 11076",
       "stage": "SEVK TESLİM",
       "kg": 25.0,
@@ -13644,7 +13667,7 @@
       "repairs": []
     },
     {
-      "id": "p555",
+      "id": "p556",
       "parti": "(2026) 11077",
       "stage": "SEVK TESLİM",
       "kg": 25.0,
@@ -13667,7 +13690,7 @@
       "repairs": []
     },
     {
-      "id": "p556",
+      "id": "p557",
       "parti": "(2026) 11078",
       "stage": "SEVK TESLİM",
       "kg": 25.5,
@@ -13690,7 +13713,7 @@
       "repairs": []
     },
     {
-      "id": "p557",
+      "id": "p558",
       "parti": "(2026) 11079",
       "stage": "SEVK TESLİM",
       "kg": 25.5,
@@ -13713,7 +13736,7 @@
       "repairs": []
     },
     {
-      "id": "p558",
+      "id": "p559",
       "parti": "(2026) 11343",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 440.0,
@@ -13736,7 +13759,7 @@
       "repairs": []
     },
     {
-      "id": "p559",
+      "id": "p560",
       "parti": "(2026) 11074",
       "stage": "KALİTE KONTROL",
       "kg": 225.0,
@@ -13759,11 +13782,11 @@
       "repairs": []
     },
     {
-      "id": "p560",
+      "id": "p561",
       "parti": "(2026) 11134",
       "stage": "YAŞ AÇMA",
       "kg": 408.0,
-      "wait": 1,
+      "wait": 0.0,
       "sev": "ok",
       "firma": "RT ÖRME KUMAŞ SAN VE TİC LTD ŞTİ",
       "order": "(2025) 106",
@@ -13778,11 +13801,11 @@
       "flow": "PARTİ, M.AÇMA, ÖNFİKSE 1, BOYA, Y.AÇMA, RAM APRE, KK, FZK.KNT, SEVK",
       "machine": "SL500-8",
       "lastStage": "BOYAMA",
-      "hareket": "11.11.2026 06:44",
+      "hareket": "12.11.2026 17:23",
       "repairs": []
     },
     {
-      "id": "p561",
+      "id": "p562",
       "parti": "(2026) 11135",
       "stage": "YIKAMA",
       "kg": 361.0,
@@ -13805,7 +13828,7 @@
       "repairs": []
     },
     {
-      "id": "p562",
+      "id": "p563",
       "parti": "(2026) 11137",
       "stage": "ZIMPARA 1",
       "kg": 953.0,
@@ -13828,7 +13851,7 @@
       "repairs": []
     },
     {
-      "id": "p563",
+      "id": "p564",
       "parti": "(2026) 11138",
       "stage": "ZIMPARA 1",
       "kg": 953.0,
@@ -13851,7 +13874,7 @@
       "repairs": []
     },
     {
-      "id": "p564",
+      "id": "p565",
       "parti": "(2026) 11139",
       "stage": "RAM",
       "kg": 1006.0,
@@ -13874,7 +13897,7 @@
       "repairs": []
     },
     {
-      "id": "p565",
+      "id": "p566",
       "parti": "(2026) 11144",
       "stage": "SEVK TESLİM",
       "kg": 215.0,
@@ -13897,7 +13920,7 @@
       "repairs": []
     },
     {
-      "id": "p566",
+      "id": "p567",
       "parti": "(2026) 10664",
       "stage": "MAL AÇMA",
       "kg": 311.0,
@@ -13920,7 +13943,7 @@
       "repairs": []
     },
     {
-      "id": "p567",
+      "id": "p568",
       "parti": "(2026) 11081",
       "stage": "BOYAMA",
       "kg": 330.0,
@@ -13943,7 +13966,7 @@
       "repairs": []
     },
     {
-      "id": "p568",
+      "id": "p569",
       "parti": "(2026) 11084",
       "stage": "MAL AÇMA",
       "kg": 330.0,
@@ -13966,7 +13989,7 @@
       "repairs": []
     },
     {
-      "id": "p569",
+      "id": "p570",
       "parti": "(2026) 11247",
       "stage": "BOYAMA",
       "kg": 800.0,
@@ -13989,7 +14012,7 @@
       "repairs": []
     },
     {
-      "id": "p570",
+      "id": "p571",
       "parti": "(2026) 11248",
       "stage": "MAL AÇMA",
       "kg": 850.0,
@@ -14012,7 +14035,7 @@
       "repairs": []
     },
     {
-      "id": "p571",
+      "id": "p572",
       "parti": "(2026) 11249",
       "stage": "YAŞ AÇMA",
       "kg": 850.0,
@@ -14035,7 +14058,7 @@
       "repairs": []
     },
     {
-      "id": "p572",
+      "id": "p573",
       "parti": "(2026) 11285",
       "stage": "KALİTE KONTROL",
       "kg": 225.0,
@@ -14058,7 +14081,7 @@
       "repairs": []
     },
     {
-      "id": "p573",
+      "id": "p574",
       "parti": "(2026) 11286",
       "stage": "MAL AÇMA",
       "kg": 218.0,
@@ -14081,7 +14104,7 @@
       "repairs": []
     },
     {
-      "id": "p574",
+      "id": "p575",
       "parti": "(2026) 11288",
       "stage": "MAL AÇMA",
       "kg": 27.0,
@@ -14104,7 +14127,7 @@
       "repairs": []
     },
     {
-      "id": "p575",
+      "id": "p576",
       "parti": "(2026) 11290",
       "stage": "MAL AÇMA",
       "kg": 21.0,
@@ -14127,7 +14150,7 @@
       "repairs": []
     },
     {
-      "id": "p576",
+      "id": "p577",
       "parti": "(2026) 11291",
       "stage": "KALİTE KONTROL",
       "kg": 225.0,
@@ -14150,7 +14173,7 @@
       "repairs": []
     },
     {
-      "id": "p577",
+      "id": "p578",
       "parti": "(2026) 11292",
       "stage": "KALİTE KONTROL",
       "kg": 475.0,
@@ -14173,7 +14196,7 @@
       "repairs": []
     },
     {
-      "id": "p578",
+      "id": "p579",
       "parti": "(2026) 11293",
       "stage": "KALİTE KONTROL",
       "kg": 400.0,
@@ -14196,7 +14219,7 @@
       "repairs": []
     },
     {
-      "id": "p579",
+      "id": "p580",
       "parti": "(2026) 11294",
       "stage": "KALİTE KONTROL",
       "kg": 446.0,
@@ -14219,7 +14242,7 @@
       "repairs": []
     },
     {
-      "id": "p580",
+      "id": "p581",
       "parti": "(2026) 11295",
       "stage": "MAL AÇMA",
       "kg": 30.0,
@@ -14242,7 +14265,7 @@
       "repairs": []
     },
     {
-      "id": "p581",
+      "id": "p582",
       "parti": "(2026) 11296",
       "stage": "MAL AÇMA",
       "kg": 812.0,
@@ -14265,7 +14288,7 @@
       "repairs": []
     },
     {
-      "id": "p582",
+      "id": "p583",
       "parti": "(2026) 11297",
       "stage": "MAL AÇMA",
       "kg": 84.65,
@@ -14288,7 +14311,7 @@
       "repairs": []
     },
     {
-      "id": "p583",
+      "id": "p584",
       "parti": "(2026) 11298",
       "stage": "MAL AÇMA",
       "kg": 36.0,
@@ -14311,7 +14334,7 @@
       "repairs": []
     },
     {
-      "id": "p584",
+      "id": "p585",
       "parti": "(2026) 11299",
       "stage": "MAL AÇMA",
       "kg": 809.0,
@@ -14334,7 +14357,7 @@
       "repairs": []
     },
     {
-      "id": "p585",
+      "id": "p586",
       "parti": "(2026) 11300",
       "stage": "MAL AÇMA",
       "kg": 85.6,
@@ -14357,7 +14380,7 @@
       "repairs": []
     },
     {
-      "id": "p586",
+      "id": "p587",
       "parti": "(2026) 11301",
       "stage": "MAL AÇMA",
       "kg": 36.0,
@@ -14380,7 +14403,7 @@
       "repairs": []
     },
     {
-      "id": "p587",
+      "id": "p588",
       "parti": "(2026) 11302",
       "stage": "MAL AÇMA",
       "kg": 540.0,
@@ -14403,7 +14426,7 @@
       "repairs": []
     },
     {
-      "id": "p588",
+      "id": "p589",
       "parti": "(2026) 11303",
       "stage": "MAL AÇMA",
       "kg": 49.75,
@@ -14426,7 +14449,7 @@
       "repairs": []
     },
     {
-      "id": "p589",
+      "id": "p590",
       "parti": "(2026) 11304",
       "stage": "MAL AÇMA",
       "kg": 27.0,
@@ -14449,7 +14472,7 @@
       "repairs": []
     },
     {
-      "id": "p590",
+      "id": "p591",
       "parti": "(2026) 11305",
       "stage": "MAL AÇMA",
       "kg": 540.0,
@@ -14472,7 +14495,7 @@
       "repairs": []
     },
     {
-      "id": "p591",
+      "id": "p592",
       "parti": "(2026) 11306",
       "stage": "MAL AÇMA",
       "kg": 49.85,
@@ -14495,7 +14518,7 @@
       "repairs": []
     },
     {
-      "id": "p592",
+      "id": "p593",
       "parti": "(2026) 11307",
       "stage": "MAL AÇMA",
       "kg": 27.0,
@@ -14518,7 +14541,7 @@
       "repairs": []
     },
     {
-      "id": "p593",
+      "id": "p594",
       "parti": "(2026) 11308",
       "stage": "MAL AÇMA",
       "kg": 540.0,
@@ -14541,7 +14564,7 @@
       "repairs": []
     },
     {
-      "id": "p594",
+      "id": "p595",
       "parti": "(2026) 11309",
       "stage": "MAL AÇMA",
       "kg": 50.0,
@@ -14564,7 +14587,7 @@
       "repairs": []
     },
     {
-      "id": "p595",
+      "id": "p596",
       "parti": "(2026) 11310",
       "stage": "MAL AÇMA",
       "kg": 27.0,
@@ -14587,7 +14610,7 @@
       "repairs": []
     },
     {
-      "id": "p596",
+      "id": "p597",
       "parti": "(2026) 11311",
       "stage": "MAL AÇMA",
       "kg": 333.0,
@@ -14610,7 +14633,7 @@
       "repairs": []
     },
     {
-      "id": "p597",
+      "id": "p598",
       "parti": "(2026) 11312",
       "stage": "MAL AÇMA",
       "kg": 36.75,
@@ -14633,7 +14656,7 @@
       "repairs": []
     },
     {
-      "id": "p598",
+      "id": "p599",
       "parti": "(2026) 11313",
       "stage": "MAL AÇMA",
       "kg": 20.0,
@@ -14656,7 +14679,7 @@
       "repairs": []
     },
     {
-      "id": "p599",
+      "id": "p600",
       "parti": "(2026) 11314",
       "stage": "MAL AÇMA",
       "kg": 332.0,
@@ -14679,7 +14702,7 @@
       "repairs": []
     },
     {
-      "id": "p600",
+      "id": "p601",
       "parti": "(2026) 11315",
       "stage": "MAL AÇMA",
       "kg": 36.35,
@@ -14702,7 +14725,7 @@
       "repairs": []
     },
     {
-      "id": "p601",
+      "id": "p602",
       "parti": "(2026) 11316",
       "stage": "MAL AÇMA",
       "kg": 20.0,
@@ -14725,7 +14748,7 @@
       "repairs": []
     },
     {
-      "id": "p602",
+      "id": "p603",
       "parti": "(2026) 11317",
       "stage": "MAL AÇMA",
       "kg": 178.0,
@@ -14748,7 +14771,7 @@
       "repairs": []
     },
     {
-      "id": "p603",
+      "id": "p604",
       "parti": "(2026) 11318",
       "stage": "MAL AÇMA",
       "kg": 83.2,
@@ -14771,7 +14794,7 @@
       "repairs": []
     },
     {
-      "id": "p604",
+      "id": "p605",
       "parti": "(2026) 11319",
       "stage": "MAL AÇMA",
       "kg": 20.0,
@@ -14794,11 +14817,11 @@
       "repairs": []
     },
     {
-      "id": "p605",
+      "id": "p606",
       "parti": "(2026) 11253",
       "stage": "KALİTE KONTROL",
       "kg": 375.0,
-      "wait": 0.0,
+      "wait": 0.041666666666666664,
       "sev": "ok",
       "firma": "KNİTTED FABRİC TEKS.ÜRÜN.SAN.VE TİC.A.Ş",
       "order": "(2026) 4",
@@ -14817,7 +14840,7 @@
       "repairs": []
     },
     {
-      "id": "p606",
+      "id": "p607",
       "parti": "(2026) 11353",
       "stage": "RAM",
       "kg": 383.0,
@@ -14840,7 +14863,7 @@
       "repairs": []
     },
     {
-      "id": "p607",
+      "id": "p608",
       "parti": "(2026) 11354",
       "stage": "MAL AÇMA",
       "kg": 14.5,
@@ -14863,7 +14886,7 @@
       "repairs": []
     },
     {
-      "id": "p608",
+      "id": "p609",
       "parti": "(2026) 11355",
       "stage": "MAL AÇMA",
       "kg": 15.75,
@@ -14886,7 +14909,7 @@
       "repairs": []
     },
     {
-      "id": "p609",
+      "id": "p610",
       "parti": "(2026) 11364",
       "stage": "MAL AÇMA",
       "kg": 205.0,
@@ -14909,7 +14932,7 @@
       "repairs": []
     },
     {
-      "id": "p610",
+      "id": "p611",
       "parti": "(2026) 11366",
       "stage": "MAL AÇMA",
       "kg": 305.0,
@@ -14932,7 +14955,7 @@
       "repairs": []
     },
     {
-      "id": "p611",
+      "id": "p612",
       "parti": "(2026) 11367",
       "stage": "MAL AÇMA",
       "kg": 300.0,
@@ -14955,7 +14978,7 @@
       "repairs": []
     },
     {
-      "id": "p612",
+      "id": "p613",
       "parti": "(2026) 11374",
       "stage": "PARTİLEME",
       "kg": 425.0,
@@ -14978,7 +15001,7 @@
       "repairs": []
     },
     {
-      "id": "p613",
+      "id": "p614",
       "parti": "(2026) 11375",
       "stage": "PARTİLEME",
       "kg": 200.0,
@@ -15001,7 +15024,7 @@
       "repairs": []
     },
     {
-      "id": "p614",
+      "id": "p615",
       "parti": "(2026) 11376",
       "stage": "PARTİLEME",
       "kg": 438.0,
@@ -15024,7 +15047,7 @@
       "repairs": []
     },
     {
-      "id": "p615",
+      "id": "p616",
       "parti": "(2026) 11377",
       "stage": "PARTİLEME",
       "kg": 210.0,
@@ -15047,7 +15070,7 @@
       "repairs": []
     },
     {
-      "id": "p616",
+      "id": "p617",
       "parti": "(2026) 11378",
       "stage": "PARTİLEME",
       "kg": 50.0,
@@ -15070,7 +15093,7 @@
       "repairs": []
     },
     {
-      "id": "p617",
+      "id": "p618",
       "parti": "(2026) 11379",
       "stage": "PARTİLEME",
       "kg": 36.0,
@@ -15093,7 +15116,7 @@
       "repairs": []
     },
     {
-      "id": "p618",
+      "id": "p619",
       "parti": "(2026) 11380",
       "stage": "PARTİLEME",
       "kg": 25.0,
@@ -15116,7 +15139,7 @@
       "repairs": []
     },
     {
-      "id": "p619",
+      "id": "p620",
       "parti": "(2026) 11381",
       "stage": "PARTİLEME",
       "kg": 25.0,
@@ -15139,7 +15162,7 @@
       "repairs": []
     },
     {
-      "id": "p620",
+      "id": "p621",
       "parti": "(2026) 11382",
       "stage": "PARTİLEME",
       "kg": 25.0,
@@ -15162,7 +15185,7 @@
       "repairs": []
     },
     {
-      "id": "p621",
+      "id": "p622",
       "parti": "(2026) 11384",
       "stage": "PARTİLEME",
       "kg": 50.0,
@@ -15185,7 +15208,7 @@
       "repairs": []
     },
     {
-      "id": "p622",
+      "id": "p623",
       "parti": "(2026) 11385",
       "stage": "PARTİLEME",
       "kg": 40.0,
@@ -15208,7 +15231,7 @@
       "repairs": []
     },
     {
-      "id": "p623",
+      "id": "p624",
       "parti": "(2026) 11386",
       "stage": "PARTİLEME",
       "kg": 20.0,
@@ -15231,7 +15254,7 @@
       "repairs": []
     },
     {
-      "id": "p624",
+      "id": "p625",
       "parti": "(2026) 11388",
       "stage": "MAL AÇMA",
       "kg": 5.0,
@@ -15254,7 +15277,7 @@
       "repairs": []
     },
     {
-      "id": "p625",
+      "id": "p626",
       "parti": "(2026) 11397",
       "stage": "KALİTE KONTROL",
       "kg": 16.0,
@@ -15277,7 +15300,7 @@
       "repairs": []
     },
     {
-      "id": "p626",
+      "id": "p627",
       "parti": "(2026) 11389",
       "stage": "PARTİLEME",
       "kg": 155.0,
@@ -15300,7 +15323,7 @@
       "repairs": []
     },
     {
-      "id": "p627",
+      "id": "p628",
       "parti": "(2026) 11406",
       "stage": "PARTİLEME",
       "kg": 403.0,
@@ -15323,7 +15346,7 @@
       "repairs": []
     },
     {
-      "id": "p628",
+      "id": "p629",
       "parti": "(2026) 11407",
       "stage": "PARTİLEME",
       "kg": 231.0,
@@ -15346,7 +15369,7 @@
       "repairs": []
     },
     {
-      "id": "p629",
+      "id": "p630",
       "parti": "(2026) 11409",
       "stage": "PARTİLEME",
       "kg": 450.0,
@@ -15369,7 +15392,7 @@
       "repairs": []
     },
     {
-      "id": "p630",
+      "id": "p631",
       "parti": "(2026) 11413",
       "stage": "PARTİLEME",
       "kg": 412.0,
@@ -15392,7 +15415,7 @@
       "repairs": []
     },
     {
-      "id": "p631",
+      "id": "p632",
       "parti": "(2026) 11417",
       "stage": "PARTİLEME",
       "kg": 474.0,
@@ -15415,7 +15438,7 @@
       "repairs": []
     },
     {
-      "id": "p632",
+      "id": "p633",
       "parti": "(2026) 11418",
       "stage": "MAL AÇMA",
       "kg": 940.0,
@@ -15438,7 +15461,7 @@
       "repairs": []
     },
     {
-      "id": "p633",
+      "id": "p634",
       "parti": "(2026) 11419",
       "stage": "PARTİLEME",
       "kg": 225.0,
@@ -15461,7 +15484,7 @@
       "repairs": []
     },
     {
-      "id": "p634",
+      "id": "p635",
       "parti": "(2026) 11420",
       "stage": "PARTİLEME",
       "kg": 225.0,
@@ -15484,7 +15507,7 @@
       "repairs": []
     },
     {
-      "id": "p635",
+      "id": "p636",
       "parti": "(2026) 11189",
       "stage": "RAM",
       "kg": 845.0,
@@ -15507,7 +15530,7 @@
       "repairs": []
     },
     {
-      "id": "p636",
+      "id": "p637",
       "parti": "(2026) 11190",
       "stage": "RAM",
       "kg": 1000.0,
@@ -15530,7 +15553,7 @@
       "repairs": []
     },
     {
-      "id": "p637",
+      "id": "p638",
       "parti": "(2026) 11244",
       "stage": "MAL AÇMA",
       "kg": 261.0,
@@ -15553,7 +15576,7 @@
       "repairs": []
     },
     {
-      "id": "p638",
+      "id": "p639",
       "parti": "(2026) 11245",
       "stage": "MAL AÇMA",
       "kg": 262.0,
@@ -15576,7 +15599,7 @@
       "repairs": []
     },
     {
-      "id": "p639",
+      "id": "p640",
       "parti": "(2026) 11246",
       "stage": "MAL AÇMA",
       "kg": 262.0,
@@ -15599,7 +15622,7 @@
       "repairs": []
     },
     {
-      "id": "p640",
+      "id": "p641",
       "parti": "(2026) 11261",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -15622,7 +15645,7 @@
       "repairs": []
     },
     {
-      "id": "p641",
+      "id": "p642",
       "parti": "(2026) 11262",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -15645,7 +15668,7 @@
       "repairs": []
     },
     {
-      "id": "p642",
+      "id": "p643",
       "parti": "(2026) 11263",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -15668,7 +15691,7 @@
       "repairs": []
     },
     {
-      "id": "p643",
+      "id": "p644",
       "parti": "(2026) 11264",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -15691,7 +15714,7 @@
       "repairs": []
     },
     {
-      "id": "p644",
+      "id": "p645",
       "parti": "(2026) 11265",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -15714,7 +15737,7 @@
       "repairs": []
     },
     {
-      "id": "p645",
+      "id": "p646",
       "parti": "(2026) 11267",
       "stage": "MAL AÇMA",
       "kg": 419.0,
@@ -15737,7 +15760,7 @@
       "repairs": []
     },
     {
-      "id": "p646",
+      "id": "p647",
       "parti": "(2026) 11268",
       "stage": "MAL AÇMA",
       "kg": 450.0,
@@ -15760,7 +15783,7 @@
       "repairs": []
     },
     {
-      "id": "p647",
+      "id": "p648",
       "parti": "(2026) 11277",
       "stage": "ŞARDON",
       "kg": 440.0,
@@ -15783,7 +15806,7 @@
       "repairs": []
     },
     {
-      "id": "p648",
+      "id": "p649",
       "parti": "(2026) 11278",
       "stage": "ŞARDON",
       "kg": 440.0,
@@ -15806,7 +15829,7 @@
       "repairs": []
     },
     {
-      "id": "p649",
+      "id": "p650",
       "parti": "(2026) 11282",
       "stage": "MAL AÇMA",
       "kg": 358.0,
@@ -15829,7 +15852,7 @@
       "repairs": []
     },
     {
-      "id": "p650",
+      "id": "p651",
       "parti": "(2026) 11283",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -15852,7 +15875,7 @@
       "repairs": []
     },
     {
-      "id": "p651",
+      "id": "p652",
       "parti": "(2026) 11320",
       "stage": "MAL AÇMA",
       "kg": 240.0,
@@ -15875,11 +15898,11 @@
       "repairs": []
     },
     {
-      "id": "p652",
+      "id": "p653",
       "parti": "(2026) 11338",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 220.0,
-      "wait": 0.2916666666666667,
+      "wait": 0.3333333333333333,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2025) 447",
@@ -15898,11 +15921,11 @@
       "repairs": []
     },
     {
-      "id": "p653",
+      "id": "p654",
       "parti": "(2026) 11339",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 440.0,
-      "wait": 0.20833333333333334,
+      "wait": 0.25,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2025) 447",
@@ -15921,7 +15944,7 @@
       "repairs": []
     },
     {
-      "id": "p654",
+      "id": "p655",
       "parti": "(2026) 11340",
       "stage": "DÖŞEME ÖNFİKSE 1",
       "kg": 220.0,
@@ -15944,7 +15967,7 @@
       "repairs": []
     },
     {
-      "id": "p655",
+      "id": "p656",
       "parti": "(2026) 11351",
       "stage": "MAL AÇMA",
       "kg": 840.0,
@@ -15967,7 +15990,7 @@
       "repairs": []
     },
     {
-      "id": "p656",
+      "id": "p657",
       "parti": "(2026) 11359",
       "stage": "ÖN FİKSE 1",
       "kg": 28.0,
@@ -15990,7 +16013,7 @@
       "repairs": []
     },
     {
-      "id": "p657",
+      "id": "p658",
       "parti": "(2026) 11371",
       "stage": "KALİTE KONTROL",
       "kg": 220.0,
@@ -16013,7 +16036,7 @@
       "repairs": []
     },
     {
-      "id": "p658",
+      "id": "p659",
       "parti": "(2026) 11372",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -16036,7 +16059,7 @@
       "repairs": []
     },
     {
-      "id": "p659",
+      "id": "p660",
       "parti": "(2026) 11373",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -16059,7 +16082,7 @@
       "repairs": []
     },
     {
-      "id": "p660",
+      "id": "p661",
       "parti": "(2026) 11383",
       "stage": "MAL AÇMA",
       "kg": 1453.0,
@@ -16082,7 +16105,7 @@
       "repairs": []
     },
     {
-      "id": "p661",
+      "id": "p662",
       "parti": "(2026) 11387",
       "stage": "MAL AÇMA",
       "kg": 341.6,
@@ -16105,7 +16128,7 @@
       "repairs": []
     },
     {
-      "id": "p662",
+      "id": "p663",
       "parti": "(2026) 11394",
       "stage": "MAL AÇMA",
       "kg": 1000.0,
@@ -16128,7 +16151,7 @@
       "repairs": []
     },
     {
-      "id": "p663",
+      "id": "p664",
       "parti": "(2026) 11398",
       "stage": "MAL AÇMA",
       "kg": 840.0,
@@ -16151,7 +16174,7 @@
       "repairs": []
     },
     {
-      "id": "p664",
+      "id": "p665",
       "parti": "(2026) 11402",
       "stage": "MAL AÇMA",
       "kg": 750.0,
@@ -16174,7 +16197,7 @@
       "repairs": []
     },
     {
-      "id": "p665",
+      "id": "p666",
       "parti": "(2026) 11403",
       "stage": "MAL AÇMA",
       "kg": 750.0,
@@ -16197,7 +16220,7 @@
       "repairs": []
     },
     {
-      "id": "p666",
+      "id": "p667",
       "parti": "(2026) 11405",
       "stage": "MAL AÇMA",
       "kg": 180.0,
@@ -16220,7 +16243,7 @@
       "repairs": []
     },
     {
-      "id": "p667",
+      "id": "p668",
       "parti": "(2026) 11410",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -16243,7 +16266,7 @@
       "repairs": []
     },
     {
-      "id": "p668",
+      "id": "p669",
       "parti": "(2026) 11411",
       "stage": "MAL AÇMA",
       "kg": 360.0,
@@ -16266,7 +16289,7 @@
       "repairs": []
     },
     {
-      "id": "p669",
+      "id": "p670",
       "parti": "(2026) 11412",
       "stage": "PARTİLEME",
       "kg": 180.0,
@@ -16289,34 +16312,11 @@
       "repairs": []
     },
     {
-      "id": "p670",
+      "id": "p671",
       "parti": "(2026) 11414",
       "stage": "MAL AÇMA",
       "kg": 440.0,
-      "wait": 0.041666666666666664,
-      "sev": "ok",
-      "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
-      "order": "(2025) 447",
-      "customer": "FSA_2399_30/07/2026",
-      "fabric": "DWB010525",
-      "recipe": "M905 BEJ",
-      "term": "30.11.2026",
-      "due": 18,
-      "pri": "1000",
-      "inner": "",
-      "blocked": "",
-      "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, Y.AÇMA, FIRÇA, R.Y APRE, TRAŞ 1, POLISH 1, TRAŞ 1, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
-      "machine": "",
-      "lastStage": "PARTİLEME",
-      "hareket": "12.11.2026 15:22",
-      "repairs": []
-    },
-    {
-      "id": "p671",
-      "parti": "(2026) 11415",
-      "stage": "MAL AÇMA",
-      "kg": 440.0,
-      "wait": 0.041666666666666664,
+      "wait": 0.08333333333333333,
       "sev": "ok",
       "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
       "order": "(2025) 447",
@@ -16336,6 +16336,29 @@
     },
     {
       "id": "p672",
+      "parti": "(2026) 11415",
+      "stage": "MAL AÇMA",
+      "kg": 440.0,
+      "wait": 0.08333333333333333,
+      "sev": "ok",
+      "firma": "FAYTEKS SUNİ DERİ VE TEKS SAN VE TİC.A.Ş",
+      "order": "(2025) 447",
+      "customer": "FSA_2399_30/07/2026",
+      "fabric": "DWB010525",
+      "recipe": "M905 BEJ",
+      "term": "30.11.2026",
+      "due": 18,
+      "pri": "1000",
+      "inner": "",
+      "blocked": "",
+      "flow": "PARTİ, M.AÇMA, DÖŞEME ÖNF, ŞARDON, POLISH 1, ÖN FİKSE 2, KK, PARTİ, PFD AÇMA, BOYA, Y.AÇMA, FIRÇA, R.Y APRE, TRAŞ 1, POLISH 1, TRAŞ 1, RAM APRE, SARIM 1, LAMİNASYON, KK, FZK.KNT, SEVK",
+      "machine": "",
+      "lastStage": "PARTİLEME",
+      "hareket": "12.11.2026 15:22",
+      "repairs": []
+    },
+    {
+      "id": "p673",
       "parti": "(2026) 11416",
       "stage": "PARTİLEME",
       "kg": 220.0,
@@ -16358,7 +16381,7 @@
       "repairs": []
     },
     {
-      "id": "p673",
+      "id": "p674",
       "parti": "(2026) 11421",
       "stage": "KALİTE KONTROL",
       "kg": 317.0,
@@ -16381,7 +16404,7 @@
       "repairs": []
     },
     {
-      "id": "p674",
+      "id": "p675",
       "parti": "(2026) 11441",
       "stage": "PARTİLEME",
       "kg": 217.0,
@@ -16404,7 +16427,7 @@
       "repairs": []
     },
     {
-      "id": "p675",
+      "id": "p676",
       "parti": "(2026) 10301",
       "stage": "KALİTE KONTROL",
       "kg": 1100.0,
@@ -16427,7 +16450,7 @@
       "repairs": []
     },
     {
-      "id": "p676",
+      "id": "p677",
       "parti": "(2026) 10666",
       "stage": "KALİTE KONTROL",
       "kg": 1144.0,
@@ -16450,7 +16473,7 @@
       "repairs": []
     },
     {
-      "id": "p677",
+      "id": "p678",
       "parti": "(2026) 10667",
       "stage": "KALİTE KONTROL",
       "kg": 681.0,
@@ -16473,7 +16496,7 @@
       "repairs": []
     },
     {
-      "id": "p678",
+      "id": "p679",
       "parti": "(2026) 10707",
       "stage": "ALTBEZ LAMİNASYON",
       "kg": 348.0,
@@ -16496,7 +16519,7 @@
       "repairs": []
     },
     {
-      "id": "p679",
+      "id": "p680",
       "parti": "(2026) 10913",
       "stage": "ŞARDON",
       "kg": 990.0,
@@ -16519,7 +16542,7 @@
       "repairs": []
     },
     {
-      "id": "p680",
+      "id": "p681",
       "parti": "(2026) 10914",
       "stage": "ALTBEZ LAMİNASYON",
       "kg": 702.0,
@@ -16542,7 +16565,7 @@
       "repairs": []
     },
     {
-      "id": "p681",
+      "id": "p682",
       "parti": "(2026) 10972",
       "stage": "MAL AÇMA",
       "kg": 1134.0,
@@ -16565,7 +16588,7 @@
       "repairs": []
     },
     {
-      "id": "p682",
+      "id": "p683",
       "parti": "(2026) 11177",
       "stage": "RAM APRE",
       "kg": 57.0,

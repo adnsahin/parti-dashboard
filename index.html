@@ -647,6 +647,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 <div class="quick-insights" id="quickInsights">
 <button type="button" class="qi-live" onclick="lbOpen()" title="Kalite Kontrol, Sarım1 ve Sarım2: Gelecek · Üzerinde · Üretim tek ekranda, canlı"><b>📺 Canlı Hareket İzleme</b><small>Kalite Kontrol · Sarım1 · Sarım2 — tıkla izle</small></button>
 <button type="button" class="qi-ana" onclick="paOpen()" title="Günlük üretim trendi, gelen–geçen dengesi, saatlik dağılım, aşamada kalış süresi"><b>📊 Üretim Analizi</b><small>günlük trend · denge · saatler · kalış süresi</small></button>
+<button type="button" class="qi-ana qi-boya" onclick="boyaGelBoard()" title="Şu an boyamada olup Kalite Kontrol, Sarım1 ve Sarım2'ye gelecek partiler (ayrı ayrı)"><b>🎨 Boyadan Gelecekler</b><small>KK · Sarım1 · Sarım2'ye gidecekler</small></button>
 <button type="button" data-action="repair" onclick="showTamirCards()"><b id="qiRepair">0</b><small>Tamirli Parti</small></button>
 </div>
 <div class="group-mode-bar">
@@ -3816,6 +3817,7 @@ function hmModalShow(inner){
         document.addEventListener('keydown',e=>{if(e.key==='Escape'&&m.classList.contains('show')&&!document.querySelector('#detailModal.show'))hmCardPopupClose()});
         document.body.appendChild(m);
     }
+    hmModalFsOff();
     m.innerHTML='<div class="modal-box hm-card-box"><button class="modal-close" onclick="hmCardPopupClose()">×</button>'+inner+'</div>';
     m.classList.add('show');
 }
@@ -3826,7 +3828,21 @@ function hmCardPopupOpen(cards,title){
         +'<div class="cards-container hm-card-list">'+cards.map(k=>flashCardHtml(k,true)).join('')+'</div>'
         +'<div class="hm-card-hint">Karta dokun: arkasını çevir (üretim sırası, bekleme…)</div>');
 }
-function hmCardPopupClose(){const m=document.getElementById('hmCardModal');if(m)m.classList.remove('show')}
+function hmCardPopupClose(){const m=document.getElementById('hmCardModal');if(m){m.classList.remove('show');hmModalFsOff()}}
+// ⛶ Pencere tam ekran: kutu ekranı kaplar; tarayıcı izin veriyorsa gerçek tam ekrana da geçer (Esc ya da düğme: çık)
+function hmModalFsOn(){const m=document.getElementById('hmCardModal');return !!(m&&m.classList.contains('fs'))}
+function hmModalFsOff(){const m=document.getElementById('hmCardModal');if(m)m.classList.remove('fs');try{if(document.fullscreenElement===m)document.exitFullscreen()}catch(e){}}
+function hmModalFsToggle(){
+    const m=document.getElementById('hmCardModal');if(!m)return;
+    if(m.classList.contains('fs'))hmModalFsOff();
+    else{m.classList.add('fs');try{if(m.requestFullscreen&&!document.fullscreenElement){const pr=m.requestFullscreen();if(pr&&pr.catch)pr.catch(()=>{})}}catch(e){}}
+    m.querySelectorAll('.hm-fs-b').forEach(b=>{b.textContent=hmModalFsOn()?'✕ Tam ekrandan çık':'⛶ Tam ekran'});
+}
+function hmModalFsBtn(){return '<button type="button" class="hm-fs-b" onclick="hmModalFsToggle()" title="Bu pencereyi tam ekran göster / geri al">'+(hmModalFsOn()?'✕ Tam ekrandan çık':'⛶ Tam ekran')+'</button>'}
+document.addEventListener('fullscreenchange',()=>{const m=document.getElementById('hmCardModal');if(m&&m.classList.contains('fs')&&!document.fullscreenElement&&m._fsWas){hmModalFsOff();m.querySelectorAll('.hm-fs-b').forEach(b=>{b.textContent='⛶ Tam ekran'})}if(m)m._fsWas=document.fullscreenElement===m});
+(function(){const st=document.createElement('style');st.textContent='#hmCardModal.fs{padding:0;align-items:stretch;justify-content:stretch;background:#0f0c29}#hmCardModal.fs .modal-box{width:100vw;max-width:none;height:100vh;max-height:none;border-radius:0;border:0;padding:18px 22px;box-sizing:border-box}#hmCardModal.fs .bg-box{width:100%}'
+ +'#hmCardModal.fs .go-tb{font-size:clamp(14px,1.25vw,22px)}#hmCardModal.fs .go-tb th{font-size:.9em}#hmCardModal.fs .go-tb td{padding:.75em .7em}#hmCardModal.fs .go-tb td small{font-size:.72em}#hmCardModal.fs .go-tb td.go-t b{font-size:1.2em}#hmCardModal.fs .hm-card-title{font-size:clamp(18px,1.6vw,28px)}'
+ +'#hmCardModal.fs .bg-r1 b{font-size:clamp(16px,1.3vw,22px)}#hmCardModal.fs .bg-r2{font-size:clamp(12px,.95vw,16px)}';document.head.appendChild(st)})();
 function heatmapMindCardsForPath(path){
     const idx=path.split('-').map(Number),lastIdx=idx.pop(),parentPath=idx.join('-');
     const rows=heatmapMindNodeCache.get(parentPath),row=rows&&rows[lastIdx];
@@ -6211,7 +6227,7 @@ function lbLayApply(){
 function lbLayReset(){lbLay=JSON.parse(JSON.stringify(LB_LAY_DEF));lbLaySave();lbFocus=null;hmCardPopupClose();lbLastKeys=null;lbRender();showToast('🧩 Pano varsayılan düzende')}
 // Görünüm: 'all' pano · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (sütun tam ekran) · 'sel' seçilen partiler (ayrı ekran)
 let lbView='all';
-const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler',p:'✅ Üretim',t:'🛠 Tamirler'};
+const LB_VIEW_L={g:'⏳ Gelecek',u:'📍 Üzerinde',sel:'☑ Seçilen partiler',p:'✅ Üretim',t:'🛠 Tamirler',b:'🎨 Boyamadan gelecekler'};
 // Seçilenler ekranında sütun: '' iki sütun · 'g' yalnız Gelecek · 'u' yalnız Üzerinde (tam ekran)
 let lbSelCol='',lbSelOne=false;
 // Seçilenler ekranının görünümü: 'oto' (24 partiye kadar kart, fazlası kutu) · 'kart' · 'liste' (satır satır tablo) · 'kutu'; cihaz başına hatırlanır
@@ -6227,21 +6243,27 @@ function lbSelCardModeNext(){
 function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
 // ── 🧠 Pano mindmap'leri: ☑ Seçilenler, ✅ Üretim (bugün geçenler) ve 🛠 Tamirler (devam eden) — her biri kendi seviyeleri ve
 //    hazır düzenleriyle A4 mindmap; panoda sayfa okunurluğa göre otomatik yatay / dikey A4, 📄 ile önizleme → PDF / PNG / yazdır
-const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','kumas','prenk'],kkp2:['gun','firma','kumas','prenk'],kak:['asama','yon','saat','asaat']};
+const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','kumas','prenk'],kkp2:['gun','firma','kumas','prenk'],kak:['asama','yon','saat','asaat'],b:['hedef','firma','parti']};
 const lbMindSt={};
 try{if(localStorage.getItem('kkpMindV2')!=='1'){localStorage.removeItem('lbMind9_kkp');localStorage.removeItem('lbMind9_kkp2');localStorage.setItem('kkpMindV2','1')}}catch(e){}
-['sel','p','t','kay','kkp','kkp2','kak'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
+['sel','p','t','kay','kkp','kkp2','kak','b'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
 const lbSelMind=lbMindSt.sel;
 function lbMindSave(K){try{localStorage.setItem(K==='sel'?'lbSelMind9':'lbMind9_'+K,JSON.stringify(lbMindSt[K]))}catch(e){}}
 // Üretim / Tamirler görünümünde kutular ↔ mindmap (cihaz başına)
 let lbTvMind=(()=>{try{const v=JSON.parse(localStorage.getItem('lbTvMind9')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return{}}})();
-function lbTvMindToggle(){const K=lbView;if(K!=='p'&&K!=='t')return;lbTvMind[K]=!lbTvMind[K];try{localStorage.setItem('lbTvMind9',JSON.stringify(lbTvMind))}catch(e){}lbLastKeys=null;lbRender()}
-function lbTvMindBtn(){return (lbView==='p'||lbView==='t')&&!lbTvMind[lbView]?'<button type="button" onclick="event.stopPropagation();lbTvMindToggle()" title="Mindmap görünümü: seviyeli harita, A4 / PDF">🧠 Mindmap</button>':''}
+function lbTvMindToggle(){const K=lbView;if(K!=='p'&&K!=='t'&&K!=='b')return;lbTvMind[K]=!lbTvMind[K];try{localStorage.setItem('lbTvMind9',JSON.stringify(lbTvMind))}catch(e){}lbLastKeys=null;lbRender()}
+function lbTvMindBtn(){return (lbView==='p'||lbView==='t'||lbView==='b')&&!lbTvMind[lbView]?'<button type="button" onclick="event.stopPropagation();lbTvMindToggle()" title="Mindmap görünümü: seviyeli harita, A4 / PDF">🧠 Mindmap</button>':''}
 const LB_T_YAS=['0–1 gün','1–3 gün','3–7 gün','7–30 gün','30+ gün'],LB_T_SAAT=['0–1 sa','1–2 sa','2–4 sa','4–8 sa','8–12 sa','12–24 sa','1–3 gün','3–7 gün','7+ gün'],LB_P_GEC={kk:'Kalite Kontrol',sr1:'Sarım1',sr2:'Sarım2'};
 // ekrana özel seviyeler (ısı haritası seviyelerine ek)
 // kayıttan gelen (güncel veride olmayan) partilerde firma uzun adla gelir → kısa ada birleştir
 const LB_MIND_FIRMA={label:'Firma',get:k=>{const v=HEATMAP_DIMENSIONS.firma.get(k);try{return upShortCompany(v)||v}catch(e){return v}}},LB_MIND_MUS={label:'Müşteri (sipariş)',get:k=>lbGroupName(k)};
+const LB_B_HEDEF={kk:'Kalite Kontrole gelecek',sr1:'Sarım1\'e gelecek',sr2:'Sarım2\'ye gelecek'};
 const LB_MIND_EXTRA={
+    b:{hedef:{label:'Gideceği yer',get:k=>k._bHedef||'?',ord:Object.values(LB_B_HEDEF)},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
+        adim:{label:'Kaç aşama sonra',get:k=>k._bAdim<=1?'Sıradaki aşama':k._bAdim+' aşama sonra',sortKey:k=>k._bAdim},
+        kumas:{label:'Kumaş',get:k=>String(k.ham_adi||'-').trim()||'-'},renk:{label:'Renk (reçete)',get:k=>String(k.recete_adi||'').trim()||'Renk yok'},
+        prenk:{label:'Parti no + renk',get:k=>heatmapShortParti(k)+' • '+(String(k.recete_adi||'').trim()||'renk yok')},
+        bekle:{label:'Boyamada bekleme',get:k=>{const h=lbWaitH(k)||0;return LB_T_SAAT[h<1?0:h<2?1:h<4?2:h<8?3:h<12?4:h<24?5:h<72?6:h<168?7:8]},ord:LB_T_SAAT}},
     kkp2:{gun:{label:'Program günü',get:k=>k._pGun||'?',sortKey:k=>k._pGunI},renk:{label:'Renk (reçete)',get:k=>String(k.recete_adi||'').trim()||'Renk yok'},
         prenk:{label:'Parti no + renk',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+(String(k.recete_adi||'').trim()||'renk yok')+(k._pM?' • '+k._pM:'')+(k._pInc?' 📥':''),sortKey:k=>k._pSira},durum:{label:'Üzerinde / gelecek',get:k=>k._pInc?'📥 Gelecek':'🔹 Üzerinde',ord:['🔹 Üzerinde','📥 Gelecek']},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
         kumas:{label:'Kumaş',get:k=>String(k.ham_adi||'-').trim()||'-'},psira:{label:'Sıra + parti + kg',get:k=>k._pSira+'. '+heatmapShortParti(k)+' • '+Math.round(num(k.kilo)).toLocaleString('tr-TR')+' kg'+(k._pInc?' 📥':''),sortKey:k=>k._pSira}},
@@ -6273,6 +6295,7 @@ const LB_MIND_EXTRA={
         tparti:{label:'Parti + tamir yaşı',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0),byAge:true}}
 };
 const LB_MIND_PRE={
+    b:[['hedef','🎯 Gideceği yer › Firma',['hedef','firma','parti']],['adim','🔢 Gideceği yer › Kaç aşama sonra',['hedef','adim','parti']],['kumas','🧵 Gideceği yer › Kumaş › Parti + renk',['hedef','kumas','prenk']],['firma','👤 Firma › Gideceği yer',['firma','hedef','parti']],['bekle','⏱ Gideceği yer › Boyamada bekleme',['hedef','bekle','parti']]],
     kkp2:[['gfkr','📅 Gün › Firma › Kumaş › Parti + renk',['gun','firma','kumas','prenk']],['fkrp','👤 Firma › Kumaş › Renk › Parti',['firma','kumas','renk','prenk']],['gun','📅 Gün › Üzerinde/gelecek › Parti',['gun','durum','psira']],['gunfirma','📅 Gün › Firma › Parti',['gun','firma','psira']],['gunkumas','📅 Gün › Kumaş › Parti',['gun','kumas','psira']]],
     kak:[['asama','🏭 Aşama › Gelen/geçen › Saat › Parti',['asama','yon','saat','asaat']],['saat','🕐 Saat › Aşama › Gelen/geçen › Parti',['saat','asama','yon','asaat']],['firma','👤 Aşama › Gelen/geçen › Firma › Parti',['asama','yon','firma','asaat']]],
     kkp:[['gfkr','📅 Gün › Firma › Kumaş › Parti + renk',['gun','firma','kumas','prenk']],['mfkr','🛠 Gün › Makine › Firma › Parti + renk',['gun','makine','firma','prenk']],['fkrp','👤 Firma › Kumaş › Renk › Parti',['firma','kumas','renk','prenk']],['gunmak','📅 Gün › Makine › Parti',['gun','makine','pkumas']],['gun','📅 Gün › Firma › Parti',['gun','firma','psira']],['gunkumas','📅 Gün › Kumaş › Parti',['gun','kumas','psira']],['gunhiz','📅 Gün › Hız grubu › Parti',['gun','hiz','pkumas']],['hiz','⚡ Hız grubu › Kumaş › Parti',['hiz','kumas','psira']]],
@@ -6281,7 +6304,7 @@ const LB_MIND_PRE={
     p:[['gecis','✅ Geçtiği aşamaya göre',['gecis','firma','parti']],['gidis','➡ Gittiği aşamaya göre',['gidis','firma','parti']],['firma','👤 Firmaya göre',['firma','gecis','parti']],['saat','🕐 Saate göre',['saat','gecis','parti']]],
     t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','ttip','parti']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','parti']],['firma','👤 Firmaya göre',['firma','ttip','parti']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','parti']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
 };
-const LB_MIND_T={kkp2:['Program (üzerindekiler + gelecekler)','Program','program_mindmap'],kak:['Saatlik akış — gelen ve geçen','Saatlik akış','saatlik_akis_mindmap'],kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
+const LB_MIND_T={b:['Boyamadan gelecekler — KK / Sarım1 / Sarım2','Boyamada','boyamadan_gelecekler_mindmap'],kkp2:['Program (üzerindekiler + gelecekler)','Program','program_mindmap'],kak:['Saatlik akış — gelen ve geçen','Saatlik akış','saatlik_akis_mindmap'],kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
 function lbMindDim(K,k){return (LB_MIND_EXTRA[K]||{})[k]||HEATMAP_DIMENSIONS[k]}
 function lbSelMindDim(k){return lbMindDim('sel',k)}
 function lbMindLv(K){const l=lbMindSt[K].lv.filter(k=>lbMindDim(K,k));return l.length?l:[LB_MIND_DEF[K][0]]}
@@ -6289,6 +6312,7 @@ function lbMindKey(){return lbView==='sel'?'sel':lbView}
 // veri: seçili kartlar / bugünkü üretim kayıtları / açık tamirler (kart biçiminde; güncel veride yoksa kayıttaki bilgiyle)
 function lbMindCards(K){
     if(K==='sel')return lbSelCustFilter(getAllCards().filter(k=>lbSel.has(lbPn(k))));
+    if(K==='b'){const D=boyaGelData(),out=[];D.cols.forEach(c=>{if(lbFocus&&lbFocus!==c.T.key)return;c.rows.forEach(x=>out.push(Object.assign({},x.k,{_bHedef:LB_B_HEDEF[c.T.key],_bAdim:x.steps})))});return out}
     if(K==='kkp2'){const L=kkp._last;if(!L)return[];let n=0;return L.days.flatMap(d=>d.rows.map(x=>Object.assign({},x.k,{_pGun:(d.i+1)+'. gün • '+kkpDate(d.i),_pGunI:d.i,_pSira:++n,_pInc:x.inc,_pM:x.m||''})))}
     if(K==='kak'){if(typeof URETIM_LOG==='undefined'||!URETIM_LOG||!kkp.ad)return[];const out=[],hh=h=>String(h).padStart(2,'0');
         [['kkGelen','Kalite Kontrol','📥 Gelen'],['kkGecen','Kalite Kontrol','✅ Geçen'],['sr1Gelen','Sarım1','📥 Gelen'],['sr1Gecen','Sarım1','✅ Geçen'],['sr2Gelen','Sarım2','📥 Gelen'],['sr2Gecen','Sarım2','✅ Geçen']].forEach(([c,st,yon])=>uretimLogRows(kkp.ad,c).forEach(r=>{if(!r.ts)return;const d=new Date(r.ts),h=d.getHours();
@@ -6330,7 +6354,7 @@ function lbMindSrc(K,cards){
         maxDepth:()=>lv.length,
         setDepth:v=>{st.depth=v;src.depth=v;lbMindSave(K)},
         changed:()=>lbMindBoardRefresh(),
-        sub:P=>lv.slice(0,P.depth).map(k=>lbMindDim(K,k).label).join(' › ')+' • '+P.root.count.toLocaleString('tr-TR')+' '+(K==='t'?'tamir':'parti')+' • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg',
+        sub:P=>lv.slice(0,P.depth).map(k=>lbMindDim(K,k).label).join(' › ')+' • '+P.root.count.toLocaleString('tr-TR')+' '+(K==='t'?'tamir':K==='b'?'satır (parti × hedef)':'parti')+' • '+Math.round(P.root.kg).toLocaleString('tr-TR')+' kg',
         sub2:K==='p'?()=>SW_ROWS.map(R=>{const cs=cards.filter(k=>k._mSt===R.key),Pc=lbNormPace(R.key,cs.map(k=>({ts:k._mTs,nm:k._mNm,kg:k._mKg})));
             return Pc?{t:lbNormPaceLine(R,Pc),b:lbNormPaceTxt(Pc),c:Math.abs(Pc.pct)<3?'#555':Pc.pct>0?'#2E7D32':'#C62828'}:null}).filter(Boolean):null,
         optHtml:()=>'<label>Hazır düzen<span class="hm-a4-lv">'+lbMindPresetHtml(K)+'</span></label><label>Seviyeler<span class="hm-a4-lv">'+lbMindLvHtml(K)+'</span></label>'};
@@ -6352,15 +6376,15 @@ function lbMindSetLv(K,i,v){
     const st=lbMindSt[K],lv=st.lv.slice(0,4);if(v)lv[i]=v;else lv.length=i;st.lv=lv.filter(Boolean);if(!st.lv.length)st.lv=[LB_MIND_DEF[K][0]];
     st.depth=0;lbMindSave(K);lbMindAfter(K);
 }
-function lbMindOn(){const K=lbMindKey();return K==='sel'?lbSelCardMode==='mind':(K==='p'||K==='t')&&!!lbTvMind[K]}
+function lbMindOn(){const K=lbMindKey();return K==='sel'?lbSelCardMode==='mind':(K==='p'||K==='t'||K==='b')&&!!lbTvMind[K]}
 function lbMindBoardRefresh(){if(srView==='mind'&&srPanelOpen())renderSelectionPanel();if(kkp.view==='mind'&&document.getElementById('kkpBox'))kkpRender();if(lbMindOn()&&typeof lbVisible==='function'&&lbVisible()){lbLastKeys=null;lbRender()}}
 const lbSelMindBoardRefresh=lbMindBoardRefresh;
 function lbMindOri(v){hmA4.ori=v;hmA4Save();lbMindBoardRefresh()}
 function lbMindFont(v){hmA4.font=v;hmA4Save();lbMindBoardRefresh()}
 function lbMindA4(K){hmA4Open(lbMindSrc(K,lbMindCards(K)))}
 function lbMindHtml(K,cards){
-    const tv=K==='p'||K==='t',back=tv?'<button type="button" class="lb-mind-back" onclick="lbTvMindToggle()" title="Kutu tablosuna dön">▦ Kutular</button>':'';
-    if(!cards.length)return '<div class="lb-mindw"><div class="lb-mind-tb">'+back+'</div><div class="lb-mind-area"><div class="lb-cards-empty">'+(K==='p'?'Bugün KK / Sarım\'dan geçen parti yok.':K==='t'?'Devam eden tamir yok ✅':'Seçili parti yok.')+'</div></div></div>';
+    const tv=K==='p'||K==='t'||K==='b',back=tv?'<button type="button" class="lb-mind-back" onclick="lbTvMindToggle()" title="Kutu tablosuna dön">▦ Kutular</button>':'';
+    if(!cards.length)return '<div class="lb-mindw"><div class="lb-mind-tb">'+back+'</div><div class="lb-mind-area"><div class="lb-cards-empty">'+(K==='p'?'Bugün KK / Sarım\'dan geçen parti yok.':K==='t'?'Devam eden tamir yok ✅':K==='b'?'Boyamada KK / Sarım\'a gelecek parti yok.':'Seçili parti yok.')+'</div></div></div>';
     const prev=hmA4Src,pf=hmA4.font,KP=K==='kkp'||K==='kkp2';hmA4Src=lbMindSrc(K,cards);if(KP&&(!pf||pf==='fit'))hmA4.font='9';let P;try{P=hmA4Plan()}finally{hmA4Src=prev;hmA4.font=pf}
     const ptc=P.pt>=9?'ok':P.pt>=HM_A4_MINPT?'mid':'low';
     return '<div class="lb-mindw"><div class="lb-mind-tb">'+back+lbMindPresetHtml(K)+lbMindLvHtml(K)
@@ -7308,6 +7332,99 @@ function lbSelMachKanbanHtml(selAll,tile){
 }
 // ── ✅ Üretim ve 🛠 Tamirler görünümleri (pano tablosu biçiminde, en yeni önde) ──
 // kutu için kart: güncel veride varsa o (tıklayınca ayrıntı), yoksa kayıttaki bilgilerle (sevk edilmiş / bitmiş)
+// ── 🎨 Boyamadan gelecekler: şu an BOYAMA aşamasında olan partilerden, akışının devamında Kalite Kontrol / Sarım1 / Sarım2 olanlar
+//    (her hedef ayrı sütun; parti birden çok hedefe gidecekse hepsinde görünür). Sıra: hedefe en az aşama kalan, sonra boyamada en uzun bekleyen.
+let boyaGelSel=mapLoadPref('boyaGel9',v=>['all','kk','sr1','sr2'].includes(v),'all');
+function boyaGelIsBoya(k){return /BOYA/.test(normalizeStageName(k._asama||k.asama))}
+function boyaGelHas(k,key){const T=LB_ETA_TGT.find(t=>t.key===key);if(!T)return false;const r=cardFlowIdx(k);if(r.idx<0)return false;for(let j=r.idx+1;j<r.parts.length;j++)if(T.is(r.parts[j]))return true;return false}
+// panoda (🎨 görünümü) bir aşama satırına düşecek partiler: boyamada olup akışının devamında o aşama olanlar
+function boyaGelFilter(R){return k=>boyaGelIsBoya(k)&&boyaGelHas(k,R.key)}
+function boyaGelBoard(){if(typeof lbVisible==='function'&&!lbVisible())lbOpen();const m=document.querySelector('#hmCardModal.show,.hm-modal.show');try{if(typeof hmCardPopupClose==='function')hmCardPopupClose()}catch(e){}if(lbView!=='b')lbSetView('b')}
+function boyaGelData(){
+    const cards=getAllCards().filter(boyaGelIsBoya),cols=LB_ETA_TGT.map(T=>({T,rows:[]}));let none=0;
+    cards.forEach(k=>{const r=cardFlowIdx(k);let hit=false;
+        if(r.idx>=0)cols.forEach(c=>{for(let j=r.idx+1;j<r.parts.length;j++)if(c.T.is(r.parts[j])){c.rows.push({k,steps:j-r.idx,via:r.parts.slice(r.idx+1,j),w:lbWaitH(k)});hit=true;break}});
+        if(!hit)none++});
+    cols.forEach(c=>{c.rows.sort((a,b)=>a.steps-b.steps||(b.w||0)-(a.w||0));c.kg=c.rows.reduce((s,x)=>s+num(x.k.kilo),0)});
+    return{cards,cols,none,kg:cards.reduce((s,k)=>s+num(k.kilo),0)};
+}
+const BOYA_GEL_L={kk:['Kalite Kontrole gelecek','#42A5F5','✅'],sr1:['Sarım1\'e gelecek','#9575CD','🟣'],sr2:['Sarım2\'ye gelecek','#66BB6A','🟢']};
+function boyaGelRowHtml(x,T){
+    const k=x.k,eta=(()=>{try{const e=lbEtaTarget(k);return e&&e.T.key===T.key?e:null}catch(e){return null}})(),nm=T.key==='kk'?kkNormOf(k):null;
+    return '<div class="bg-r" onclick="openDetailModal(&quot;'+esc(k.id)+'&quot;)" title="Akış: '+esc(['BOYAMA'].concat(x.via,[T.key==='kk'?'KK':T.key==='sr1'?'SARIM 1':'SARIM 2']).join(' › '))+'">'
+        +'<div class="bg-r1"><b>'+esc(heatmapShortParti(k))+'</b><span class="bg-kg">'+lbShortKg(k.kilo)+' kg</span><span class="bg-st'+(x.steps<=1?' n1':'')+'">'+(x.steps<=1?'sıradaki aşama':x.steps+' aşama sonra')+'</span>'
+            +'<span class="bg-w" title="Boyamada bekleme (son hareketten beri)">⏱ '+esc(lbWaitShort(x.w))+'</span></div>'
+        +'<div class="bg-r2">'+esc(lbFirm(k)||'-')+' • '+esc(String(k.ham_adi||'-').trim())+(k.recete_adi?' • 🎨 '+esc(k.recete_adi):'')+'</div>'
+        +(x.via.length?'<div class="bg-r3">arada: '+esc(x.via.join(' › '))+'</div>':'')
+        +(eta||nm?'<div class="bg-r3 e">'+(eta?esc(lbEtaLine(eta)):'')+(eta&&nm?' • ':'')+(nm?'KK normu ≈ '+nm.txt:'')+'</div>':'')+'</div>';
+}
+function boyaGelHtml(){
+    const D=boyaGelData(),f0=v=>Math.round(v).toLocaleString('tr-TR'),sel=boyaGelSel,show=D.cols.filter(c=>sel==='all'||c.T.key===sel);
+    let h='<div class="hm-card-title">🎨 Boyamadan gelecekler<small>şu an boyamada '+D.cards.length+' parti • '+f0(D.kg)+' kg'+(D.none?' • '+D.none+' partinin akışında KK / Sarım yok':'')+'</small></div>'
+        +'<div class="bg-tabs"><button type="button" class="'+(sel==='all'?'on':'')+'" onclick="boyaGelSet(&quot;all&quot;)">Hepsi yan yana</button>'
+        +D.cols.map(c=>{const L=BOYA_GEL_L[c.T.key];return '<button type="button" class="'+(sel===c.T.key?'on':'')+'" style="--c:'+L[1]+'" onclick="boyaGelSet(&quot;'+c.T.key+'&quot;)">'+L[2]+' '+L[0]+' <b>'+c.rows.length+'</b></button>'}).join('')
+        +'<button type="button" class="bg-cp" onclick="boyaGelCopy()">📋 Kopyala</button>'+hmModalFsBtn()+'</div>';
+    if(!D.cards.length)return h+'<div class="lb-cards-empty">Şu an boyama aşamasında parti yok.</div>';
+    h+='<div class="bg-grid'+(show.length===1?' one':'')+'">'+show.map(c=>{const L=BOYA_GEL_L[c.T.key],n1=c.rows.filter(x=>x.steps<=1).length;
+        const nm=c.T.key==='kk'?c.rows.reduce((s,x)=>{const n=kkNormOf(x.k);return s+(n?n.m:0)},0):0;
+        return '<div class="bg-col" style="--c:'+L[1]+'"><div class="bg-h">'+L[2]+' '+L[0]+'<span><b>'+c.rows.length+'</b> parti • <b>'+f0(c.kg)+'</b> kg</span>'
+            +'<small>'+(c.rows.length?(n1?n1+' parti boyamadan hemen sonra • ':'')+'en az aşama kalan önce'+(nm?' • KK norm süresi toplam ≈ '+lbNormFmt(nm):''):'')+'</small></div>'
+            +(c.rows.length?c.rows.map(x=>boyaGelRowHtml(x,c.T)).join(''):'<div class="bg-empty">Boyamadaki partilerden buraya gelecek yok.</div>')+'</div>'}).join('')+'</div>'
+        +'<div class="bg-note">Boyamadaki her partinin üretim akışına bakılır: akışın devamında Kalite Kontrol, Sarım1 ya da Sarım2 varsa o sütunda görünür (birden çoğu varsa hepsinde). Satıra dokun: parti ayrıntısı. Çift boyama da boyama sayılır.</div>';
+    return h;
+}
+function boyaGelOpen(){hmModalShow('<div id="boyaGelBox" class="bg-box">'+boyaGelHtml()+'</div>')}
+function boyaGelSet(v){boyaGelSel=v;mapSavePref('boyaGel9',v);const b=document.getElementById('boyaGelBox');if(b)b.innerHTML=boyaGelHtml()}
+function boyaGelCopy(){
+    const D=boyaGelData();let t='🎨 Boyamadan gelecekler — '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n';
+    D.cols.forEach(c=>{if(boyaGelSel!=='all'&&boyaGelSel!==c.T.key)return;t+='\n'+BOYA_GEL_L[c.T.key][0]+' ('+c.rows.length+' parti • '+Math.round(c.kg).toLocaleString('tr-TR')+' kg)\n'
+        +c.rows.map(x=>'• '+heatmapShortParti(x.k)+' — '+lbShortKg(x.k.kilo)+' kg — '+(lbFirm(x.k)||'-')+' — '+String(x.k.ham_adi||'-').trim()+(x.k.recete_adi?' — '+x.k.recete_adi:'')+' — '+(x.steps<=1?'sıradaki':x.steps+' aşama sonra')).join('\n')+'\n'});
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📋 Liste kopyalandı')).catch(()=>showToast('Kopyalanamadı','error'));
+}
+(function(){const st=document.createElement('style');st.textContent='.bg-box{color:#fff;width:min(1100px,100%);max-width:100%;box-sizing:border-box}.bg-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.bg-tabs button{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}.bg-tabs button.on{background:var(--c,#546E7A);border-color:#fff}.bg-tabs button b{background:rgba(0,0,0,.3);border-radius:999px;padding:0 7px;margin-left:3px}.bg-tabs .bg-cp{margin-left:auto}'
+ +'.bg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:start}.bg-grid.one{grid-template-columns:1fr}.bg-grid.one .bg-col{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0 8px}.bg-grid.one .bg-h,.bg-grid.one .bg-empty{grid-column:1/-1}'
+ +'.bg-col{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-top:4px solid var(--c);border-radius:10px;padding:8px;min-width:0}.bg-h{font-weight:900;font-size:15px;color:var(--c);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}.bg-h span{color:#fff;font-weight:600;font-size:13px}.bg-h span b{font-size:16px;color:#FFD54F}.bg-h small{flex-basis:100%;color:#B0BEC5;font-weight:500;font-size:11px}'
+ +'.bg-r{background:rgba(0,0,0,.25);border-left:3px solid var(--c);border-radius:7px;padding:6px 8px;margin-bottom:6px;cursor:pointer}.bg-r:hover{background:rgba(255,255,255,.1)}.bg-r1{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:baseline}.bg-r1 b{font-size:16px;color:#FFD700}.bg-kg{font-weight:800}.bg-st{font-size:11px;background:rgba(255,255,255,.12);border-radius:999px;padding:1px 7px}.bg-st.n1{background:#2E7D32;font-weight:800}.bg-w{margin-left:auto;font-size:11.5px;color:#FFCC80}.bg-r2{font-size:12px;color:#E0E0E0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bg-r3{font-size:11px;color:#90A4AE;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bg-r3.e{color:#80DEEA}.bg-empty{color:#90A4AE;font-size:12.5px;padding:8px 2px}.bg-note{font-size:11.5px;color:#90A4AE;margin-top:8px}'
+ +'@media(max-width:820px){.bg-grid{grid-template-columns:1fr}.bg-tabs .bg-cp{margin-left:0}}';document.head.appendChild(st)})();
+// ── 📊 Gelecekler özeti: KK / Sarım1 / Sarım2'ye (1) sıradaki aşaması olarak gelecek ve (2) boyamada olup akışının devamında gelecek
+//    partilerin toplamı ve tahmini geliş zamanları (panodaki geliş tahminiyle aynı hesap; hedefe özel)
+const GEL_OZ_B=[['4 sa içinde',(t,n,e)=>t-n<=4*3600000],['Bugün',(t,n,e)=>t<=e],['Yarın',(t,n,e)=>t<=e+86400000],['2–3 gün',(t,n,e)=>t<=e+3*86400000],['Daha sonra',()=>true]];
+function gelOzData(){
+    const all=getAllCards(),now=Date.now(),H=3600000,s0=todayShiftWindow().start.getTime(),end=s0+24*H;   // "bugün" = bu vardiya günü (ertesi sabah 08:00'e kadar)
+    const rows=[];
+    SW_ROWS.filter(R=>LB_ETA_TGT.some(T=>T.key===R.key)).forEach(R=>{
+        [['sira',R.gel,'sıradaki aşaması '+R.name,all.filter(R.coming)],['boya','Boyamadan '+R.gel.replace(/Gelecek/,'gelecek'),'şu an boyamada, akışının devamında '+R.name+' var',all.filter(boyaGelFilter(R))]].forEach(([tip,label,sub,cs])=>{
+            const b=GEL_OZ_B.map(()=>({n:0,kg:0})),un={n:0,kg:0},ts=[];let late=0;
+            cs.forEach(k=>{const x=lbEtaFor(k,R.key),kg=num(k.kilo);if(!x||!x.at){un.n++;un.kg+=kg;return}if(x.late)late++;ts.push({t:x.at,kg});const i=GEL_OZ_B.findIndex(B=>B[1](x.at,now,end));b[i].n++;b[i].kg+=kg});
+            ts.sort((a,c)=>a.t-c.t);const tk=ts.reduce((a,x)=>a+x.kg,0);let acc=0,half=null;for(const x of ts){acc+=x.kg;if(acc>=tk/2){half=x.t;break}}
+            rows.push({R,tip,label,sub,n:cs.length,kg:cs.reduce((a,k)=>a+num(k.kilo),0),b,un,late,first:ts.length?ts[0].t:null,half,last:ts.length?ts[ts.length-1].t:null,cards:cs});
+        })});
+    return{rows,now};
+}
+function gelOzHtml(){
+    const D=gelOzData(),f0=v=>Math.round(v).toLocaleString('tr-TR'),cell=x=>x.n?'<b>'+f0(x.kg)+'</b> kg<small>'+x.n+' parti</small>':'<span class="go-z">—</span>',w=t=>t?esc(lbEtaWhen(t)):'—';
+    const hasD=!!lbDwell();
+    let h='<div class="hm-card-title">📊 Gelecekler özeti<small>Kalite Kontrol, Sarım1 ve Sarım2\'ye gelecek malların toplamı ve tahmini geliş zamanı • '+esc(new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}))+'</small></div>'
+        +(hasD?'':'<div class="ulg-warn">Geliş tahmini için gereken aşama süreleri (zaman özeti) henüz yüklenmedi; toplamlar doğru, geliş zamanları boş görünebilir.</div>')
+        +'<div class="go-tw"><table class="go-tb"><thead><tr><th>Gelecek mallar</th><th>Toplam</th>'+GEL_OZ_B.map(B=>'<th>'+B[0]+'</th>').join('')+'<th>Tahmin yok</th><th>İlk geliş</th><th title="Toplam kg\'ın yarısının gelmiş olacağı zaman">Yarısı gelmiş olur</th><th>Son geliş</th></tr></thead><tbody>'
+        +D.rows.map((r,i)=>'<tr class="'+(r.tip==='boya'?'go-boya':'go-sira')+(i%2?'':' go-top')+'" style="--c:'+r.R.color+'"><td><b>'+(r.tip==='boya'?'🎨 ':r.R.icon+' ')+esc(r.label)+'</b><small>'+esc(r.sub)+(r.late?' • '+r.late+' parti gecikmiş (yeni tahminle)':'')+'</small></td>'
+            +'<td class="go-t"><b>'+f0(r.kg)+'</b> kg<small>'+r.n+' parti</small></td>'+r.b.map(x=>'<td>'+cell(x)+'</td>').join('')+'<td>'+cell(r.un)+'</td><td>'+w(r.first)+'</td><td>'+w(r.half)+'</td><td>'+w(r.last)+'</td></tr>').join('')
+        +'</tbody></table></div>'
+        +'<div class="go-btns"><button type="button" onclick="gelOzCopy()">📋 Kopyala</button><button type="button" onclick="gelOzExcel()">📥 Excel</button><button type="button" onclick="gelOzRefresh()">🔄 Yenile</button>'+hmModalFsBtn()+'</div>'
+        +'<div class="bg-note"><b>Nasıl okunur:</b> her aşama için iki satır var. <b>Gelecek</b>: bir sonraki aşaması o aşama olan partiler (panodaki Gelecek sütunu). <b>🎨 Boyamadan gelecek</b>: şu an boyamada olup akışının devamında o aşama olan partiler; aradaki aşamaların süreleri de hesaba katılır. Sütunlar tahmini geliş zamanına göre kg ve parti sayısıdır; <b>Bugün</b> yarın sabah 08:00\'e kadar olan vardiya günüdür. Tahminler partilerin geçmişteki aşama sürelerinden gelir (çalışma saatiyle, gece sayılmaz); kesin değil, yaklaşık değerlerdir. Boyamadan doğrudan o aşamaya geçecek bir parti iki satırda da sayılır.</div>';
+    return h;
+}
+function gelOzOpen(){hmModalShow('<div id="gelOzBox" class="bg-box">'+gelOzHtml()+'</div>')}
+function gelOzRefresh(){const b=document.getElementById('gelOzBox');if(b)b.innerHTML=gelOzHtml()}
+function gelOzFlat(){const D=gelOzData(),w=t=>t?lbEtaWhen(t):'';return D.rows.map(r=>{const o={'Gelecek mallar':r.label,'Parti':r.n,'Kg':Math.round(r.kg)};GEL_OZ_B.forEach((B,i)=>{o[B[0]+' (kg)']=Math.round(r.b[i].kg);o[B[0]+' (parti)']=r.b[i].n});o['Tahmin yok (kg)']=Math.round(r.un.kg);o['Tahmin yok (parti)']=r.un.n;o['İlk geliş']=w(r.first);o['Yarısı gelmiş olur']=w(r.half);o['Son geliş']=w(r.last);return o})}
+function gelOzCopy(){
+    const D=gelOzData(),f0=v=>Math.round(v).toLocaleString('tr-TR');let t='📊 Gelecekler özeti — '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n';
+    D.rows.forEach(r=>{t+='\n'+(r.tip==='boya'?'🎨 ':'')+r.label+': '+r.n+' parti • '+f0(r.kg)+' kg\n'+GEL_OZ_B.map((B,i)=>r.b[i].n?'  '+B[0]+': '+f0(r.b[i].kg)+' kg ('+r.b[i].n+' p)':'').filter(Boolean).join('\n')+(r.un.n?'\n  Tahmin yok: '+f0(r.un.kg)+' kg ('+r.un.n+' p)':'')+(r.first?'\n  İlk geliş '+lbEtaWhen(r.first)+' • yarısı '+lbEtaWhen(r.half)+' • son '+lbEtaWhen(r.last):'')+'\n'});
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📋 Özet kopyalandı')).catch(()=>showToast('Kopyalanamadı','error'));
+}
+function gelOzExcel(){try{const ws=XLSX.utils.json_to_sheet(gelOzFlat()),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gelecekler');XLSX.writeFile(wb,'gelecekler_ozeti_'+new Date().toISOString().slice(0,10)+'.xlsx');showToast('📥 Excel indirildi')}catch(e){showToast('Excel oluşturulamadı: '+e,'error')}}
+(function(){const st=document.createElement('style');st.textContent='.go-tw{overflow:auto;margin:6px 0 10px}.go-tb{border-collapse:collapse;width:100%;font-size:13px;color:#fff}.go-tb th{background:rgba(255,255,255,.1);padding:6px 8px;text-align:right;font-size:12px;white-space:nowrap;position:sticky;top:0}.go-tb th:first-child,.go-tb td:first-child{text-align:left}.go-tb td{padding:6px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;vertical-align:top}.go-tb td small{display:block;color:#B0BEC5;font-size:10.5px;font-weight:400;white-space:normal}.go-tb td:first-child{border-left:4px solid var(--c);min-width:190px}.go-tb td:first-child b{color:var(--c);filter:brightness(1.5)}.go-tb tr.go-top td{border-top:2px solid rgba(255,255,255,.25)}.go-tb tr.go-boya td{background:rgba(236,64,122,.07)}.go-tb td.go-t{background:rgba(255,213,79,.08)}.go-tb td.go-t b{color:#FFD54F;font-size:15px}.go-z{opacity:.35}'
+ +'.go-btns{display:flex;gap:6px;flex-wrap:wrap}.go-btns button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}';document.head.appendChild(st)})();
 // ── ⏱ Üretim normu (canlı): bugün KK / Sarım'dan geçen partilerin kumaş normuna göre gereken süresi ve tempo
 //    norm dk: KK = sabit parti payı + kg ÷ kumaşın KK hızı (urt); Sarım = kg ÷ kumaşın Sarım hızı (zaman raporu).
 //    tempo: gereken süre (norm toplamı ÷ makine sayısı; KK 3, Sarım 1) ile 08:00'den şimdiye geçen mesai süresi kıyaslanır:
@@ -7637,10 +7754,11 @@ function lbEtaTarget(k){
         const r=lbEtaCalc(k,D,now);lbEtaMemo.set(k,{D,m:mm,r});return r;
     }catch(e){return null}
 }
-function lbEtaCalc(k,D,now){
+function lbEtaFor(k,key){try{const D=lbDwell();if(!D||!k)return null;return lbEtaCalc(k,D,Date.now(),key)}catch(e){return null}}
+function lbEtaCalc(k,D,now,key){
     const r=cardFlowIdx(k);if(r.idx<0)return null;
-    if(LB_ETA_TGT.some(x=>x.is(r.parts[r.idx])))return null;
-    let j=-1,T=null;for(let i=r.idx+1;i<r.parts.length;i++){const t=LB_ETA_TGT.find(x=>x.is(r.parts[i]));if(t){j=i;T=t;break}}
+    if(LB_ETA_TGT.some(x=>(!key||x.key===key)&&x.is(r.parts[r.idx])))return null;
+    let j=-1,T=null;for(let i=r.idx+1;i<r.parts.length;i++){const t=LB_ETA_TGT.find(x=>(!key||x.key===key)&&x.is(r.parts[i]));if(t){j=i;T=t;break}}
     if(j<0)return null;
     // e: aşamaya girdiğinden beri geçen ÇALIŞMA saati; bütün süreler çalışma saati, saate çevirirken gece atlanır
     const H=3600000,cur=normalizeStageName(k._asama||k.asama),dc=D[cur]||lbDwFor(r.parts[r.idx]),w=lbWaitH(k),ent=w!=null?now-w*H:null,e=ent!=null?lbWorkH(ent,now):0,fb=lbDwFallback(),seed=lbPn(k)+'|'+cur+'|'+T.key;
@@ -8606,6 +8724,8 @@ function lbRender(){
         +'<button type="button" class="'+(lbSearchOpen||lbQuery?'on':'')+'" title="Müşteri / parti ara ve vurgula" onclick="lbSearchToggle()">🔍</button>'
         +'<button type="button" class="lb-selb'+(lbSelMode?' on':'')+'" title="Seç: parti kutularına tıklayarak seç (Ctrl + tık her zaman seçer)" onclick="lbSelModeSet()">☑</button>'
         +'<button type="button" class="lb-exp lb-selo'+(lbView==='sel'?' on':'')+'" title="Seçilen partileri ayrı ekranda göster (seçim telefon dahil tüm cihazlarda aynı)" onclick="lbSelOpen()">📋<span class="lb-bl"> Seçilenler</span><span class="lb-seln">'+(lbSel.size||'')+'</span>'+(lbSelUnseen?'<span class="lb-selev" title="Görülmemiş hareket">🔔'+lbSelUnseen+'</span>':'')+'</button>'
+        +'<button type="button" class="lb-exp lb-boya'+(lbView==='b'?' on':'')+'" title="Boyamadan gelecekler: şu an boyamada olup Kalite Kontrol, Sarım1 ve Sarım2\'ye gelecek partiler — pano görünümünde (kutular, gruplama, arama, seçim, mindmap). Tekrar tıkla: pano" onclick="lbSetView(&quot;b&quot;)">🎨<span class="lb-bl"> Boyadan gelecek</span></button>'
+        +'<button type="button" class="lb-exp" title="Gelecekler özeti: KK ve Sarımlara gelecek (ve boyamadan gelecek) malların toplamı ve tahmini geliş zamanları — tablo" onclick="gelOzOpen()">📊<span class="lb-bl"> Gelecek özeti</span></button>'
         +'<button type="button" class="lb-more-b'+(lbMoreOpen?' on':'')+(lbMoreActive()?' dot':'')+'" title="Diğer düğmeler" onclick="lbMoreToggle(event)">⋯</button><span class="lb-more'+(lbMoreOpen?' open':'')+'" onclick="lbMoreAfter(event)">'
         +'<button type="button" class="'+(lbLayIsDef()?'':'on')+'" title="Pano düzeni: hangi aşamalar ve Gelecek / Üzerinde / Üretim sütunları görünsün" data-l="Pano düzeni" onclick="lbLayOpen()">🧩</button>'
         +'<button type="button" class="lb-unit'+(lbUnit==='kg'?' on':'')+'" title="Parti adedi / kg görünümü (şu an: '+(lbUnit==='kg'?'kg':'parti adedi')+')" data-l="Parti adedi / kg" onclick="lbToggleUnit()">'+(lbUnit==='kg'?'kg':'#')+'</button>'
@@ -8627,6 +8747,7 @@ function lbRender(){
     let g='';
     if(lbView==='p')g=lbProdViewHtml(stats);
     else if(lbView==='t')g=lbTamirViewHtml();
+    else if(lbView==='b'&&lbTvMind.b)g=lbMindHtml('b',lbMindCards('b'));
     else if(lbView==='sel'){
         const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
         if(eff!==lbSelCardEff){lbSelCardEff=eff;lbLastKeys=null}
@@ -8635,16 +8756,18 @@ function lbRender(){
     }
     else{
     // Gelecek / Üzerinde başlığına tıklayınca o sütun tam ekran (tekrar tıklayınca ya da ↩ ile pano)
-    const showG=lbView!=='u'&&(lbView==='g'||!!lbLay.g),showU=lbView!=='g'&&(lbView==='u'||!!lbLay.u),showP=lbView==='all'&&!!lbLay.p;
+    // 🎨 'b': aynı pano, yalnız Gelecek sütunu; satırlara boyamadaki partiler (akışında o aşama olanlar) düşer
+    const BY=lbView==='b',CF=R=>BY?boyaGelFilter(R):R.coming,RS=BY?lbRows().filter(R=>LB_ETA_TGT.some(T=>T.key===R.key)):lbRows();
+    const showG=BY||(lbView!=='u'&&(lbView==='g'||!!lbLay.g)),showU=!BY&&lbView!=='g'&&(lbView==='u'||!!lbLay.u),showP=lbView==='all'&&!!lbLay.p;
     // düzen varsayılandan farklıysa sütun sayısı değişir: ızgara sütunları burada (varsayılanda CSS'teki gibi)
     const gcols=lbLayIsDef()||lbView!=='all'?'':'grid-template-columns:clamp(24px,7vw,100px)'+(showG?' minmax(0,1fr)':'')+(showU?' minmax(0,1fr)':'')+(showP?' clamp(42px,8vw,128px)':'')+';';
-    const rowW=lbRows().map(R=>{const c=showG?all.filter(R.coming):[],o=showU?all.filter(R.is):[];return Math.max(5,Math.max(units(c,'g'),units(o,'u'))+3)});
+    const rowW=RS.map(R=>{const c=showG?all.filter(CF(R)):[],o=showU?all.filter(R.is):[];return Math.max(5,Math.max(units(c,'g'),units(o,'u'))+3)});
     const colh=(v,l,n)=>'<div class="lb-colh lb-colh-b" onclick="lbSetView(&quot;'+v+'&quot;)" title="'+(lbView===v?'Panoya dön':'Yalnız '+n+' — tam ekran')+'">'+l+'<span class="lb-colh-i">'+(lbView===v?'↩ geri':'⛶')+'</span></div>';
-    g='<div class="lb-grid" style="'+gcols+'grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div>'+(showG?colh('g','⏳ Gelecek','Gelecek'):'')+(showU?colh('u','📍 Üzerinde','Üzerinde'):'')+(showP?'<div class="lb-colh lb-colh-b" onclick="lbSetView(&quot;p&quot;)" title="Bugün KK / Sarım\'dan geçen partiler kutu tablosunda (şu an nerede olursa olsun) — tam ekran">✅ Üretim<span class="lb-colh-i">⛶</span></div>':'');
+    g='<div class="lb-grid" style="'+gcols+'grid-template-rows:auto '+rowW.map(w=>'minmax(0,'+w.toFixed(2)+'fr)').join(' ')+'"><div></div>'+(BY?'<div class="lb-colh lb-colh-b lb-colh-boya" onclick="lbSetView(&quot;all&quot;)" title="Panoya dön">🎨 Boyamada olup gelecekler<span class="lb-colh-i">↩ geri</span><span class="lb-boya-btns">'+lbTvMindBtn()+'<button type="button" onclick="event.stopPropagation();boyaGelOpen()" title="Aynı partiler ayrıntılı liste olarak (aradaki aşamalar, tahmini geliş, kopyala)">☰ Liste</button><button type="button" onclick="event.stopPropagation();gelOzOpen()" title="Gelecek malların toplamı ve tahmini geliş zamanları tablosu">📊 Özet tablo</button></span></div>':showG?colh('g','⏳ Gelecek','Gelecek'):'')+(showU?colh('u','📍 Üzerinde','Üzerinde'):'')+(showP?'<div class="lb-colh lb-colh-b" onclick="lbSetView(&quot;p&quot;)" title="Bugün KK / Sarım\'dan geçen partiler kutu tablosunda (şu an nerede olursa olsun) — tam ekran">✅ Üretim<span class="lb-colh-i">⛶</span></div>':'');
     // sütun toplamları (bütün aşamalar): başlıktaki % payı için
-    const colTot=f=>{const RS=lbRows(),t={kg:0,n:0,rows:RS.length,names:RS.map(R=>R.name).join(' + ')};RS.forEach(R=>{all.filter(f(R)).forEach(k=>{t.kg+=num(k.kilo);t.n++})});return t},totG=colTot(R=>R.coming),totU=colTot(R=>R.is);
-    lbRows().forEach(R=>{
-        const coming=all.filter(R.coming).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
+    const colTot=f=>{const t={kg:0,n:0,rows:RS.length,names:RS.map(R=>R.name).join(' + ')};RS.forEach(R=>{all.filter(f(R)).forEach(k=>{t.kg+=num(k.kilo);t.n++})});return t},totG=colTot(CF),totU=colTot(R=>R.is);
+    RS.forEach(R=>{
+        const coming=all.filter(CF(R)).sort(newestFirstCompare),on=all.filter(R.is).sort(newestFirstCompare);
         const prodObj=stats.log[R.log]||{},prod=Object.keys(prodObj).map(pn=>Object.assign({parti:pn},prodObj[pn])).sort((a,b)=>(b.ts||0)-(a.ts||0));
         prodSets[R.key]=new Set(prod.map(r=>r.parti));prodCount[R.key]=prod.length;
         const key=(p,col)=>{let k=R.key+'|'+p;if(keys.has(k))k+='|'+col;keys.set(k,1);return k};
@@ -8662,7 +8785,7 @@ function lbRender(){
             +(hA.length||hP.length?'<b class="a">'+hA.length+'<span class="lb-hm"> geldi</span><span class="lb-ph">↓</span></b><span class="lb-hm"> ·</span> <b class="p">'+hP.length+'<span class="lb-hm"> geçti</span><span class="lb-ph">↑</span></b>':'<span class="lb-hm">hareket </span>yok')+'</button>'
             // kayıt güncel değilken de yeri belli olsun (sessizce kaybolmasın)
             :'<button type="button" class="lb-hour none" onclick="showToast(&quot;Son 1 saatin hareketi sunucudaki üretim kaydından gelir; kayıt 45 dakikadan eski olduğu için gösterilemiyor&quot;,&quot;warning&quot;)" title="Sunucudaki üretim kaydı 45 dakikadan eski; saatler güvenilir olmadığı için sayı gösterilmiyor"><span class="lb-hm">son </span>1 sa: kayıt <span class="lb-hm">güncel değil</span><span class="lb-ph">eski</span></button>';
-        g+=(showG?lbCellHtml(R.key+'g',R.gel,coming,'#42A5F5',lbEtaChip(R,coming),'',totG):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck+'<button type="button" class="lb-hour lb-kkp" onclick="event.stopPropagation();kkpOpen(&quot;'+(R.key==='kk'?'kk':R.key)+'&quot;)" title="'+esc(R.name)+' çalışma programı (simülasyon) ve saatlik akış">🧮 <span class="lb-hm">program</span></button><button type="button" class="lb-hour" onclick="event.stopPropagation();kkpOpen(&quot;akis&quot;)" title="Bugün saat saat gelen ve geçen partiler (grafik ve liste)">⏱ <span class="lb-hm">saatlik</span></button>','',totU):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
+        g+=(showG?lbCellHtml(R.key+'g',R.gel+(BY?' — boyamadan':''),coming,BY?'#EC407A':'#42A5F5',lbEtaChip(R,coming),'',totG):'')+(showU?lbCellHtml(R.key+'u',R.on,on,'#9575CD',R.custom?'':hour+lbTrendChip(R)+stuck+'<button type="button" class="lb-hour lb-kkp" onclick="event.stopPropagation();kkpOpen(&quot;'+(R.key==='kk'?'kk':R.key)+'&quot;)" title="'+esc(R.name)+' çalışma programı (simülasyon) ve saatlik akış">🧮 <span class="lb-hm">program</span></button><button type="button" class="lb-hour" onclick="event.stopPropagation();kkpOpen(&quot;akis&quot;)" title="Bugün saat saat gelen ve geçen partiler (grafik ve liste)">⏱ <span class="lb-hm">saatlik</span></button>','',totU):'')+(showP?(R.custom?'<div class="lb-cell lb-prod-na"><span>—</span></div>':lbProdCellHtml(R,prod)):'');
     });
     g+='</div>';
     }
@@ -8683,7 +8806,7 @@ function lbRender(){
     const ae=document.activeElement,qf=ae&&ae.id==='lbQ',qs=qf?[ae.selectionStart,ae.selectionEnd]:null;
     el.innerHTML=h;el.classList.toggle('fm',fm);el.classList.toggle('cust',lbShowCust);el.classList.toggle('focus',!!lbFocus);el.classList.toggle('selc',lbView==='sel'&&(!!lbSelCol||lbSelOne));el.classList.toggle('cardv',lbView==='sel'&&!!lbSelCardEff);
     {const c2=el.querySelector('.lb-cards');if(c2&&cTop)c2.scrollTop=cTop}
-    el.classList.toggle('colv',lbView==='g'||lbView==='u');el.classList.toggle('selv',lbView==='sel');el.classList.toggle('selmode',lbSelMode);el.classList.toggle('searching',!!lbQuery||lbStuckHi||lbEtaHi);
+    el.classList.toggle('colv',lbView==='g'||lbView==='u'||lbView==='b');el.classList.toggle('selv',lbView==='sel');el.classList.toggle('selmode',lbSelMode);el.classList.toggle('searching',!!lbQuery||lbStuckHi||lbEtaHi);
     if(qf){const q=document.getElementById('lbQ');if(q){q.focus();try{q.setSelectionRange(qs[0],qs[1])}catch(e){}}}
     {const m=el.querySelector('.lb-meta');if(m)m.classList.toggle('stale',!!stale)}
     lbLayout();
@@ -8726,7 +8849,7 @@ function lbFit(){lbLayout()}
 // Çıktı: ekrandaki pano (odak seçiliyse yalnız o aşama) 1600 px masaüstü düzeninde yeniden yerleştirilir — telefondan alınsa da okunaklı
 function lbExportEl(){
     const FR=lbFocus&&SW_ROWS.find(R=>R.key===lbFocus),VL=lbViewLabel();
-    const wrap=document.createElement('div');wrap.className='lb lb-export'+(lbShowCust?' cust':'')+(FR?' focus':'')+(lbQuery||lbStuckHi||lbEtaHi?' searching':'')+(lbView==='g'||lbView==='u'?' colv':'')+(lbView==='sel'?' selv':'')+(lbView==='sel'&&(lbSelCol||lbSelOne)?' selc':'')+(lbView==='sel'&&lbSelCardEff?' cardv':'')+(lbExpOri==='dikey'?' dik':'');
+    const wrap=document.createElement('div');wrap.className='lb lb-export'+(lbShowCust?' cust':'')+(FR?' focus':'')+(lbQuery||lbStuckHi||lbEtaHi?' searching':'')+(lbView==='g'||lbView==='u'||lbView==='b'?' colv':'')+(lbView==='sel'?' selv':'')+(lbView==='sel'&&(lbSelCol||lbSelOne)?' selc':'')+(lbView==='sel'&&lbSelCardEff?' cardv':'')+(lbExpOri==='dikey'?' dik':'');
     const dik=lbExpOri==='dikey';wrap.style.width=dik?'900px':'1600px';wrap.style.height=lbView==='sel'&&lbSelCardEff?'auto':(dik?(lbFocus?1150:1450):(lbFocus?860:1000))+'px';
     wrap.innerHTML='<div class="lb-exp-h"><b>📺 Canlı Hareket İzleme'+(VL?' — '+VL:'')+(FR?' — '+esc(FR.name):'')+'</b><span>'+esc(new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))
         +'</span>'+(lbAnnActive()&&lbAnn.x?'<span class="lb-exp-ann">📢 '+esc(lbAnn.x)+'</span>':'')+(lbQuery?'<span class="lb-exp-q">🔍 '+esc(lbQuery)+'</span>':'')
@@ -8740,7 +8863,7 @@ function lbExportEl(){
 function lbExport(mode){
     if(!lbGridHtml)return;
     const FR=lbFocus&&SW_ROWS.find(R=>R.key===lbFocus),VN=lbViewLabel(true);
-    return mapExportImage(mode,{title:'Canlı Hareket İzleme'+(VN?' — '+VN:'')+(FR?' — '+FR.name:''),file:'canli_hareket'+(lbView!=='all'?'_'+({g:'gelecek',u:'uzerinde',sel:'secilenler'}[lbView]):'')+(lbView==='sel'&&lbSelCol?'_'+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(FR?'_'+lbFocus:''),bg:'#0d0b24',noWhite:true,what:'Pano',build:lbExportEl});
+    return mapExportImage(mode,{title:'Canlı Hareket İzleme'+(VN?' — '+VN:'')+(FR?' — '+FR.name:''),file:'canli_hareket'+(lbView!=='all'?'_'+({g:'gelecek',u:'uzerinde',sel:'secilenler',b:'boyamadan_gelecek',p:'uretim',t:'tamirler'}[lbView]||lbView):'')+(lbView==='sel'&&lbSelCol?'_'+(lbSelCol==='g'?'gelecek':'uzerinde'):'')+(FR?'_'+lbFocus:''),bg:'#0d0b24',noWhite:true,what:'Pano',build:lbExportEl});
 }
 let lbResizeT=null;
 window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResizeT);lbResizeT=setTimeout(()=>{
@@ -8939,7 +9062,7 @@ window.addEventListener('resize',()=>{if(!lbVisible())return;clearTimeout(lbResi
         +'.lb-grpbox{position:absolute;border-radius:8px;overflow:hidden;background:var(--tc);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}'
         +'.lb:not(.cust) .lb-grpbox{border-radius:6px;box-shadow:none}'
         +'.lb-grp-h{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;justify-content:center;padding:0 5px;background:rgba(0,0,0,.38);color:#FFE0B2;font-weight:900;letter-spacing:.2px;white-space:nowrap;overflow:hidden;line-height:1.12}'
-        +'.lb-prod .lb-px-norm{display:block;line-height:1.2}.lb-prod .lb-px-norm b{white-space:nowrap}.lb-prod .lb-nx{display:none}.lb-prod[data-sz="m"] .lb-nx,.lb-prod[data-sz="l"] .lb-nx,.lb-prod[data-sz="xl"] .lb-nx{display:inline}.lb-px-norm b{font-weight:900}.lb-px-norm.up b{color:#69F0AE}.lb-px-norm.dn b{color:#FF8A80}.lb-npbox{border:1px solid var(--c);border-left-width:5px;border-radius:10px;background:rgba(255,255,255,.05);padding:8px 12px;margin:0 0 10px;color:#fff}.lb-np-t{font-size:13.5px;font-weight:700;margin-bottom:6px}.lb-np-t b{color:var(--c);font-weight:900;margin-left:4px}.lb-np-g{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:3px 12px;align-items:baseline;font-size:13px}.lb-np-g span{color:#B0BEC5}.lb-np-g b{font-weight:900;white-space:nowrap}.lb-np-g small{color:#90A4AE;font-size:11px}@media(max-width:560px){.lb-np-g{grid-template-columns:auto 1fr}.lb-np-g small{grid-column:1/-1;margin-top:-3px}}.lb-pct{display:inline-block;background:rgba(255,213,79,.18);border:1px solid rgba(255,213,79,.55);color:#FFD54F;border-radius:999px;padding:0 .45em;margin-right:.25em;font-size:.82em;font-weight:900;vertical-align:.08em}.lb-grp-h span{display:block}.lb-grp-h i{font-style:normal;color:#ECEFF1;opacity:.85;font-weight:700}'
+        +'.lb-prod .lb-px-norm{display:block;line-height:1.2}.lb-prod .lb-px-norm b{white-space:nowrap}.lb-prod .lb-nx{display:none}.lb-prod[data-sz="m"] .lb-nx,.lb-prod[data-sz="l"] .lb-nx,.lb-prod[data-sz="xl"] .lb-nx{display:inline}.lb-px-norm b{font-weight:900}.lb-px-norm.up b{color:#69F0AE}.lb-px-norm.dn b{color:#FF8A80}.lb-npbox{border:1px solid var(--c);border-left-width:5px;border-radius:10px;background:rgba(255,255,255,.05);padding:8px 12px;margin:0 0 10px;color:#fff}.lb-np-t{font-size:13.5px;font-weight:700;margin-bottom:6px}.lb-np-t b{color:var(--c);font-weight:900;margin-left:4px}.lb-np-g{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:3px 12px;align-items:baseline;font-size:13px}.lb-np-g span{color:#B0BEC5}.lb-np-g b{font-weight:900;white-space:nowrap}.lb-np-g small{color:#90A4AE;font-size:11px}@media(max-width:560px){.lb-np-g{grid-template-columns:auto 1fr}.lb-np-g small{grid-column:1/-1;margin-top:-3px}}.lb-colh-boya{color:#F8BBD0}.lb-boya-btns{display:inline-flex;gap:6px;margin-left:12px;vertical-align:middle}.lb-boya-btns button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:2px 9px;font-size:.8em;font-weight:700;cursor:pointer}.lb-pct{display:inline-block;background:rgba(255,213,79,.18);border:1px solid rgba(255,213,79,.55);color:#FFD54F;border-radius:999px;padding:0 .45em;margin-right:.25em;font-size:.82em;font-weight:900;vertical-align:.08em}.lb-grp-h span{display:block}.lb-grp-h i{font-style:normal;color:#ECEFF1;opacity:.85;font-weight:700}'
         +'.lb-t{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer;line-height:1.02;box-shadow:inset -1px -1px 0 rgba(0,0,0,.45);background:var(--tc);overflow:hidden}'
         +'.lb-t b{font-weight:900;letter-spacing:.2px}.lb-t span{font-size:.74em;opacity:.92;font-weight:700}.lb-t.in{flex-direction:row;gap:.35em}.lb-t:hover{filter:brightness(1.3)}'
         +'.lb-t.uyari::after,.lb-t.kritik::after{content:"";position:absolute;left:12%;right:12%;bottom:2px;height:3px;border-radius:2px;background:#FFB74D}.lb-t.kritik::after{background:#EF5350}'
@@ -10771,7 +10894,7 @@ function paExport(mode){const R=SW_ROWS.find(r=>r.key===paStage);return mapExpor
         +'.pa-tip-r span{flex:1 1 auto}.pa-tip-r b{color:#fff;font-size:13.5px;font-weight:700;margin-left:10px}'
         // çıktı kopyası (ekran dışında, sabit genişlik)
         +'.pa.pa-export{position:relative;inset:auto;display:block;z-index:auto}.pa-exp-h{display:flex;align-items:baseline;gap:16px;padding:12px 14px 0}.pa-exp-h b{font-size:22px;color:#4DD0E1}.pa-exp-h span{font-size:14px;color:#c3c2b7}'
-        +'.qi-ana{background:linear-gradient(135deg,#1565C0,#283593)!important;border-color:rgba(255,255,255,.35)!important;padding:10px 18px!important}.qi-ana b{color:#fff!important;font-size:16px!important}'
+        +'.qi-ana{background:linear-gradient(135deg,#1565C0,#283593)!important;border-color:rgba(255,255,255,.35)!important;padding:10px 18px!important}.qi-ana.qi-boya{background:linear-gradient(135deg,#AD1457,#6A1B9A)!important}.qi-ana b{color:#fff!important;font-size:16px!important}'
         // dar ekran: yalnız ekrandaki panel (çıktı kopyası masaüstü düzeninde kalır)
         +'@media(max-width:1100px){#prodAnalysis .pa-meta{display:none}#prodAnalysis .pa-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}'
         +'@media(max-width:1100px){#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#prodAnalysis .pa-rep>div:first-child{grid-column:1/-1}}@media(max-width:820px){#prodAnalysis .pa-grid{grid-template-columns:minmax(0,1fr)}#prodAnalysis .pa-rep{grid-template-columns:minmax(0,1fr)}#prodAnalysis .pa-two{grid-template-columns:minmax(0,1fr)}}'

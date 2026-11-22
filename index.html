@@ -6243,11 +6243,12 @@ function lbSelCardModeNext(){
 function lbSelCardBtn(){return '<button type="button" class="lb-cardb" onclick="lbSelCardModeNext()" title="Görünüm (tıkla: Otomatik → Kart → Liste → Kutu → Mindmap). Otomatik: '+LB_CARD_MAX+' partiye kadar kart, fazlası kutu">'+(lbSelCardMode==='mind'?'🧠':lbSelCardEff?(lbSelCardMode==='liste'?'☰':'🗂'):'▦')+'<span class="lb-bt"> '+LB_CARD_MODES[lbSelCardMode]+(lbSelCardMode==='oto'?' ('+(lbSelCardEff?'kart':'kutu')+')':'')+'</span></button>'}
 // ── 🧠 Pano mindmap'leri: ☑ Seçilenler, ✅ Üretim (bugün geçenler) ve 🛠 Tamirler (devam eden) — her biri kendi seviyeleri ve
 //    hazır düzenleriyle A4 mindmap; panoda sayfa okunurluğa göre otomatik yatay / dikey A4, 📄 ile önizleme → PDF / PNG / yazdır
-const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','parti'],kay:['kat','firma','partinot'],kkp:['gun','firma','kumas','prenk'],kkp2:['gun','firma','kumas','prenk'],kak:['asama','yon','saat','asaat'],b:['hedef','firma','parti']};
+const LB_MIND_DEF={sel:['asama','firma','parti'],p:['gecis','firma','parti'],t:['ttip','firma','pneden'],kay:['kat','firma','partinot'],kkp:['gun','firma','kumas','prenk'],kkp2:['gun','firma','kumas','prenk'],kak:['asama','yon','saat','asaat'],b:['hedef','firma','parti']};
 const lbMindSt={};
 try{if(localStorage.getItem('kkpMindV2')!=='1'){localStorage.removeItem('lbMind9_kkp');localStorage.removeItem('lbMind9_kkp2');localStorage.setItem('kkpMindV2','1')}}catch(e){}
 ['sel','p','t','kay','kkp','kkp2','kak','b'].forEach(K=>{const d={lv:LB_MIND_DEF[K].slice(),depth:0};try{const v=JSON.parse(localStorage.getItem(K==='sel'?'lbSelMind9':'lbMind9_'+K)||'null');if(v&&Array.isArray(v.lv)&&v.lv.length)Object.assign(d,v)}catch(e){}lbMindSt[K]=d});
 const lbSelMind=lbMindSt.sel;
+try{if(localStorage.getItem('tMindV2')!=='1'){const v=JSON.parse(localStorage.getItem('lbMind9_t')||'null');if(v&&Array.isArray(v.lv)){v.lv=v.lv.map(x=>x==='parti'?'pneden':x);localStorage.setItem('lbMind9_t',JSON.stringify(v));if(lbMindSt.t)lbMindSt.t.lv=v.lv}localStorage.setItem('tMindV2','1')}}catch(e){}
 function lbMindSave(K){try{localStorage.setItem(K==='sel'?'lbSelMind9':'lbMind9_'+K,JSON.stringify(lbMindSt[K]))}catch(e){}}
 // Üretim / Tamirler görünümünde kutular ↔ mindmap (cihaz başına)
 let lbTvMind=(()=>{try{const v=JSON.parse(localStorage.getItem('lbTvMind9')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return{}}})();
@@ -6258,6 +6259,13 @@ const LB_T_YAS=['0–1 gün','1–3 gün','3–7 gün','7–30 gün','30+ gün']
 // kayıttan gelen (güncel veride olmayan) partilerde firma uzun adla gelir → kısa ada birleştir
 const LB_MIND_FIRMA={label:'Firma',get:k=>{const v=HEATMAP_DIMENSIONS.firma.get(k);try{return upShortCompany(v)||v}catch(e){return v}}},LB_MIND_MUS={label:'Müşteri (sipariş)',get:k=>lbGroupName(k)};
 const LB_B_HEDEF={kk:'Kalite Kontrole gelecek',sr1:'Sarım1\'e gelecek',sr2:'Sarım2\'ye gelecek'};
+// tamir sebebi (neden: RAM, BOYA KAYNAKLI…); yoksa tamir tipi
+function lbTamNeden(k){return String(k._mNeden||'').trim()}
+function lbTamTip(k){return String(k._mTip||'Tamir').trim()||'Tamir'}
+function lbTamErp(k){return /ERP/i.test(lbTamTip(k))}
+function lbTamSebep(k){return lbTamNeden(k)||(lbTamErp(k)?'tamir listesinde kaydı yok':'sebep girilmemiş')}
+// "Tamir Detayı" sütunundaki gibi: tip / neden
+function lbTamDetay(k){return lbTamErp(k)?'İç tamir (ERP) — tamir listesinde kaydı yok':lbTamTip(k)+(lbTamNeden(k)?' / '+lbTamNeden(k):'')}
 const LB_MIND_EXTRA={
     b:{hedef:{label:'Gideceği yer',get:k=>k._bHedef||'?',ord:Object.values(LB_B_HEDEF)},firma:LB_MIND_FIRMA,musteri:LB_MIND_MUS,
         adim:{label:'Kaç aşama sonra',get:k=>k._bAdim<=1?'Sıradaki aşama':k._bAdim+' aşama sonra',sortKey:k=>k._bAdim},
@@ -6292,7 +6300,9 @@ const LB_MIND_EXTRA={
         tyas:{label:'Tamir yaşı (gün)',get:k=>{const d=(k._mAgeH||0)/24;return LB_T_YAS[d<1?0:d<3?1:d<7?2:d<30?3:4]},ord:LB_T_YAS},
         // saat: bugün açılan tamirlerin ne kadar süredir açık olduğu (ERP iç tamirlerinde son hareketten, tahmini)
         tsaat:{label:'Tamir yaşı (saat)',get:k=>{const h=k._mAgeH||0;return LB_T_SAAT[h<1?0:h<2?1:h<4?2:h<8?3:h<12?4:h<24?5:h<72?6:h<168?7:8]},ord:LB_T_SAAT},
-        tparti:{label:'Parti + tamir yaşı',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0),byAge:true}}
+        tparti:{label:'Parti + tamir yaşı + detay',get:k=>heatmapShortParti(k)+' • '+(k._mEst?'~':'')+lbWaitShort(k._mAgeH||0)+' • '+lbTamDetay(k),byAge:true,longOk:true},
+        pneden:{label:'Parti + tamir sebebi',get:k=>heatmapShortParti(k)+' • '+lbTamSebep(k),longOk:true},
+        ptn:{label:'Parti + tamir detayı (tip / sebep)',get:k=>heatmapShortParti(k)+' • '+lbTamDetay(k),longOk:true}}
 };
 const LB_MIND_PRE={
     b:[['hedef','🎯 Gideceği yer › Firma',['hedef','firma','parti']],['adim','🔢 Gideceği yer › Kaç aşama sonra',['hedef','adim','parti']],['kumas','🧵 Gideceği yer › Kumaş › Parti + renk',['hedef','kumas','prenk']],['firma','👤 Firma › Gideceği yer',['firma','hedef','parti']],['bekle','⏱ Gideceği yer › Boyamada bekleme',['hedef','bekle','parti']]],
@@ -6302,7 +6312,7 @@ const LB_MIND_PRE={
     kay:[['kat','🏷 Kategori › Firma',['kat','firma','partinot']],['katsimdi','🏷 Kategori › Şu anki aşama',['kat','simdi','partinot']],['firma','👤 Firma › Kategori',['firma','kat','partinot']],['ay','📅 Ay › Kategori',['ay','kat','partinot']]],
     sel:[['asama','🏭 Aşamaya göre',['asama','firma','parti']],['makine','🛠 KK makinesine göre',['makine','parti']],['makfir','🛠 Makine › Firma',['makine','firma','parti']]],
     p:[['gecis','✅ Geçtiği aşamaya göre',['gecis','firma','parti']],['gidis','➡ Gittiği aşamaya göre',['gidis','firma','parti']],['firma','👤 Firmaya göre',['firma','gecis','parti']],['saat','🕐 Saate göre',['saat','gecis','parti']]],
-    t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','ttip','parti']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','parti']],['firma','👤 Firmaya göre',['firma','ttip','parti']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','parti']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
+    t:[['ttip','🛠 Tamir tipine göre',['ttip','firma','pneden']],['neden','❓ Tamir sebebine göre',['neden','ttip','parti']],['tasama','🏭 Tamir aşamasına göre',['tasama','firma','ptn']],['simdi','📍 Şu anki aşamaya göre',['simdi','firma','ptn']],['firma','👤 Firmaya göre',['firma','ptn']],['tyas','⏳ Tamir yaşına göre',['tyas','firma','ptn']],['tsaat','⏱ Saatlik tamir yaşı',['tsaat','tparti']]]
 };
 const LB_MIND_T={b:['Boyamadan gelecekler — KK / Sarım1 / Sarım2','Boyamada','boyamadan_gelecekler_mindmap'],kkp2:['Program (üzerindekiler + gelecekler)','Program','program_mindmap'],kak:['Saatlik akış — gelen ve geçen','Saatlik akış','saatlik_akis_mindmap'],kkp:['KK çalışma programı','KK programı','kk_calisma_programi'],kay:['Parti kayıtları — kategoriye göre','Parti kayıtları','parti_kayitlari_mindmap'],sel:['Seçilen partiler','Seçilenler','secilenler_mindmap'],p:['Üretim — bugün KK / Sarım\'dan geçenler','Bugün geçenler','uretim_mindmap'],t:['Devam eden tamirler','Devam eden tamirler','tamirler_mindmap']};
 function lbMindDim(K,k){return (LB_MIND_EXTRA[K]||{})[k]||HEATMAP_DIMENSIONS[k]}
@@ -6347,7 +6357,8 @@ function lbMindSrc(K,cards){
     const build=(cs,li,left)=>{if(left<=0||li>=lv.length)return[];const rows=lbMindRows(K,cs,lv[li],li?lv[li-1]:'');if(!rows.length)return[];
         const sc=heatmapColorScale('kg',Math.max(...rows.map(r=>r.value))||1);
         const sub=lv[li]==='firma'&&lv.indexOf('musteri')<0;
-        return rows.map(r=>({name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):lv[li]==='kat'?srKatColor(r.name):sc(r.value),mk:K==='sel'?hmA4Marks(r.cards):null,children:sub&&left>1?custSplit(r.cards,L=>build(L,li+1,left-1),sc,K==='sel'):build(r.cards,li+1,left-1)}))};
+        const lok=!!lbMindDim(K,lv[li]).longOk;
+        return rows.map(r=>({longOk:lok,name:r.name,count:r.count,kg:r.kg,heat:lv[li]==='makine'?(LB_MACH_C[r.name]||'#78909C'):lv[li]==='kat'?srKatColor(r.name):sc(r.value),mk:K==='sel'?hmA4Marks(r.cards):null,children:sub&&left>1?custSplit(r.cards,L=>build(L,li+1,left-1),sc,K==='sel'):build(r.cards,li+1,left-1)}))};
     const KP=K==='kkp'||K==='kkp2';
     const src={kind:K,depth:KP&&!st.depth?lv.length:st.depth,title:T[0],file:T[2],
         tree:d=>({name:T[1],count:cards.length,kg:kgOf(cards),heat:'#546E7A',isAll:true,children:build(cards,0,d)}),

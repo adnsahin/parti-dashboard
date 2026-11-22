@@ -1997,7 +1997,66 @@ async function shareCurrentViewWhatsApp(){
         });
     }catch(err){if(tb)tb.style.display=oldDisplay;alert('Hata: '+err)}
 }
-function exportCurrentViewPNG(){const el=getCurrentViewContainer();if(!el||!currentDisplayedCards.length){alert('PNG alınacak kayıt yok!');return}exportElementPNG(el.id,'Parti Takip - '+(currentViewMode==='list'?'Liste':currentViewMode), 'parti_takip_'+currentViewMode+'.png')}
+// ── 🖼️ Kart PNG: ekrandaki flash / mini kartları (DOM'daki hâliyle) sayfa sayfa PNG'ye aktarır. Çok kart tek dev resme sığmadığı
+//    için (tarayıcı tuval sınırı) her PNG'de en çok CARD_PNG_PER kart; birden çok sayfa ayrı dosya olarak iner ya da paylaşılır.
+const CARD_PNG_PER={flash:24,mini:48};
+let cardPngBusy=false;
+function cardPngClone(el){
+    const c=el.cloneNode(true);c.removeAttribute('id');c.classList.remove('flipped','is-checked');
+    c.querySelectorAll('button,input,select,textarea,.star-btn,.alarm-btn,.lbsel-btn,.lb-msel,.card-actions,.fire-form,.note-form,.lb-card-a,.lb-cc-mk').forEach(x=>x.remove());
+    c.style.width='';c.style.maxWidth='';c.style.margin='0';c.removeAttribute('onclick');
+    try{c.style.fontSize=getComputedStyle(el).fontSize}catch(e){}   // em tabanlı kartlar ekrandaki büyüklükte kalsın
+    return c;
+}
+async function cardPngExport(els,title,file,mode){
+    els=[...els].filter(e=>e&&e.isConnected);if(!els.length){showToast('PNG alınacak kart yok','warning');return}
+    if(cardPngBusy){showToast('PNG hazırlanıyor, lütfen bekleyin','warning');return}
+    // ekrandaki gibi: kartların bulunduğu alanın genişliği, kartların kendi genişliği ve aralığı aynen alınır (telefonda tek sütun,
+    // bilgisayarda ekrandaki sütun sayısı). Çok uzun resim tarayıcı sınırını aşmasın diye yükseklik dolunca yeni sayfaya geçilir.
+    const host=els[0].parentElement,hs=host?getComputedStyle(host):null,gap=hs?(parseFloat(hs.columnGap)||parseFloat(hs.gap)||10):10;
+    const cw=Math.max(150,Math.round(els[0].getBoundingClientRect().width)||350),W=Math.max(cw,Math.round(host&&host.clientWidth||cw)-(hs?(parseFloat(hs.paddingLeft)||0)+(parseFloat(hs.paddingRight)||0):0));
+    const perRow=Math.max(1,Math.floor((W+gap)/(cw+gap))),scale=Math.min(2,Math.max(1.5,window.devicePixelRatio||1)),maxH=Math.floor(15000/scale)-140;
+    // sayfalar: satır satır, satırın en uzun kartıyla yükseklik toplanır
+    const pages=[];let cur=[],h=0;
+    for(let i=0;i<els.length;i+=perRow){const row=els.slice(i,i+perRow),rh=Math.max(...row.map(e=>e.getBoundingClientRect().height||300))+gap;if(cur.length&&h+rh>maxH){pages.push(cur);cur=[];h=0}cur=cur.concat(row);h+=rh}
+    if(cur.length)pages.push(cur);
+    if(pages.length>3&&!confirm(els.length+' kart '+pages.length+' ayrı PNG dosyası olacak (ekrandaki düzende, uzun resim bölünerek). Devam edilsin mi?\n\nDaha az sayfa için önce arama ya da aşama filtresiyle listeyi daraltabilirsiniz.'))return;
+    cardPngBusy=true;const blobs=[];
+    const stamp=new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),kg=els.reduce((s,e)=>{const m=(e.querySelector('.kilo,.mc-kilo,.lb-cc-h .kg')||{}).textContent||'';return s+(parseInt((m.match(/[\d.]+/)||[''])[0].replace(/\./g,''),10)||0)},0);
+    try{
+        for(let i=0;i<pages.length;i++){
+            showToast('🖼️ PNG hazırlanıyor'+(pages.length>1?' — sayfa '+(i+1)+' / '+pages.length:'')+'…','warning');
+            const w=document.createElement('div');w.className='card-png'+(W<600?' narrow':'');w.style.width=(W+28)+'px';
+            w.innerHTML='<div class="card-png-h"><b>'+esc(title)+'</b><span>'+els.length+' parti • '+kg.toLocaleString('tr-TR')+' kg'+(pages.length>1?' • sayfa '+(i+1)+' / '+pages.length:'')+'</span><span>'+esc(stamp)+'</span></div><div class="card-png-g" style="gap:'+gap+'px"></div>';
+            const g=w.querySelector('.card-png-g');pages[i].forEach(e=>{const c=cardPngClone(e);c.style.setProperty('width',cw+'px','important');c.style.setProperty('flex','0 0 '+cw+'px','important');g.appendChild(c)});
+            document.body.appendChild(w);
+            try{const cv=await html2canvas(w,{backgroundColor:'#1a1a2e',scale,useCORS:true,scrollY:0,onclone:sanitizeOklchColors});blobs.push(await new Promise(r=>cv.toBlob(r,'image/png')))}
+            finally{w.remove()}
+        }
+        const base=(file||'parti_kartlari').replace(/\.png$/i,''),files=blobs.map((b,i)=>new File([b],base+(pages.length>1?'_'+(i+1):'')+'.png',{type:'image/png'}));
+        if(mode==='share'&&navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title,text:title+' — '+stamp});showToast('✅ Paylaşıldı');return}catch(e){if(e&&e.name==='AbortError')return}}
+        for(const f of files){fallbackDownload(f,f.name);await new Promise(r=>setTimeout(r,350))}
+        showToast('✅ '+(files.length>1?files.length+' PNG indirildi':'PNG indirildi'));
+    }catch(err){showToast('PNG oluşturulamadı: '+err,'error')}
+    finally{cardPngBusy=false}
+}
+function cardPngBtns(scopeSel,title,file){
+    const a='&quot;'+scopeSel+'&quot;,&quot;'+esc(title)+'&quot;,&quot;'+file+'&quot;';
+    return '<span class="card-png-btns"><button type="button" onclick="event.stopPropagation();cardPngFrom('+a+')" title="Bu kartları PNG olarak indir (çok kartta sayfa sayfa)">🖼️ PNG</button><button type="button" onclick="event.stopPropagation();cardPngFrom('+a+',&quot;share&quot;)" title="PNG olarak paylaş (telefonda WhatsApp vb.)">📱 Paylaş</button></span>';
+}
+function cardPngFrom(scopeSel,title,file,mode){const sc=document.querySelector(scopeSel);if(!sc)return;cardPngExport(sc.querySelectorAll('.flash-card,.mini-card'),title,file,mode)}
+// tek parti kartı (ayrıntı penceresinden)
+function cardPngOne(id,mode){
+    const k=getCardById(id);if(!k)return;const t=document.createElement('div');t.style.cssText='position:fixed;left:-30000px;top:0;width:'+Math.min(420,Math.max(300,window.innerWidth-24))+'px';t.innerHTML=flashCardHtml(k,true);document.body.appendChild(t);
+    const el=t.firstElementChild;cardPngExport([el],'Parti '+String(k.parti||'').trim(),'parti_'+String(k.parti||'').replace(/[^0-9]+/g,'_').replace(/^_|_$/g,''),mode).finally(()=>t.remove());
+}
+(function(){const st=document.createElement('style');st.textContent='.card-png{position:fixed;left:-30000px;top:0;background:#1a1a2e;color:#fff;padding:18px;font-family:Segoe UI,Arial,sans-serif;box-sizing:border-box}.card-png-h{display:flex;gap:16px;align-items:baseline;border-bottom:2px solid rgba(255,255,255,.2);padding-bottom:8px;margin-bottom:12px}.card-png-h b{font-size:22px;color:#FFD54F}.card-png-h span{font-size:14px;color:#B0BEC5}.card-png-h span:last-child{margin-left:auto}.card-png-g{display:flex;flex-wrap:wrap;align-items:flex-start}.card-png.narrow{padding:12px}.card-png.narrow .card-png-h{flex-wrap:wrap;gap:2px 10px}.card-png.narrow .card-png-h b{font-size:17px;flex-basis:100%}.card-png.narrow .card-png-h span{font-size:12px}.card-png.narrow .card-png-h span:last-child{margin-left:0}.lb-pngcards .lb-cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,17em),1fr));gap:.55em .5em}.card-png-g .lb-card{cursor:default}.card-png-g .flash-card,.card-png-g .mini-card{width:auto!important;max-width:none!important;margin:0!important;transform:none!important;box-shadow:none!important}'
+ +'.card-png-bar{margin:2px 0 8px}.card-png-btns{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}.card-png-btns button{background:#1565C0;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer}.card-png-btns button+button{background:#25D366}';document.head.appendChild(st)})();
+function exportCurrentViewPNG(){
+    // kart görünümlerinde (flash / mini): sayfa sayfa kart PNG'si; liste / kanban eskisi gibi tek resim
+    if((currentViewMode==='cards'||currentViewMode==='mini')&&currentDisplayedCards.length){const el=getCurrentViewContainer();if(el){cardPngExport(el.querySelectorAll('.flash-card,.mini-card'),'Parti Takip — '+(currentViewMode==='cards'?'Flash kartlar':'Mini kartlar'),'parti_takip_'+currentViewMode);return}}
+    return exportCurrentViewPNG0()}
+function exportCurrentViewPNG0(){const el=getCurrentViewContainer();if(!el||!currentDisplayedCards.length){alert('PNG alınacak kayıt yok!');return}exportElementPNG(el.id,'Parti Takip - '+(currentViewMode==='list'?'Liste':currentViewMode), 'parti_takip_'+currentViewMode+'.png')}
 function ensureElementFullscreenToolbar(id,title){
     const el=document.getElementById(id);if(!el||!el.classList.contains('view-fullscreen')||el.querySelector('.view-fullscreen-toolbar'))return;
     const safeTitle=esc(title||'Görünüm');
@@ -2236,6 +2295,7 @@ function openDetailModal(id){
     h+='<div class="note-form" style="margin-top:12px"><div class="note-form-title">📝 Not</div><textarea class="note-textarea" id="mnote_'+k.id+'">'+esc(nv)+'</textarea><div class="note-actions"><button class="btn-save-note" onclick="saveNoteM(event,\''+k.id+'\')">Kaydet</button><button class="btn-clear-note" onclick="clearNoteM(event,\''+k.id+'\')">Sil</button></div></div>';
     h+='<div class="alarm-card-form" style="margin-top:8px"><div class="alarm-form-title">🔔 Alarm</div>'+alMl+'<div style="margin-top:10px"><input type="text" id="mAlarmTitle_'+k.id+'" placeholder="Alarm başlığı..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none;margin-bottom:8px"></div><div class="datetime-row"><div><input type="date" id="mAlarmDate_'+k.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div><div><input type="time" id="mAlarmTime_'+k.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"></div></div><div style="margin-top:8px"><label style="color:#64B5F6;font-size:12px;font-weight:bold">Hedef bekleme süresi (dakika)</label><input type="number" id="mAlarmDuration_'+k.id+'" min="0" step="15" value="0" placeholder="0 = sadece tarih/saat" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:white;outline:none"><small style="color:#aaa">Seçilen aşamada bu süre dolmadan bildirim gönderilmez.</small></div><div class="priority-btns" id="mPrioBtns_'+k.id+'">'+prioOpts+'</div><div class="alarm-actions"><button class="btn-save-alarm" onclick="saveAlarmM(event,\''+k.id+'\')">🔔 Alarm Ekle</button></div></div>';
     h+='<div class="fire-form" style="margin-top:8px"><div class="fire-form-title">🔥 Fire</div>'+fml+'<div class="fire-grid"><input class="fire-input" id="mfirekg_'+k.id+'" type="number" step="0.01" placeholder="kg"><input class="fire-input" id="mfiremt_'+k.id+'" type="number" step="0.01" placeholder="mt"><select class="fire-select full" id="mfiresebep_'+k.id+'">'+ro+'</select><textarea class="fire-textarea" id="mfirenote_'+k.id+'" placeholder="Açıklama" style="grid-column:1/-1;min-height:50px;resize:vertical"></textarea></div><div class="fire-actions"><button class="btn-save-fire" onclick="saveFireM(event,\''+k.id+'\')">Ekle</button><button class="btn-clear-fire" onclick="clearFireM(event,\''+k.id+'\')">Hepsini Sil</button></div></div>';
+    h='<div class="card-png-bar" style="margin:-6px 0 8px">'+'<span class="card-png-btns" style="margin-left:0"><button type="button" onclick="cardPngOne(&quot;'+esc(k.id)+'&quot;)" title="Bu partinin kartını PNG olarak indir">🖼️ Kart PNG</button><button type="button" onclick="cardPngOne(&quot;'+esc(k.id)+'&quot;,&quot;share&quot;)" title="Kartı PNG olarak paylaş (telefonda WhatsApp vb.)">📱 Paylaş</button></span></div>'+h;
     document.getElementById('detailModalContent').innerHTML=h;insertAlarmTargetField(k.id,k,'mAlarmDate_'+k.id,'mAlarmTarget_'+k.id);insertNtfyNoteButton(k.id);document.getElementById('detailModal').classList.add('show');
 }
 function closeDetailModal(){
@@ -3820,6 +3880,8 @@ function hmModalShow(inner){
     hmModalFsOff();
     m.innerHTML='<div class="modal-box hm-card-box"><button class="modal-close" onclick="hmCardPopupClose()">×</button>'+inner+'</div>';
     m.classList.add('show');
+    try{if(m.querySelector('.hm-card-list .flash-card,.hm-card-list .mini-card')){const t=m.querySelector('.hm-card-title'),tt=t?(t.childNodes[0]&&t.childNodes[0].textContent||t.textContent).trim():'Parti kartları',
+        bar=document.createElement('div');bar.className='card-png-bar';bar.innerHTML=cardPngBtns('#hmCardModal .hm-card-list',tt.replace(/[^\wçğıöşüÇĞİÖŞÜ .,()+\-–]/g,'').trim()||'Parti kartları','parti_kartlari');(t||m.querySelector('.hm-card-box')).insertAdjacentElement(t?'afterend':'afterbegin',bar)}}catch(e){}
 }
 function hmCardPopupOpen(cards,title){
     if(!cards||!cards.length)return;
@@ -7018,7 +7080,48 @@ function lbSelRefresh(){
     el.querySelectorAll('.lb-seln').forEach(s=>s.textContent=lbSel.size||'');
     if(lbAnn&&lbAnn.k)lbAnnRefresh();
 }
+// ── 🖼️ Kutulardan PNG: Seçilenler (kutu görünümü) ekranında kutulara dokunarak birden çok parti işaretlenir; işaretlenenlerin
+//    flash kartları ekrandaki düzende PNG olur. Müşteri başlığına dokunmak o bloğun hepsini işaretler / kaldırır.
+let lbPngPick=null;
+function lbPngPickToggle(on){
+    lbPngPick=(on===undefined?!lbPngPick:on)?new Set():null;if(lbPngPick&&lbSelMode)lbSelMode=false;
+    lbLastKeys=null;lbRender();if(lbPngPick)showToast('🖼️ PNG: kutulara dokunarak partileri işaretleyin (başlığa dokunmak: bloğun hepsi)','warning');
+}
+function lbPngPickSet(pns,force){if(!lbPngPick)return;const all=pns.every(p=>lbPngPick.has(p)),on=force!=null?force:!all;pns.forEach(p=>on?lbPngPick.add(p):lbPngPick.delete(p));lbPngPickPaint()}
+function lbPngPickPaint(){
+    const el=document.getElementById('liveBoard');if(!el)return;
+    el.querySelectorAll('.lb-t').forEach(t=>{const p=(t.dataset.k||'').split('|')[1];t.classList.toggle('pngp',!!(lbPngPick&&lbPngPick.has(p)))});
+    const b=document.getElementById('lbPngBar');if(b)b.outerHTML=lbPngBarHtml();else if(lbPngPick)el.insertAdjacentHTML('beforeend',lbPngBarHtml());
+}
+function lbPngBarHtml(){
+    if(!lbPngPick)return '<div id="lbPngBar" style="display:none"></div>';
+    const cs=getAllCards().filter(k=>lbPngPick.has(lbPn(k))),kg=cs.reduce((s,k)=>s+num(k.kilo),0),n=lbPngPick.size;
+    return '<div id="lbPngBar" class="lb-pngbar"><b>🖼️ '+n+' parti işaretli</b><span>'+lbShortKg(kg)+' kg</span>'
+        +'<button type="button" class="go"'+(n?'':' disabled')+' onclick="lbPngPickExport()">🖼️ PNG</button><button type="button" class="wa"'+(n?'':' disabled')+' onclick="lbPngPickExport(&quot;share&quot;)">📱 Paylaş</button>'
+        +'<button type="button" onclick="lbPngPickAll()" title="Ekrandaki bütün kutuları işaretle">Hepsi</button><button type="button" onclick="lbPngPickClear()">Temizle</button><button type="button" onclick="lbPngPickToggle(false)">✕ Kapat</button></div>';
+}
+function lbPngPickAll(){const el=document.getElementById('liveBoard');if(!el||!lbPngPick)return;lbPngPickSet([...new Set([...el.querySelectorAll('.lb-t')].map(t=>(t.dataset.k||'').split('|')[1]).filter(Boolean))],true)}
+function lbPngPickClear(){if(lbPngPick){lbPngPick.clear();lbPngPickPaint()}}
+function lbPngPickExport(mode){
+    if(!lbPngPick||!lbPngPick.size)return;
+    // ekrandaki kutu sırasıyla (soldan sağa, yukarıdan aşağıya)
+    const el=document.getElementById('liveBoard'),order=[];if(el)el.querySelectorAll('.lb-t').forEach(t=>{const p=(t.dataset.k||'').split('|')[1];if(lbPngPick.has(p)&&!order.includes(p))order.push(p)});
+    lbPngPick.forEach(p=>{if(!order.includes(p))order.push(p)});
+    const byPn=new Map(getAllCards().map(k=>[lbPn(k),k])),cs=order.map(p=>byPn.get(p)).filter(Boolean);
+    if(!cs.length){showToast('İşaretli partiler güncel veride yok','warning');return}
+    // Seçilenler ekranındaki kart tasarımı (müşteri, 🧵 kumaş, reçete, tahmini geliş, akış): ekrandaki yazı büyüklüğüyle
+    const sec=k=>{for(const R of SW_ROWS){if(R.coming(k))return{id:R.key+'g',g:true};if(R.is(k)){const n=lbStageNorm(R);return{id:R.key+'u',thr:n&&n.thr}}}return{id:'oth'}};
+    const lb=document.getElementById('liveBoard'),fs=lb?parseFloat(getComputedStyle(lb).fontSize)||14:14;
+    const host=document.createElement('div');host.className='lb-pngcards';host.style.cssText='position:fixed;left:-30000px;top:0;font-size:'+Math.max(13,Math.min(18,fs))+'px;width:'+Math.min(1500,Math.max(320,window.innerWidth-24))+'px';
+    host.innerHTML='<div class="lb-cg">'+cs.map(k=>'<div class="lb-card">'+lbCardBodyHtml(k,sec(k))+'</div>').join('')+'</div>';document.body.appendChild(host);
+    cardPngExport(host.querySelectorAll('.lb-card'),'Seçilen partiler','secilen_partiler',mode).finally(()=>host.remove());
+}
+(function(){const st=document.createElement('style');st.textContent='.lb-t.pngp{box-shadow:inset 0 0 0 4px #FF4081,0 0 0 2px #FF4081!important;background-image:linear-gradient(rgba(255,64,129,.38),rgba(255,64,129,.38))!important;z-index:3}.lb-t.pngp::after{content:"✓";position:absolute;right:3px;top:2px;width:18px;height:18px;border-radius:50%;background:#FF4081;color:#fff;font-size:13px;font-weight:900;line-height:18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}'
+ +'.lb-pngbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:10030;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;background:rgba(20,16,50,.97);border:2px solid #FF4081;border-radius:14px;padding:8px 12px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.6);max-width:calc(100vw - 20px)}'
+ +'.lb-pngbar b{color:#FF80AB}.lb-pngbar span{color:#B0BEC5;font-weight:700}.lb-pngbar button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;font-size:13px}.lb-pngbar button.go{background:#1565C0}.lb-pngbar button.wa{background:#25D366}.lb-pngbar button:disabled{opacity:.4;cursor:default}'
+ +'.lb-pngpk.on{background:#FF4081!important;color:#fff!important}';document.head.appendChild(st)})();
 function lbTileClick(e,el,id){
+    if(lbPngPick){e.preventDefault();e.stopPropagation();lbPngPickSet([el.dataset.k.split('|')[1]]);return}
     if(lbSelMode||e.ctrlKey||e.metaKey||e.shiftKey){e.preventDefault();lbSelToggle([el.dataset.k.split('|')[1]]);return}
     if(!id){showToast('Bu parti güncel veride yok (sevk edilmiş / bitmiş olabilir) — ayrıntı kutunun ipucunda','warning');return}
     openDetailModal(id);
@@ -7028,6 +7131,7 @@ function lbGrpKey(d,k){return d.groupBy?d.groupBy(k):lbShowCust?lbGroupOf(k,d.cl
 function lbGrpClick(h,e){
     const body=h.closest('.lb-body'),d=body&&lbCells[body.dataset.cell];if(!d)return;
     const name=h.dataset.g;
+    if(lbPngPick){lbPngPickSet(d.items.filter(x=>lbGrpKey(d,x.k)===name).map(x=>lbPn(x.k)));return}
     if(lbSelMode||e.ctrlKey||e.metaKey||e.shiftKey){lbSelToggle(d.items.filter(x=>lbGrpKey(d,x.k)===name).map(x=>lbPn(x.k)));return}
     if((lbGroupMode==='cust'&&!d.groupBy)||d.cust)lbCustOpen(lbCustId(name));
 }
@@ -7258,6 +7362,7 @@ function lbSelBarInner(){
             +'<button type="button" onclick="lbSelClear()">🗑<span class="lb-bt"> Temizle</span></button>';
         return '<b class="lb-sel-t">☑ Seçilen partiler</b><span class="lb-sel-n">'+(n-gone.length)+' parti • '+lbShortKg(kg)+' kg</span>'
             +(lbSelMode?'<span class="lb-sel-h">kutuya tıkla: seçimden çıkar</span>':'')+find+lbOcrBtn()+lbSelCardBtn()
+            +'<button type="button" class="lb-pngpk'+(lbPngPick?' on':'')+'" onclick="lbPngPickToggle()" title="PNG: kutulara dokunarak birden çok parti işaretle, flash kartlarını PNG olarak indir / paylaş">🖼️<span class="lb-bt"> '+(lbPngPick?'PNG seçimi açık':'PNG seç')+'</span></button>'
             +'<button type="button" class="'+(lbSelMode?'on':'')+'" onclick="lbSelModeSet()">'+(lbSelMode?'✓<span class="lb-bt"> Bitti</span>':'☑<span class="lb-bt"> Düzenle</span>')+'</button>'
             +'<button type="button" class="lb-fmb" onclick="lbFocusModeSet(true)" title="Odak modu: üstteki bütün çubukları gizle, kartlar tam ekran (çıkmak için sağ üstteki ⤡ ya da Esc)">⤢<span class="lb-bt"> Odak</span></button>'
             +'<span class="lb-sp"></span>'
@@ -8619,7 +8724,8 @@ function lbMkFit(root){
     for(let i=0;i<9;i++){const m=(lo+hi)/2;b.style.fontSize=m+'px';if(ok())lo=m;else hi=m}
     b.style.fontSize=lo+'px';if(!ok())b.classList.remove('fit');   // 6 px'e de sığmıyorsa kaydırma
 }
-function lbLayout(root){
+function lbLayout(root){const r=lbLayout0(root);if(lbPngPick&&!root)try{lbPngPickPaint()}catch(e){}return r}
+function lbLayout0(root){
     root=root||document.getElementById('liveBoard');if(!root)return;
     lbMkFit(root);
     lbBalanceRows(root);root.querySelectorAll('.lb-body[data-cell]').forEach(b=>lbLayoutCell(b,root));
@@ -8760,10 +8866,10 @@ function lbRender(){
     else if(lbView==='t')g=lbTamirViewHtml();
     else if(lbView==='b'&&lbTvMind.b)g=lbMindHtml('b',lbMindCards('b'));
     else if(lbView==='sel'){
-        const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
+        const sel=all.filter(k=>lbSel.has(lbPn(k))),eff=!lbPngPick&&!!sel.length&&(lbSelCardMode==='kart'||lbSelCardMode==='liste'||(lbSelCardMode==='oto'&&sel.length<=LB_CARD_MAX));
         if(eff!==lbSelCardEff){lbSelCardEff=eff;lbLastKeys=null}
-        if(lbSelCardMode==='mind'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMindHtml(lbSelCustFilter(sel))}
-        else if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
+        if(lbSelCardMode==='mind'&&sel.length&&!lbPngPick){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMindHtml(lbSelCustFilter(sel))}
+        else if(lbSelGrp==='makine'&&lbSelCardMode!=='liste'&&sel.length&&!lbPngPick){lbSelOne=false;g=lbSelChipsHtml(sel,false)+lbSelMachKanbanHtml(sel,!eff)}else if(eff){lbSelOne=false;g=lbSelCardsHtml(lbSelCustFilter(sel),sel)}else g=(sel.length?lbSelChipsHtml(sel,false):'')+lbSelGridHtml(all,units,keys);
     }
     else{
     // Gelecek / Üzerinde başlığına tıklayınca o sütun tam ekran (tekrar tıklayınca ya da ↩ ile pano)
@@ -8815,12 +8921,14 @@ function lbRender(){
     h+=g+'<div class="lb-ticker"><div class="lb-ticker-in">'+lbEventsHtml(stats)+'</div></div>'+(fm?'<button type="button" class="lb-fm-x" onclick="lbFocusModeSet(false)" title="Odak modundan çık (Esc)">⤡</button>':'');
     // yeniden çizimde arama kutusundaki imleç kaybolmasın
     const ae=document.activeElement,qf=ae&&ae.id==='lbQ',qs=qf?[ae.selectionStart,ae.selectionEnd]:null;
+    if(lbPngPick&&lbView!=='sel')lbPngPick=null;
     el.innerHTML=h;el.classList.toggle('fm',fm);el.classList.toggle('cust',lbShowCust);el.classList.toggle('focus',!!lbFocus);el.classList.toggle('selc',lbView==='sel'&&(!!lbSelCol||lbSelOne));el.classList.toggle('cardv',lbView==='sel'&&!!lbSelCardEff);
     {const c2=el.querySelector('.lb-cards');if(c2&&cTop)c2.scrollTop=cTop}
     el.classList.toggle('colv',lbView==='g'||lbView==='u'||lbView==='b');el.classList.toggle('selv',lbView==='sel');el.classList.toggle('selmode',lbSelMode);el.classList.toggle('searching',!!lbQuery||lbStuckHi||lbEtaHi);
     if(qf){const q=document.getElementById('lbQ');if(q){q.focus();try{q.setSelectionRange(qs[0],qs[1])}catch(e){}}}
     {const m=el.querySelector('.lb-meta');if(m)m.classList.toggle('stale',!!stale)}
     lbLayout();
+    if(!lbPngPick)lbPngPickPaint();
     // kartlar: yeni yerine kayar, yeni gelen belirir
     if(oldC.size&&lbLastKeys!==null)el.querySelectorAll('.lb-card').forEach(c=>{const o=oldC.get(c.dataset.p),r=c.getBoundingClientRect();
         if(!o){c.animate([{opacity:0,transform:'scale(.85)'},{opacity:1,transform:'none'}],{duration:500,easing:'ease-out'});return}
